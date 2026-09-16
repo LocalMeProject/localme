@@ -1,0 +1,19 @@
+{
+  "name": "LocalMe — backend as a service",
+  "short_name": "LocalMe",
+  "description": "Ship full-stack web apps with frontend code only: database, storage, visitor accounts, routing and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B1220",
+  "theme_color": "#0B1220",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/og.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

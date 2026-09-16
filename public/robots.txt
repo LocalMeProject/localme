@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Private console surfaces
+Disallow: /admin
+Disallow: /account
+Disallow: /projects/
+Disallow: /library
+
+# Never crawl the API or hosted project content from the marketing host
+Disallow: /api/
+Disallow: /auth/
+
+# Query-string variants of the same page
+Disallow: /*?returnTo=
+
+User-agent: GPTBot
+Allow: /
+
+Sitemap: https://console.example.com/sitemap.xml

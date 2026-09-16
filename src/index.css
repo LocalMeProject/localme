@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Blueprint light theme — paper surfaces, ink text, signal-orange accents */
+    --background: 45 20% 97%;
+    --foreground: 220 39% 11%;
+
+    --paper: 45 20% 97%;
+    --ink: 220 39% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 39% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 39% 11%;
+
+    --primary: 220 39% 11%;
+    --primary-foreground: 45 20% 97%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 39% 11%;
+
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 14% 36%;
+
+    --accent: 220 16% 94%;
+    --accent-foreground: 220 39% 11%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 16% 85%;
+    --input: 220 16% 84%;
+    --ring: 18 100% 52%;
+
+    --signal: 18 96% 50%;
+    --signal-foreground: 0 0% 100%;
+    --blueprint: 199 92% 40%;
+
+    --shadow-color: 220 40% 25%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Blueprint dark theme — ink surfaces, blueprint grid, signal-orange accents */
+    --background: 222 40% 7%;
+    --foreground: 40 24% 96%;
+
+    --paper: 45 20% 96%;
+    --ink: 220 39% 11%;
+
+    --card: 221 34% 10%;
+    --card-foreground: 40 24% 96%;
+
+    --popover: 221 34% 11%;
+    --popover-foreground: 40 24% 96%;
+
+    --primary: 40 24% 96%;
+    --primary-foreground: 222 40% 9%;
+
+    --secondary: 221 24% 17%;
+    --secondary-foreground: 40 24% 96%;
+
+    --muted: 221 24% 15%;
+    --muted-foreground: 219 14% 68%;
+
+    --accent: 221 24% 18%;
+    --accent-foreground: 40 24% 96%;
+
+    --destructive: 0 68% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 21%;
+    --input: 220 20% 23%;
+    --ring: 18 100% 58%;
+
+    --signal: 18 100% 58%;
+    --signal-foreground: 222 40% 8%;
+    --blueprint: 199 92% 60%;
+
+    --shadow-color: 220 60% 2%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Anchor links land below the sticky marketing header on all breakpoints. */
+    scroll-padding-top: 7.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-top: 5.5rem;
+    }
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+
+  /* One consistent, highly visible focus state for keyboard users. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    @apply bg-signal/30;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Blueprint grid used on the landing page and empty states */
+  .blueprint-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--blueprint) / 0.09) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--blueprint) / 0.09) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .blueprint-grid-sm {
+    background-image:
+      linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  /* Dotted drafting paper — used behind hero and CTA blocks. */
+  .blueprint-dots {
+    background-image: radial-gradient(hsl(var(--blueprint) / 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .mono-label {
+    @apply font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+  .panel {
+    @apply rounded-lg border border-border bg-card shadow-panel;
+  }
+
+  /* Interactive card surface: lifts on hover, presses on active. */
+  .card-interactive {
+    @apply transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-signal/40 hover:shadow-raised active:translate-y-0;
+  }
+
+  .hairline {
+    @apply border-border/70;
+  }
+
+  /* Minimum comfortable tap target on touch hardware only. */
+  .tap {
+    @apply touch:min-h-11 touch:min-w-11;
+  }
+
+  .link-quiet {
+    @apply text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline;
+  }
+
+  .section-y {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+
+  /* Long-form marketing / docs copy that needs to breathe. */
+  .copy {
+    @apply text-[13px] leading-relaxed text-muted-foreground sm:text-sm;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 999px;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .glow-signal {
+    background: radial-gradient(circle, hsl(var(--signal) / 0.45) 0%, transparent 70%);
+  }
+
+  .glow-blueprint {
+    background: radial-gradient(circle, hsl(var(--blueprint) / 0.35) 0%, transparent 70%);
+  }
+
+  /* Fades a horizontal band at both edges — used for the trust marquee. */
+  .edge-fade {
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  }
+
+  .grid-stack > * {
+    grid-area: 1 / 1;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

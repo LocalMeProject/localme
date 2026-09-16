@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="light dark" />
+
+    <title>LocalMe — Ship a full-stack web app with frontend code only</title>
+    <meta
+      name="description"
+      content="LocalMe is a backend-as-a-service for frontend-only apps. Upload HTML, CSS and JavaScript and get a document database, file storage, visitor accounts, routing, encrypted secrets, a reverse proxy, cron jobs, webhooks and custom domains — already running."
+    />
+    <meta
+      name="keywords"
+      content="backend as a service, BaaS, frontend only app, no backend, document database API, static site backend, add database to html site, visitor login without server, web app backend, indie hacker tools, LocalMe"
+    />
+    <meta name="author" content="LocalMe" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="googlebot" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="LocalMe" />
+    <meta property="og:title" content="LocalMe — Ship a full-stack web app with frontend code only" />
+    <meta
+      property="og:description"
+      content="Drop in HTML, CSS and JavaScript. LocalMe gives every project a document database, file storage, visitor accounts, routing, secrets, a proxy, cron and webhooks."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LocalMe — backend as a service for frontend-only apps" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="LocalMe — Ship a full-stack web app with frontend code only" />
+    <meta
+      name="twitter:description"
+      content="A document database, file storage, visitor auth, routing, secrets, proxy, cron and webhooks for apps that are just HTML, CSS and JavaScript."
+    />
+    <meta name="twitter:image" content="/og.png" />
+    <meta name="twitter:image:alt" content="LocalMe — backend as a service for frontend-only apps" />
+
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B1220'/%3E%3Cpath d='M9 22V10h3.2v9.2H22V22z' fill='%23FF6B2C'/%3E%3C/svg%3E" />
+    <link rel="apple-touch-icon" href="/og.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "localme#organization",
+            "name": "LocalMe",
+            "description": "Backend-as-a-Service for frontend-only web applications.",
+            "logo": "/og.png"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "localme#website",
+            "name": "LocalMe",
+            "url": "/",
+            "publisher": { "@id": "localme#organization" },
+            "inLanguage": "en"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "localme#software",
+            "name": "LocalMe",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Any (browser-based)",
+            "description": "Host frontend-only apps and get a managed JSON document database, file storage, visitor accounts with roles, routing, encrypted secrets, a reverse proxy, scheduled tasks, webhooks and custom domains.",
+            "featureList": [
+              "JSON document database with a Mongo-style query DSL",
+              "File and asset storage with hard quota enforcement",
+              "Shared asset library across projects",
+              "Visitor accounts, roles and 15 granular permissions",
+              "Path routing with login and role gating",
+              "AES-256-GCM encrypted secrets",
+              "Server-side reverse proxy with secret header injection",
+              "Scheduled cron tasks and signed webhooks",
+              "Custom domains with certificate handling"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Free tier: 5 MB account storage, a 5 MB shared library, 100 page views per project each month."
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <h1>LocalMe — backend-as-a-service for frontend-only apps</h1>
+      <p>
+        LocalMe hosts applications built from HTML, CSS and JavaScript and provides everything a backend normally would:
+        a JSON document database, file and asset storage, visitor accounts with roles and permissions, path routing,
+        encrypted secrets, a server-side reverse proxy, scheduled tasks, signed webhooks, custom domains and usage
+        reporting. No server-side user code is ever executed.
+      </p>
+      <ul>
+        <li><a href="/docs">API reference and endpoint documentation</a></li>
+        <li><a href="/auth?mode=signup">Create a free account</a></li>
+        <li><a href="/auth">Sign in to the console</a></li>
+      </ul>
+      <p>This application requires JavaScript to run.</p>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
