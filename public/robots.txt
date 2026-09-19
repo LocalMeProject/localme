@@ -7,14 +7,7 @@ Disallow: /account
 Disallow: /projects/
 Disallow: /library
 
-# Never crawl the API or hosted project content from the marketing host
+# Never crawl the API
 Disallow: /api/
-Disallow: /auth/
 
-# Query-string variants of the same page
-Disallow: /*?returnTo=
-
-User-agent: GPTBot
-Allow: /
-
-Sitemap: https://console.example.com/sitemap.xml
+Sitemap: https://localme.example.com/sitemap.xml
