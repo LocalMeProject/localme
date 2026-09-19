@@ -1,26 +1,25 @@
-# Dependencies
+# dependencies
 node_modules/
+.bun/
 
-# Build output
+# next.js build output
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# production
 dist/
-dist-ssr/
+build/
 
-# Local backend state (contains local deployment data)
+# local backend state (legacy Convex; kept for safety)
 .convex/
 
-# Environment files — never commit these
+# env & secrets
 .env
-.env.local
+.env.*
 *.local
 
-# Tooling caches
-node_modules/.vite/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-error.log*
-bun-error.log*
-
-# OS noise
+# misc
 .DS_Store
+*.log
