@@ -39,8 +39,11 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: Test
+      - name: Test (sqlite)
         run: bun run test
+
+      - name: Test (postgres)
+        run: bun run test:postgres
 
       - name: Build
         run: bun run build
@@ -52,3 +55,40 @@ jobs:
           name: nextjs-build
           path: .next
           retention-days: 3
+
+  postgres-integration:
+    name: postgres · migrations + data layer
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: localme
+          POSTGRES_PASSWORD: localme
+          POSTGRES_DB: localme_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://localme:localme@localhost:5432/localme_test
+      DB_DRIVER: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply migrations (postgres)
+        run: bun run db:migrate
+
+      - name: Data-layer tests (postgres)
+        run: bun run test:postgres

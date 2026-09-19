@@ -1,3 +1,8 @@
+/**
+ * @deprecated Superseded by the dialect-agnostic facade in `lib/server/db/index.ts`
+ * (DB_DRIVER=sqlite default, postgres switchable — see docs/adr/003).
+ * Kept temporarily for reference; will be removed once callers migrate.
+ */
 import { Pool, type QueryResultRow } from "pg";
 
 declare global {
