@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { convexConfigured } from "@/lib/convex";
 import { useSessionStore } from "@/lib/session";
+import { BackendNotice } from "@/components/backend-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -20,6 +22,10 @@ export function RequireAuth() {
   useEffect(() => {
     if (expired) clear();
   }, [expired, clear]);
+
+  // Without a reachable backend there is nothing to authenticate against, so
+  // explain the situation instead of bouncing the visitor to a login form.
+  if (!convexConfigured) return <BackendNotice />;
 
   if (!token || expired) {
     const returnTo = `${location.pathname}${location.search}`;

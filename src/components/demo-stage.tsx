@@ -5,7 +5,7 @@ import { DEMOS, demoDocument, stageDemoImport, type DemoApp, type DemoId } from 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { siteUrl } from "@/lib/convex";
+import { siteUrl, siteUrlIsPublic } from "@/lib/convex";
 
 interface LogEntry {
   id: number;
@@ -116,7 +116,7 @@ export function DemoStage({ className }: { className?: string }) {
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
           </span>
           <span className="ml-1 truncate font-mono text-[11px] text-muted-foreground">
-            {siteUrl}/you/{demo.id}-app/
+            {siteUrlIsPublic ? `${siteUrl}/you/${demo.id}-app/` : `/{your-username}/${demo.id}-app/`}
           </span>
           <Badge variant="signal" className="ml-auto hidden sm:inline-flex">
             live sandbox

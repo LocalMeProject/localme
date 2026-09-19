@@ -32,7 +32,7 @@ import { DemoStage } from "@/components/demo-stage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { siteUrl } from "@/lib/convex";
+import { siteUrl, siteUrlIsPublic } from "@/lib/convex";
 import { useTheme } from "@/lib/theme";
 import { useSeo } from "@/lib/seo";
 
@@ -945,23 +945,26 @@ const { data } = await fetch('/api/db/find', {
             <div key={group.title}>
               <div className="mono-label">{group.title}</div>
               <ul className="mt-4 space-y-2.5">
-                {group.links.map((link) => (
-                  <li key={link.label}>
-                    {link.to ? (
-                      <Link className="link-quiet text-[13px]" to={link.to}>
-                        {link.label}
-                      </Link>
-                    ) : (
-                      <a
-                        className="link-quiet text-[13px]"
-                        href={link.href}
-                        {...(link.href?.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}
-                      >
-                        {link.label}
-                      </a>
-                    )}
-                  </li>
-                ))}
+                {group.links
+                  // Links into the hosting origin only make sense once it is public.
+                  .filter((link) => siteUrlIsPublic || !link.href?.startsWith("http"))
+                  .map((link) => (
+                    <li key={link.label}>
+                      {link.to ? (
+                        <Link className="link-quiet text-[13px]" to={link.to}>
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a
+                          className="link-quiet text-[13px]"
+                          href={link.href}
+                          {...(link.href?.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}
+                        >
+                          {link.label}
+                        </a>
+                      )}
+                    </li>
+                  ))}
               </ul>
             </div>
           ))}
@@ -980,10 +983,12 @@ const { data } = await fetch('/api/db/find', {
               <Mail className="h-3.5 w-3.5" />
               {info?.supportEmail ?? "support@localme"}
             </span>
-            <a className="link-quiet flex items-center gap-1.5" href={`${siteUrl}/health`} target="_blank" rel="noreferrer">
-              <Gauge className="h-3.5 w-3.5" />
-              Status
-            </a>
+            {siteUrlIsPublic && (
+              <a className="link-quiet flex items-center gap-1.5" href={`${siteUrl}/health`} target="_blank" rel="noreferrer">
+                <Gauge className="h-3.5 w-3.5" />
+                Status
+              </a>
+            )}
           </div>
         </div>
       </footer>

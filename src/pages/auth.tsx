@@ -32,6 +32,8 @@ import { useTheme } from "@/lib/theme";
 import { useSeo } from "@/lib/seo";
 import { errorText } from "@/lib/errors";
 import { getDemo, DEMOS } from "@/lib/demo-apps";
+import { convexConfigured } from "@/lib/convex";
+import { BackendNotice } from "@/components/backend-notice";
 
 type Mode = "login" | "signup";
 
@@ -146,6 +148,9 @@ export function AuthPage() {
       setPending(false);
     }
   };
+
+  // Signing in needs a reachable backend; explain rather than fail on submit.
+  if (!convexConfigured) return <BackendNotice />;
 
   // Already signed in? Go straight to the console.
   if (token && session) {
