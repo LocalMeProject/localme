@@ -4,9 +4,9 @@
  * their project; session callers pass ?projectId=.
  */
 import { z } from "zod";
-import { apiOk, handler, parseJson } from "@/lib/server/http";
+import { ApiError, apiOk, handler, parseJson } from "@/lib/server/http";
 import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
-import { createDocumentStore } from "@/lib/server/db/documents";
+import { createDocumentStore, DuplicateDocumentIdError } from "@/lib/server/db/documents";
 import { getDb } from "@/lib/server/db/index";
 
 const findSchema = z.object({
@@ -53,8 +53,15 @@ export const dbFind = handler(async (request) => {
 export const dbInsert = handler(async (request) => {
   const body = await parseJson(request, insertSchema);
   const { store, projectId } = await scopedStore(request);
-  const row = await store.insert(projectId, body.table, body.document as Record<string, never>);
-  return apiOk({ success: true, id: (row.document as { id?: unknown }).id ?? null }, { status: 201 });
+  try {
+    const row = await store.insert(projectId, body.table, body.document as Record<string, never>);
+    return apiOk({ success: true, id: (row.document as { id?: unknown }).id ?? null }, { status: 201 });
+  } catch (error) {
+    if (error instanceof DuplicateDocumentIdError) {
+      throw new ApiError("conflict", error.message);
+    }
+    throw error;
+  }
 });
 
 export const dbUpdate = handler(async (request) => {

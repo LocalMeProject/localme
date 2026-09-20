@@ -161,7 +161,7 @@ export function createDocumentStore(db: Db) {
         return toRows(rows)[0]!;
       } catch (error) {
         if (isDuplicateId(error)) {
-          throw new Error(`A document with id "${idText}" already exists in ${table}`);
+          throw new DuplicateDocumentIdError(table, idText);
         }
         throw error;
       }
@@ -223,6 +223,17 @@ export function createDocumentStore(db: Db) {
 }
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
+
+/** Thrown when an insert violates the (project_id, table_name, id) unique index. */
+export class DuplicateDocumentIdError extends Error {
+  constructor(
+    public readonly table: string,
+    public readonly id: string,
+  ) {
+    super(`A document with id "${id}" already exists in ${table}`);
+    this.name = "DuplicateDocumentIdError";
+  }
+}
 
 /** Detect a duplicate-id violation on either dialect. */
 function isDuplicateId(error: unknown): boolean {

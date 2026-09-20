@@ -84,17 +84,17 @@ function get(url: string, headers: Record<string, string> = {}): Request {
 describe("db endpoints", () => {
   it("inserts, finds, updates, and deletes documents", async () => {
     const insert = await dbInsert(
-      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 1, name: "Ada", age: 36, active: true } }),
+      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 1, name: "Ada", age: 36, active: true } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     expect(insert.status).toBe(201);
 
     await dbInsert(
-      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 2, name: "Ben", age: 17, active: true } }),
+      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 2, name: "Ben", age: 17, active: true } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     await dbInsert(
-      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 3, name: "Cy", age: 50, active: false } }),
+      post(`/api/db/insert?projectId=${project.id}`, { table: "users", document: { id: 3, name: "Cy", age: 50, active: false } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
 
@@ -103,7 +103,7 @@ describe("db endpoints", () => {
         table: "users",
         filter: { age: { $gt: 18 }, active: true },
         sort: { age: 1 },
-      }),
+      }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     const foundBody = (await found.json()) as { data: Array<{ name: string }>; total: number };
@@ -111,14 +111,14 @@ describe("db endpoints", () => {
     expect(foundBody.total).toBe(1);
 
     const updated = await dbUpdate(
-      post(`/api/db/update?projectId=${project.id}`, { table: "users", filter: { id: 1 }, update: { age: 37 } }),
+      post(`/api/db/update?projectId=${project.id}`, { table: "users", filter: { id: 1 }, update: { age: 37 } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     const updatedBody = (await updated.json()) as { modified: number };
     expect(updatedBody.modified).toBe(1);
 
     const deleted = await dbDelete(
-      post(`/api/db/delete?projectId=${project.id}`, { table: "users", filter: { id: 3 } }),
+      post(`/api/db/delete?projectId=${project.id}`, { table: "users", filter: { id: 3 } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     const deletedBody = (await deleted.json()) as { deleted: number };
@@ -127,7 +127,7 @@ describe("db endpoints", () => {
 
   it("rejects invalid table names", async () => {
     const response = await dbFind(
-      post(`/api/db/find?projectId=${project.id}`, { table: "not a table" }),
+      post(`/api/db/find?projectId=${project.id}`, { table: "not a table" }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     expect(response.status).toBe(400);
@@ -143,14 +143,14 @@ describe("db endpoints", () => {
 
   it("rejects duplicate document ids with a clear error", async () => {
     await dbInsert(
-      post(`/api/db/insert?projectId=${project.id}`, { table: "dupe", document: { id: "x", v: 1 } }),
+      post(`/api/db/insert?projectId=${project.id}`, { table: "dupe", document: { id: "x", v: 1 } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
     const again = await dbInsert(
-      post(`/api/db/insert?projectId=${project.id}`, { table: "dupe", document: { id: "x", v: 2 } }),
+      post(`/api/db/insert?projectId=${project.id}`, { table: "dupe", document: { id: "x", v: 2 } }, authHeaders()),
       { params: Promise.resolve({}) },
     );
-    expect(again.status).toBe(500); // store throws Error; handler maps to 500
+    expect(again.status).toBe(409); // DuplicateDocumentIdError maps to conflict
   });
 });
 
@@ -161,6 +161,7 @@ describe("storage endpoints", () => {
     const uploaded = await storageUpload(
       new Request(`https://app.test/api/storage/upload?projectId=${project.id}&path=assets/app.css`, {
         method: "POST",
+        headers: authHeaders(),
         body: "body{}",
       }),
       { params: Promise.resolve({}) },
@@ -261,7 +262,7 @@ describe("webhooks", () => {
 
     try {
       const created = await webhooksCreate(
-        post(`?projectId=${project.id}`, { url: `http://127.0.0.1:${port}/hook`, events: ["document.created"] }),
+        post(`?projectId=${project.id}`, { url: `http://127.0.0.1:${port}/hook`, events: ["document.created"] }, authHeaders()),
         { params: Promise.resolve({}) },
       );
       expect(created.status).toBe(201);
