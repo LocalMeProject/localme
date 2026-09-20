@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { createHmac } from "node:crypto";
 import { ApiError, apiOk, handler, parseJson } from "@/lib/server/http";
-import { requireSessionUser, requireProjectScoped } from "@/lib/server/api-auth";
+import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 
@@ -20,7 +20,7 @@ const webhookSchema = z.object({
 });
 
 async function scopedProject(request: Request, projectIdParam: string | null) {
-  const principal = await requireSessionUser(request);
+  const principal = await requirePrincipal(request);
   return requireProjectScoped(request, principal, projectIdParam);
 }
 

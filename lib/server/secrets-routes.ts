@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { ApiError, apiOk, handler, parseJson } from "@/lib/server/http";
-import { requireSessionUser, requireProjectScoped } from "@/lib/server/api-auth";
+import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets-crypto";
@@ -20,7 +20,8 @@ const upsertSchema = z.object({
 const getSchema = z.object({ key: z.string().regex(KEY_NAME) });
 
 async function scopedProject(request: Request, projectIdParam: string | null) {
-  const principal = await requireSessionUser(request);
+  // Owner/admin sessions and project-pinned API keys both manage secrets.
+  const principal = await requirePrincipal(request);
   return requireProjectScoped(request, principal, projectIdParam);
 }
 

@@ -8,7 +8,7 @@
  */
 import { z } from "zod";
 import { apiOk, handler, parseJson } from "@/lib/server/http";
-import { requireSessionUser, requireProjectScoped } from "@/lib/server/api-auth";
+import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { purgeExpiredSessions } from "@/lib/server/sessions";
@@ -29,7 +29,7 @@ const toggleSchema = z.object({
 const runSchema = z.object({ task: z.enum(BUILTIN_TASKS) });
 
 async function scopedProject(request: Request, projectIdParam: string | null) {
-  const principal = await requireSessionUser(request);
+  const principal = await requirePrincipal(request);
   return requireProjectScoped(request, principal, projectIdParam);
 }
 
