@@ -56,27 +56,21 @@ function numberExpr(ctx: Ctx, expr: string): string {
     : `CAST(${expr} AS REAL)`;
 }
 
-/** Text form of a JSON path (the default comparison domain). */
-function textExpr(ctx: Ctx, expr: string): string {
-  void ctx;
-  return expr;
-}
-
 function andGroup(parts: string[]): string {
   return parts.length === 1 ? parts[0]! : parts.map((p) => `(${p})`).join(" AND ");
 }
 
 /** Compile an operator object (`{ $gt: 18 }`) against a JSON path. */
-function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): string {
+function compileOperators(ctx: Ctx, fieldExpr: string, textE: string, ops: FilterObject): string {
   const parts: string[] = [];
   for (const [op, value] of Object.entries(ops)) {
     switch (op) {
       case "$eq": {
-        parts.push(equalityPredicate(ctx, fieldExpr, value));
+        parts.push(equalityPredicate(ctx, fieldExpr, textE, value));
         break;
       }
       case "$ne": {
-        parts.push(`NOT ${equalityPredicate(ctx, fieldExpr, value)}`);
+        parts.push(`NOT ${equalityPredicate(ctx, fieldExpr, textE, value)}`);
         break;
       }
       case "$gt":
@@ -96,7 +90,7 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
           break;
         }
         const hasNumbers = value.some((v) => typeof v === "number");
-        const left = hasNumbers ? numberExpr(ctx, fieldExpr) : textExpr(ctx, fieldExpr);
+        const left = hasNumbers ? numberExpr(ctx, fieldExpr) : textE;
         const placeholders = value.map((v) => addParam(ctx, v)).join(", ");
         parts.push(
           op === "$in"
@@ -107,7 +101,6 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
       }
       case "$regex": {
         if (typeof value !== "string") throw new Error("$regex expects a string");
-        const textE = textExpr(ctx, fieldExpr);
         if (ctx.flavor === "postgres") {
           parts.push(`(${textE} ~ ${addParam(ctx, value)})`);
         } else {
@@ -131,28 +124,33 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
   return andGroup(parts);
 }
 
-/** Equality predicate, dispatched on the filter value's type. */
-function equalityPredicate(ctx: Ctx, fieldExpr: string, value: unknown): string {
+/**
+ * Equality predicate, dispatched on the filter value's type. Text comparisons
+ * use the text-cast expression (`->>` on Postgres): a JSON-typed expr compared
+ * to a text param would make Postgres parse the param as JSON and fail.
+ */
+function equalityPredicate(ctx: Ctx, fieldExpr: string, textE: string, value: unknown): string {
   if (typeof value === "number") {
     return `(${numberExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
   }
   if (typeof value === "boolean") {
     // JSON true/false serialize to the text "true"/"false" on both dialects.
-    return `(LOWER(COALESCE(${textExpr(ctx, fieldExpr)}, '')) = ${addParam(ctx, value ? "true" : "false")})`;
+    return `(LOWER(COALESCE(${textE}, '')) = ${addParam(ctx, value ? "true" : "false")})`;
   }
   if (value === null) {
-    return `(${textExpr(ctx, fieldExpr)} IS NULL)`;
+    return `(${textE} IS NULL)`;
   }
   if (typeof value === "object") {
     // Arrays/objects compare on their canonical JSON text.
-    return `(${textExpr(ctx, fieldExpr)} = ${addParam(ctx, JSON.stringify(value))})`;
+    return `(${textE} = ${addParam(ctx, JSON.stringify(value))})`;
   }
-  return `(${textExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
+  return `(${textE} = ${addParam(ctx, value)})`;
 }
 
 /** Comparison expression matching the type of the filter value. */
 function comparisonExpr(ctx: Ctx, fieldExpr: string, value: unknown): string {
-  return typeof value === "number" ? numberExpr(ctx, fieldExpr) : textExpr(ctx, fieldExpr);
+  void ctx;
+  return typeof value === "number" ? numberExpr(ctx, fieldExpr) : fieldExpr;
 }
 
 /** Compile a filter object (fields + logical operators) into a WHERE fragment. */
@@ -204,10 +202,11 @@ function compileNode(ctx: Ctx, node: FilterObject): string {
       default: {
         const segments = key.split(".");
         const expr = jsonPathExpr(ctx.flavor, segments);
+        const textE = jsonPathText(ctx.flavor, segments);
         if (isOperatorObject(value)) {
-          parts.push(compileOperators(ctx, expr, value));
+          parts.push(compileOperators(ctx, expr, textE, value));
         } else {
-          parts.push(equalityPredicate(ctx, expr, value));
+          parts.push(equalityPredicate(ctx, expr, textE, value));
         }
       }
     }
@@ -313,7 +312,7 @@ export function compileUpdate(update: UpdateSpec, flavor: SqlFlavor, base = 0): 
     const current = jsonPathExpr(flavor, [k]);
     expr =
       flavor === "postgres"
-        ? `jsonb_set(${expr}, ARRAY['${key}'], to_jsonb(COALESCE((${current}) #>> '{}')::numeric, 0) + ((${incParam}::jsonb) #>> '{}')::numeric))`
+        ? `jsonb_set(${expr}, ARRAY['${key}'], to_jsonb(COALESCE(((${current}) #>> '{}')::numeric, 0) + ((${incParam}::jsonb) #>> '{}')::numeric))`
         : `json_set(${expr}, '$.${key}', COALESCE(json_extract(${expr}, '$.${key}'), 0) + json_extract(${incParam}, '$.${key}'))`;
     changed = true;
   }
