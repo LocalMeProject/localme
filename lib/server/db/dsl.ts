@@ -134,7 +134,11 @@ function equalityPredicate(ctx: Ctx, fieldExpr: string, textE: string, value: un
     return `(${numberExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
   }
   if (typeof value === "boolean") {
-    // JSON true/false serialize to the text "true"/"false" on both dialects.
+    // SQLite's json_extract yields JSON true/false as integers 1/0; Postgres's
+    // ->> yields the text "true"/"false". Compare per dialect so booleans match.
+    if (ctx.flavor === "sqlite") {
+      return `(${textE} = ${value ? 1 : 0})`;
+    }
     return `(LOWER(COALESCE(${textE}, '')) = ${addParam(ctx, value ? "true" : "false")})`;
   }
   if (value === null) {

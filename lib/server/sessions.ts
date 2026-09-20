@@ -82,8 +82,14 @@ export async function getSessionUser(): Promise<{
   isAdmin: boolean;
   isOperator: boolean;
 } | null> {
-  const store = await cookies();
-  const sessionId = unpack(store.get(SESSION_COOKIE)?.value);
+  let sessionId: string | null = null;
+  try {
+    const store = await cookies();
+    sessionId = unpack(store.get(SESSION_COOKIE)?.value);
+  } catch {
+    // `cookies()` throws outside a request scope (static rendering, tests); no session.
+    return null;
+  }
   if (!sessionId) return null;
 
   const db = getDb();
