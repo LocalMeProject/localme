@@ -25,6 +25,12 @@ suite("document store (postgres)", () => {
   const projectId = 990001;
 
   beforeAll(async () => {
+    await makeDb().raw(
+      "INSERT INTO users (id, username, password_hash) VALUES (990000, 'pg-test', 'x') ON CONFLICT (id) DO NOTHING",
+    );
+    await makeDb().raw(
+      "INSERT INTO projects (id, user_id, name) VALUES (990001, 990000, 'orders-project') ON CONFLICT (id) DO NOTHING",
+    );
     await store.insert(projectId, "orders", { id: "a", status: "paid", total: 140, tags: ["x"] });
     await store.insert(projectId, "orders", { id: "b", status: "shipped", total: 90, tags: ["y"] });
   });
@@ -49,6 +55,6 @@ suite("document store (postgres)", () => {
     const n = await store.update(projectId, "orders", { id: "b" }, { $inc: { total: 15 } }, false);
     expect(n).toBe(1);
     const after = await store.get(projectId, "orders", "b");
-    expect(after?.document.total).toBe(105);
+    expect((after?.document as { total?: number } | null)?.total).toBe(105);
   });
 });

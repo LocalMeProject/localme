@@ -36,8 +36,13 @@ export interface DbEndpoint {
 export function resolveDriver(env: Record<string, string | undefined> = process.env): DbEndpoint {
   const raw = env.DB_DRIVER?.trim().toLowerCase() || "sqlite";
   if (raw === "sqlite") {
-    const path = env.DB_PATH?.trim();
-    return { driver: "sqlite", sqlitePath: path ? pathSchema.parse(path) : undefined };
+    const rawPath = env.DB_PATH?.trim();
+    if (!rawPath) return { driver: "sqlite" };
+    // Canonical form is the plain filesystem path; the file:/ URI prefix is
+    // accepted (and stripped) so env strings copy-paste from better-sqlite3 docs.
+    const path = rawPath.replace(/^file:\/+/, "/");
+    pathSchema.parse(rawPath);
+    return { driver: "sqlite", sqlitePath: path };
   }
   if (raw === "postgres") {
     const connectionString = env.DATABASE_URL?.trim();

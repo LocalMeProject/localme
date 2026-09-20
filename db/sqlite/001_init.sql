@@ -210,8 +210,12 @@ CREATE TABLE IF NOT EXISTS project_data (
     table_name TEXT NOT NULL,
     document TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(project_id, table_name, json_extract(document, '$.id'))
+    updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- SQLite (like Postgres) does not accept expressions inside table constraints;
+-- the text-cast json_extract form mirrors the Postgres document->>'id' index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_project_data_doc_id
+    ON project_data (project_id, table_name, json_extract(document, '$.id'));
 
 CREATE INDEX IF NOT EXISTS idx_project_data_table ON project_data(project_id, table_name);

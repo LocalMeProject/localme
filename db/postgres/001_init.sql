@@ -214,9 +214,13 @@ CREATE TABLE IF NOT EXISTS project_data (
     table_name TEXT NOT NULL,
     document JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(project_id, table_name, (document->>'id'))
+    updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Expression uniqueness must be a unique index (table constraints cannot carry
+-- expressions). Text-cast form per the Blueprint: 1 and "1" are the same id.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_project_data_doc_id
+    ON project_data (project_id, table_name, (document->>'id'));
 
 CREATE INDEX IF NOT EXISTS idx_project_data_gin ON project_data USING GIN (document);
 CREATE INDEX IF NOT EXISTS idx_project_data_table ON project_data(project_id, table_name);

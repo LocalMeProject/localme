@@ -19,6 +19,15 @@ function makeDb(): Db {
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
     database.exec(readFileSync(join(dir, file), "utf8"));
   }
+  database
+    .prepare("INSERT INTO users (username, password_hash) VALUES ('u1', 'x')")
+    .run();
+  database
+    .prepare("INSERT INTO projects (id, user_id, name) VALUES (1, 1, 'p1')")
+    .run();
+  database
+    .prepare("INSERT INTO projects (id, user_id, name) VALUES (2, 1, 'p2')")
+    .run();
   return getDb({ driver: "sqlite", sqliteDatabase: database });
 }
 
@@ -61,7 +70,8 @@ describe("document store (sqlite)", () => {
     const sorted = await store.find(1, "orders", { sort: { total: -1 } });
     expect(sorted.data.map((d) => d.id)).toEqual(["a", "b"]);
     const page = await store.find(1, "orders", { limit: 1, offset: 1, sort: { total: 1 } });
-    expect(page.data.map((d) => d.id)).toEqual(["b"]);
+    // ASC over totals 90 (b) and 140 (a): ["b", "a"]; offset 1 → ["a"].
+    expect(page.data.map((d) => d.id)).toEqual(["a"]);
   });
 
   it("supports operators", async () => {
@@ -88,12 +98,12 @@ describe("document store (sqlite)", () => {
     const n1 = await store.update(1, "orders", { id: "a" }, { status: "refunded" }, false);
     expect(n1).toBe(1);
     const after1 = await store.get(1, "orders", "a");
-    expect(after1?.document.status).toBe("refunded");
+    expect((after1?.document as { status?: string } | null)?.status).toBe("refunded");
 
     const n2 = await store.update(1, "orders", { id: "a" }, { $inc: { total: 10 } }, false);
     expect(n2).toBe(1);
     const after2 = await store.get(1, "orders", "a");
-    expect(after2?.document.total).toBe(150);
+    expect((after2?.document as { total?: number } | null)?.total).toBe(150);
 
     const n3 = await store.update(1, "orders", {}, { $set: { touched: true } }, false);
     expect(n3).toBe(1); // many=false caps to one row

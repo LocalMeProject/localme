@@ -4,8 +4,15 @@
  * Operates on the project_data document store (Blueprint §4.2): `table`,
  * `document` (JSON), `project_id`. Supported operators: $eq, $ne, $gt, $gte,
  * $lt, $lte, $in, $nin, $regex, $exists, $and, $or, $not (Blueprint §4.2).
- * Both dialects share one AST (compileFilter); only leaf predicate SQL and the
- * parameter placeholder differ.
+ * Both dialects share one AST (compileFilter); only the leaf predicate SQL and
+ * the parameter placeholder differ.
+ *
+ * Comparison semantics:
+ * - Values typed as numbers in the filter compare numerically (numeric cast on
+ *   both sides); non-numeric JSON becomes NULL and cannot match — mirroring the
+ *   "type-bracket" behavior users expect from Mongo-style stores.
+ * - All other values compare on their JSON text form (`->>` on Postgres,
+ *   json_extract text on SQLite).
  */
 import type { SqlFlavor } from "./sql";
 import { jsonPathExpr, jsonPathText, placeholder } from "./sql";
@@ -28,26 +35,35 @@ export interface CompiledWhere {
 interface Ctx {
   flavor: SqlFlavor;
   params: unknown[];
+  /** Placeholder numbering offset: statements that embed this fragment after
+   * fixed parameters start numbering at `base`. */
+  base: number;
 }
 
 function addParam(ctx: Ctx, value: unknown): string {
   ctx.params.push(value === undefined ? null : value);
-  return placeholder(ctx.flavor, ctx.params.length - 1);
+  return placeholder(ctx.flavor, ctx.base + ctx.params.length - 1);
 }
 
+/**
+ * Numeric cast of a JSON path. On Postgres the numeric JSONB scalar is unwrapped
+ * with `#>>'{}'` and cast; on SQLite CAST(json_extract…) AS REAL works because
+ * json_extract returns the scalar's text form.
+ */
 function numberExpr(ctx: Ctx, expr: string): string {
   return ctx.flavor === "postgres"
-    ? `(CASE WHEN jsonb_typeof(${expr}) = 'number' THEN (${expr})#>>'{}' ELSE NULL END)::numeric`
+    ? `((${expr}) #>> '{}')::numeric`
     : `CAST(${expr} AS REAL)`;
 }
 
-/** Cast a JSON scalar to the SQL type used for comparisons. */
-function scalarExpr(ctx: Ctx, expr: string): string {
-  return ctx.flavor === "postgres" ? `${expr}#>>'{}'` : expr;
+/** Text form of a JSON path (the default comparison domain). */
+function textExpr(ctx: Ctx, expr: string): string {
+  void ctx;
+  return expr;
 }
 
 function andGroup(parts: string[]): string {
-  return parts.length === 1 ? parts[0] : parts.map((p) => `(${p})`).join(" AND ");
+  return parts.length === 1 ? parts[0]! : parts.map((p) => `(${p})`).join(" AND ");
 }
 
 /** Compile an operator object (`{ $gt: 18 }`) against a JSON path. */
@@ -56,19 +72,11 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
   for (const [op, value] of Object.entries(ops)) {
     switch (op) {
       case "$eq": {
-        if (typeof value === "number") {
-          parts.push(`(${numberExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`);
-        } else {
-          parts.push(`(${scalarExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`);
-        }
+        parts.push(equalityPredicate(ctx, fieldExpr, value));
         break;
       }
       case "$ne": {
-        const eq =
-          typeof value === "number"
-            ? `(${numberExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`
-            : `(${scalarExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
-        parts.push(`NOT ${eq}`);
+        parts.push(`NOT ${equalityPredicate(ctx, fieldExpr, value)}`);
         break;
       }
       case "$gt":
@@ -76,8 +84,7 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
       case "$lt":
       case "$lte": {
         const sqlOp = { $gt: ">", $gte: ">=", $lt: "<", $lte: "<=" }[op]!;
-        const left =
-          typeof value === "number" ? numberExpr(ctx, fieldExpr) : scalarExpr(ctx, fieldExpr);
+        const left = comparisonExpr(ctx, fieldExpr, value);
         parts.push(`(${left} ${sqlOp} ${addParam(ctx, value)})`);
         break;
       }
@@ -89,7 +96,7 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
           break;
         }
         const hasNumbers = value.some((v) => typeof v === "number");
-        const left = hasNumbers ? numberExpr(ctx, fieldExpr) : scalarExpr(ctx, fieldExpr);
+        const left = hasNumbers ? numberExpr(ctx, fieldExpr) : textExpr(ctx, fieldExpr);
         const placeholders = value.map((v) => addParam(ctx, v)).join(", ");
         parts.push(
           op === "$in"
@@ -100,24 +107,21 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
       }
       case "$regex": {
         if (typeof value !== "string") throw new Error("$regex expects a string");
-        const flavor = ctx.flavor;
-        const textExpr = scalarExpr(ctx, fieldExpr);
-        if (flavor === "postgres") {
-          parts.push(`(${textExpr} ~ ${addParam(ctx, value)})`);
+        const textE = textExpr(ctx, fieldExpr);
+        if (ctx.flavor === "postgres") {
+          parts.push(`(${textE} ~ ${addParam(ctx, value)})`);
         } else {
+          // SQLite has no native regexp; the `regexp()` scalar function is
+          // registered by the SQLite driver (JS RegExp semantics, like pg's ~).
           const escaped = value.replace(/'/g, "''");
           parts.push(
-            `(COALESCE(${textExpr}, '') REGEXP ${addParam(ctx, escaped)})`,
+            `(COALESCE(${textE}, '') REGEXP ${addParam(ctx, escaped)})`,
           );
         }
         break;
       }
       case "$exists": {
-        const exists =
-          ctx.flavor === "postgres"
-            ? `${fieldExpr} IS NOT NULL`
-            : `${fieldExpr} IS NOT NULL AND json_extract_type_check(${fieldExpr}) IS NULL`;
-        parts.push(value === true ? `(${exists})` : `NOT (${exists})`);
+        parts.push(value === true ? `(${fieldExpr} IS NOT NULL)` : `(${fieldExpr} IS NULL)`);
         break;
       }
       default:
@@ -127,9 +131,37 @@ function compileOperators(ctx: Ctx, fieldExpr: string, ops: FilterObject): strin
   return andGroup(parts);
 }
 
+/** Equality predicate, dispatched on the filter value's type. */
+function equalityPredicate(ctx: Ctx, fieldExpr: string, value: unknown): string {
+  if (typeof value === "number") {
+    return `(${numberExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
+  }
+  if (typeof value === "boolean") {
+    // JSON true/false serialize to the text "true"/"false" on both dialects.
+    return `(LOWER(COALESCE(${textExpr(ctx, fieldExpr)}, '')) = ${addParam(ctx, value ? "true" : "false")})`;
+  }
+  if (value === null) {
+    return `(${textExpr(ctx, fieldExpr)} IS NULL)`;
+  }
+  if (typeof value === "object") {
+    // Arrays/objects compare on their canonical JSON text.
+    return `(${textExpr(ctx, fieldExpr)} = ${addParam(ctx, JSON.stringify(value))})`;
+  }
+  return `(${textExpr(ctx, fieldExpr)} = ${addParam(ctx, value)})`;
+}
+
+/** Comparison expression matching the type of the filter value. */
+function comparisonExpr(ctx: Ctx, fieldExpr: string, value: unknown): string {
+  return typeof value === "number" ? numberExpr(ctx, fieldExpr) : textExpr(ctx, fieldExpr);
+}
+
 /** Compile a filter object (fields + logical operators) into a WHERE fragment. */
-export function compileFilter(filter: FilterObject | undefined, flavor: SqlFlavor): CompiledWhere {
-  const ctx: Ctx = { flavor, params: [] };
+export function compileFilter(
+  filter: FilterObject | undefined,
+  flavor: SqlFlavor,
+  base = 0,
+): CompiledWhere {
+  const ctx: Ctx = { flavor, params: [], base };
   const where = compileNode(ctx, filter ?? {});
   return { sql: where || "1 = 1", params: ctx.params };
 }
@@ -159,8 +191,8 @@ function compileNode(ctx: Ctx, node: FilterObject): string {
           branches.length === 0
             ? "0 = 1"
             : branches.length === 1
-              ? branches[0]!
-              : branches.map((b) => `(${b})`).join(" OR "),
+              ? `(${branches[0]!})`
+              : `(${branches.map((b) => `(${b})`).join(" OR ")})`,
         );
         break;
       }
@@ -174,20 +206,8 @@ function compileNode(ctx: Ctx, node: FilterObject): string {
         const expr = jsonPathExpr(ctx.flavor, segments);
         if (isOperatorObject(value)) {
           parts.push(compileOperators(ctx, expr, value));
-        } else if (value === null) {
-          parts.push(`(${scalarExpr(ctx, expr)} IS NULL)`);
-        } else if (typeof value === "number") {
-          parts.push(`(${numberExpr(ctx, expr)} = ${addParam(ctx, value)})`);
-        } else if (typeof value === "boolean") {
-          // Booleans are compared textually: JSON true → "true".
-          parts.push(
-            `(LOWER(COALESCE(${scalarExpr(ctx, expr)}, '')) = ${addParam(ctx, value ? "true" : "false")})`,
-          );
-        } else if (typeof value === "object") {
-          // Arrays/objects compare on their canonical JSON text.
-          parts.push(`(${scalarExpr(ctx, expr)} = ${addParam(ctx, JSON.stringify(value))})`);
         } else {
-          parts.push(`(${scalarExpr(ctx, expr)} = ${addParam(ctx, value)})`);
+          parts.push(equalityPredicate(ctx, expr, value));
         }
       }
     }
@@ -214,8 +234,16 @@ export function compileSort(sort: FilterObject | undefined, flavor: SqlFlavor): 
   if (!sort || Object.keys(sort).length === 0) return { sql: "" };
   const entries = Object.entries(sort).slice(0, 8);
   const parts = entries.map(([key, dir]) => {
-    const expr = jsonPathText(flavor, key.split("."));
-    return `${expr} ${dir === -1 || dir === "-1" ? "DESC" : "ASC"}`;
+    const segments = key.split(".");
+    const text = jsonPathText(flavor, segments);
+    // Numbers must order numerically (140 < 90 as text would flip them);
+    // non-numeric values coerce to 0 and tie-break on the text form.
+    const numeric =
+      flavor === "postgres"
+        ? `CASE WHEN jsonb_typeof(document->${segments.map((seg) => `'${seg.replace(/'/g, "''")}'`).join("->")}) = 'number' THEN (document->${segments.map((seg) => `'${seg.replace(/'/g, "''")}'`).join("->")}) #>> '{}')::numeric END`
+        : `CAST(${text} AS REAL)`;
+    const direction = dir === -1 || dir === "-1" ? "DESC" : "ASC";
+    return `${numeric} ${direction}, ${text} ${direction}`;
   });
   return { sql: ` ORDER BY ${parts.join(", ")}` };
 }
@@ -228,13 +256,21 @@ export interface CompiledUpdate {
 }
 
 /**
- * Compile an update into per-row JSON patching. Postgres uses jsonb concatenation;
- * SQLite uses json_patch. $inc/$unset are applied by rewriting the document.
+ * Compile an update into per-row JSON patching. Postgres uses jsonb
+ * concatenation (`document || patch`); SQLite uses json_patch. $inc and $unset
+ * chain on top of the patch expression; each op renumbers its own placeholder,
+ * so the SQL stays valid regardless of how many operations compose.
  */
-export function compileUpdate(update: UpdateSpec, flavor: SqlFlavor): CompiledUpdate {
+/**
+ * Compile an update into per-row JSON patching. Postgres uses jsonb
+ * concatenation (`document || patch`); SQLite uses json_patch. $inc and $unset
+ * chain on top of the patch expression; each op renumbers its own placeholder,
+ * so the SQL stays valid regardless of how many operations compose.
+ */
+export function compileUpdate(update: UpdateSpec, flavor: SqlFlavor, base = 0): CompiledUpdate {
   const params: unknown[] = [];
-  const setOps: string[] = [];
-  const incOps: string[] = [];
+  const setOps: Array<[string, unknown]> = [];
+  const incOps: Array<[string, number]> = [];
   const unsetKeys: string[] = [];
 
   for (const [key, value] of Object.entries(update)) {
@@ -256,42 +292,44 @@ export function compileUpdate(update: UpdateSpec, flavor: SqlFlavor): CompiledUp
     }
   }
 
-  const assignments: string[] = [];
-  const docExpr = flavor === "postgres" ? "document" : "document";
+  const cleanKey = (k: string) => k.replace(/'/g, "''");
+  let expr = "document";
+  let changed = false;
 
-  let expr = docExpr;
   if (setOps.length > 0) {
-    const patchJson = JSON.stringify(Object.fromEntries(setOps.map(([k, v]) => [k, v])));
+    const patchJson = JSON.stringify(Object.fromEntries(setOps));
     params.push(patchJson);
-    const patchParam = placeholder(flavor, params.length - 1);
+    const patchParam = placeholder(flavor, base + params.length - 1);
     expr =
       flavor === "postgres"
         ? `document || ${patchParam}::jsonb`
         : `json_patch(document, ${patchParam})`;
+    changed = true;
   }
   for (const [k, v] of incOps) {
     params.push(JSON.stringify({ [k]: v }));
-    const incParam = placeholder(flavor, params.length - 1);
-    const pathExpr =
-      flavor === "postgres"
-        ? `COALESCE(document->'${k.replace(/'/g, "''")}', '0')::numeric + ((${incParam}::jsonb)->>'${k.replace(/'/g, "''")}')::numeric`
-        : `COALESCE(json_extract(document, '$.${k.replace(/'/g, "''")}'), 0) + json_extract(${incParam}, '$.${k.replace(/'/g, "''")}')`;
+    const incParam = placeholder(flavor, base + params.length - 1);
+    const key = cleanKey(k);
+    const current = jsonPathExpr(flavor, [k]);
     expr =
       flavor === "postgres"
-        ? `jsonb_set(document, ARRAY['${k.replace(/'/g, "''")}'], to_jsonb(${pathExpr}))`
-        : `json_set(document, '$.${k.replace(/'/g, "''")}', ${pathExpr})`;
+        ? `jsonb_set(${expr}, ARRAY['${key}'], to_jsonb(COALESCE((${current}) #>> '{}')::numeric, 0) + ((${incParam}::jsonb) #>> '{}')::numeric))`
+        : `json_set(${expr}, '$.${key}', COALESCE(json_extract(${expr}, '$.${key}'), 0) + json_extract(${incParam}, '$.${key}'))`;
+    changed = true;
   }
   for (const k of unsetKeys) {
-    const clean = k.replace(/'/g, "''");
+    const key = cleanKey(k);
     expr =
       flavor === "postgres"
-        ? `document - '${clean}'`
-        : `json_remove(document, '$.${clean}')`;
+        ? `(${expr}) - '${key}'`
+        : `json_remove(${expr}, '$.${key}')`;
+    changed = true;
   }
-  if (expr === docExpr) {
+  if (!changed) {
     throw new Error("Empty update");
   }
-  assignments.push(`document = ${expr}`);
-  assignments.push(`updated_at = CURRENT_TIMESTAMP`);
-  return { assignments, params };
+  return {
+    assignments: [`document = ${expr}`, `updated_at = CURRENT_TIMESTAMP`],
+    params,
+  };
 }

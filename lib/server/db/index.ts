@@ -3,11 +3,12 @@
  *
  * A single dialect-agnostic interface (Db) implemented once per driver and
  * selected at boot from DB_DRIVER (see driver.ts). Application code imports
- * `getDb()` and never touches a driver package directly.
+ * `getDb()` and never touches a driver package directly. Driver modules load
+ * lazily so a SQLite runtime never pulls `pg` into its dependency graph and
+ * vice versa.
  */
 import { drizzle as drizzleSqlite, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
 import * as pgSchema from "./postgres/schema";
 import * as sqSchema from "./sqlite/schema";
 import { resolveDriver, type DbDriver, type DbEndpoint } from "./driver";
@@ -22,7 +23,6 @@ export interface Db {
   run: (sqlText: string, params?: unknown[]) => Promise<{ changes: number }>;
   exec: (sqlText: string) => Promise<void>;
   transaction: <T>(fn: (tx: Db) => Promise<T>) => Promise<T>;
-  dialect: (sqlText: string) => string;
 }
 
 class SqliteDb implements Db {
@@ -37,7 +37,7 @@ class SqliteDb implements Db {
 
   async raw<T = unknown>(sqlText: string, params: unknown[] = []): Promise<T[]> {
     const stmt = this.#runner.prepare(sqlText);
-    return (stmt.all(...params) as T[]);
+    return stmt.all(...params) as T[];
   }
 
   async run(sqlText: string, params: unknown[] = []): Promise<{ changes: number }> {
@@ -49,16 +49,29 @@ class SqliteDb implements Db {
     this.#runner.exec(sqlText);
   }
 
+  /**
+   * Transaction with async-callback support.
+   *
+   * better-sqlite3's native transaction helper only supports synchronous work.
+   * Emulating async commit safely needs BEGIN IMMEDIATE/COMMIT around awaited
+   * work, which this wrapper provides; the callback runs on the event loop with
+   * the transaction held open (single-writer SQLite keeps this safe).
+   */
   async transaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
-    const wrap = this.#runner.transaction((txRunner: import("better-sqlite3").Database) => {
-      const txDb = new SqliteDb(txRunner);
-      return Promise.resolve(fn(txDb));
-    });
-    return wrap(...([] as const)) as Promise<T>;
-  }
-
-  dialect(sqlText: string): string {
-    return sqlText;
+    this.#runner.exec("BEGIN IMMEDIATE");
+    try {
+      const txDb = new SqliteDb(this.#runner);
+      const result = await fn(txDb);
+      this.#runner.exec("COMMIT");
+      return result;
+    } catch (error) {
+      try {
+        this.#runner.exec("ROLLBACK");
+      } catch {
+        /* connection already rolled back; nothing further to do */
+      }
+      throw error;
+    }
   }
 }
 
@@ -106,10 +119,6 @@ class PostgresDb implements Db {
       client.release();
     }
   }
-
-  dialect(sqlText: string): string {
-    return sqlText;
-  }
 }
 
 function createSqlite(endpoint: DbEndpoint): SqliteDb {
@@ -123,6 +132,7 @@ function createSqlite(endpoint: DbEndpoint): SqliteDb {
       : new Database(":memory:");
   database.pragma("journal_mode = WAL");
   database.pragma("foreign_keys = ON");
+  installRegexp(database);
   return new SqliteDb(database);
 }
 
@@ -137,6 +147,22 @@ function createPostgres(endpoint: DbEndpoint): PostgresDb {
     connectionTimeoutMillis: 10_000,
   });
   return new PostgresDb(pool);
+}
+
+/**
+ * Register `regexp(pattern, text)` on a SQLite connection so the DSL's $regex
+ * operator works like Postgres's `~`. JS RegExp semantics apply; queries with
+ * invalid patterns fail closed (no match) rather than throwing.
+ */
+function installRegexp(database: import("better-sqlite3").Database): void {
+  database.function("regexp", (pattern: string | null, text: string | null) => {
+    if (typeof pattern !== "string" || typeof text !== "string") return 0;
+    try {
+      return new RegExp(pattern).test(text) ? 1 : 0;
+    } catch {
+      return 0;
+    }
+  });
 }
 
 let cached: { endpoint: DbEndpoint; db: Db } | undefined;
@@ -154,4 +180,3 @@ export function getDb(endpoint?: DbEndpoint): Db {
 
 export { pgSchema, sqSchema };
 export type { DbDriver, DbEndpoint };
-export { sql };

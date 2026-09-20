@@ -8,28 +8,35 @@
  */
 export type SqlFlavor = "postgres" | "sqlite";
 
-/** JSON path expression for a document field, e.g. `document->'tags'->1`. */
+function quotedKey(segment: string): string {
+  return `'${segment.replace(/'/g, "''")}'`;
+}
+
+/**
+ * JSON path expression for a document field (JSON-typed result).
+ * Postgres: `document->'a'->'b'` — `->` keeps the JSONB type so the chain nests.
+ * SQLite: `json_extract(document, '$.a.b')` — JSON-typed when the value is an
+ * object/array, otherwise the SQL text of the scalar.
+ */
 export function jsonPathExpr(flavor: SqlFlavor, segments: string[]): string {
-  const root = "document";
-  if (segments.length === 0) return root;
+  if (segments.length === 0) return "document";
   if (flavor === "postgres") {
-    return `${root}->${segments.map((segment) => `'${escapeKey(segment)}'`).join("->")}`;
+    return `document->${segments.map(quotedKey).join("->")}`;
   }
-  return `json_extract(${root}, '$.${segments.map((segment) => escapeKey(segment)).join(".")}')";
+  return `json_extract(document, '$.${segments.map(escapeDollarKey).join(".")}')`;
 }
 
 /** JSON path expression for a document field, text-cast (`->>` / full text). */
 export function jsonPathText(flavor: SqlFlavor, segments: string[]): string {
   if (flavor === "postgres") {
-    const root = "document";
-    if (segments.length === 0) return root;
-    return `${root}->>${segments.map((segment) => `'${escapeKey(segment)}'`).join("->>")}`;
+    if (segments.length === 0) return "document::text";
+    return `document->>${segments.map(quotedKey).join("->>")}`;
   }
   return jsonPathExpr("sqlite", segments); // json_extract already returns TEXT/NULL
 }
 
-function escapeKey(segment: string): string {
-  return segment.replace(/'/g, "''");
+function escapeDollarKey(segment: string): string {
+  return segment.replace(/'/g, "''").replace(/"/g, '\\"');
 }
 
 export function placeholder(flavor: SqlFlavor, index: number): string {
