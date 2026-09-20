@@ -313,7 +313,7 @@ export function compileUpdate(update: UpdateSpec, flavor: SqlFlavor, base = 0): 
     const current = jsonPathExpr(flavor, [k]);
     expr =
       flavor === "postgres"
-        ? `jsonb_set(${expr}, ARRAY['${key}'], to_jsonb(COALESCE(((${current}) #>> '{}')::numeric, 0) + ((${incParam}::jsonb) #>> '{}')::numeric))`
+        ? `jsonb_set(${expr}, ARRAY['${key}'], to_jsonb(COALESCE(((${current}) #>> '{}')::numeric, 0) + (((${incParam}::jsonb) -> '${key}') #>> '{}')::numeric))`
         : `json_set(${expr}, '$.${key}', COALESCE(json_extract(${expr}, '$.${key}'), 0) + json_extract(${incParam}, '$.${key}'))`;
     changed = true;
   }
