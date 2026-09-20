@@ -113,7 +113,7 @@ describe("rate limiting", () => {
     expect(first.allowed).toBe(true);
 
     let last = first;
-    for (let i = 1; i < group.limit; i++) {
+    for (let i = 1; i <= group.limit; i++) {
       last = await checkRateLimit(request, "auth");
     }
     expect(last.allowed).toBe(false);
