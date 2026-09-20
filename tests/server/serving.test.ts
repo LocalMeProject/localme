@@ -214,10 +214,11 @@ describe("visits", () => {
   });
 
   it("marks is_unique only for a route/ip pair's first visit of the day", async () => {
-    // Pre-existing visit from 5.5.5.5 yesterday → today's visit is not unique.
+    // Pre-existing visit from 5.5.5.5 earlier today (outside the 5-minute
+    // dedupe window, inside the day window) → today's visit is not unique.
     await db.run(
-      "INSERT INTO visit_logs (project_id, route, ip, visited_at) VALUES (?, '/dedupe', '5.5.5.5', ?)",
-      [project.id, new Date(Date.now() - 26 * 3600 * 1000).toISOString()],
+      "INSERT INTO visit_logs (project_id, route, ip, visited_at) VALUES (?, 'index.html', '5.5.5.5', ?)",
+      [project.id, new Date(Date.now() - 2 * 3600 * 1000).toISOString()],
     );
     const target = { user: "serveowner", project: "site", path: "/" };
     await serveProjectRequest(get("/serveowner/site/", { "x-forwarded-for": "5.5.5.5" }), target);
@@ -247,7 +248,7 @@ describe("visits", () => {
 describe("watermark", () => {
   it("injects before </body> and is idempotent-safe", () => {
     const html = injectWatermark("<html><body>x</body></html>");
-    expect(html).toMatch(/MVP Platform<\/div><\/body>/i);
+    expect(html).toMatch(/MVP Platform<\/a><\/div><\/body>/i);
     expect(injectWatermark("<html><head></head></html>").endsWith("MVP Platform</div>") ||
       injectWatermark("<html><head></head></html>").includes("MVP Platform")).toBe(true);
   });

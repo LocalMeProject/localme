@@ -98,31 +98,33 @@ export interface RouteRow {
   is_active: number | boolean;
 }
 
-/** Find the active route matching the request path (docs §3.3.3). */
+/** Find the active route matching the request path (docs §3.3.3).
+ *
+ * Resolution order: exact pattern → longest proxy mount prefix → catch-all
+ * "/". Proxy routes act as mounts, so a route registered at "/gateway"
+ * also serves "/gateway/data"; file-target routes match exactly (plus the
+ * catch-all), mirroring static hosting semantics.
+ */
 export async function findRoute(projectId: number, path: string): Promise<RouteRow | null> {
   const db = getDb();
   const p = db.driver;
-  // Exact match first, then the catch-all "/" pattern. SQLite `?` is
-  // positional, so every occurrence needs its own parameter; Postgres reuses
-  // numbered placeholders ($1, $2) safely.
-  if (p === "sqlite") {
-    const rows = await db.raw<RouteRow>(
-      `SELECT target_file, is_proxy, proxy_config, requires_auth, required_role, is_active FROM routes
-       WHERE project_id = ? AND is_active = 1
-         AND path_pattern IN (?, ?)
-       ORDER BY CASE path_pattern WHEN ? THEN 0 ELSE 1 END
-       LIMIT 1`,
-      [projectId, path, "/", path],
-    );
-    return rows[0] ?? null;
-  }
+  const boolLit = p === "sqlite" ? "1" : "TRUE";
+  const ph0 = placeholder(p, 0);
+  const ph1 = placeholder(p, 1);
+  const ph2 = placeholder(p, 2);
+
   const rows = await db.raw<RouteRow>(
     `SELECT target_file, is_proxy, proxy_config, requires_auth, required_role, is_active FROM routes
-     WHERE project_id = $1 AND is_active = TRUE
-       AND path_pattern IN ($2, $3)
-     ORDER BY CASE path_pattern WHEN $2 THEN 0 ELSE 1 END
+     WHERE project_id = ${ph0} AND is_active = ${boolLit}
+       AND (
+         path_pattern = ${ph1}
+         OR (is_proxy = ${boolLit} AND ${ph2} LIKE path_pattern || '%')
+         OR (is_proxy = ${boolLit} AND path_pattern = '/')
+       )
+     ORDER BY CASE WHEN path_pattern = ${ph1} THEN 0 ELSE 1 END,
+              LENGTH(path_pattern) DESC
      LIMIT 1`,
-    [projectId, path, "/"],
+    [projectId, path, `${path}/`],
   );
   return rows[0] ?? null;
 }
@@ -165,6 +167,7 @@ export async function logVisit(
     ?? "unknown";
   const userAgent = request.headers.get("user-agent") ?? "";
 
+  const nowIso = new Date().toISOString();
   const since = new Date(Date.now() - DEDUPE_WINDOW_SECONDS * 1000).toISOString();
   const recent = await db.raw<{ id: number }>(
     `SELECT id FROM visit_logs
@@ -175,7 +178,7 @@ export async function logVisit(
   );
   if (recent[0]) return;
 
-  const dayStart = `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
+  const dayStart = `${nowIso.slice(0, 10)}T00:00:00.000Z`;
   const sameDay = await db.raw<{ n: number | string }>(
     `SELECT COUNT(*) AS n FROM visit_logs
      WHERE project_id = ${placeholder(p, 0)} AND route = ${placeholder(p, 1)}
@@ -185,13 +188,16 @@ export async function logVisit(
   const isUnique = Number(sameDay[0]?.n ?? 0) === 0;
   const uniqueLit = p === "sqlite" ? (isUnique ? 1 : 0) : isUnique ? "TRUE" : "FALSE";
   const visitorCol = visitorId != null ? `, visitor_id` : "";
-  const visitorPh = visitorId != null ? `, ${placeholder(p, 4)}` : "";
+  const visitorPh = visitorId != null ? `, ${placeholder(p, 5)}` : "";
   const visitorVal = visitorId != null ? [visitorId] : [];
 
+  // visited_at is inserted explicitly as ISO-8601: the column default's
+  // "YYYY-MM-DD HH:MM:SS" format (space, not "T") never compares correctly
+  // against ISO bounds in the dedupe/quota queries.
   await db.run(
-    `INSERT INTO visit_logs (project_id, route, ip, user_agent, is_unique${visitorCol})
-     VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)}, ${uniqueLit}${visitorPh})`,
-    [projectId, route, ip, userAgent, ...visitorVal],
+    `INSERT INTO visit_logs (project_id, route, ip, user_agent, is_unique, visited_at${visitorCol})
+     VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)}, ${uniqueLit}, ${placeholder(p, 4)}${visitorPh})`,
+    [projectId, route, ip, userAgent, nowIso, ...visitorVal],
   );
 }
 
