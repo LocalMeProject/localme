@@ -197,15 +197,14 @@ export function createDocumentStore(db: Db) {
         WHERE project_id = ${projParam}
           AND table_name = ${tableParam}
           AND ${where.sql}${capped}`;
-      const params = [
-        ...compiled.params,
-        projectId,
-        table,
-        ...where.params,
-        projectId,
-        table,
-        ...where.params,
-      ];
+      // SQLite placeholders are positional: every occurrence consumes the next
+      // value, so the sub-select's placeholders repeat the values. Postgres
+      // placeholders are numbered and shared: each value is supplied once.
+      const fixedAndFilter = [projectId, table, ...where.params];
+      const params =
+        flavor === "postgres"
+          ? [...compiled.params, ...fixedAndFilter]
+          : [...compiled.params, ...fixedAndFilter, ...fixedAndFilter];
       const result = await db.run(sqlText, params);
       return result.changes;
     },

@@ -234,12 +234,13 @@ export function compileSort(sort: FilterObject | undefined, flavor: SqlFlavor): 
   const entries = Object.entries(sort).slice(0, 8);
   const parts = entries.map(([key, dir]) => {
     const segments = key.split(".");
+    const quoted = segments.map((seg) => `'${seg.replace(/'/g, "''")}'`).join("->");
     const text = jsonPathText(flavor, segments);
-    // Numbers must order numerically (140 < 90 as text would flip them);
-    // non-numeric values coerce to 0 and tie-break on the text form.
+    // Numbers must order numerically (as text, "90" > "140"); non-numeric
+    // values coerce to 0 on the numeric key and tie-break on the text form.
     const numeric =
       flavor === "postgres"
-        ? `CASE WHEN jsonb_typeof(document->${segments.map((seg) => `'${seg.replace(/'/g, "''")}'`).join("->")}) = 'number' THEN (document->${segments.map((seg) => `'${seg.replace(/'/g, "''")}'`).join("->")}) #>> '{}')::numeric END`
+        ? `CASE WHEN jsonb_typeof(document->${quoted}) = 'number' THEN ((document->${quoted}) #>> '{}')::numeric END`
         : `CAST(${text} AS REAL)`;
     const direction = dir === -1 || dir === "-1" ? "DESC" : "ASC";
     return `${numeric} ${direction}, ${text} ${direction}`;
