@@ -3,20 +3,22 @@
  * windows, repositories, and permission checks. Runs against SQLite; Postgres
  * parity is verified in CI via the postgres data-layer suite.
  *
- * Sessions read cookies() from next/headers, which only works inside a request
- * scope, so these tests exercise the session *store* primitives (create +
- * lookup by raw session id) rather than the cookie-bound helpers.
+ * The modules under test resolve their own connection via `getDb()`, so the
+ * suite points the global driver at a temp *file* DB (DB_PATH) and applies the
+ * schema there — every module then shares the same database.
  */
 import { mkdtempSync, rmSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+const tmp = mkdtempSync(join(tmpdir(), "foundations-"));
+const dbFile = join(tmp, "test.db");
 process.env.DB_DRIVER = "sqlite";
+process.env.DB_PATH = `file:${dbFile}`;
 process.env.SESSION_SECRET = "test-session-secret";
 process.env.SECRETS_ENCRYPTION_KEY = "test-encryption-key-32-bytes!!";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import Database from "better-sqlite3";
 import { getDb, type Db } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { generateToken, hashToken } from "@/lib/server/crypto";
@@ -42,23 +44,17 @@ import { decryptSecret, encryptSecret } from "@/lib/server/secrets-crypto";
 
 let db: Db;
 let p: "postgres" | "sqlite";
-let database: import("better-sqlite3").Database;
-let tmp: string;
 
 beforeAll(() => {
-  tmp = mkdtempSync(join(tmpdir(), "foundations-"));
-  database = new Database(join(tmp, "test.db"));
-  database.pragma("foreign_keys = ON");
+  db = getDb(); // resolves via DB_PATH → the temp file DB
+  p = db.driver;
   const dir = join(process.cwd(), "db", "sqlite");
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
-    database.exec(readFileSync(join(dir, file), "utf8"));
+    db.exec(readFileSync(join(dir, file), "utf8"));
   }
-  db = getDb({ driver: "sqlite", sqliteDatabase: database });
-  p = db.driver;
 });
 
 afterAll(() => {
-  database.close();
   rmSync(tmp, { recursive: true, force: true });
 });
 
@@ -268,6 +264,7 @@ describe("token hashing", () => {
   it("hashes tokens deterministically without storing plaintext", () => {
     expect(hashToken("abc")).toBe(hashToken("abc"));
     expect(hashToken("abc")).not.toBe("abc");
-    expect(generateToken(32)).toHaveLength(64); // 32 bytes hex
+    // 32 bytes → 43 base64url chars (same shape as `sk_<43>` API keys).
+    expect(generateToken(32)).toHaveLength(43);
   });
 });
