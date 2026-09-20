@@ -15,6 +15,12 @@ build/
 # local backend state (legacy Convex; kept for safety)
 .convex/
 
+# sqlite data files
+*.db
+*.db-wal
+*.db-shm
+local.db*
+
 # env & secrets
 .env
 .env.*
