@@ -72,7 +72,9 @@ export const storageList = handler(async (request: Request) => {
   const project = await scopedProject(request);
   const url = new URL(request.url);
   const library = url.searchParams.get("lib") === "1";
-  const dir = sanitizeRelativePath(url.searchParams.get("path") ?? "");
+  const rawPath = url.searchParams.get("path") ?? "";
+  // Empty path lists everything; a given path lists that directory.
+  const dir = rawPath === "" ? "" : sanitizeRelativePath(rawPath);
   const prefix = library ? `${LIBRARY_PREFIX}${dir}` : dir;
   const files = await listFiles(project.id, prefix);
   return apiOk({

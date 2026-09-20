@@ -56,7 +56,7 @@ export const webhooksCreate = handler(async (request) => {
     `INSERT INTO webhooks (project_id, url, secret, events, is_active)
      VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)}, ${placeholder(p, 4)})
      RETURNING id`,
-    [project.id, body.url, secret, JSON.stringify(body.events), body.isActive ? 1 : 0],
+    [project.id, body.url, secret, JSON.stringify(body.events), p === "sqlite" ? (body.isActive ? 1 : 0) : body.isActive],
   );
   return apiOk({ success: true, id: Number(inserted[0]?.id ?? 0), secret }, { status: 201 });
 });
@@ -86,15 +86,15 @@ export async function dispatchWebhookEvent(
   const db = getDb();
   const p = db.driver;
   const rows = await db.raw<Record<string, unknown>>(
-    `SELECT id, url, secret FROM webhooks
-     WHERE project_id = ${placeholder(p, 0)} AND is_active = 1`,
+    `SELECT id, url, secret, events FROM webhooks
+     WHERE project_id = ${placeholder(p, 0)} AND is_active = ${p === "sqlite" ? 1 : "TRUE"}`,
     [projectId],
   );
   const body = JSON.stringify({ event, projectId, data: payload, sentAt: new Date().toISOString() });
 
   for (const row of rows) {
     const webhookId = Number(row.id);
-    const subscribed = JSON.parse(String(row.events)) as string[];
+    const subscribed = JSON.parse(String(row.events ?? "[]")) as string[];
     if (!subscribed.includes(event) && !subscribed.includes("*")) continue;
 
     const secret = row.secret ? String(row.secret) : "";
@@ -124,9 +124,9 @@ export async function dispatchWebhookEvent(
     }
 
     await db.run(
-      `INSERT INTO webhook_deliveries (webhook_id, event, status_code, error, request_body)
-       VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)}, ${placeholder(p, 4)})`,
-      [webhookId, event, status, error, body],
+      `INSERT INTO webhook_deliveries (webhook_id, event, payload, response_status, response_body, error_message)
+       VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)}, ${placeholder(p, 4)}, ${placeholder(p, 5)})`,
+      [webhookId, event, body, status, null, error],
     );
   }
 }

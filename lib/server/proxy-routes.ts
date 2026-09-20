@@ -28,9 +28,10 @@ export const proxyRequest = handlerProxy(async (request, routePath) => {
 
   const db = getDb();
   const p = db.driver;
+  const boolLit = p === "sqlite" ? "1" : "TRUE";
   const rows = await db.raw<Record<string, unknown>>(
     `SELECT proxy_config FROM routes
-     WHERE project_id = ${placeholder(p, 0)} AND path_pattern = ${placeholder(p, 1)} AND is_proxy = 1 AND is_active = 1`,
+     WHERE project_id = ${placeholder(p, 0)} AND path_pattern = ${placeholder(p, 1)} AND is_proxy = ${boolLit} AND is_active = ${boolLit}`,
     [project.id, routePath],
   );
   if (!rows[0]) throw new ApiError("not_found", "Proxy route not found.");

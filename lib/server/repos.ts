@@ -317,19 +317,21 @@ export async function putFile(
     `SELECT id FROM files WHERE project_id = ${placeholder(p, 0)} AND path = ${placeholder(p, 1)}`,
     [projectId, storedPath],
   );
+  // Postgres BOOLEAN rejects integer binds; SQLite INTEGER rejects booleans.
+  const isTextValue = p === "sqlite" ? (isText ? 1 : 0) : isText;
   if (existing[0]) {
     await db.run(
       `UPDATE files SET content_text = ${placeholder(p, 0)}, content_blob = ${placeholder(p, 1)},
          size_bytes = ${placeholder(p, 2)}, is_text = ${placeholder(p, 3)}, updated_at = ${placeholder(p, 4)}
        WHERE id = ${placeholder(p, 5)}`,
-      [contentText, content, sizeBytes, isText ? 1 : 0, new Date().toISOString(), existing[0].id],
+      [contentText, content, sizeBytes, isTextValue, new Date().toISOString(), existing[0].id],
     );
     return (await getFile(projectId, storedPath))!;
   }
   const insertedId = await insertReturningId(
     "files",
     ["project_id", "path", "content_text", "content_blob", "size_bytes", "is_text"],
-    [projectId, storedPath, contentText, content, sizeBytes, isText ? 1 : 0],
+    [projectId, storedPath, contentText, content, sizeBytes, isTextValue],
   );
   void insertedId;
   return (await getFile(projectId, storedPath))!;

@@ -65,15 +65,17 @@ export const cronToggle = handler(async (request) => {
     `SELECT id FROM cron_configs WHERE project_id = ${placeholder(p, 0)} AND task_name = ${placeholder(p, 1)}`,
     [project.id, body.task],
   );
+  // Postgres BOOLEAN rejects integer binds; SQLite INTEGER rejects booleans.
+  const enabledValue = p === "sqlite" ? (body.isEnabled ? 1 : 0) : body.isEnabled;
   if (existing[0]) {
     await db.run(`UPDATE cron_configs SET is_enabled = ${placeholder(p, 0)} WHERE id = ${placeholder(p, 1)}`, [
-      body.isEnabled ? 1 : 0,
+      enabledValue,
       existing[0].id,
     ]);
   } else {
     await db.run(
       `INSERT INTO cron_configs (project_id, task_name, is_enabled) VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)})`,
-      [project.id, body.task, body.isEnabled ? 1 : 0],
+      [project.id, body.task, enabledValue],
     );
   }
   return apiOk({ success: true, task: body.task, isEnabled: body.isEnabled });
