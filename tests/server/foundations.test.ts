@@ -90,7 +90,7 @@ describe("session store", () => {
     await seedSession(user.id, new Date(Date.now() - 1_000).toISOString());
 
     const rows = await db.raw<Record<string, unknown>>(
-      `SELECT id FROM sessions WHERE user_id = ${placeholder(p, 0)} AND expires_at > ${placeholder(p, 1)}`,
+      `SELECT session_id FROM sessions WHERE user_id = ${placeholder(p, 0)} AND expires_at > ${placeholder(p, 1)}`,
       [user.id, new Date().toISOString()],
     );
     expect(rows).toHaveLength(0);
