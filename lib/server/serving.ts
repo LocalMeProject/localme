@@ -112,6 +112,7 @@ export async function findRoute(projectId: number, path: string): Promise<RouteR
   const ph0 = placeholder(p, 0);
   const ph1 = placeholder(p, 1);
   const ph2 = placeholder(p, 2);
+  const ph3 = placeholder(p, 3);
 
   const rows = await db.raw<RouteRow>(
     `SELECT target_file, is_proxy, proxy_config, requires_auth, required_role, is_active FROM routes
@@ -121,10 +122,10 @@ export async function findRoute(projectId: number, path: string): Promise<RouteR
          OR (is_proxy = ${boolLit} AND ${ph2} LIKE path_pattern || '%')
          OR (is_proxy = ${boolLit} AND path_pattern = '/')
        )
-     ORDER BY CASE WHEN path_pattern = ${ph1} THEN 0 ELSE 1 END,
+     ORDER BY CASE WHEN path_pattern = ${ph3} THEN 0 ELSE 1 END,
               LENGTH(path_pattern) DESC
      LIMIT 1`,
-    [projectId, path, `${path}/`],
+    [projectId, path, `${path}/`, path],
   );
   return rows[0] ?? null;
 }
