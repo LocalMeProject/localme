@@ -6,20 +6,17 @@
  * values are substituted from the project's sealed secrets at request time —
  * plaintext never appears in config or logs. The upstream response is streamed
  * back to the caller.
+ *
+ * The forwarding mechanics live in proxy-forward.ts so project serving can
+ * proxy is_proxy routes through the same code path.
  */
 import { ApiError } from "@/lib/server/http";
 import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
-import { decryptSecret } from "@/lib/server/secrets-crypto";
-
-interface ProxyConfig {
-  target: string;
-  headers?: Record<string, string>;
-  timeoutMs?: number;
-}
-
-const DEFAULT_TIMEOUT_MS = 15_000;
+import { forwardProxyRequest, loadSecrets, parseProxyConfig } from "@/lib/server/proxy-forward";
+import { handler } from "@/lib/server/http";
+import { NextResponse } from "next/server";
 
 export const proxyRequest = handlerProxy(async (request, routePath) => {
   const principal = await requirePrincipal(request);
@@ -36,60 +33,12 @@ export const proxyRequest = handlerProxy(async (request, routePath) => {
   );
   if (!rows[0]) throw new ApiError("not_found", "Proxy route not found.");
 
-  let config: ProxyConfig;
-  try {
-    config = JSON.parse(String(rows[0].proxy_config)) as ProxyConfig;
-  } catch {
-    throw new ApiError("internal_error", "Proxy route has invalid configuration.");
-  }
-  if (!config?.target || !/^https?:\/\//i.test(config.target)) {
-    throw new ApiError("internal_error", "Proxy route target must be an http(s) URL.");
-  }
-
+  const config = parseProxyConfig(rows[0].proxy_config);
   const secrets = await loadSecrets(project.id);
-  const headers = new Headers();
-  for (const [name, value] of Object.entries(config.headers ?? {})) {
-    headers.set(name, substituteSecrets(value, secrets));
-  }
-  // Forward the caller's content type so streamed bodies stay usable.
-  const contentType = request.headers.get("content-type");
-  if (contentType) headers.set("content-type", contentType);
-
-  const targetUrl = new URL(config.target);
-  targetUrl.search = url.search;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  try {
-    const upstream = await fetch(targetUrl, {
-      method: request.method,
-      headers,
-      body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
-      signal: controller.signal,
-      // @ts-expect-error -- undici-only flag, valid on the Node runtime
-      duplex: "half",
-    });
-    return new Response(upstream.body, {
-      status: upstream.status,
-      headers: {
-        "content-type": upstream.headers.get("content-type") ?? "application/octet-stream",
-        "cache-control": "no-store",
-      },
-    }) as unknown as import("next/server").NextResponse;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError("gateway_timeout", "Upstream request timed out.");
-    }
-    throw new ApiError("bad_gateway", "Upstream request failed.");
-  } finally {
-    clearTimeout(timeout);
-  }
+  return forwardProxyRequest(request, config, secrets);
 });
 
 /** Handler wrapper for routes with a dynamic /api/proxy/{route} path. */
-import { handler } from "@/lib/server/http";
-import { NextResponse } from "next/server";
-
 function handlerProxy(
   fn: (request: Request, routePath: string) => Promise<Response>,
 ): (request: Request, context: { params: Promise<{ route: string }> }) => Promise<NextResponse> {
@@ -98,29 +47,4 @@ function handlerProxy(
     const response = await fn(request, `/${route}`);
     return response as NextResponse;
   });
-}
-
-function substituteSecrets(value: string, secrets: Map<string, string>): string {
-  return value.replace(/\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (match, name) => {
-    const secret = secrets.get(name);
-    if (secret === undefined) return match; // leave unknown placeholders intact
-    return secret;
-  });
-}
-
-async function loadSecrets(projectId: number): Promise<Map<string, string>> {
-  const db = getDb();
-  const rows = await db.raw<{ key_name: string; encrypted_value: string }>(
-    `SELECT key_name, encrypted_value FROM secrets WHERE project_id = ${placeholder(db.driver, 0)}`,
-    [projectId],
-  );
-  const map = new Map<string, string>();
-  for (const row of rows) {
-    try {
-      map.set(row.key_name, decryptSecret(row.encrypted_value));
-    } catch {
-      // Skip undecryptable entries; substitution leaves the placeholder in place.
-    }
-  }
-  return map;
 }

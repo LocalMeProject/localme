@@ -163,6 +163,17 @@ export async function getProjectById(id: number): Promise<ProjectRecord | null> 
   return rows[0] ? mapProject(rows[0]) : null;
 }
 
+/** Owner username for a project (visitor cookie path scoping, docs §6.2). */
+export async function getProjectOwnerUsername(projectId: number): Promise<string | null> {
+  const db = getDb();
+  const rows = await db.raw<{ username: string }>(
+    `SELECT u.username FROM projects pr JOIN users u ON u.id = pr.user_id
+     WHERE pr.id = ${placeholder(db.driver, 0)} LIMIT 1`,
+    [projectId],
+  );
+  return rows[0]?.username ?? null;
+}
+
 export async function listProjectsByUser(userId: number): Promise<ProjectRecord[]> {
   const db = getDb();
   const rows = await db.raw<Record<string, unknown>>(

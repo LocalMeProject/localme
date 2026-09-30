@@ -36,6 +36,11 @@ const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   internal_error: 500,
 };
 
+/** HTTP status for an error code — shared by API handlers and project serving. */
+export function statusForCode(code: ApiErrorCode): number {
+  return STATUS_BY_CODE[code];
+}
+
 /** Uniform error body: `{ error, code }` per the docs "Errors" section. */
 export function apiError(code: ApiErrorCode, message: string, headers?: HeadersInit): NextResponse {
   return NextResponse.json(
