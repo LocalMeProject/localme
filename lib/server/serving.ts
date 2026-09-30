@@ -283,7 +283,7 @@ export async function serveProjectRequest(request: Request, target: ServingTarge
   const visitorPayload = await getVisitorFromRequest(request, project.projectId);
   if (route?.requires_auth === 1 || route?.requires_auth === true) {
     if (!visitorPayload) {
-      return visitorLoginRedirect(target, requestPath);
+      return visitorLoginRedirect(project.projectId, target, requestPath);
     }
     if (!visitorHasRole(visitorPayload, route.required_role)) {
       return new Response("Forbidden: insufficient role for this page.", { status: 403 });
@@ -355,12 +355,14 @@ export async function serveProjectRequest(request: Request, target: ServingTarge
 }
 
 /** Redirect unauthenticated visitors to the built-in login page (docs §5.5). */
-function visitorLoginRedirect(target: ServingTarget, requestPath: string): Response {
+function visitorLoginRedirect(projectId: number, target: ServingTarget, requestPath: string): Response {
   const projectBase = `/${target.user}/${target.project}`;
   const returnUrl = encodeURIComponent(`${projectBase}${requestPath === "/" ? "/" : requestPath}`);
   return new Response(null, {
     status: 303,
-    headers: { location: `${VISITOR_LOGIN_PATH}?returnUrl=${returnUrl}` },
+    headers: {
+      location: `${VISITOR_LOGIN_PATH}?projectId=${projectId}&returnUrl=${returnUrl}`,
+    },
   });
 }
 

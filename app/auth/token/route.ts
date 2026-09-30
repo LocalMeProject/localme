@@ -1,31 +1,27 @@
 /**
- * POST /auth/token — platform login/signup (Blueprint §13.4, docs §7) and
- * per-project visitor login/signup (Blueprint §5.5, docs §6.2).
- *
- * Platform requests omit `projectId` and receive the console session cookie.
- * Visitor requests carry `projectId`; the response is
- * `{ success, redirectUrl, projectId, token }` and the signed JWT is set as
- * the `auth_{projectId}` cookie scoped with Path=/{username}/{projectname}/.
+ * POST /auth/token — console login/signup (Blueprint §13.4, docs §7) and
+ * visitor login/signup (docs §6.2). A body with `projectId` authenticates a
+ * per-project visitor and sets the project-scoped `auth_{projectId}` cookie;
+ * without it the console session cookie is set.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ApiError, apiOk, handler, parseJson } from "@/lib/server/http";
-import { authenticateUser, createUser, getProjectById, getProjectOwnerUsername } from "@/lib/server/repos";
+import { authenticateUser, createUser, getProjectById, getUserById } from "@/lib/server/repos";
 import { createSession, SESSION_COOKIE } from "@/lib/server/sessions";
+import { enforceRateLimit } from "@/lib/server/ratelimit";
 import {
   visitorAuthenticate,
   visitorCookieName,
   visitorCookiePath,
 } from "@/lib/server/visitor-auth";
-import { enforceRateLimit } from "@/lib/server/ratelimit";
 
 const tokenSchema = z.object({
   action: z.enum(["login", "signup"]).default("login"),
   username: z.string().min(1).max(64),
   password: z.string().min(1).max(256),
   returnUrl: z.string().max(512).optional(),
-  /** Visitor (per-project) auth when present — docs §6.2. */
-  projectId: z.coerce.number().int().positive().optional(),
+  projectId: z.number().int().positive().optional(),
 });
 
 export const POST = handler(async (request) => {
@@ -35,7 +31,7 @@ export const POST = handler(async (request) => {
   const body = await parseJson(request, tokenSchema);
 
   if (body.projectId != null) {
-    return visitorToken(request, body.projectId, body.action, body.username, body.password, body.returnUrl);
+    return visitorTokenResponse(body);
   }
 
   if (body.action === "signup") {
@@ -62,29 +58,36 @@ export const POST = handler(async (request) => {
   return response;
 });
 
-async function visitorToken(
-  _request: Request,
-  projectId: number,
-  action: "login" | "signup",
-  username: string,
-  password: string,
-  returnUrl?: string,
+/** Visitor flow: credentials are scoped to one project; token rides its own cookie. */
+async function visitorTokenResponse(
+  body: z.infer<typeof tokenSchema>,
 ): Promise<NextResponse> {
-  const project = await getProjectById(projectId);
+  const project = await getProjectById(body.projectId!);
   if (!project) throw new ApiError("not_found", "Project not found.");
-  const owner = await getProjectOwnerUsername(projectId);
-  if (!owner) throw new ApiError("not_found", "Project not found.");
 
-  const token = await visitorAuthenticate({ projectId, action, username, password });
-  const projectBase = `/${owner}/${project.name}`;
-  const redirectUrl = returnUrl && returnUrl.startsWith("/") ? returnUrl : `${projectBase}/`;
-  const response = apiOk({ success: true, redirectUrl, projectId, token });
-  response.cookies.set(visitorCookieName(projectId), token, {
+  const token = await visitorAuthenticate({
+    projectId: project.id,
+    action: body.action === "signup" ? "signup" : "login",
+    username: body.username,
+    password: body.password,
+  });
+
+  const owner = await getUserById(project.userId);
+  const cookiePath = owner ? visitorCookiePath(owner.username, project.name) : "/";
+
+  const response = apiOk({
+    success: true,
+    visitor: true,
+    redirectUrl: body.returnUrl && body.returnUrl.startsWith("/")
+      ? body.returnUrl
+      : `/${owner?.username ?? ""}/${project.name}/`,
+  });
+  response.cookies.set(visitorCookieName(project.id), token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: visitorCookiePath(owner, project.name),
-    maxAge: 60 * 20, // 20-minute sliding window (docs §6.2)
+    path: cookiePath,
+    maxAge: 60 * 20, // slides on each serving request that verifies the token
   });
   return response;
 }
