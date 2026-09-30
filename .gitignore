@@ -26,6 +26,9 @@ local.db*
 .env.*
 *.local
 
+# testing & coverage
+coverage/
+
 # misc
 .DS_Store
 *.log
