@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { ApiError, apiOk, handler, parseJson } from "@/lib/server/http";
-import { requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
+import { requirePermission, requirePrincipal, requireProjectScoped } from "@/lib/server/api-auth";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets-crypto";
@@ -20,9 +20,17 @@ const upsertSchema = z.object({
 const getSchema = z.object({ key: z.string().regex(KEY_NAME) });
 
 async function scopedProject(request: Request, projectIdParam: string | null) {
-  // Owner/admin sessions and project-pinned API keys both manage secrets.
+  // Owner/admin sessions and project-pinned API keys both manage secrets
+  // (§6.2: reading a value needs the secrets_admin permission).
   const principal = await requirePrincipal(request);
-  return requireProjectScoped(request, principal, projectIdParam);
+  const project = await requireProjectScoped(request, principal, projectIdParam);
+  requirePermission(principal, "secrets_admin");
+  return project;
+}
+
+/** Fail with 503 and the fix before anything tries to seal a value. */
+function sealedProject(request: Request, projectIdParam: string | null) {
+  return scopedProject(request, projectIdParam);
 }
 
 /** GET /api/secrets?projectId=N — key names + timestamps only, never values. */
@@ -48,11 +56,11 @@ export const secretsList = handler(async (request) => {
 /** PUT /api/secrets — create or replace one secret. */
 export const secretsUpsert = handler(async (request) => {
   const url = new URL(request.url);
-  const project = await scopedProject(request, url.searchParams.get("projectId"));
+  const project = await sealedProject(request, url.searchParams.get("projectId"));
   const body = await parseJson(request, upsertSchema);
   const db = getDb();
   const p = db.driver;
-  const sealed = encryptSecret(body.value);
+  const sealed = await encryptSecret(body.value);
   const now = new Date().toISOString();
 
   const existing = await db.raw<{ id: number }>(
@@ -76,7 +84,7 @@ export const secretsUpsert = handler(async (request) => {
 /** POST /api/secrets/get — decrypt one secret (owner session only). */
 export const secretsGet = handler(async (request) => {
   const url = new URL(request.url);
-  const project = await scopedProject(request, url.searchParams.get("projectId"));
+  const project = await sealedProject(request, url.searchParams.get("projectId"));
   const body = await parseJson(request, getSchema);
   const db = getDb();
   const p = db.driver;
@@ -86,7 +94,7 @@ export const secretsGet = handler(async (request) => {
     [project.id, body.key],
   );
   if (!rows[0]) throw new ApiError("not_found", "Secret not found.");
-  return apiOk({ key: body.key, value: decryptSecret(rows[0].encrypted_value) });
+  return apiOk({ key: body.key, value: await decryptSecret(rows[0].encrypted_value) });
 });
 
 /** DELETE /api/secrets?key=NAME&projectId=N */

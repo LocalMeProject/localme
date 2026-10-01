@@ -63,7 +63,9 @@ API keys grant access **exclusively to storage and library endpoints**. They can
 All passwords — platform users and project visitors — are hashed using **bcrypt** (work factor ≥ 12). No other hash algorithm is used.
 
 **P‑14. Asset Hotlinking Protection**  
-Requests to `/static/*` and `/library/*` are validated against a **referer allowlist** that includes `localme.com`, the project’s custom domains (if any), and an empty referer (direct requests). Unknown referers are blocked with `403 Forbidden`.
+Requests to `/static/*` and to library assets (`/{user}/library/*`) are validated against a **referer allowlist** that includes the request’s own forwarded host, the platform origin, the project’s custom domains (if any), and an empty referer (direct requests). Unknown referers are blocked with `403 Forbidden`.
+
+The comparison is against the **forwarded** host (`X-Forwarded-Host` / `Host`), not the application’s own origin. Behind a reverse proxy or preview tunnel the two differ, and comparing against the internal name made this rule refuse the project’s *own* stylesheet and scripts — the control defending against CDN abuse was breaking normal delivery.
 
 **P‑15. Path Traversal Prevention**  
 All file paths provided by users are sanitised to reject `..`, absolute paths, and any attempt to escape the project’s storage root.
@@ -121,7 +123,7 @@ No single file upload may exceed **10 MB**. This limit is enforced at the API ga
 The Database Service returns at most **500 documents** per query. Pagination parameters (`limit`/`offset`) must be used for larger datasets.
 
 **P‑28. Storage Cap Enforcement**  
-Every user has a defined storage quota (default 5 MB + 5 MB library bonus). Any operation that would exceed the cap is **rejected before any data is written**.
+Every user has a defined storage quota (default 2 MB for project files, plus 3 MB for the shared library — two independent ceilings, not a bonus). Any operation that would exceed the cap is **rejected before any data is written**.
 
 ---
 

@@ -28,6 +28,7 @@ import {
   createProject,
   createUser,
   deleteFile,
+  ensureLibraryProject,
   getFile,
   getFileBlob,
   listFiles,
@@ -38,7 +39,7 @@ import {
   storageUsedBytes,
 } from "@/lib/server/repos";
 import { ApiError } from "@/lib/server/http";
-import { checkRateLimit, ROUTE_GROUPS } from "@/lib/server/ratelimit";
+import { checkRateLimit, resolveGroupLimit, ROUTE_GROUPS } from "@/lib/server/ratelimit";
 import { SESSION_COOKIE, SESSION_IDLE_MINUTES } from "@/lib/server/sessions";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets-crypto";
 
@@ -108,12 +109,14 @@ describe("rate limiting", () => {
     const request = new Request("https://app.test/api/test", {
       headers: { "x-forwarded-for": "203.0.113.9" },
     });
-    const group = ROUTE_GROUPS.auth;
+    // The effective budget comes from `rate_limits.auth_requests_per_minute`,
+    // not the static fallback in ROUTE_GROUPS.
+    const limit = await resolveGroupLimit("auth");
     const first = await checkRateLimit(request, "auth");
     expect(first.allowed).toBe(true);
 
     let last = first;
-    for (let i = 1; i <= group.limit; i++) {
+    for (let i = 1; i <= limit; i++) {
       last = await checkRateLimit(request, "auth");
     }
     expect(last.allowed).toBe(false);
@@ -127,8 +130,8 @@ describe("rate limiting", () => {
     const b = new Request("https://app.test/api/test", {
       headers: { "x-forwarded-for": "203.0.113.11" },
     });
-    const group = ROUTE_GROUPS.auth;
-    for (let i = 0; i < group.limit; i++) await checkRateLimit(a, "auth");
+    const limit = await resolveGroupLimit("auth");
+    for (let i = 0; i < limit; i++) await checkRateLimit(a, "auth");
     const bResult = await checkRateLimit(b, "auth");
     expect(bResult.allowed).toBe(true);
   });
@@ -138,7 +141,8 @@ describe("rate limiting", () => {
       headers: { "x-forwarded-for": "203.0.113.12" },
     });
     const group = ROUTE_GROUPS.auth;
-    for (let i = 0; i < group.limit; i++) await checkRateLimit(request, "auth");
+    const limit = await resolveGroupLimit("auth");
+    for (let i = 0; i < limit; i++) await checkRateLimit(request, "auth");
     const blocked = await checkRateLimit(request, "auth");
     expect(blocked.allowed).toBe(false);
 
@@ -189,6 +193,25 @@ describe("projects", () => {
     expect((await requireOwnedProject(owner.id, project.id)).id).toBe(project.id);
     await expect(createProject(owner.id, "my-app")).rejects.toThrow(ApiError);
   });
+
+  it("reserves the name library for the shared asset namespace", async () => {
+    const owner = await createUser("libowner", "password123");
+    await expect(createProject(owner.id, "library")).rejects.toMatchObject({ code: "bad_request" });
+
+    // Concurrent first use must converge on one project, not race the unique
+    // (user_id, name) constraint into a 500 — the library page loads its list
+    // and its usage together on a first visit.
+    const [a, b, c] = await Promise.all([
+      ensureLibraryProject(owner.id),
+      ensureLibraryProject(owner.id),
+      ensureLibraryProject(owner.id),
+    ]);
+    expect(a.id).toBe(b.id);
+    expect(b.id).toBe(c.id);
+    expect(a.name).toBe("library");
+    // …and it is stable afterwards.
+    expect((await ensureLibraryProject(owner.id)).id).toBe(a.id);
+  });
 });
 
 describe("api keys", () => {
@@ -213,7 +236,11 @@ describe("files + storage quota", () => {
     await putFile(owner.id, project.id, "app.css", Buffer.from("body{}"));
 
     const files = await listFiles(project.id);
-    expect(files.map((f) => f.path)).toEqual(["app.css", "index.html"]);
+    // Project creation seeds a scaffold (index.html, manifest.json, sw.js,
+    // icons/icon.svg) per Blueprint §12; the uploaded paths are added to it.
+    expect(files.map((f) => f.path)).toEqual(
+      expect.arrayContaining(["app.css", "index.html", "manifest.json", "sw.js", "icons/icon.svg"]),
+    );
 
     const blob = await getFileBlob(project.id, "index.html");
     expect(blob!.content.toString("utf8")).toBe("<h1>hi</h1>");
@@ -221,7 +248,9 @@ describe("files + storage quota", () => {
 
     // Overwrite: same path, updated content, no duplicate row.
     await putFile(owner.id, project.id, "index.html", Buffer.from("<h1>bye</h1>"));
-    expect(await listFiles(project.id)).toHaveLength(2);
+    const afterOverwrite = await listFiles(project.id);
+    expect(afterOverwrite.filter((f) => f.path === "index.html")).toHaveLength(1);
+    expect(afterOverwrite).toHaveLength(files.length);
     expect((await getFileBlob(project.id, "index.html"))!.content.toString("utf8")).toBe("<h1>bye</h1>");
 
     const used = await storageUsedBytes(owner.id);
@@ -229,6 +258,19 @@ describe("files + storage quota", () => {
 
     expect(await deleteFile(owner.id, project.id, "index.html")).toBe(1);
     expect(await getFile(project.id, "index.html")).toBeNull();
+  });it("deletes a whole folder with the prefix option, and nothing beside it", async () => {
+    const owner = await createUser("folderowner", "password123");
+    const project = await createProject(owner.id, "folders");
+    await putFile(owner.id, project.id, "app/main.js", Buffer.from("a"));
+    await putFile(owner.id, project.id, "app/deep/nested.css", Buffer.from("b"));
+    // A sibling whose name merely starts with "app" must survive.
+    await putFile(owner.id, project.id, "application.js", Buffer.from("keep me"));
+
+    const removed = await deleteFile(owner.id, project.id, "app", { prefix: true });
+    expect(removed).toBe(2);
+    expect((await listFiles(project.id)).map((f) => f.path)).not.toContain("app/main.js");
+    expect((await listFiles(project.id)).map((f) => f.path)).not.toContain("app/deep/nested.css");
+    expect(await getFileBlob(project.id, "application.js")).not.toBeNull();
   });
 
   it("rejects path traversal", async () => {
@@ -249,13 +291,13 @@ describe("files + storage quota", () => {
 // ---------------------------------------------------------------- secrets
 
 describe("secret encryption", () => {
-  it("round-trips AES-256-GCM and rejects tampering", () => {
-    const sealed = encryptSecret("hunter2");
+  it("round-trips AES-256-GCM and rejects tampering", async () => {
+    const sealed = await encryptSecret("hunter2");
     expect(sealed).not.toContain("hunter2");
-    expect(decryptSecret(sealed)).toBe("hunter2");
+    expect(await decryptSecret(sealed)).toBe("hunter2");
 
     const tampered = sealed.slice(0, -4) + "aaaa";
-    expect(() => decryptSecret(tampered)).toThrow();
+    await expect(decryptSecret(tampered)).rejects.toThrow();
   });
 });
 

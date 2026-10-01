@@ -11,11 +11,23 @@ import { ApiError } from "@/lib/server/http";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { decryptSecret } from "@/lib/server/secrets-crypto";
+import { setting } from "@/lib/server/system-config";
 
 export interface ProxyConfig {
   target: string;
   headers?: Record<string, string>;
   timeoutMs?: number;
+}
+
+export interface ProxyForwardOptions {
+  /**
+   * The route pattern that matched, when forwarding comes from project serving.
+   * A proxy route acts as a mount (docs §3.3.3, Blueprint §5.7): the caller's
+   * path *after* the mount is appended to the target path, so `/api/stripe/*`
+   * can front `https://api.stripe.com/v1`. An exact match leaves the target
+   * path untouched, which is what the Blueprint's Stripe example needs.
+   */
+  mountPath?: string;
 }
 
 export const DEFAULT_PROXY_TIMEOUT_MS = 15_000;
@@ -50,7 +62,7 @@ export async function loadSecrets(projectId: number): Promise<Map<string, string
   const map = new Map<string, string>();
   for (const row of rows) {
     try {
-      map.set(row.key_name, decryptSecret(row.encrypted_value));
+      map.set(row.key_name, await decryptSecret(row.encrypted_value));
     } catch {
       // Skip undecryptable entries; substitution leaves the placeholder in place.
     }
@@ -58,11 +70,23 @@ export async function loadSecrets(projectId: number): Promise<Map<string, string
   return map;
 }
 
+/**
+ * The part of the caller's path that sits below a proxy mount, or "" when the
+ * route matched exactly (so the configured target path wins).
+ */
+export function mountRemainder(mountPath: string | undefined, callerPath: string): string {
+  if (!mountPath || mountPath === "/") return "";
+  if (!callerPath.startsWith(mountPath)) return "";
+  const rest = callerPath.slice(mountPath.length);
+  return rest === "" || rest === "/" ? "" : rest;
+}
+
 /** Forward the request to the configured upstream and stream the response. */
 export async function forwardProxyRequest(
   request: Request,
   config: ProxyConfig,
   secrets: Map<string, string>,
+  options: ProxyForwardOptions = {},
 ): Promise<Response> {
   const url = new URL(request.url);
   const headers = new Headers();
@@ -75,9 +99,22 @@ export async function forwardProxyRequest(
 
   const targetUrl = new URL(config.target);
   targetUrl.search = url.search;
+  const remainder = mountRemainder(options.mountPath, url.pathname);
+  if (remainder) {
+    targetUrl.pathname = `${targetUrl.pathname.replace(/\/+$/, "")}/${remainder.replace(/^\/+/, "")}`;
+  }
+
+  // §10 proxy timeouts: the configured default, clamped to the configured max.
+  const [configuredDefault, configuredMax] = await Promise.all([
+    setting("proxy.default_timeout_seconds"),
+    setting("proxy.max_timeout_seconds"),
+  ]);
+  const requested = config.timeoutMs ?? (configuredDefault > 0 ? configuredDefault * 1000 : DEFAULT_PROXY_TIMEOUT_MS);
+  const ceiling = configuredMax > 0 ? configuredMax * 1000 : requested;
+  const timeoutMs = Math.min(requested, ceiling);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs ?? DEFAULT_PROXY_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const upstream = await fetch(targetUrl, {
       method: request.method,

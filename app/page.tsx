@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteOrigin, siteOriginIsPublic } from "@/lib/seo";
 import { useTheme } from "@/lib/theme";
+import { revealDelay, useScrollReveal } from "@/components/reveal";
 
 /* ------------------------------------------------------------------ *
  * Content
@@ -85,8 +86,8 @@ const PILLARS = [
       },
       {
         name: "Shared asset library",
-        body: "Keep one stylesheet or script for every project you own and reference it at /library/theme.css.",
-        tag: "/library/*",
+        body: "Upload an asset once and every project you own references it at /{you}/library/theme.css.",
+        tag: "/{you}/library/*",
       },
     ],
   },
@@ -144,7 +145,7 @@ const PILLARS = [
     items: [
       {
         name: "Custom domains",
-        body: "Prove ownership with a DNS TXT record; the platform handles certificates and routing.",
+        body: "Prove ownership with a DNS TXT record, then the platform routes the domain and — when certificate provisioning is enabled — obtains and renews its TLS certificate for you.",
         tag: "domains",
       },
       {
@@ -153,9 +154,9 @@ const PILLARS = [
         tag: "limits",
       },
       {
-        name: "Backups & audit",
-        body: "Export a project as an archive, restore it, and review every administrative action in the log.",
-        tag: "audit",
+        name: "Backups",
+        body: "Export a project as a full archive — files, library, configuration and secrets — and restore it anywhere.",
+        tag: "backup",
       },
     ],
   },
@@ -240,7 +241,7 @@ const PLAN_INCLUDES = [
   "Routing with login and role gates",
   "Encrypted secrets and reverse proxy",
   "Cron jobs, webhooks and delivery logs",
-  "Custom domains with certificate handling",
+  "Custom domains with optional ACME certificate provisioning",
   "Backups, restore and usage reporting",
 ];
 
@@ -275,11 +276,11 @@ const FAQS = [
   },
   {
     q: "Can I connect my own domain?",
-    a: "Yes. Register the domain in the console, add the DNS TXT record the platform gives you to prove ownership, and it will serve your project with certificate handling rather than a shared path.",
+    a: "Yes. Register the domain in the console, add the DNS TXT record the platform gives you to prove ownership, and it will serve your project on that host rather than a shared path. TLS is terminated by your edge: enable certificate provisioning and the platform obtains an ACME certificate over HTTP-01 and renews it before expiry, otherwise point your proxy at the host and bring your own certificate.",
   },
   {
     q: "Can I get my data out?",
-    a: "Any project can be exported as an archive containing its files, documents, visitors and configuration, and imported again later. Deletion is permanent, so export first if you are removing a project.",
+    a: "Any project can be exported as an archive containing its files, shared library, routes, API policy, roles, cron, webhooks, domains and secrets, and imported again later. Password hashes are never exported, so restored visitors start disabled. Deletion is permanent, so export first if you are removing a project.",
   },
 ];
 
@@ -318,6 +319,8 @@ const FOOTER_GROUPS: { title: string; links: { label: string; to?: string; href?
 
 export default function LandingPage() {
   const { theme, toggle } = useTheme();
+  // Single observer pass: every [data-reveal] element fades up as it scrolls in.
+  useScrollReveal();
   // Live platform stats come from the public stats endpoint once the API exists (WS-5+).
   const liveStats: { accounts: number | null; projects: number | null; deployedApps: number | null } | null =
     null as { accounts: number | null; projects: number | null; deployedApps: number | null } | null;
@@ -352,14 +355,14 @@ export default function LandingPage() {
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="link-slide rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 {link.label}
               </a>
             ))}
             <Link
               href="/docs"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="link-slide rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Docs
             </Link>
@@ -389,7 +392,7 @@ export default function LandingPage() {
             <a
               key={link.href}
               href={link.href}
-              className="tap flex shrink-0 items-center whitespace-nowrap rounded-full border border-border px-3.5 text-xs text-muted-foreground"
+              className="tap link-slide flex shrink-0 items-center whitespace-nowrap rounded-full border border-border px-3.5 text-xs text-muted-foreground"
             >
               {link.label}
             </a>
@@ -400,7 +403,12 @@ export default function LandingPage() {
       <main id="main">
         {/* -------------------------------------------------------- Hero */}
         <section className="relative overflow-hidden border-b border-border">
-          <div className="blueprint-grid absolute inset-0 opacity-60" aria-hidden />
+          <div className="blueprint-grid grid-drift absolute inset-0 opacity-60" aria-hidden />
+          {/* A light bar sweeping the drafting grid, like an instrument coming alive. */}
+          <div
+            className="scan-sweep pointer-events-none absolute inset-y-0 -left-1/4 w-1/4 bg-gradient-to-r from-transparent via-signal/10 to-transparent"
+            aria-hidden
+          />
           <div className="glow-signal pointer-events-none absolute -top-48 left-1/4 h-[26rem] w-[46rem] -translate-x-1/2 opacity-25 blur-3xl" aria-hidden />
           <div className="glow-blueprint pointer-events-none absolute -bottom-40 right-0 h-80 w-[34rem] opacity-25 blur-3xl" aria-hidden />
 
@@ -413,7 +421,10 @@ export default function LandingPage() {
               <h1 className="text-balance text-[2.5rem] font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.5rem]">
                 Ship the app.
                 <br />
-                <span className="text-signal">Skip the backend.</span>
+                <span className="text-signal">
+                  Skip the backend.
+                  <span className="caret" aria-hidden />
+                </span>
               </h1>
               <p className="copy mt-5 max-w-xl text-pretty text-sm sm:text-base">
                 You already write HTML, CSS and JavaScript. LocalMe supplies the rest — a document database, file
@@ -487,7 +498,7 @@ export default function LandingPage() {
         {/* ------------------------------------------------ Problem/solution */}
         <section className="border-b border-border">
           <div className="mx-auto grid max-w-7xl gap-8 px-5 section-y lg:grid-cols-2 lg:gap-14">
-            <div className="panel p-6 sm:p-8">
+            <div className="panel p-6 sm:p-8" data-reveal>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="mono-label">the usual weekend</span>
@@ -509,7 +520,7 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            <div className="panel border-signal/30 bg-signal/[0.04] p-6 sm:p-8">
+            <div className="panel border-signal/30 bg-signal/[0.04] p-6 sm:p-8" data-reveal style={revealDelay(1, 90)}>
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-signal" />
                 <span className="mono-label text-signal">with localme</span>
@@ -542,7 +553,7 @@ export default function LandingPage() {
         {/* ------------------------------------------------------ Features */}
         <section id="features" className="border-b border-border bg-card/40">
           <div className="mx-auto max-w-7xl px-5 section-y">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl" data-reveal>
               <div className="mono-label mb-3">features</div>
               <h2 className="text-balance text-display-md">Twelve services you never have to build.</h2>
               <p className="copy mt-3">
@@ -552,8 +563,13 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-2">
-              {PILLARS.map((pillar) => (
-                <article key={pillar.id} className="panel p-6 sm:p-7">
+              {PILLARS.map((pillar, index) => (
+                <article
+                  key={pillar.id}
+                  className="panel p-6 sm:p-7"
+                  data-reveal
+                  style={revealDelay(index)}
+                >
                   <div className="flex items-start gap-4">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-background">
                       <pillar.icon className="h-5 w-5 text-signal" />
@@ -587,7 +603,7 @@ export default function LandingPage() {
         <section id="how" className="border-b border-border">
           <div className="mx-auto max-w-7xl px-5 section-y">
             <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-              <div>
+              <div data-reveal>
                 <div className="mono-label mb-3">how it works</div>
                 <h2 className="text-balance text-display-md">From idea to a live URL in three steps.</h2>
                 <p className="copy mt-3">
@@ -613,7 +629,7 @@ export default function LandingPage() {
                 </ol>
               </div>
 
-              <div className="panel overflow-hidden">
+              <div className="panel overflow-hidden" data-reveal style={revealDelay(1, 90)}>
                 <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
                   <span className="mono-label">your project</span>
                   <Badge variant="blueprint">served at /you/app/</Badge>
@@ -630,7 +646,7 @@ export default function LandingPage() {
     └── app.js
 
 # Reference one stylesheet from every project
-<link rel="stylesheet" href="/library/theme.css">
+<link rel="stylesheet" href="/ada/library/theme.css">
 
 # Talk to the platform from any page
 const { data } = await fetch('/api/db/find', {
@@ -660,7 +676,7 @@ const { data } = await fetch('/api/db/find', {
         {/* ---------------------------------------------------- Use cases */}
         <section id="use-cases" className="border-b border-border bg-card/40">
           <div className="mx-auto max-w-7xl px-5 section-y">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl" data-reveal>
               <div className="mono-label mb-3">use cases</div>
               <h2 className="text-balance text-display-md">Who ships on LocalMe</h2>
               <p className="copy mt-3">
@@ -670,8 +686,13 @@ const { data } = await fetch('/api/db/find', {
             </div>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {USE_CASES.map((item) => (
-                <article key={item.title} className="panel card-interactive p-6">
+              {USE_CASES.map((item, index) => (
+                <article
+                  key={item.title}
+                  className="panel card-interactive p-6"
+                  data-reveal
+                  style={revealDelay(index, 60)}
+                >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background">
                     <item.icon className="h-4 w-4 text-blueprint" />
                   </span>
@@ -686,7 +707,7 @@ const { data } = await fetch('/api/db/find', {
         {/* --------------------------------------------------- Comparison */}
         <section id="compare" className="border-b border-border">
           <div className="mx-auto max-w-7xl px-5 section-y">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl" data-reveal>
               <div className="mono-label mb-3">comparison</div>
               <h2 className="text-balance text-display-md">Honest maths, three ways.</h2>
               <p className="copy mt-3">
@@ -695,7 +716,7 @@ const { data } = await fetch('/api/db/find', {
               </p>
             </div>
 
-            <div className="mt-10 overflow-x-auto rounded-xl border border-border scrollbar-thin">
+            <div className="mt-10 overflow-x-auto rounded-xl border border-border scrollbar-thin" data-reveal style={revealDelay(1, 90)}>
               <table className="w-full min-w-[620px] border-collapse text-left">
                 <caption className="sr-only">Comparison of building a backend yourself, using a traditional BaaS, or using LocalMe</caption>
                 <thead>
@@ -750,7 +771,7 @@ const { data } = await fetch('/api/db/find', {
         {/* ------------------------------------------------------ Pricing */}
         <section id="pricing" className="border-b border-border bg-card/40">
           <div className="mx-auto max-w-7xl px-5 section-y">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl" data-reveal>
               <div className="mono-label mb-3">pricing</div>
               <h2 className="text-balance text-display-md">One plan. Free, and honest about limits.</h2>
               <p className="copy mt-3">
@@ -760,7 +781,7 @@ const { data } = await fetch('/api/db/find', {
             </div>
 
             <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-              <div className="panel relative overflow-hidden p-6 sm:p-8">
+              <div className="panel relative overflow-hidden p-6 sm:p-8" data-reveal>
                 <div className="glow-signal pointer-events-none absolute -right-16 -top-24 h-64 w-64 opacity-20 blur-3xl" aria-hidden />
                 <div className="relative flex flex-wrap items-end justify-between gap-4">
                   <div>
@@ -792,7 +813,7 @@ const { data } = await fetch('/api/db/find', {
                 </div>
               </div>
 
-              <div className="panel p-6 sm:p-8">
+              <div className="panel p-6 sm:p-8" data-reveal style={revealDelay(1, 90)}>
                 <h3 className="text-sm font-semibold">Included from the first minute</h3>
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                   {PLAN_INCLUDES.map((item) => (
@@ -820,7 +841,7 @@ const { data } = await fetch('/api/db/find', {
         {/* ----------------------------------------------------------- FAQ */}
         <section id="faq" className="border-b border-border">
           <div className="mx-auto grid max-w-7xl gap-10 px-5 section-y lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="lg:sticky lg:top-28 lg:self-start">
+            <div className="lg:sticky lg:top-28 lg:self-start" data-reveal>
               <div className="mono-label mb-3">faq</div>
               <h2 className="text-balance text-display-sm">Questions people ask before signing up</h2>
               <p className="copy mt-3">
@@ -834,7 +855,7 @@ const { data } = await fetch('/api/db/find', {
               </Button>
             </div>
 
-            <div className="divide-y divide-border rounded-xl border border-border bg-card">
+            <div className="divide-y divide-border rounded-xl border border-border bg-card" data-reveal style={revealDelay(1, 90)}>
               {FAQS.map((faq, index) => {
                 const open = openFaq === index;
                 return (
@@ -875,7 +896,7 @@ const { data } = await fetch('/api/db/find', {
           <div className="mx-auto max-w-7xl px-5 section-y">
             <div className="blueprint-dots relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-14 text-center sm:px-12">
               <div className="glow-signal pointer-events-none absolute -bottom-32 left-1/2 h-72 w-[42rem] -translate-x-1/2 opacity-25 blur-3xl" aria-hidden />
-              <div className="relative mx-auto max-w-2xl">
+              <div className="relative mx-auto max-w-2xl" data-reveal>
                 <Badge variant="signal" className="mb-5">
                   <Rocket className="h-3 w-3" />
                   ready when you are

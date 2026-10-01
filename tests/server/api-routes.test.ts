@@ -17,6 +17,7 @@ process.env.SESSION_SECRET = "test-session-secret";
 process.env.SECRETS_ENCRYPTION_KEY = "test-encryption-key-32-bytes!!";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { setSystemConfig } from "@/tests/helpers/config";
 import { getDb } from "@/lib/server/db/index";
 import {
   createApiKey,
@@ -26,6 +27,7 @@ import {
 import { dbDelete, dbFind, dbInsert, dbUpdate } from "@/lib/server/db-routes";
 import {
   storageDelete,
+  storageMove,
   storageDownload,
   storageList,
   storageStatus,
@@ -43,7 +45,7 @@ import {
   webhooksDelete,
   webhooksList,
 } from "@/lib/server/webhook-routes";
-import { BUILTIN_TASKS, cronList, cronRun, cronToggle, runCronTask } from "@/lib/server/cron-routes";
+import { BUILTIN_TASKS, CRON_TASKS, cronList, cronRun, cronToggle, runCronTask } from "@/lib/server/cron-routes";
 
 let db: ReturnType<typeof getDb>;
 let owner: { id: number };
@@ -61,6 +63,10 @@ beforeAll(async () => {
   project = await createProject(owner.id, "apiapp");
   const created = await createApiKey(owner.id, project.id, "tests");
   apiKey = created.key;
+  // The webhook receiver in this suite is a local HTTP server, which the SSRF
+  // guard rejects by default. The opt-in switch is what a self-hosted
+  // deployment would set.
+  await setSystemConfig(db, "webhooks.allow_private_targets", true);
 });
 
 afterAll(() => {
@@ -207,6 +213,95 @@ describe("storage endpoints", () => {
     );
     expect(response.status).toBe(400);
   });
+
+  it("renames and relocates a file, keeping the bytes intact", async () => {
+    await storageUpload(
+      new Request(`https://app.test/api/storage/upload?projectId=${project.id}&path=js/old.js`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: "console.log('moved')",
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    const moved = await storageMove(
+      new Request(`https://app.test/api/storage/move?projectId=${project.id}`, {
+        method: "POST",
+        headers: { ...authHeaders(), "content-type": "application/json" },
+        body: JSON.stringify({ from: "js/old.js", to: "static/app.js" }),
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(moved.status).toBe(200);
+
+    const after = await storageList(get(`/api/storage/list?projectId=${project.id}`, authHeaders()), {
+      params: Promise.resolve({}),
+    });
+    const paths = ((await after.json()) as { data: Array<{ path: string }> }).data.map((f) => f.path);
+    expect(paths).toContain("static/app.js");
+    expect(paths).not.toContain("js/old.js");
+
+    const download = await storageDownload(
+      get(`/api/storage/download?projectId=${project.id}&path=static/app.js`, authHeaders()),
+      { params: Promise.resolve({}) },
+    );
+    expect(await download.text()).toBe("console.log('moved')");
+  });
+
+  it("refuses a move that is a no-op or would nest a folder inside itself", async () => {
+    const attempt = (body: unknown) =>
+      storageMove(
+        new Request(`https://app.test/api/storage/move?projectId=${project.id}`, {
+          method: "POST",
+          headers: { ...authHeaders(), "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        { params: Promise.resolve({}) },
+      );
+
+    expect((await attempt({ from: "index.html", to: "index.html" })).status).toBe(400);
+    expect((await attempt({ from: "static", to: "static/inner" })).status).toBe(400);
+    expect((await attempt({ from: "nope.html", to: "other.html" })).status).toBe(404);
+    expect((await attempt({ from: "../escape", to: "ok.html" })).status).toBe(400);
+  });
+
+  it("deletes a folder's contents with ?prefix=1 and leaves siblings alone", async () => {
+    for (const path of ["bundle/a.js", "bundle/deep/b.css"]) {
+      await storageUpload(
+        new Request(`https://app.test/api/storage/upload?projectId=${project.id}&path=${path}`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: path,
+        }),
+        { params: Promise.resolve({}) },
+      );
+    }
+    await storageUpload(
+      new Request(`https://app.test/api/storage/upload?projectId=${project.id}&path=bundled.js`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: "sibling",
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    const removed = await storageDelete(
+      new Request(`https://app.test/api/storage/delete?projectId=${project.id}&path=bundle&prefix=1`, {
+        method: "POST",
+        headers: authHeaders(),
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(removed.status).toBe(200);
+    expect(((await removed.json()) as { deleted: number }).deleted).toBe(2);
+
+    const after = await storageList(get(`/api/storage/list?projectId=${project.id}`, authHeaders()), {
+      params: Promise.resolve({}),
+    });
+    const paths = ((await after.json()) as { data: Array<{ path: string }> }).data.map((f) => f.path);
+    expect(paths.some((p) => p.startsWith("bundle/"))).toBe(false);
+    expect(paths).toContain("bundled.js");
+  });
 });
 
 // ---------------------------------------------------------------- secrets
@@ -309,7 +404,8 @@ describe("cron", () => {
       { params: Promise.resolve({}) },
     );
     const listedBody = (await listed.json()) as { data: Array<{ task: string; isEnabled: boolean }>; available: string[] };
-    expect(listedBody.available).toEqual([...BUILTIN_TASKS]);
+    expect(listedBody.available).toEqual([...CRON_TASKS]);
+    expect(BUILTIN_TASKS.every((task) => listedBody.available.includes(task))).toBe(true);
     expect(listedBody.data.find((t) => t.task === "clean_expired_sessions")?.isEnabled).toBe(true);
 
     const ran = await cronRun(

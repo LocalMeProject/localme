@@ -159,7 +159,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE,
     is_admin BOOLEAN DEFAULT FALSE,
     is_operator BOOLEAN DEFAULT FALSE,
-    storage_cap_bytes BIGINT DEFAULT 5242880, -- 5MB default
+    storage_cap_bytes BIGINT DEFAULT 2097152, -- 2MB default
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     last_login TIMESTAMP,
@@ -392,7 +392,15 @@ Query DSL (MongoDB-style):
 }
 ```
 
-Supported Operators: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $regex, $exists, $and, $or, $not
+Supported Operators: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $regex, $exists, $text, $and, $or, $not
+
+`$text` matches a substring anywhere in the document. `$regex` only works when the
+caller already knows which field to look in, which is exactly what a console
+search box does not. Sorting also accepts `_localme.created` / `_localme.updated`
+(and `created_at` / `updated_at`), which order by the real columns rather than a
+JSON path — `_localme` is synthesised at read time and is not stored in the
+document, so ordering happens in the database and stays stable across a
+pagination window.
 
 ---
 
@@ -448,7 +456,19 @@ Minification & Compression:
 
 5.3 Library Service
 
-Purpose: Per-user shared asset storage (5MB bonus). Accessible across all projects via /library/{path}.
+Purpose: Per-user shared asset storage, served as a CDN. An account has one
+reserved project named `library`; its files are published at
+/{username}/library/{path} and referenced directly by every project the account
+owns. Nothing is copied between projects and there is no per-project home to
+choose. 3MB, an absolute ceiling of its own rather than a bonus on the project
+cap. Managed at /dashboard/library.
+
+`library` is a reserved keyword:
+
+· A project cannot be named `library`.
+· A project file cannot be created or moved under a top-level `library/` folder.
+· Inside a hosted project, `library/{path}` resolves to the account's library, so
+  a relative reference also works on a verified custom domain.
 
 Endpoints:
 
@@ -457,17 +477,19 @@ Endpoints:
 · POST /api/lib/delete
 · GET /api/lib/status
 
+Account-scoped console API (no projectId):
+
+· GET /api/library
+· POST /api/library/upload
+· DELETE /api/library/delete
+
 Security:
 
-· HTML files are blocked (upload rejected).
-· Files served via /library/{path} resolve to the current user's library.
+· HTML files are blocked (upload rejected); the assets are served from the
+  platform origin, where stored HTML would execute against a console session.
+· Files served via /{username}/library/{path} resolve to that account's library.
+· Library requests do not consume the visit quota and are not watermarked.
 · Rate limits: 1000 requests/minute per session.
-
-Move to Library:
-
-· In the Storage file manager, each file has a "Move to Library" button.
-· Copies file from project storage to library, deletes from project.
-· Returns new library path: /library/{path}.
 
 Admin Public Library:
 
@@ -492,8 +514,7 @@ Reserved Prefixes (blocked from user configuration):
 · /auth/*
 · /admin/*
 · /dashboard/*
-· /library/*
-
+· /library/*          (the root prefix only — /{user}/library/* is the library's own URL)
 API Endpoints Configuration:
 
 · Users can enable/disable pre-defined API endpoints.
@@ -517,7 +538,35 @@ Platform Authentication (Owners & Admins)
 · Username + Password + Math CAPTCHA.
 · 5 failed attempts → lockout for 5 minutes.
 · Session stored in PostgreSQL (sessions table).
-· Roles: Admin (full system control), Operator (read-only support), User (standard).
+· Roles: Admin (full system control), Operator (runs the platform day to day), User (standard).
+
+Console role model — both tiers reach `/admin`, and the API splits on what an
+operator is allowed to escalate to:
+
+| Capability | Operator | Admin |
+| :--------- | :------- | :---- |
+| Read accounts, projects, stats, config | yes | yes |
+| Suspend / resume / unlock accounts, projects | yes | yes |
+| Revoke sessions of ordinary users | yes | yes |
+| Impersonate an ordinary user | yes | yes |
+| Edit configuration, run cron, manage the public library | yes | yes |
+| Grant or revoke **admin/operator** | **no** | yes |
+| Delete an account or a project | **no** | yes |
+| Impersonate another admin | **no** | yes |
+| Revoke another admin's sessions | **no** | yes |
+
+An operator whose account cannot use `/admin` makes the flag decorative; a
+separate code path per capability is what keeps the split honest. The console
+hides the four admin-only controls from an operator rather than offering buttons
+that return 403.
+
+**First boot.** A deployment with zero users has no way to reach `/admin` at all,
+so the platform creates one administrator the first time it starts against an
+empty database. It never runs again once anyone exists. `SESSION_SECRET` selects
+the credentials: `ADMIN_INITIAL_USERNAME` (default `admin`) and
+`ADMIN_INITIAL_PASSWORD` (default `admin1234`). In production the default
+password is refused unless `ALLOW_DEFAULT_ADMIN_PASSWORD=1`, so a deployment can
+never sit on a published credential because nobody read the docs.
 
 Visitor Authentication (Per Project)
 
@@ -531,8 +580,15 @@ Login Flow:
 1. Visitor clicks "Login" → redirected to /auth/login?returnUrl=....
 2. LocalMe serves built-in login page (or custom login.html if uploaded).
 3. POST to /auth/token with username, password, captcha.
-4. Backend validates, generates JWT, sets cookie: auth_{projectId} with Path=/{username}/{projectname}/.
+4. Backend validates, generates JWT, sets cookie: auth_{projectId} with Path=/.
+   The cookie is scoped by NAME, not by path — the token is only ever accepted
+   for the project it names. A narrower path (it used to be
+   /{username}/{projectname}/) meant the browser never sent the cookie to
+   /api/db/*, so a signed-in visitor's page loaded but every data call 401'd.
 5. Redirects to returnUrl.
+6. A visitor session is a first-class API principal: /api/db/* and /api/storage/*
+   accept the auth_{projectId} cookie, scoped to that one project. Naming a
+   different projectId is 403.
 
 Logout:
 
@@ -795,7 +851,7 @@ Endpoint Method Description
 /auth/captcha GET CAPTCHA image generation
 /{username}/{projectname}/ GET Project homepage (routed to index.html)
 /{username}/{projectname}/{route} GET User-defined route
-/library/{path} GET Library asset (resolves to current user's library)
+/{username}/library/{path} GET Shared library asset (served from the platform origin; HTML is never storable)
 /~public/{path} GET Admin public library
 
 6.2 Protected API Endpoints (Session or API Key)
@@ -805,15 +861,16 @@ Endpoint Method Description
 /api/db/insert POST Insert document
 /api/db/update POST Update documents
 /api/db/delete POST Delete documents
-/api/storage/list GET List files
-/api/storage/upload POST Upload file
+/api/storage/list GET List files (supports ?path= for one directory)
+/api/storage/upload POST Upload file (raw body + ?path=, or multipart)
 /api/storage/download GET Download file
-/api/storage/delete POST Delete file
+/api/storage/delete DELETE Delete file; ?prefix=1 removes a folder and its contents
+/api/storage/move POST Rename or relocate a file (write new, then delete old)
 /api/storage/status GET Storage usage
-/api/lib/list GET List library files
-/api/lib/upload POST Upload to library
-/api/lib/delete POST Delete from library
-/api/lib/status GET Library usage
+/api/lib/list GET List library files (project-scoped)
+/api/lib/upload POST Upload to library (project-scoped)
+/api/lib/delete DELETE Delete from library (project-scoped)
+/api/lib/status GET Library usage (project-scoped)
 /api/secrets/get POST Get secret value (owner/admin only)
 /api/proxy/{route}  *  Proxy to external API
 
@@ -823,25 +880,47 @@ Endpoint Method Description
 /api/projects CRUD Project management
 /api/routes CRUD Route configuration
 /api/api-endpoints CRUD API endpoint enable/disable
-/api/roles CRUD Role and permission management
+/api/roles GET|POST Role and permission management
+/api/roles/{roleId} PATCH Rename a role or change its permissions
+/api/roles/{roleId} DELETE Delete a role; ?onDelete=leave_role|delete_visitors|move_to
+/api/library GET Account-scoped library list, usage and public URL prefix
+/api/library/upload POST Publish an asset (rejects .html/.htm)
+/api/library/delete DELETE Remove an asset or folder from the account library
 /api/visitors CRUD Visitor account management
+/api/visitors/{visitorId} PATCH Change a visitor's role, rename, or suspend them
+/api/visitors/{visitorId} DELETE Delete a visitor
 /api/secrets CRUD Secret management
 /api/cron CRUD Cron task configuration
 /api/webhooks CRUD Webhook configuration
 /api/domains CRUD Domain registration
+/api/transfer GET Selective export (?feature, ?ids); POST additive import/copy-from
 /api/export/{feature} GET Export configuration
 /api/export/all GET Export full project (ZIP)
 /api/import/{feature} POST Import configuration
 /api/import/all POST Import full project (ZIP)
 
-6.4 Admin API Endpoints (Admin Role Required)
+6.4 Admin API Endpoints
+
+Reachable by an **operator**; the four capabilities marked † require an **admin**
+and are the only difference between the tiers (see §5.5).
 
 Endpoint Method Description
-/admin/api/users CRUD User management
-/admin/api/projects CRUD Project management (all)
-/admin/api/system-configs CRUD System configuration
-/admin/api/global-cron CRUD Global cron task management
-/admin/api/stats GET Anonymous aggregated statistics
+/api/admin GET Aggregated platform totals
+/api/admin/overview GET KPIs, health counters, and the caller's own tier
+/api/admin/users GET Paged + filtered + sorted account list (?page, ?pageSize, ?q, ?status, ?sort)
+/api/admin/users?userId=N GET One account with its projects
+/api/admin/users PATCH Bulk suspend/resume/unlock/re-cap †role changes
+/api/admin/users DELETE Delete an account † (requires confirmUsername)
+/api/admin/projects GET Paged + filtered + sorted project list
+/api/admin/projects PATCH Bulk activate/suspend/watermark
+/api/admin/projects DELETE Delete a project † (requires confirmName)
+/api/admin/impersonate POST Sign in as another user (a session swap, not a sudo flag)
+/api/admin/impersonate/stop POST Return to the operator's own session
+/api/admin/impersonate/status GET Whether an impersonation is active
+/api/admin/sessions DELETE Sign an account out everywhere (admins only † for admins)
+/api/admin/cron GET|POST Global cron task management
+/api/admin/config GET|PUT System configuration (grouped tree + defaults)
+/api/admin/public-library GET|POST|DELETE Platform-wide library at /~public/
 
 ---
 
@@ -891,9 +970,13 @@ Endpoint Method Description
 
 7.8 Anti-CDN Hotlinking
 
-· All /static/* and /library/* requests validated against Referer/Origin.
+· All /static/* and library asset requests validated against Referer/Origin.
 · Blocked if referer is from external domain.
-· Allowed: localme.com, empty (direct), search engine bots.
+· Allowed: the request's own forwarded host, the platform origin, verified custom
+  domains, empty (direct), and search engine bots.
+· The comparison uses X-Forwarded-Host/Host rather than the app's own origin:
+  behind a reverse proxy those differ, and using the internal name made the rule
+  refuse the project's own stylesheet and scripts.
 
 ---
 
@@ -970,9 +1053,9 @@ All configurable values stored in system_configs table:
 ```json
 {
   "storage": {
-    "default_user_cap_bytes": 5242880,
+    "default_user_cap_bytes": 2097152,
     "max_user_cap_bytes": 1073741824,
-    "library_bonus_bytes": 5242880,
+    "library_cap_bytes": 3145728,
     "max_upload_size_bytes": 10485760
   },
   "visits": {

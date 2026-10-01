@@ -72,6 +72,11 @@ export const GET = handler(async (request) => {
     <input id="username" name="username" autocomplete="username" required>
     <label for="password">Password</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <div id="captcha-box" style="display:none">
+      <label for="captcha">Captcha</label>
+      <div id="captcha-svg"></div>
+      <input id="captcha" autocomplete="off" inputmode="numeric" placeholder="Answer" required>
+    </div>
     <div class="error" id="error"></div>
     <button type="submit" id="submit">Sign in</button>
     <div class="toggle">New here? <a id="toggle">Create an account</a></div>
@@ -80,6 +85,15 @@ export const GET = handler(async (request) => {
 <script>
   var action = "login";
   var defaultBody = ${JSON.stringify(postBody)};
+  var challenge = null;
+  function loadCaptcha() {
+    fetch("/auth/captcha").then(function (r) { return r.json(); }).then(function (data) {
+      challenge = data;
+      document.getElementById("captcha-svg").innerHTML = data.svg;
+      document.getElementById("captcha-box").style.display = "block";
+    });
+  }
+  loadCaptcha();
   toggleEl = document.getElementById("toggle");
   toggleEl.addEventListener("click", function () {
     action = action === "login" ? "signup" : "login";
@@ -98,6 +112,11 @@ export const GET = handler(async (request) => {
     body.action = action;
     body.username = username;
     body.password = password;
+    if (action === "login") {
+      if (!challenge) { errorEl.textContent = "Loading captcha…"; return; }
+      body.captchaId = challenge.challengeId;
+      body.captchaAnswer = document.getElementById("captcha").value;
+    }
     fetch("/auth/token", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -109,6 +128,9 @@ export const GET = handler(async (request) => {
         window.location.href = result.data.redirectUrl || "/";
       } else {
         errorEl.textContent = result.data && result.data.error ? result.data.error : "Sign in failed.";
+        challenge = null;
+        document.getElementById("captcha").value = "";
+        loadCaptcha();
       }
     }).catch(function () { errorEl.textContent = "Sign in failed. Try again."; });
   });

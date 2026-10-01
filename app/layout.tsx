@@ -37,7 +37,9 @@ export const viewport: Viewport = {
   ],
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem("localme.theme");if(t==="light"){document.documentElement.classList.remove("dark")}else{document.documentElement.classList.add("dark")}}catch(e){document.documentElement.classList.add("dark")}})()`;
+// Runs before the body is parsed: applies the persisted theme and marks the
+// document as script-capable so scroll-reveal styles may hide elements.
+const themeScript = `(function(){var d=document.documentElement;d.classList.add("js");try{var t=localStorage.getItem("localme.theme");if(t==="light"){d.classList.remove("dark")}else{d.classList.add("dark")}}catch(e){d.classList.add("dark")}})()`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

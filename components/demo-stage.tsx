@@ -94,7 +94,7 @@ export function DemoStage({ className }: { className?: string }) {
               aria-controls={`demo-panel-${entry.id}`}
               onClick={() => selectDemo(entry.id)}
               className={cn(
-                "tap flex min-h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition-colors",
+                "tap flex min-h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition-colors duration-200",
                 selected
                   ? "bg-secondary text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -118,7 +118,8 @@ export function DemoStage({ className }: { className?: string }) {
           <span className="ml-1 truncate font-mono text-[11px] text-muted-foreground">
             {siteOriginIsPublic() ? `${siteOrigin()}/you/${demo.id}-app/` : `/{your-username}/${demo.id}-app/`}
           </span>
-          <Badge variant="signal" className="ml-auto hidden sm:inline-flex">
+          <Badge variant="signal" className="ml-auto hidden items-center gap-1.5 sm:inline-flex">
+            <span className="status-led relative inline-flex h-1.5 w-1.5 rounded-full bg-signal text-signal" aria-hidden />
             live sandbox
           </Badge>
         </div>

@@ -86,7 +86,7 @@ describe("Coverage Boost Suite", () => {
     const keyProject = await requireProjectScoped(new Request("http://localhost"), keyPrincipal!, null);
     expect(keyProject.id).toBe(projectId);
 
-    const userPrincipal = { kind: "session" as const, userId, username: "boostuser", projectId: null, apiKeyName: null };
+    const userPrincipal = { kind: "session" as const, userId, username: "boostuser", projectId: null, apiKeyName: null, permissions: ["*"] };
     await expect(requireProjectScoped(new Request("http://localhost"), userPrincipal, "invalid")).rejects.toThrow(ApiError);
   });
 

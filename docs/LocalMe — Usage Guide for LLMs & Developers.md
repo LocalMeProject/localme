@@ -400,7 +400,7 @@ The file is streamed directly. You can use it as a link or open it in a new tab.
 ```json
 {
   "used": 1234567,
-  "total": 5242880,
+  "total": 2097152,
   "files": 42
 }
 ```
@@ -409,19 +409,34 @@ The file is streamed directly. You can use it as a link or open it in a new tab.
 
 ## 6. Library Service
 
-The Library is a shared storage area accessible across all your projects. You get a bonus 5MB.
+The Library is a CDN for assets shared across all your projects. Every account gets 3 MB for it — a ceiling of its own, separate from the 2 MB you get for project files.
 
-### 6.1 Moving a File to Library
+Each account has one reserved project named `library`, and its files are served
+from `/{username}/library/{path}`. Upload an asset once and every project
+references that single URL; nothing is copied between projects.
 
-From the Storage file manager, click **"Move to Library"** on any file. The file is moved and the new path is returned (e.g., `/library/bootstrap.css`).
+Manage it at **Library** in the console: upload files or a whole folder, delete,
+and copy any asset's public URL.
+
+`library` is a reserved name: it cannot be a project name, nor a top-level
+folder inside a project.
+
+### 6.1 Publishing an Asset
+
+Upload it in the console, or `POST /api/library/upload` with
+`{ "path": "theme.css", "contentBase64": "..." }` (console session required).
+There is no project to pick and no copy step.
 
 ### 6.2 Using Library Assets
 
-In your HTML, reference library assets via `/library/{filename}`:
-
 ```html
-<link rel="stylesheet" href="/library/bootstrap.min.css">
-<script src="/library/jquery.min.js"></script>
+<!-- absolute public URL -->
+<link rel="stylesheet" href="/ada/library/bootstrap.min.css">
+<script src="/ada/library/jquery.min.js"></script>
+
+<!-- from inside a project: `library` is reserved, so this resolves to the
+     account library and survives a custom domain -->
+<link rel="stylesheet" href="library/bootstrap.min.css">
 ```
 
 ### 6.3 Library API Endpoints
@@ -463,8 +478,12 @@ The following paths are reserved by the platform and cannot be overridden:
 - `/auth/*`
 - `/admin/*`
 - `/dashboard/*`
-- `/library/*`
+- `/library/*` (the root prefix; `/{user}/library/*` is the library’s own URL)
 - `/~public/*`
+
+Separately, `library` is a **reserved name** rather than a reserved path: a project
+cannot be called `library`, and a project file cannot live under a top-level
+`library/` folder. That is where the account’s shared assets live.
 
 ---
 

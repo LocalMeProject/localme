@@ -133,7 +133,44 @@ function createSqlite(endpoint: DbEndpoint): SqliteDb {
   database.pragma("journal_mode = WAL");
   database.pragma("foreign_keys = ON");
   installRegexp(database);
+  if (shouldAutoMigrate(endpoint)) {
+    migrateSqliteSchema(database);
+  }
   return new SqliteDb(database);
+}
+
+/**
+ * Apply `db/sqlite/*.sql` to a throwaway local database.
+ *
+ * Only for the in-memory default: it exists so `bun run dev` works from a clean
+ * checkout with no `bun run db:migrate` step, which is what the README promises
+ * ("local dev needs no database service"). A file-backed or Postgres database
+ * is a real deployment and must be migrated explicitly, where the ledger and
+ * the ordering guarantee live — silently re-running migrations there would be
+ * exactly the sort of surprise this platform should not have. Tests inject
+ * their own handle and own their own schema.
+ */
+function shouldAutoMigrate(endpoint: DbEndpoint): boolean {
+  if (endpoint.sqliteDatabase) return false;
+  if (endpoint.sqlitePath) return false;
+  return process.env.NODE_ENV !== "production";
+}
+
+function migrateSqliteSchema(database: import("better-sqlite3").Database): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync, readdirSync } = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { join } = require("node:path") as typeof import("node:path");
+    const dir = join(process.cwd(), "db", "sqlite");
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+      database.exec(readFileSync(join(dir, file), "utf8"));
+    }
+  } catch (error) {
+    // A missing or unreadable migration directory must not stop the server from
+    // booting; the first request that needs a table will report it clearly.
+    console.warn("[localme] could not auto-apply the SQLite schema for the in-memory dev database:", error);
+  }
 }
 
 function createPostgres(endpoint: DbEndpoint): PostgresDb {
