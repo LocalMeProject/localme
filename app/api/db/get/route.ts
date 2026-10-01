@@ -1,0 +1,3 @@
+import { dbGet } from "@/lib/server/db-routes";
+
+export const POST = dbGet;

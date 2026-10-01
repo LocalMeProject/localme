@@ -9,15 +9,9 @@
  * dialect-agnostic. Driver packages are loaded lazily so each runtime only needs
  * the driver it actually uses (this module must stay free of driver imports).
  */
-import { z } from "zod";
+import { sqlitePathFrom } from "./sqlite-path.mjs";
 
 export type DbDriver = "sqlite" | "postgres";
-
-const pathSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .regex(/^file:\//, "DB_PATH must start with file:/");
 
 export interface DbEndpoint {
   driver: DbDriver;
@@ -36,13 +30,12 @@ export interface DbEndpoint {
 export function resolveDriver(env: Record<string, string | undefined> = process.env): DbEndpoint {
   const raw = env.DB_DRIVER?.trim().toLowerCase() || "sqlite";
   if (raw === "sqlite") {
-    const rawPath = env.DB_PATH?.trim();
-    if (!rawPath) return { driver: "sqlite" };
     // Canonical form is the plain filesystem path; the file:/ URI prefix is
-    // accepted (and stripped) so env strings copy-paste from better-sqlite3 docs.
-    const path = rawPath.replace(/^file:\/+/, "/");
-    pathSchema.parse(rawPath);
-    return { driver: "sqlite", sqlitePath: path };
+    // accepted (and stripped) so env strings copy-paste from better-sqlite3
+    // docs. Validation and stripping live in sqlite-path.mjs, shared with the
+    // migration runner — see the note there.
+    const sqlitePath = sqlitePathFrom(env) as string | undefined;
+    return sqlitePath ? { driver: "sqlite", sqlitePath } : { driver: "sqlite" };
   }
   if (raw === "postgres") {
     const connectionString = env.DATABASE_URL?.trim();

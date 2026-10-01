@@ -26,17 +26,44 @@ export function jsonPathExpr(flavor: SqlFlavor, segments: string[]): string {
   return `json_extract(document, '$.${segments.map(escapeDollarKey).join(".")}')`;
 }
 
-/** JSON path expression for a document field, text-cast (`->>` / full text). */
+/**
+ * JSON path expression for a document field, text-cast (`->>` / full text).
+ *
+ * The cast is what makes the two dialects agree. Postgres's `->>` always
+ * returns text, so `{id: 1}` and `{id: "1"}` are the same document id. SQLite's
+ * `json_extract` is type-preserving — a JSON number comes back INTEGER — so
+ * comparing it to a bound string never matches and the unique index lets
+ * `1` and `"1"` coexist. Casting to TEXT normalises SQLite to Postgres
+ * semantics: both dialects treat the id as its text form.
+ */
 export function jsonPathText(flavor: SqlFlavor, segments: string[]): string {
   if (flavor === "postgres") {
     if (segments.length === 0) return "document::text";
     return `document->>${segments.map(quotedKey).join("->>")}`;
   }
-  return jsonPathExpr("sqlite", segments); // json_extract already returns TEXT/NULL
+  if (segments.length === 0) return "CAST(document AS TEXT)";
+  return `CAST(json_extract(document, '$.${segments.map(escapeDollarKey).join(".")}') AS TEXT)`;
 }
 
-function escapeDollarKey(segment: string): string {
-  return segment.replace(/'/g, "''").replace(/"/g, '\\"');
+/**
+ * Expression yielding the JSON *type* of a document field: `number`, `string`,
+ * `boolean`, `null`, `object`, `array`, or NULL when the path is absent.
+ *
+ * Numeric comparisons use this to match only real JSON numbers, so
+ * `{ id: 1 }` can never pick up a document whose id is the string `"1"`.
+ * Note the two-argument SQLite form `json_type(document, '$.a.b')` — passing an
+ * already-extracted value would hand `json_type` a scalar and raise
+ * "malformed JSON" for any string field.
+ */
+export function jsonTypeExpr(flavor: SqlFlavor, segments: string[]): string {
+  if (flavor === "postgres") {
+    return `jsonb_typeof(${jsonPathExpr(flavor, segments)})`;
+  }
+  if (segments.length === 0) return "json_type(document)";
+  return `json_type(document, '$.${segments.map(escapeDollarKey).join(".")}')`;
+}
+
+function escapeDollarKey(segment: string): string {  return segment.replace(/'/g, "''").replace(/"/g, '\\"');
 }
 
 export function placeholder(flavor: SqlFlavor, index: number): string {

@@ -37,11 +37,13 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }),
   isAdmin: boolean("is_admin").notNull().default(false),
   isOperator: boolean("is_operator").notNull().default(false),
-  storageCapBytes: bigint("storage_cap_bytes", { mode: "number" }).notNull().default(5242880),
+  storageCapBytes: bigint("storage_cap_bytes", { mode: "number" }).notNull().default(2097152),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   lastLogin: timestamp("last_login"),
   isSuspended: boolean("is_suspended").notNull().default(false),
+  failedLoginCount: integer("failed_login_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until"),
 });
 
 export const projects = pgTable(
@@ -57,6 +59,7 @@ export const projects = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     isActive: boolean("is_active").notNull().default(true),
+    watermarkEnabled: boolean("watermark_enabled").notNull().default(true),
   },
   (t) => [uniqueIndex("projects_user_name_uq").on(t.userId, t.name)],
 );
@@ -91,6 +94,19 @@ export const rateLimits = pgTable(
   ],
 );
 
+export const acmeChallenges = pgTable(
+  "acme_challenges",
+  {
+    id: serial("id").primaryKey(),
+    domain: text("domain").notNull(),
+    token: text("token").notNull(),
+    keyAuthorization: text("key_authorization").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("acme_challenges_domain_token_uq").on(t.domain, t.token)],
+);
+
 export const routes = pgTable(
   "routes",
   {
@@ -104,6 +120,7 @@ export const routes = pgTable(
     proxyConfig: jsonb("proxy_config"),
     requiresAuth: boolean("requires_auth").notNull().default(false),
     requiredRole: text("required_role"),
+    requiredPermission: text("required_permission"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

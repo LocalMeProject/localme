@@ -1,45 +1,18 @@
 /**
  * HTTP plumbing shared by every route handler: JSON responses with the
- * documented `{ error, code }` body, zod body parsing, and the principal
- * resolution used to authenticate a request (Blueprint §7, the `/docs` auth
- * section).
+ * documented `{ error, code }` body, zod body parsing, and the per-request rate
+ * limit every route inherits (Blueprint §7, §5.11).
+ *
+ * The error vocabulary lives in `./errors` and is re-exported here; see the note
+ * in that file for why it is not defined inline.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { ApiError, statusForCode, STATUS_BY_CODE, type ApiErrorCode } from "@/lib/server/errors";
+import { enforceRateLimit, rateGroupFor } from "@/lib/server/ratelimit";
+import { createLogger } from "@/lib/server/logger";
 
-export type ApiErrorCode =
-  | "bad_request"
-  | "unauthorized"
-  | "forbidden"
-  | "not_found"
-  | "method_not_allowed"
-  | "conflict"
-  | "payload_too_large"
-  | "payment_required"
-  | "rate_limited"
-  | "bad_gateway"
-  | "gateway_timeout"
-  | "internal_error";
-
-const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
-  bad_request: 400,
-  unauthorized: 401,
-  forbidden: 403,
-  not_found: 404,
-  method_not_allowed: 405,
-  conflict: 409,
-  payload_too_large: 413,
-  payment_required: 402,
-  rate_limited: 429,
-  bad_gateway: 502,
-  gateway_timeout: 504,
-  internal_error: 500,
-};
-
-/** HTTP status for an error code — shared by API handlers and project serving. */
-export function statusForCode(code: ApiErrorCode): number {
-  return STATUS_BY_CODE[code];
-}
+export { ApiError, statusForCode, type ApiErrorCode };
 
 /** Uniform error body: `{ error, code }` per the docs "Errors" section. */
 export function apiError(code: ApiErrorCode, message: string, headers?: HeadersInit): NextResponse {
@@ -83,29 +56,36 @@ export type RouteContext<P extends Record<string, string> = Record<string, strin
   params: Promise<P>;
 };
 
+/** API request logging (§9.4) — every unhandled fault lands here. */
+const log = createLogger("api");
+
 export function handler<P extends Record<string, string> = Record<string, string>>(
   fn: (request: Request, context: RouteContext<P>) => Promise<NextResponse>,
 ) {
   return async (request: Request, context?: RouteContext<P>): Promise<NextResponse> => {
+    const path = new URL(request.url).pathname;
     try {
+      // §5.11 rate limiting is applied here rather than per route, so a new
+      // endpoint cannot ship unprotected by omission. `rateGroupFor` maps the
+      // path to its documented budget.
+      const limited = await enforceRateLimit(request, rateGroupFor(path));
+      if (limited) return limited;
       return await fn(request, context ?? { params: Promise.resolve({} as P) });
     } catch (error) {
       if (error instanceof ApiError) {
-        return apiError(error.code, error.message);
+        // 4xx are the caller's problem and expected in normal traffic; only
+        // server faults and rate limits are worth a log line (§9.4).
+        if (error.code === "rate_limited") {
+          log.warn("rate_limited", { method: request.method, path });
+        }
+        return apiError(error.code, error.message, error.headers);
       }
-      console.error("[api] unhandled error:", error);
+      log.error("unhandled_error", {
+        method: request.method,
+        path,
+        error,
+      });
       return apiError("internal_error", "Something went wrong.");
     }
   };
-}
-
-/** Throwable error carrying a documented status/code pair. */
-export class ApiError extends Error {
-  constructor(
-    public readonly code: ApiErrorCode,
-    message: string,
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
 }

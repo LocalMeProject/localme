@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { BrandMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiPost } from "@/app/console";
+import { apiGet, apiPost } from "@/app/console";
 
 /**
  * POST /auth/token — console login or signup. Sessions are 20-minute sliding
@@ -33,8 +33,22 @@ function AuthForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<{ challengeId: string; svg: string } | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
 
   const returnTo = params.get("returnTo") ?? "/dashboard";
+
+  // Logins are captcha-gated (Blueprint §7.2); fetch the challenge lazily.
+  useEffect(() => {
+    if (mode !== "login" || captcha) return;
+    let cancelled = false;
+    void apiGet<{ challengeId: string; svg: string }>("/auth/captcha").then((challenge) => {
+      if (!cancelled) setCaptcha(challenge);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, captcha]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -46,11 +60,16 @@ function AuthForm() {
         username,
         password,
         returnUrl: returnTo,
+        ...(mode === "login" && captcha
+          ? { captchaId: captcha.challengeId, captchaAnswer }
+          : {}),
       });
       toast.success(mode === "signup" ? "Welcome to LocalMe" : "Welcome back");
       router.push(result.redirectUrl || "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed.");
+      setCaptcha(null); // fresh challenge for the next attempt
+      setCaptchaAnswer("");
     } finally {
       setBusy(false);
     }
@@ -101,6 +120,24 @@ function AuthForm() {
                 <p className="text-[11.5px] text-muted-foreground">At least 8 characters.</p>
               )}
             </div>
+            {mode === "login" && captcha && (
+              <div className="space-y-1.5">
+                <Label htmlFor="captcha">Captcha</Label>
+                <div
+                  className="w-full overflow-hidden rounded-md border border-border"
+                  dangerouslySetInnerHTML={{ __html: captcha.svg }}
+                />
+                <Input
+                  id="captcha"
+                  value={captchaAnswer}
+                  onChange={(e) => setCaptchaAnswer(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="Answer"
+                  required
+                />
+              </div>
+            )}
             {error && (
               <p className="text-[13px] text-destructive" role="alert">
                 {error}

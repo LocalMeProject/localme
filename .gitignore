@@ -29,6 +29,12 @@ local.db*
 # testing & coverage
 coverage/
 
+# scratch mirror copies of the working tree
+isolate/
+
 # misc
 .DS_Store
 *.log
+
+# seeder build output
+.seed-build/

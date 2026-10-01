@@ -12,7 +12,7 @@ export function StatCard({
   value: React.ReactNode;
   hint?: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
-  tone?: "default" | "signal" | "blueprint";
+  tone?: "default" | "signal" | "blueprint" | "destructive";
   className?: string;
 }) {
   return (
@@ -23,7 +23,13 @@ export function StatCard({
           <Icon
             className={cn(
               "h-4 w-4",
-              tone === "signal" ? "text-signal" : tone === "blueprint" ? "text-blueprint" : "text-muted-foreground",
+              tone === "signal"
+                ? "text-signal"
+                : tone === "blueprint"
+                  ? "text-blueprint"
+                  : tone === "destructive"
+                    ? "text-destructive"
+                    : "text-muted-foreground",
             )}
           />
         )}

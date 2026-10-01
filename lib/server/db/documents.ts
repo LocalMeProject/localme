@@ -9,6 +9,7 @@
 import { compileFilter, compileSort, compileUpdate, type JsonValue } from "./dsl";
 import { jsonPathText, placeholder, quote, type SqlFlavor } from "./sql";
 import type { Db } from "./index";
+import { withProjectWriteLock } from "../write-lock";
 
 export interface FindOptions {
   filter?: Record<string, unknown>;
@@ -70,7 +71,7 @@ function withMeta(
 export function createDocumentStore(db: Db) {
   const flavor = flavorOf(db);
 
-  return {
+  const store = {
     /** List table names for a project with row counts. */
     async listTables(projectId: number): Promise<Array<{ name: string; count: number }>> {
       const rows = await db.raw<{ table_name: string; count: string | number }>(
@@ -82,18 +83,37 @@ export function createDocumentStore(db: Db) {
       return rows.map((r) => ({ name: r.table_name, count: Number(r.count) }));
     },
 
-    /** Count documents matching a filter (caller-bounded; see SCAN_CAP note). */
-    async count(projectId: number, table: string, filter?: Record<string, unknown>): Promise<number> {
+    /**
+     * Count documents matching a filter.
+     *
+     * `cap` bounds the rows the database has to visit, so a query against a
+     * huge table cannot turn into an unbounded full scan. When the cap is hit
+     * the returned number is the number of rows actually examined, and the
+     * caller treats that as "at least this many" (see `FindResult.truncated`).
+     */
+    async count(
+      projectId: number,
+      table: string,
+      filter?: Record<string, unknown>,
+      cap?: number,
+    ): Promise<number> {
       quote.ident(table);
       // $1=project_id, $2=table_name, then filter params from #3.
       const where = compileFilter(filter, flavor, 2);
-      const rows = await db.raw<{ total: string | number }>(
-        `SELECT COUNT(*) AS total FROM project_data
-         WHERE project_id = ${placeholder(flavor, 0)}
-           AND table_name = ${placeholder(flavor, 1)}
-           AND ${where.sql}`,
-        [projectId, table, ...where.params],
-      );
+      const bounded =
+        cap && cap > 0
+          ? `SELECT COUNT(*) AS total FROM (
+               SELECT 1 FROM project_data
+               WHERE project_id = ${placeholder(flavor, 0)}
+                 AND table_name = ${placeholder(flavor, 1)}
+                 AND ${where.sql}
+               LIMIT ${Math.floor(cap)}
+             ) AS capped`
+          : `SELECT COUNT(*) AS total FROM project_data
+               WHERE project_id = ${placeholder(flavor, 0)}
+                 AND table_name = ${placeholder(flavor, 1)}
+                 AND ${where.sql}`;
+      const rows = await db.raw<{ total: string | number }>(bounded, [projectId, table, ...where.params]);
       return Number(rows[0]?.total ?? 0);
     },
 
@@ -104,7 +124,7 @@ export function createDocumentStore(db: Db) {
       const order = compileSort(options.sort, flavor);
       const limit = Math.min(Math.max(options.limit ?? MAX_LIMIT, 1), MAX_LIMIT);
       const offset = Math.max(options.offset ?? 0, 0);
-      const truncated = limit + offset > SCAN_CAP;
+      const windowPastCap = limit + offset > SCAN_CAP;
 
       const rows = await db.raw(
         `SELECT document, created_at, updated_at FROM project_data
@@ -116,12 +136,16 @@ export function createDocumentStore(db: Db) {
         [projectId, table, ...where.params, limit, offset],
       );
 
+      // One extra bounded count, not an unbounded one: this is the only `total`
+      // the response reports, so callers do not need a second round trip.
+      const total = await store.count(projectId, table, options.filter, SCAN_CAP + 1);
+
       return {
         data: toRows(rows).map(withMeta),
-        total: 0, // total is computed by the caller via count() when needed
+        total,
         limit,
         offset,
-        truncated,
+        truncated: windowPastCap || total > SCAN_CAP,
       };
     },
 
@@ -145,26 +169,29 @@ export function createDocumentStore(db: Db) {
       table: string,
       document: Record<string, JsonValue>,
     ): Promise<DocumentRow> {
-      quote.ident(table);
-      if (document.id === undefined || document.id === null) {
-        throw new Error("Every document must carry a non-null id field");
-      }
-      const idText = String(document.id);
-      const jsonText = JSON.stringify(document);
-      const docParam =
-        flavor === "postgres" ? `${placeholder(flavor, 2)}::jsonb` : placeholder(flavor, 2);
-      const sqlText = `INSERT INTO project_data (project_id, table_name, document)
+      // §8.4: writes for one project are serialized; reads stay lock-free.
+      return withProjectWriteLock(projectId, async () => {
+        quote.ident(table);
+        if (document.id === undefined || document.id === null) {
+          throw new Error("Every document must carry a non-null id field");
+        }
+        const idText = String(document.id);
+        const jsonText = JSON.stringify(document);
+        const docParam =
+          flavor === "postgres" ? `${placeholder(flavor, 2)}::jsonb` : placeholder(flavor, 2);
+        const sqlText = `INSERT INTO project_data (project_id, table_name, document)
         VALUES (${placeholder(flavor, 0)}, ${placeholder(flavor, 1)}, ${docParam})
         RETURNING document, created_at, updated_at`;
-      try {
-        const rows = await db.raw(sqlText, [projectId, table, jsonText]);
-        return toRows(rows)[0]!;
-      } catch (error) {
-        if (isDuplicateId(error)) {
-          throw new DuplicateDocumentIdError(table, idText);
+        try {
+          const rows = await db.raw(sqlText, [projectId, table, jsonText]);
+          return toRows(rows)[0]!;
+        } catch (error) {
+          if (isDuplicateId(error)) {
+            throw new DuplicateDocumentIdError(table, idText);
+          }
+          throw error;
         }
-        throw error;
-      }
+      });
     },
 
     async update(
@@ -174,52 +201,57 @@ export function createDocumentStore(db: Db) {
       update: Record<string, unknown>,
       many: boolean,
     ): Promise<number> {
-      quote.ident(table);
-      // Binding order follows SQL appearance: SET params first, then the WHERE
-      // fixed params, then filter params (the single-row sub-select reuses the
-      // same fixed params and filter params, so they repeat in the array).
-      const compiled = compileUpdate(update, flavor, 0);
-      const fixedBase = compiled.params.length; // project_id, table_name follow
-      const where = compileFilter(filter, flavor, fixedBase + 2);
-      const projParam = placeholder(flavor, fixedBase);
-      const tableParam = placeholder(flavor, fixedBase + 1);
-      const capped = many
-        ? ""
-        : ` AND id IN (
+      return withProjectWriteLock(projectId, async () => {
+        quote.ident(table);
+        // Binding order follows SQL appearance: SET params first, then the WHERE
+        // fixed params, then filter params (the single-row sub-select reuses the
+        // same fixed params and filter params, so they repeat in the array).
+        const compiled = compileUpdate(update, flavor, 0);
+        const fixedBase = compiled.params.length; // project_id, table_name follow
+        const where = compileFilter(filter, flavor, fixedBase + 2);
+        const projParam = placeholder(flavor, fixedBase);
+        const tableParam = placeholder(flavor, fixedBase + 1);
+        const capped = many
+          ? ""
+          : ` AND id IN (
             SELECT id FROM project_data
             WHERE project_id = ${projParam}
               AND table_name = ${tableParam}
               AND ${where.sql}
             LIMIT 1
           )`;
-      const sqlText = `UPDATE project_data
+        const sqlText = `UPDATE project_data
         SET ${compiled.assignments.join(", ")}
         WHERE project_id = ${projParam}
           AND table_name = ${tableParam}
           AND ${where.sql}${capped}`;
-      // SQLite placeholders are positional: every occurrence consumes the next
-      // value, so the sub-select's placeholders repeat the values. Postgres
-      // placeholders are numbered and shared: each value is supplied once.
-      const fixedAndFilter = [projectId, table, ...where.params];
-      const params =
-        flavor === "postgres"
-          ? [...compiled.params, ...fixedAndFilter]
-          : [...compiled.params, ...fixedAndFilter, ...fixedAndFilter];
-      const result = await db.run(sqlText, params);
-      return result.changes;
+        // SQLite placeholders are positional: every occurrence consumes the next
+        // value, so the sub-select's placeholders repeat the values. Postgres
+        // placeholders are numbered and shared: each value is supplied once.
+        const fixedAndFilter = [projectId, table, ...where.params];
+        const params =
+          flavor === "postgres"
+            ? [...compiled.params, ...fixedAndFilter]
+            : [...compiled.params, ...fixedAndFilter, ...fixedAndFilter];
+        const result = await db.run(sqlText, params);
+        return result.changes;
+      });
     },
 
     async delete(projectId: number, table: string, filter?: Record<string, unknown>): Promise<number> {
-      quote.ident(table);
-      const where = compileFilter(filter, flavor, 2);
-      const sqlText = `DELETE FROM project_data
+      return withProjectWriteLock(projectId, async () => {
+        quote.ident(table);
+        const where = compileFilter(filter, flavor, 2);
+        const sqlText = `DELETE FROM project_data
         WHERE project_id = ${placeholder(flavor, 0)}
           AND table_name = ${placeholder(flavor, 1)}
           AND ${where.sql}`;
-      const result = await db.run(sqlText, [projectId, table, ...where.params]);
-      return result.changes;
+        const result = await db.run(sqlText, [projectId, table, ...where.params]);
+        return result.changes;
+      });
     },
   };
+  return store;
 }
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;

@@ -8,8 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
-        signal: "bg-signal text-signal-foreground hover:bg-signal/90 shadow-sm font-semibold",
+        default: "sheen bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+        signal: "sheen bg-signal text-signal-foreground hover:bg-signal/90 shadow-sm font-semibold",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

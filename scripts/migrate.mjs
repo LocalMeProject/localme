@@ -8,22 +8,28 @@
  *
  * Applied files are recorded in a `schema_migrations` ledger and skipped on
  * re-run. Safe to run repeatedly.
+ *
+ * DB_PATH handling is imported from `lib/server/db/sqlite-path.mjs`, the same
+ * module the app uses. An earlier version duplicated the `file:/` stripping
+ * here and drifted: a relative path opened a SQLite URI instead of a file, so
+ * `db:migrate` succeeded against a database the server never saw.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
+import { sqlitePathFrom } from "../lib/server/db/sqlite-path.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const driver = (process.env.DB_DRIVER || "sqlite").trim().toLowerCase();
+const sqlitePath = sqlitePathFrom(process.env);
 
 async function migrateSqlite() {
   // Lazy require keeps driver imports out of the Postgres path.
   const { default: Database } = await import("better-sqlite3");
-  const path = process.env.DB_PATH?.trim();
-  const db = new Database(path ? path.replace(/^file:\/+/, "/") : ":memory:");
+  const db = new Database(sqlitePath ?? ":memory:");
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 

@@ -18,11 +18,13 @@ export const users = sqliteTable("users", {
   email: text("email"),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   isOperator: integer("is_operator", { mode: "boolean" }).notNull().default(false),
-  storageCapBytes: integer("storage_cap_bytes").notNull().default(5242880),
+  storageCapBytes: integer("storage_cap_bytes").notNull().default(2097152),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   lastLogin: text("last_login"),
   isSuspended: integer("is_suspended", { mode: "boolean" }).notNull().default(false),
+  failedLoginCount: integer("failed_login_count").notNull().default(0),
+  lockedUntil: text("locked_until"),
 });
 
 export const projects = sqliteTable(
@@ -38,6 +40,7 @@ export const projects = sqliteTable(
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    watermarkEnabled: integer("watermark_enabled", { mode: "boolean" }).notNull().default(true),
   },
   (t) => [uniqueIndex("projects_user_name_uq").on(t.userId, t.name)],
 );
@@ -73,6 +76,19 @@ export const rateLimits = sqliteTable(
   ],
 );
 
+export const acmeChallenges = sqliteTable(
+  "acme_challenges",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    domain: text("domain").notNull(),
+    token: text("token").notNull(),
+    keyAuthorization: text("key_authorization").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [uniqueIndex("acme_challenges_domain_token_uq").on(t.domain, t.token)],
+);
+
 export const routes = sqliteTable(
   "routes",
   {
@@ -86,6 +102,7 @@ export const routes = sqliteTable(
     proxyConfig: text("proxy_config"),
     requiresAuth: integer("requires_auth", { mode: "boolean" }).notNull().default(false),
     requiredRole: text("required_role"),
+    requiredPermission: text("required_permission"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),

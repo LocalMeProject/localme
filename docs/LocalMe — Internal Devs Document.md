@@ -1,8 +1,25 @@
 # LocalMe — Internal Devs Document
 
-**Version**: 1.0.0  
-**Date**: 2026-07-23  
-**Status**: Final — Development Guide
+**Version**: 1.1.0  
+**Date**: 2026-10-01  
+**Status**: Living guide — see the architecture note below
+
+> ### ⚠️ Read this first
+>
+> This document was written on 2026-07-23 against a **.NET 10 backend plus a
+> separate React frontend**. [ADR 001](./adr/001-nextjs-only-architecture.md)
+> rejected that split: LocalMe ships as **one Next.js App Router application**
+> with no separate backend, and **SQLite is the default dialect** with Postgres as
+> an opt-in production path ([ADR 003](./adr/003-sqlite-first-switchable-postgres.md)).
+>
+> The sections below have been corrected where they describe the environment, the
+> commands or the data layer. Longer passages that still describe C#/YARP/a
+> `backend/` directory are retained as the original design rationale — read them
+> as history, not as instructions. Where the two disagree, **the Blueprint, the
+> Technical Documentation and the code are authoritative.**
+>
+> For how to actually build and run this, see the [README](../README.md) and
+> [`env.example`](../env.example).
 
 ---
 
@@ -18,12 +35,15 @@ This document is the internal development guide for the LocalMe platform enginee
 
 | Component | Version | Installation |
 | :--- | :--- | :--- |
-| **.NET SDK** | 10.0.10 | `sudo apt install dotnet-sdk-10.0` |
-| **Node.js** | 22.x LTS | `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -` |
-| **PostgreSQL** | 18.4 | `sudo apt install postgresql-18` |
+| **Bun** | 1.x | `curl -fsSL https://bun.sh/install | bash` |
+| **Node.js** | 22.x LTS (what Bun and Next.js run on) | `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -` |
+| **PostgreSQL** | 18.4 — *optional*, production path only | `sudo apt install postgresql-18` |
 | **Git** | 2.43+ | `sudo apt install git` |
-| **IDE** | Visual Studio Code / Rider | — |
+| **IDE** | VS Code | — |
 | **Docker** | Latest (optional) | `sudo apt install docker.io docker-compose` |
+
+There is **no .NET SDK** and no separate backend to run. `npm`/`pnpm` also work;
+`bun` is what CI and the scripts in `package.json` assume.
 
 ### 2.2 Clone & Initial Setup
 
@@ -49,33 +69,53 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE localme TO localme_us
 
 ### 2.3 Environment Variables (.env files)
 
-**Backend (`backend/.env`):**
+There is one process and therefore one environment file. Copy
+[`env.example`](../env.example) to `.env.local`; `.env.local` overrides `.env`.
+Never commit either.
+
 ```
-ASPNETCORE_ENVIRONMENT=Development
-ASPNETCORE_URLS=http://localhost:5000
-POSTGRES_CONNECTION_STRING=Host=localhost;Port=5432;Database=localme;Username=localme_user;Password=localme
-JWT_SECRET=dev_super_secret_key_change_in_production
-ENCRYPTION_KEY=dev_32_byte_key_1234567890123456
-STORAGE_ROOT=./storage
-SSL_EMAIL=dev@localme.com
+DB_DRIVER=sqlite
+# DB_PATH=file:/var/lib/localme/localme.db      # absolute; unset = in-memory
+# DATABASE_URL=postgresql://user:pass@host/db   # required when DB_DRIVER=postgres
+SESSION_SECRET=                                # optional — see below
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+PLATFORM_CRON_TOKEN=                           # unlocks unattended cron execution
+# ALLOWED_DEV_ORIGINS=*.example.com             # next dev only
+# ADMIN_INITIAL_USERNAME / ADMIN_INITIAL_PASSWORD / ALLOW_DEFAULT_ADMIN_PASSWORD
 ```
 
-**Frontend (`frontend/.env.local`):**
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
+`SESSION_SECRET` is optional: when unset the platform generates a 32-byte secret
+on first boot and stores it in `system_configs` (`platform.session_secret`), so a
+clean checkout runs with no configuration. Set it explicitly for production.
+`GET /health` reports `sessionSecretConfigured` so you can tell which mode you
+are in.
+
+Note the variables that no longer exist: `ASPNETCORE_*`,
+`POSTGRES_CONNECTION_STRING`, `JWT_SECRET`, `ENCRYPTION_KEY`, `STORAGE_ROOT`,
+`SSL_EMAIL`, `NEXT_PUBLIC_API_URL` and `STORAGE_ROOT`. There is no separate
+backend URL (same-origin API routes) and no `ENCRYPTION_KEY` — the AES-256-GCM
+key is derived from `SESSION_SECRET` with scrypt.
 
 ### 2.4 Run Locally
 
 ```bash
-# Terminal 1: Backend
-cd backend
-dotnet run --urls=http://localhost:5000
+bun install
+bun run dev          # Next.js dev server, binds 0.0.0.0:$PORT (default 3000)
+```
 
-# Terminal 2: Frontend
-cd frontend
-npm run dev
+Nothing else to start. With the default in-memory SQLite the schema is migrated
+automatically on first connection, so a clean checkout runs immediately. A
+file-backed SQLite database or Postgres needs one explicit migration first:
+
+```bash
+bun run db:migrate
+DB_DRIVER=postgres DATABASE_URL=postgresql://... bun run db:migrate
+```
+
+Everything at once — install, verify, build, run:
+
+```bash
+bun install && bun run typecheck && bun run lint && bun run test && bun run build && bun run start
 ```
 
 ---
@@ -478,7 +518,7 @@ VALUES ('admin', '{BCRYPT_HASH}', true);
 **Seed System Configs**:
 ```sql
 INSERT INTO system_configs (config_key, config_value, description) VALUES
-('storage', '{"default_user_cap_bytes":5242880,"max_user_cap_bytes":1073741824,"library_bonus_bytes":5242880}', 'Storage limits'),
+('storage', '{"default_user_cap_bytes":2097152,"max_user_cap_bytes":1073741824,"library_cap_bytes":3145728}', 'Storage limits'),
 ('rate_limits', '{"public_requests_per_minute":60,"authenticated_requests_per_minute":300,"admin_requests_per_minute":600}', 'Rate limits'),
 -- etc.
 ```

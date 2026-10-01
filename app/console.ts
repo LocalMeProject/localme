@@ -49,8 +49,15 @@ export function apiPut<T>(path: string, body: unknown): Promise<T> {
   return api<T>(path, { method: "PUT", body: JSON.stringify(body) });
 }
 
-export function apiDelete<T>(path: string): Promise<T> {
-  return api<T>(path, { method: "DELETE" });
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return api<T>(path, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export function apiDelete<T>(path: string, body?: unknown): Promise<T> {
+  return api<T>(path, {
+    method: "DELETE",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 }
 
 export function formatBytes(bytes: number): string {

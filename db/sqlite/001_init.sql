@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE,
     is_admin INTEGER DEFAULT 0,
     is_operator INTEGER DEFAULT 0,
-    storage_cap_bytes INTEGER DEFAULT 5242880,
+    storage_cap_bytes INTEGER DEFAULT 2097152,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     last_login TEXT,

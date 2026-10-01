@@ -100,7 +100,7 @@ await rateLimiter.IncrementAsync(key);
 
 #### 3.3.3 Routing Middleware
 
-- Checks if the request path matches any **platform reserved prefix** (`/api`, `/auth`, `/admin`, `/dashboard`, `/library`, `/~public`).
+- Checks if the request path matches any **platform reserved prefix** (`/api`, `/auth`, `/admin`, `/dashboard`, `/library`, `/~public`). Note `/{user}/library/…` is *not* reserved: it is the library's own public URL, resolved as the reserved `library` project.
 - If not, resolves the project from the URL path: `/{username}/{projectname}/...`.
 - If the project is resolved, checks the `routes` table for a matching path pattern.
 - If a route is found:
@@ -108,6 +108,16 @@ await rateLimiter.IncrementAsync(key);
   - Otherwise, serves the target HTML file from storage (or streams it).
 - If no route matches, attempts to serve a static file from storage.
 - If still not found, checks for `404.html`; otherwise, returns platform 404.
+
+**Base URL injection**: every served HTML response gets
+`<base href="/{username}/{project}/">` inserted after `<head>`, unless the author
+declared a `<base>` of their own (a custom domain uses `/`). Without it a
+relative `src="static/app.js"` resolves against the *document's* URL, which
+breaks at `/{user}/{project}` (no trailing slash) and again at any routed path
+such as `/{user}/{project}/reports` — the browser would look in
+`.../reports/static/app.js`. A single `<base>` pins the whole document to the
+project root, so relative asset references work from every URL the project is
+reachable at.
 
 #### 3.3.4 Watermark Middleware
 
@@ -213,9 +223,30 @@ ORDER BY ... LIMIT ... OFFSET ...
 
 ### 5.3 Storage Cap Enforcement
 
-- Before any write/upload, check `total_used` for the user (sum of all projects + library).
-- If `total_used + new_size > user.storage_cap_bytes`, return `402 Payment Required`.
-- The cap is a **hard limit**.
+Two independent ceilings, both checked **before** any bytes are written:
+
+| Budget | Config key | Default | Covers |
+| :----- | :--------- | :------ | :----- |
+| Project files | `storage.default_user_cap_bytes` | 2 097 152 (2 MB) | every project except the reserved `library` one |
+| Shared library | `storage.library_cap_bytes` | 3 145 728 (3 MB) | every file in the account's `library` project |
+
+The split is **by project, not by path prefix**. The library used to be a
+`library/` folder inside whichever project the owner uploaded to, so the
+accounting had to exclude a path prefix; it is now a project of its own
+(§13.3), so the split is `p.name <> 'library'`.
+
+`storage.library_cap_bytes` used to be `library_bonus_bytes`, meaning "the user
+cap *plus* this much". That made the advertised allowance impossible to state
+and impossible to lower without also lowering every project's budget, so it is
+now an absolute ceiling of its own.
+
+Exceeding either returns `402 Payment Required`. The cap is a **hard limit** —
+the check and the write happen inside one serialized step, so two concurrent
+uploads cannot both observe room for themselves and then both land.
+
+An admin may raise a single account's project cap up to
+`storage.max_user_cap_bytes` (1 GB); anything above that is rejected with a
+message naming the ceiling rather than silently clamped.
 
 ---
 
@@ -238,6 +269,19 @@ ORDER BY ... LIMIT ... OFFSET ...
 - Algorithm: HMAC-SHA256 (symmetric key).
 - Expiry: 20 minutes (sliding renewal on each request).
 
+**The signing key.** `SESSION_SECRET` is the documented way to configure it, and
+a production deployment should always set it. When it is absent the platform
+generates a 32-byte secret on first boot and persists it in `system_configs`
+(key `platform.session_secret`), so a fresh clone or self-hosted deploy is usable
+with no configuration at all. Resolution order is environment first, generated
+second; `GET /health` reports which one is in use as `sessionSecretConfigured`.
+
+This replaced three independent `process.env.SESSION_SECRET` reads that each
+failed on their own schedule — sign-in appeared to work (sessions fell back to an
+empty HMAC key, which meant anyone could mint a valid session cookie) while
+visitor signup and secret storage failed with a bare
+`"SESSION_SECRET is not configured."`.
+
 ### 6.2 Visitor Authentication (Per Project)
 
 - **Credentials**: Stored in `visitors` table, hashed with BCrypt.
@@ -251,8 +295,23 @@ ORDER BY ... LIMIT ... OFFSET ...
   "exp": "timestamp"
 }
 ```
-- Cookie: `auth_{projectId}` with `Path=/{username}/{projectname}/`.
+- Cookie: `auth_{projectId}` with `Path=/`.
 - Sliding expiration: 20 minutes.
+
+**The cookie path is the site root, deliberately.** It used to be
+`Path=/{username}/{projectname}/`, which was narrow enough to be actively broken:
+a signed-in visitor's page calls `/api/db/*` on the platform origin, a path that
+cookie was never sent to, so every data call answered 401. Sign-in appeared to
+succeed and changed nothing — the gated page rendered, then failed to load its
+own data. Widening the path grants no extra access, because a token is only ever
+accepted for the project it names (`resolveVisitorPrincipal` in `api-auth.ts`).
+
+**A visitor is a first-class API principal.** `resolvePrincipal` returns a
+`visitor` principal alongside `session` and `api_key`, and the project-scoped
+routes pass the target `projectId` as a hint, since the cookie is *named* after
+the project and cannot be found without it. A visitor is pinned to its own
+project: naming a different `projectId` is `403`, not a silent fall-through to
+anonymous.
 
 ### 6.3 API Key Authentication
 
@@ -366,7 +425,7 @@ ORDER BY ... LIMIT ... OFFSET ...
   - Secrets: return only keys (values omitted).
 - **All Export (ZIP)**:
   - Create a temporary directory (or use `MemoryStream`).
-  - Copy all files from project storage and library to `lib/` and `storage/` subdirectories.
+  - Copy all files from the project to `storage/`, and the account's library project to `lib/`.
   - Write `config/secrets.json` with clear text values.
   - Write `config/config.json` with all other configurations (routes, api, roles, cron, webhooks, dns, auth).
   - Zip the directory using `System.IO.Compression.ZipFile`.
@@ -382,7 +441,7 @@ ORDER BY ... LIMIT ... OFFSET ...
 - **All Import (ZIP)**:
   - Extract ZIP to temporary folder.
   - Validate `config/config.json` and `config/secrets.json`.
-  - Restore files to storage/library (user option: merge or replace).
+  - Restore files to the project and to the account's library project (user option: merge or replace).
   - Apply configurations (overwriting).
 
 ---
@@ -415,9 +474,16 @@ ORDER BY ... LIMIT ... OFFSET ...
 
 ### 12.4 File Manager
 
-- **UI**: Table view with columns: Name, Size, Modified, Actions.
+- **UI**: Table view with columns: Name, Size, Modified, Actions. Rows are
+  compact (`h-8`, `py-0.5` cells) and folders are visually distinct from files:
+  a tinted row, a filled blueprint folder icon and a medium-weight name, so a
+  directory is recognisable without reading the icon.
 - **Actions**:
-  - Download, Delete, Move to Library, Edit (opens in Monaco).
+  - Download, Delete, Rename/Move, Edit (opens in Monaco). Multi-select with bulk
+    delete. There is no "Move to Library": the library is referenced by URL
+    (§13.3), so there is nothing to copy.
+- **Reserved names**: a top-level `library/` folder cannot be created or renamed
+  into, and the platform explains where shared assets actually live.
 - **Upload**: Drag-and-drop or file picker (ZIP extraction handled by backend).
 
 ### 12.5 Routing Configuration UI
@@ -541,13 +607,64 @@ Response:
 
 Response:
 ```json
-{ "used": 1234567, "total": 5242880, "files": 42 }
+{ "used": 1234567, "total": 2097152, "files": 42 }
 ```
 
-### 13.3 Library Endpoints (Similar to Storage)
+### 13.3 Library Endpoints
 
-- Paths are user-scoped (no project in URL).
-- All methods are the same as Storage, but use library base path.
+The library is a **CDN namespace**, not a folder you copy between projects. Each
+account has one reserved project named `library` (created on first use by
+`ensureLibraryProject`), and its files are served from
+`/{username}/library/<path>`. Uploading an asset once makes that URL available to
+every project the account owns; nothing is duplicated and nothing is reconciled.
+
+`library` is a **reserved name** in two places, and both are enforced:
+`createProject` refuses it, and a project upload/rename into `library/…` is
+rejected with a pointer to the Library page. Reserving it is what makes the URL
+mean exactly one thing — otherwise a project called `library` would shadow the
+namespace.
+
+**Account-scoped** — what the console at `/dashboard/library` uses. No `projectId`,
+because a library file belongs to the account, not to one project:
+
+- `GET    /api/library` → `{ data, usage: { used, cap }, username, publicUrl }`
+- `POST   /api/library/upload` → `{ path, contentBase64 }` → `201 { path, size, url }`
+- `DELETE /api/library/delete?path=…` → `{ success, removed }`
+
+Uploads reject `.html`/`.htm`: library assets are served from the platform origin,
+so stored HTML would execute against a console session.
+
+**Project-scoped** — the original §5.3 endpoints, kept for API clients that address
+the library through a project (`?projectId=N` plus `lib=1`): `/api/lib/list`,
+`/api/lib/upload`, `/api/lib/download`, `/api/lib/delete`, `/api/lib/status`. These
+now resolve to the same account library rather than a folder inside that project,
+so the two surfaces cannot drift apart.
+
+**Referencing an asset from a page.** Inside a hosted project, `library/<name>`
+resolves against the account's library rather than the project's own files
+(`libraryReference` in `serving.ts`). A relative reference therefore keeps
+working on a verified custom domain, where an absolute `/{username}/library/…`
+path would not.
+
+**Migration 008** re-homes existing rows: a `library/…` file in any of the
+owner's projects moves to that account's `library` project with the prefix
+stripped. Two rules, both load-bearing:
+
+- Every copy of a path is ranked *before* anything moves — newest `updated_at`
+  wins, ties broken by lowest id, only that row survives — so the unique
+  `(project_id, path)` index cannot be violated mid-migration and leave the
+  data half-migrated.
+- The prefix is stripped **only when it is present**. A row already in the
+  library project was stored under its real path; an unconditional
+  `substr(path, 9)` turned `a.css` into the empty string, producing a file with
+  no name that was invisible in the console and unservable.
+
+`tests/server/library-migration.test.ts` pins both against a messy fixture (one
+path spread over four projects, an exact timestamp tie, and a copy already in
+the library project).
+
+Library requests skip the visit quota, visit logging and the watermark, and are
+served with the same ETag/cache/compression/hotlink rules as any project asset.
 
 ### 13.4 Auth Endpoints
 

@@ -16,7 +16,7 @@ LocalMe is a platform that lets you build and host complete web applications usi
 - Teams who want to avoid backend development.
 
 **What you get:**
-- 5MB storage per user account.
+- 2MB of project storage per account, plus 3MB for the shared Library.
 - 100 free visits per project per month.
 - A built-in database (JSON-based, no migrations).
 - Authentication for your visitors.
@@ -37,7 +37,7 @@ LocalMe is a platform that lets you build and host complete web applications usi
 5. Solve the simple math CAPTCHA.
 6. Click **"Create Account"**.
 
-You now have a LocalMe account with 5MB of storage.
+You now have a LocalMe account with 2MB of project storage and a 3MB shared Library.
 
 ### 2.2 Your First Project
 
@@ -72,26 +72,41 @@ The dashboard is your command center. From here, you can manage every aspect of 
 - **Domains** — Connect your own domain.
 - **Import/Export** — Backup and restore your project.
 
-### 3.2 Storage: Uploading Files
+### 3.2 Code: Your Files
 
-**Upload a file:**
-1. Go to **Storage** → **Files**.
-2. Click **"Upload"**.
-3. Select a file from your computer.
-4. The file will appear in the list.
+Everything in your project lives under the **Code** tab.
 
-**Create a file:**
-1. Click **"New File"**.
-2. Enter a filename (e.g., `about.html`).
-3. Write your code in the built-in editor.
-4. Click **"Save"**.
+**Upload one or many files:**
+1. Open your project → **Code**.
+2. Click **"Upload files"** and select as many as you like. Files land in the
+   folder you are currently viewing.
 
-**Organize files:**
-- Use folders to keep things tidy.
-- Drag and drop to move files.
-- Right-click for options (rename, delete, move to library).
+**Create and edit a file:**
+1. Click **"New file"** and type a project-relative path — `about.html`,
+   `css/main.css`, `blog/2019/post.html`. Creating the file also opens it.
+2. Edit in the built-in editor and click **Save** (or press the editor's save
+   shortcut). The editor only opens text formats; a binary file shows a download
+   and rename control instead.
 
-**Maximum file size:** 10MB per file.
+**Organising:**
+- The breadcrumb at the top navigates folders; click any segment to jump back.
+- The **filter** box narrows the current folder, and **Sort** switches between
+  name, size and last modified.
+- Tick rows to select several at once — the toolbar then appears with
+  **Delete *n***.
+- The pencil icon on a row renames or moves it to another folder (typing a new
+  folder creates it).
+- Deleting a folder removes everything inside it, and the confirmation says so.
+
+**Maximum file size:** 10MB per file (see the `storage.max_upload_size_bytes`
+system config).
+
+**Referencing your own files:** use paths **relative to your project root** —
+`static/app.css`, not `/static/app.css`. The platform pins a `<base>` on every
+page it serves, so a relative path resolves to
+`/{you}/{project}/static/app.css` no matter which URL the page was opened at,
+including routed paths. An absolute `/static/app.css` points at the platform
+root and will 404.
 
 ### 3.3 Routing: Defining URLs
 
@@ -103,16 +118,24 @@ Routing connects URL paths to your HTML files.
 
 **Add a custom route:**
 1. Go to **Routing**.
-2. Click **"Add Route"**.
-3. Enter a **path** (e.g., `/about`, `/dashboard`, `/products`).
-4. Select the **target file** (e.g., `about.html`).
-5. Choose **authorization rules**:
+2. Enter a **path** (e.g., `/about`, `/dashboard`, `/products`).
+3. Pick the **target file** from the suggestions. The field lists every file in
+   the project and warns you if the one you typed does not exist — which is the
+   usual reason a saved route returns 404.
+4. Choose **authorization rules**:
    - **Public** — anyone can view.
-   - **Logged In** — only authenticated visitors.
-   - **Role: X** — visitors with a specific role (e.g., Admin).
-6. Click **"Save"**.
+   - **Requires visitor auth** — only signed-in visitors, optionally narrowed to
+     a role or a single permission.
+5. Click **"Save route"**. Saving an existing path updates it rather than
+   creating a duplicate.
+6. **"Test this path"** opens it in a new tab.
 
-Your route is now live at `https://localme.com/[username]/[project]/[path]`.
+Proxy routes forward a path to an external service instead of a file; enter the
+upstream URL and the platform forwards the request.
+
+The table lists every route with a live **open** link, its auth requirements, and
+a **missing** badge if its target file has been deleted. Tick rows to export,
+copy from another project, or delete several at once.
 
 ### 3.4 Database: Storing Data
 
@@ -138,19 +161,22 @@ LocalMe provides a JSON-based database for your project. No schemas, no migratio
 ```
 4. Click **"Save"**.
 
-**Query data:**
-1. Go to **"Query"**.
-2. Enter a filter (MongoDB-style):
-```json
-{
-  "age": { "$gt": 18 },
-  "active": true
-}
-```
-3. Click **"Run"**.
-4. Results appear below.
+**Browse and search records:**
+1. Open your project → **Database**. Your tables appear as tabs with row counts.
+2. The search box matches text in **any** field, not just a named one.
+3. **Sort** switches between created, updated and id; the arrow next to it flips
+   ascending/descending. Sorting happens in the database, so it stays correct
+   across pages.
+4. Long tables are paged — change rows-per-page at the bottom.
 
-**Supported operators:**
+**Read one record in full:**
+Click any row's summary text to open it. Scalars are laid out as a readable
+list (long strings wrap instead of being cut off) and nested objects and arrays
+render as an indented tree with field counts, so a record is actually legible
+rather than a wall of JSON. **Copy JSON** gives you the raw document; **Delete**
+removes it.
+
+**Supported operators** (for the API and the Query panel):
 - `$eq` — equal
 - `$ne` — not equal
 - `$gt` — greater than
@@ -159,64 +185,99 @@ LocalMe provides a JSON-based database for your project. No schemas, no migratio
 - `$lte` — less or equal
 - `$in` — in array
 - `$nin` — not in array
-- `$regex` — regular expression
+- `$regex` — regular expression against one field
+- `$text` — substring match anywhere in the document
 - `$exists` — field exists
 - `$and`, `$or`, `$not` — logical operators
 
+Sorts accept `_localme.created` and `_localme.updated` (or `created_at` /
+`updated_at`), which order by the real columns rather than a JSON path.
+
 ### 3.5 Library: Shared Assets
 
-The Library is a special storage area for assets you want to use across all your projects. You get 5MB of free library storage.
+The Library is a CDN for the assets every one of your projects shares. Upload a file once and it gets one stable public URL under `/{you}/library/`; every project references that same URL. Nothing is copied between projects, and there is no "which project should hold this?" decision to make.
 
-**Move a file to the Library:**
-1. Go to **Storage**.
-2. Find the file you want to share.
-3. Click **"Move to Library"**.
-4. The file moves to your library.
+Every account gets 3MB for it, a separate ceiling from your 2MB of project files — publishing an asset there does not eat into your project budget, and vice versa.
 
-**Use a library file in a project:**
-- Reference it using `/library/[filename]`:
+**Publish an asset:**
+1. Click **Library** in the top navigation.
+2. **Choose files**, or **Upload a folder** to publish a directory tree with its
+   structure intact.
+3. Any file type works except `.html` and `.htm` — library files are served from
+   the platform's own domain, so allowing HTML there would let an uploaded page
+   run scripts inside your console session.
+4. Click an asset's URL to copy it, or the copy icon beside the base URL to grab
+   the prefix every asset shares.
+
+**Referencing a library asset:**
+
 ```html
-<link rel="stylesheet" href="/library/bootstrap.css">
-<script src="/library/app.js"></script>
+<!-- absolute: the public URL, works from anywhere -->
+<link rel="stylesheet" href="/ada/library/bootstrap.css">
+<script src="/ada/library/app.js"></script>
+
+<!-- or, from inside a project: `library` is a reserved folder name, so this
+     relative reference resolves to your library — and still works on a
+     verified custom domain, where an absolute path would not -->
+<link rel="stylesheet" href="library/bootstrap.css">
 ```
 
 **Library rules:**
 - HTML files cannot be stored in the library.
 - All other file types are allowed (CSS, JS, fonts, images).
-- Files are accessible across all your projects.
+- One copy of each asset, reachable from every project you own.
+- `library` is reserved: you cannot create a project with that name, nor a
+  `library/` folder inside a project. It is where shared assets live.
+- Library assets do not count against your project's visit quota.
 
 ### 3.6 Authentication: Managing Visitors
 
 Control who can access your project and what they can do.
 
-**Enable visitor login:**
-1. Go to **Auth**.
-2. Toggle **"Enable Visitor Login"**.
-3. Visitors can now sign up and log in.
+Everything about who can reach your project and what they can do lives under the
+**Access** tab: visitors, roles, API keys and webhooks.
 
 **Define roles:**
-1. Go to **Auth** → **Roles**.
-2. Click **"Add Role"**.
-3. Enter a role name (e.g., `Editor`, `Viewer`, `Manager`).
-4. Set permissions:
-   - `db_read` — can read database data.
-   - `db_write` — can insert/update/delete data.
-   - `storage_read` — can download files.
-   - `storage_write` — can upload/delete files.
-   - `lib_read` — can read library assets.
-   - `lib_write` — can upload to library.
-5. Click **"Save"**.
+1. Open your project → **Access**. The role panel sits under the visitor list.
+2. Type a name (e.g. `Editor`, `Viewer`, `Manager`) and click **Add role**. A new
+   role starts with no permissions.
+3. Click the **⋯** menu on the role's row → **Edit name & permissions** to rename
+   it or toggle permissions. Each permission is a chip; click to add or remove.
+   The catalogue includes `db_read`, `db_write`, `storage_read`, `storage_write`,
+   `lib_read`, `lib_write`, `analytics_read`, `secrets_admin` and the rest.
+4. The **Visitors** column shows how many accounts currently hold each role.
+
+**Delete a role — and decide what happens to its visitors:**
+1. **⋯** on the row → **Delete role…**
+2. Choose one of three:
+   - **Keep them, without a role** — they still sign in and still match routes
+     that require no particular role. This is the default.
+   - **Move them to another role** — pick the replacement; they inherit its
+     permissions immediately.
+   - **Delete those visitors** — removes the accounts and their password hashes.
+     Cannot be undone.
+3. Confirm. The toast reports exactly how many visitors were kept, moved or
+   removed.
 
 **Assign roles to visitors:**
-1. Go to **Auth** → **Visitors**.
-2. Find a visitor.
-3. Select a role from the dropdown.
-4. Click **"Update"**.
+1. When creating a visitor, pick the role in the form above the table.
+2. To change an existing visitor's role, use the **role dropdown** on their row.
+   It takes effect immediately — no need to delete and recreate the account.
+3. Tick several visitors to export, import, copy from another project, or delete
+   them in one action.
+
+**Add visitors from another project:**
+**Transfer controls → "Add from project…"** copies the visitors you have selected
+into this project. Existing usernames are updated, and **any role the
+destination does not have yet is created automatically** from the source
+project's permissions — so copying a visitor whose role lives only in the other
+project just works.
 
 **Custom login page:**
 1. Upload a `login.html` file to your project root.
 2. It will automatically replace the default login page.
-3. Use the provided instructions (in the Auth section) for building a custom login page.
+3. Use the provided instructions (in the Access section) for building a custom
+   login page.
 
 ### 3.7 Cron Jobs: Scheduled Tasks
 
@@ -315,35 +376,37 @@ Connect your own domain (e.g., `mycoolapp.com`) to your LocalMe project.
 
 ### 3.10 Import/Export: Backup & Restore
 
-**Export your project:**
-1. Go to **Import/Export**.
-2. Select what to export:
-   - **Routes** — routing configuration.
-   - **API Endpoints** — API settings.
-   - **Roles** — role definitions.
-   - **Secrets** — environment variables (names only).
-   - **Cron** — cron job configurations.
-   - **Webhooks** — webhook configurations.
-   - **DNS** — domain settings.
-   - **Auth** — authentication settings.
-   - **All** — everything (ZIP file with files + configs).
-3. Click **"Export"**.
-4. The file downloads automatically.
+Export and import live **on the tab they belong to**, not in a separate screen —
+so what you are exporting is the thing you are looking at. The transfer controls
+sit in the header of the **Routing**, **Access** (roles and visitors) and
+**Secrets** tabs.
 
-**Import a configuration:**
-1. Go to **Import/Export**.
-2. Click **"Import"**.
-3. Select a file (JSON or ZIP).
-4. Choose **import mode**:
-   - **Merge** — adds new items, updates existing.
-   - **Replace** — overwrites everything.
-5. Click **"Upload"**.
+**Export:**
+- With rows selected, **Export *n*** writes exactly those. With nothing selected
+  it exports everything of that kind in the project.
+- The file is JSON and downloads straight to your browser.
 
-**What's included in "All" export:**
-- `lib/` — all your library files.
-- `storage/` — all your project files.
-- `config/secrets.json` — secrets in clear text.
-- `config/config.json` — all other configurations.
+**Import:**
+1. Click **Import**, paste the JSON, and choose a mode:
+   - **Merge** — upserts the items sent, leaves everything else untouched.
+   - **Replace** — deletes the existing rows first.
+2. Click **Import**.
+
+**"Add from project…"** copies rows straight out of another project you own, so
+you do not have to export and re-import by hand. With rows selected it copies
+only those; otherwise it copies the whole set. Anything the destination is
+missing is created — including **roles**, which are auto-created from the source
+project's permissions.
+
+Password hashes and secret values are **never** transferred. An imported visitor
+therefore arrives disabled until you set a new password, and an imported secret
+name arrives empty. That is deliberate: a shared export file should not be a
+working credential.
+
+**Full project backup** is still available from **Settings → Backup**:
+- `Files only (.zip)` — every file in the project.
+- `Full export (.zip)` — files, library, configuration, and secrets **in clear
+  text**. Treat that archive like a password.
 
 ---
 
@@ -550,7 +613,7 @@ const response = await fetch('/api/storage/upload', {
 ## 5. Billing & Usage
 
 ### 5.1 Free Tier
-- **Storage**: 5MB total (across all projects + library).
+- **Storage**: 2MB across all your projects, plus 3MB for the shared Library.
 - **Visits**: 100 free visits per project per month.
 - **Features**: All features included (database, auth, cron, webhooks, domains).
 
@@ -608,7 +671,7 @@ Go to **Dashboard** → **Usage**:
 
 **"Storage cap exceeded"**
 - Delete unnecessary files.
-- Move assets to the Library (5MB bonus storage).
+- Move assets to the Library (it has its own 3MB).
 - Purchase additional storage.
 
 **"402 Payment Required" on visits**
@@ -664,17 +727,25 @@ Go to **Dashboard** → **Usage**:
 ### 9.1 Common URLs
 ```
 Dashboard:        https://localme.com/dashboard
+Library:          https://localme.com/dashboard/library
+Admin console:    https://localme.com/admin        (operators and admins)
+API docs:         https://localme.com/docs
 Your Project:     https://localme.com/[username]/[projectname]/
-Login:            https://localme.com/auth/login
+Visitor login:    https://localme.com/[username]/[projectname]/auth/login
 Logout:           https://localme.com/auth/logout
+Health probe:     https://localme.com/health
 ```
 
 ### 9.2 API Endpoints
 ```
 Database:         /api/db/find, /api/db/insert, /api/db/update, /api/db/delete
-Storage:          /api/storage/list, /api/storage/upload, /api/storage/download, /api/storage/delete
-Library:          /api/lib/list, /api/lib/upload, /api/lib/delete
-Secrets:          /api/secrets/get
+Storage:          /api/storage/list, /api/storage/upload, /api/storage/download,
+                  /api/storage/delete, /api/storage/move, /api/storage/status
+Library:          /api/library, /api/library/upload, /api/library/delete
+                  (also /api/lib/* when scoped to one project)
+Roles:            /api/roles, /api/roles/[roleId]
+Secrets:          /api/secrets, /api/secrets/get
+Transfer:         /api/transfer
 Proxy:            /api/proxy/[your-route]
 ```
 
@@ -699,4 +770,6 @@ Proxy:            /api/proxy/[your-route]
 
 *Happy building!*
 
-*Document generated on 2026-07-23.*
+*Document generated on 2026-07-23; updated 2026-10-01 for the redesigned
+Access, Code, Database and Routing tabs, the per-account Library, and the new
+storage allowances (2 MB project files + 3 MB library).*
