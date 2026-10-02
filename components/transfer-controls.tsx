@@ -21,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useI18n } from "@/lib/i18n/client";
+
 import { apiGet, apiPost } from "@/app/console";
 
 export type TransferFeature = "routes" | "secrets" | "auth" | "roles";
@@ -61,11 +63,12 @@ export function TransferControls({
   const [payload, setPayload] = useState("");
   const [mode, setMode] = useState<"merge" | "replace">("merge");
   const [busy, setBusy] = useState(false);
+  const { t, fmt } = useI18n();
 
   const exportSelected = useCallback(
     async (ids: string[]) => {
       if (ids.length === 0) {
-        toast.error("Select at least one row first.");
+        toast.error(t("transfer.selectFirst"));
         return;
       }
       try {
@@ -80,34 +83,34 @@ export function TransferControls({
         link.download = name;
         link.click();
         URL.revokeObjectURL(url);
-        toast.success(`Exported ${result.items.length} ${result.items.length === 1 ? "item" : "items"}`);
+        toast.success(t("transfer.exported", { count: fmt.number(result.items.length) }));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Export failed.");
+        toast.error(error instanceof Error ? error.message : t("transfer.exportFailed"));
       }
     },
-    [allIds.length, feature, projectId],
+    [allIds.length, feature, projectId, t, fmt],
   );
 
   const runImport = useCallback(async () => {
     setBusy(true);
     try {
       const parsed: unknown = JSON.parse(payload);
-      if (!Array.isArray(parsed)) throw new Error("Payload must be a JSON array.");
+      if (!Array.isArray(parsed)) throw new Error(t("transfer.notArray"));
       const result = await apiPost<{ written: number }>(`/api/transfer?projectId=${projectId}`, {
         feature,
         mode,
         items: parsed,
       });
-      toast.success(`Imported ${result.written} ${result.written === 1 ? "item" : "items"}`);
+      toast.success(t("transfer.imported", { count: fmt.number(result.written) }));
       setImportOpen(false);
       setPayload("");
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Import failed.");
+      toast.error(error instanceof Error ? error.message : t("transfer.importFailed"));
     } finally {
       setBusy(false);
     }
-  }, [feature, mode, onChanged, payload, projectId]);
+  }, [feature, mode, onChanged, payload, projectId, t, fmt]);
 
   const copyFrom = useCallback(
     async (sourceProjectId: number, ids: string[]) => {
@@ -123,18 +126,18 @@ export function TransferControls({
           ids,
         });
         const created = result.rolesCreated.length
-          ? ` · created roles: ${result.rolesCreated.join(", ")}`
+          ? t("transfer.copiedRoles", { roles: result.rolesCreated.join(", ") })
           : "";
-        toast.success(`Copied ${result.written} ${result.written === 1 ? "item" : "items"}${created}`);
+        toast.success(`${t("transfer.copied", { count: fmt.number(result.written) })}${created}`);
         setCopyOpen(false);
         await onChanged();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Copy failed.");
+        toast.error(error instanceof Error ? error.message : t("transfer.copyFailed"));
       } finally {
         setBusy(false);
       }
     },
-    [feature, onChanged, projectId],
+    [feature, onChanged, projectId, t, fmt],
   );
 
   const removeSelected = useCallback(async () => {
@@ -156,40 +159,35 @@ export function TransferControls({
         onClick={() => void exportSelected(selected)}
         title={
           selected.length > 0
-            ? `Export ${selected.length} selected`
-            : `Export every ${featureLabel} in this project`
+            ? t("transfer.exportSelectedTitle", { count: fmt.number(selected.length) })
+            : t("transfer.exportAllTitle", { label: featureLabel })
         }
       >
         <ArrowUpFromLine className="h-3.5 w-3.5" />
-        {selected.length > 0 ? `Export ${selected.length}` : "Export"}
+        {selected.length > 0
+          ? t("transfer.exportSelected", { count: fmt.number(selected.length) })
+          : t("transfer.export")}
       </Button>
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-          <ArrowDownToLine className="h-3.5 w-3.5" /> Import
+          <ArrowDownToLine className="h-3.5 w-3.5" /> {t("action.import")}
         </Button>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Import {featureLabel}</DialogTitle>
-            <DialogDescription>
-              Paste a JSON array in the shape produced by <span className="font-mono">Export</span>.
-              {" "}
-              <strong>Merge</strong> upserts the items sent and leaves everything else untouched;
-              {" "}
-              <strong>Replace</strong> deletes the existing rows first. Password hashes and secret
-              values are never exported, so imported visitors start disabled.
-            </DialogDescription>
+            <DialogTitle>{t("transfer.importTitle", { label: featureLabel })}</DialogTitle>
+            <DialogDescription>{t("transfer.importDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Mode</Label>
+              <Label>{t("transfer.mode")}</Label>
               <Select value={mode} onValueChange={(value) => setMode(value as "merge" | "replace")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="merge">Merge — keep everything else</SelectItem>
-                  <SelectItem value="replace">Replace — delete existing first</SelectItem>
+                  <SelectItem value="merge">{t("transfer.mode.merge")}</SelectItem>
+                  <SelectItem value="replace">{t("transfer.mode.replace")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -198,15 +196,15 @@ export function TransferControls({
               onChange={(event) => setPayload(event.target.value)}
               rows={10}
               placeholder='[{"…": "…"}]'
-              className="font-mono text-[12px]"
+              className="ltr-content font-mono text-12px"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImportOpen(false)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button disabled={busy || !payload.trim()} onClick={() => void runImport()}>
-              {busy ? "Importing…" : "Import"}
+              {busy ? t("transfer.importing") : t("action.import")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -233,7 +231,9 @@ export function TransferControls({
           onClick={() => void removeSelected()}
         >
           <Trash2 className="h-3.5 w-3.5" />
-          {selected.length > 0 ? `Delete ${selected.length}` : "Delete"}
+          {selected.length > 0
+            ? t("transfer.deleteCount", { count: fmt.number(selected.length) })
+            : t("transfer.delete")}
         </Button>
       )}
     </>
@@ -266,6 +266,7 @@ function CopyFromProjectDialog({
   const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([]);
   const [source, setSource] = useState("");
   const [useSelected, setUseSelected] = useState(false);
+  const { t, fmt } = useI18n();
 
   // The project list only changes when the owner adds or removes one, and there
   // are never many, so it is fetched fresh each time the dialog opens.
@@ -287,23 +288,19 @@ function CopyFromProjectDialog({
       }}
     >
       <Button variant="outline" size="sm" onClick={() => onOpenChange(true)}>
-        <FolderInput className="h-3.5 w-3.5" /> Add from project…
+        <FolderInput className="h-3.5 w-3.5" /> {t("transfer.copyFrom")}
       </Button>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add {featureLabel} from another project</DialogTitle>
-          <DialogDescription>
-            Copies rows into <span className="font-mono">this</span> project. Existing rows with
-            the same key are updated; nothing else is touched. Roles the destination is missing
-            are created automatically.
-          </DialogDescription>
+          <DialogTitle>{t("transfer.copyFromTitle", { label: featureLabel })}</DialogTitle>
+          <DialogDescription>{t("transfer.copyFromDescription")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Source project</Label>
+            <Label>{t("transfer.sourceProject")}</Label>
             <Select value={source} onValueChange={setSource}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose a project" />
+                <SelectValue placeholder={t("transfer.chooseProject")} />
               </SelectTrigger>
               <SelectContent>
                 {projects.map((project) => (
@@ -314,7 +311,7 @@ function CopyFromProjectDialog({
               </SelectContent>
             </Select>
           </div>
-          <label className="flex items-center gap-2 text-[13px]">
+          <label className="flex items-center gap-2 text-13px">
             <input
               type="checkbox"
               className="h-4 w-4 accent-[hsl(var(--signal))]"
@@ -322,19 +319,19 @@ function CopyFromProjectDialog({
               disabled={selected.length === 0}
               onChange={(event) => setUseSelected(event.target.checked)}
             />
-            Only the {selected.length} selected {selected.length === 1 ? "row" : "rows"}
-            {selected.length === 0 && " (select rows here first to enable)"}
+            {t("transfer.onlySelected", { count: fmt.number(selected.length) })}
+            {selected.length === 0 && t("transfer.onlySelectedHint")}
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("action.cancel")}
           </Button>
           <Button
             disabled={busy || !source}
             onClick={() => void onCopy(Number(source), useSelected ? selected : [])}
           >
-            {busy ? "Copying…" : "Copy"}
+            {busy ? t("transfer.copying") : t("transfer.copy")}
           </Button>
         </DialogFooter>
       </DialogContent>

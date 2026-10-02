@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/lib/i18n/client";
 
 export function ConfirmDialog({
   open,
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel,
   confirmWord,
   danger = true,
   onConfirm,
@@ -20,6 +21,7 @@ export function ConfirmDialog({
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: React.ReactNode;
+  /** Defaults to the translated "Confirm". */
   confirmLabel?: string;
   confirmWord?: string;
   danger?: boolean;
@@ -27,7 +29,9 @@ export function ConfirmDialog({
   pending?: boolean;
 }) {
   const [typed, setTyped] = useState("");
+  const { t } = useI18n();
   const blocked = Boolean(confirmWord) && typed !== confirmWord;
+  const label = confirmLabel ?? t("action.confirm");
 
   return (
     <Dialog
@@ -48,7 +52,7 @@ export function ConfirmDialog({
         {confirmWord && (
           <div className="space-y-2">
             <Label htmlFor="confirm-word">
-              Type <span className="font-mono text-foreground">{confirmWord}</span> to confirm
+              {t("confirm.typeWord", { word: confirmWord })}
             </Label>
             <Input
               id="confirm-word"
@@ -61,7 +65,7 @@ export function ConfirmDialog({
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("action.cancel")}
           </Button>
           <Button
             variant={danger ? "destructive" : "default"}
@@ -72,7 +76,7 @@ export function ConfirmDialog({
               onOpenChange(false);
             }}
           >
-            {pending ? "Working…" : confirmLabel}
+            {pending ? t("action.working") : label}
           </Button>
         </DialogFooter>
       </DialogContent>

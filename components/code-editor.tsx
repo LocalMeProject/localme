@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, FileCode2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 export function CodeEditor({
@@ -24,6 +25,7 @@ export function CodeEditor({
   className?: string;
 }) {
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const { t } = useI18n();
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
 
   const lineNumbers = useMemo(() => {
@@ -50,20 +52,20 @@ export function CodeEditor({
           <FileCode2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span className="truncate font-mono text-xs">{path}</span>
           <Badge variant="outline">{language}</Badge>
-          {dirty && <Badge variant="warning">unsaved</Badge>}
+          {dirty && <Badge variant="warning">{t("code.unsaved")}</Badge>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden font-mono text-[10px] text-muted-foreground sm:block">
-            Ln {cursor.line}, Col {cursor.column}
+          <span className="nums hidden font-mono text-10px text-muted-foreground sm:block">
+            {t("code.cursor", { line: cursor.line, column: cursor.column })}
           </span>
           <Button size="sm" variant="signal" onClick={onSave} disabled={saving || !dirty}>
             {saving ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? "Saving" : "Save"}
+            {saving ? t("action.saving") : t("action.save")}
           </Button>
         </div>
       </div>
       <div className="relative flex min-h-0 flex-1">
-        <div className="select-none overflow-hidden border-r border-border bg-muted/30 px-2 py-2 text-right font-mono text-[11px] leading-5 text-muted-foreground/70">
+        <div className="nums select-none overflow-hidden border-e border-border bg-muted/30 px-2 py-2 text-end font-mono text-11px leading-5 text-muted-foreground/70">
           {lineNumbers.map((line) => (
             <div key={line}>{line}</div>
           ))}
@@ -83,7 +85,7 @@ export function CodeEditor({
             const lines = upToCursor.split("\n");
             setCursor({ line: lines.length, column: lines[lines.length - 1].length + 1 });
           }}
-          className="min-h-[380px] w-full flex-1 resize-none bg-transparent px-3 py-2 font-mono text-[12.5px] leading-5 outline-none scrollbar-thin"
+          className="ltr-content min-h-[380px] w-full flex-1 resize-none bg-transparent px-3 py-2 text-start font-mono text-12.5px leading-5 outline-none scrollbar-thin"
         />
       </div>
     </div>

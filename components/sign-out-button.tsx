@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Sign out from anywhere in the console.
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
  */
 export function SignOutButton({ className }: { className?: string }) {
   const router = useRouter();
+  const { t } = useI18n();
 
   async function signOut() {
     try {
@@ -32,7 +34,7 @@ export function SignOutButton({ className }: { className?: string }) {
 
   return (
     <Button variant="outline" size="sm" onClick={signOut} className={className}>
-      <LogOut className="h-3.5 w-3.5" /> Sign out
+      <LogOut className="rtl-flip h-3.5 w-3.5" /> {t("action.signOut")}
     </Button>
   );
 }

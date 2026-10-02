@@ -90,7 +90,12 @@ import { Pagination } from "@/components/pagination";
 import { cn } from "@/lib/utils";
 import { StatCard, MeterBar } from "@/components/stat-card";
 import { SectionHeader } from "@/components/page-header";
-import { apiDelete, apiGet, apiPatch, apiPost, apiPut, formatBytes } from "@/app/console";
+import { CultureSwitch } from "@/components/culture-switch";
+import { CultureDateTimePicker } from "@/components/culture-date-time-picker";
+import { useI18n } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/catalog";
+import { parseIsoDay } from "@/lib/i18n/format";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/app/console";
 
 type Params = { params: Promise<{ projectId: string }> };
 
@@ -122,7 +127,7 @@ function useProject(params: Params["params"]) {
           setUsername(me.username);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Project not found.");
+        if (!cancelled) setError(err instanceof Error ? err.message : null);
       }
     })();
     return () => {
@@ -134,15 +139,16 @@ function useProject(params: Params["params"]) {
 }
 
 export default function ProjectWorkspacePage({ params }: { params: Params["params"] }) {
+  const { t } = useI18n();
   const { project, username, error, setProject } = useProject(params);
 
-  if (error) {
+  if (error !== null) {
     return (
       <div className="panel p-8 text-center">
-        <p className="text-sm text-muted-foreground">{error}</p>
+        <p className="text-sm text-muted-foreground">{error || t("workspace.loadFailed")}</p>
         <Button asChild variant="outline" size="sm" className="mt-4">
           <Link href="/dashboard">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to projects
+            <ArrowLeft className="h-3.5 w-3.5 rtl-flip" /> {t("workspace.backToProjects")}
           </Link>
         </Button>
       </div>
@@ -159,16 +165,16 @@ export default function ProjectWorkspacePage({ params }: { params: Params["param
       <div>
         <Link
           href="/dashboard"
-          className="mb-2 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+          className="mb-2 inline-flex items-center gap-1.5 text-13px text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> All projects
+          <ArrowLeft className="h-3.5 w-3.5 rtl-flip" /> {t("workspace.allProjects")}
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
               <Badge variant={project.isActive ? "default" : "outline"}>
-                {project.isActive ? "live" : "suspended"}
+                {project.isActive ? t("projects.badge.live") : t("projects.badge.suspended")}
               </Badge>
             </div>
             {base && (
@@ -176,25 +182,26 @@ export default function ProjectWorkspacePage({ params }: { params: Params["param
                 href={`${base}/`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-flex items-center gap-1.5 font-mono text-[12.5px] text-signal hover:underline"
+                className="ltr-content mt-1 inline-flex items-center gap-1.5 font-mono text-12.5px text-signal hover:underline"
               >
                 {`${base}/`} <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
+          <CultureSwitch />
         </div>
       </div>
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="code"><Braces className="h-3.5 w-3.5" /> Code</TabsTrigger>
-          <TabsTrigger value="data"><Database className="h-3.5 w-3.5" /> Database</TabsTrigger>
-          <TabsTrigger value="routes"><RouteIcon className="h-3.5 w-3.5" /> Routing</TabsTrigger>
-          <TabsTrigger value="access"><ShieldCheck className="h-3.5 w-3.5" /> Access</TabsTrigger>
-          <TabsTrigger value="secrets"><KeyRound className="h-3.5 w-3.5" /> Secrets</TabsTrigger>
-          <TabsTrigger value="automate"><Zap className="h-3.5 w-3.5" /> Automate</TabsTrigger>
-          <TabsTrigger value="settings"><Settings2 className="h-3.5 w-3.5" /> Settings</TabsTrigger>
+          <TabsTrigger value="overview">{t("workspace.tab.overview")}</TabsTrigger>
+          <TabsTrigger value="code"><Braces className="h-3.5 w-3.5" /> {t("workspace.tab.code")}</TabsTrigger>
+          <TabsTrigger value="data"><Database className="h-3.5 w-3.5" /> {t("workspace.tab.data")}</TabsTrigger>
+          <TabsTrigger value="routes"><RouteIcon className="h-3.5 w-3.5" /> {t("workspace.tab.routes")}</TabsTrigger>
+          <TabsTrigger value="access"><ShieldCheck className="h-3.5 w-3.5" /> {t("workspace.tab.access")}</TabsTrigger>
+          <TabsTrigger value="secrets"><KeyRound className="h-3.5 w-3.5" /> {t("workspace.tab.secrets")}</TabsTrigger>
+          <TabsTrigger value="automate"><Zap className="h-3.5 w-3.5" /> {t("workspace.tab.automate")}</TabsTrigger>
+          <TabsTrigger value="settings"><Settings2 className="h-3.5 w-3.5" /> {t("workspace.tab.settings")}</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab project={project} base={base} /></TabsContent>
         <TabsContent value="code"><FilesTab projectId={project.id} /></TabsContent>
@@ -217,6 +224,7 @@ export default function ProjectWorkspacePage({ params }: { params: Params["param
 /* ------------------------------------------------------------------ overview */
 
 function OverviewTab({ project, base }: { project: Project; base: string | null }) {
+  const { t, fmt } = useI18n();
   const [storage, setStorage] = useState<{ used: number; total: number; files: number } | null>(null);
   const [visits, setVisits] = useState<number | null>(null);
 
@@ -233,22 +241,22 @@ function OverviewTab({ project, base }: { project: Project; base: string | null 
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Storage"
-          value={storage ? formatBytes(storage.used) : "…"}
-          hint={storage ? `${storage.files} files of 5 MB free tier` : undefined}
+          label={t("projects.stat.storage")}
+          value={storage ? fmt.bytes(storage.used) : "…"}
+          hint={storage ? t("overview.storage.hint", { count: fmt.number(storage.files) }) : undefined}
           icon={HardDrive}
           tone="signal"
         />
         <StatCard
-          label="Visits this month"
-          value={visits === null ? "…" : visits.toLocaleString("en-US")}
-          hint={`Free quota: ${project.freeVisitsPerMonth.toLocaleString("en-US")}`}
+          label={t("projects.stat.visits")}
+          value={visits === null ? "…" : fmt.number(visits)}
+          hint={t("overview.visits.hint", { count: fmt.number(project.freeVisitsPerMonth) })}
           icon={Activity}
         />
         <StatCard
-          label="Serving URL"
-          value={<span className="font-mono text-sm">{base ? `${base}/` : "…"}</span>}
-          hint="Served by the platform with watermark + visit accounting"
+          label={t("overview.url.title")}
+          value={<span className="ltr-content font-mono text-sm">{base ? `${base}/` : "…"}</span>}
+          hint={t("overview.url.hint")}
           icon={Globe2}
           tone="blueprint"
         />
@@ -256,9 +264,12 @@ function OverviewTab({ project, base }: { project: Project; base: string | null 
       {storage && storage.total > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Storage cap</CardTitle>
-            <CardDescription className="text-[12.5px]">
-              {formatBytes(storage.used)} of {formatBytes(storage.total)} used
+            <CardTitle className="text-sm">{t("overview.cap.title")}</CardTitle>
+            <CardDescription className="text-12.5px">
+              {t("overview.cap.used", {
+                used: fmt.bytes(storage.used),
+                total: fmt.bytes(storage.total),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -297,6 +308,7 @@ interface StoredEntry {
 type FileSort = "name" | "size" | "modified";
 
 function FilesTab({ projectId }: { projectId: number }) {
+  const { t, fmt } = useI18n();
   const [files, setFiles] = useState<StoredEntry[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
@@ -324,14 +336,14 @@ function FilesTab({ projectId }: { projectId: number }) {
         prev.filter((path) => data.some((entry) => entry.path === path && entry.type === "file")),
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not list files.");
+      toast.error(error instanceof Error ? error.message : t("files.listFailed"));
     }
     try {
       setUsage(await apiGet<{ used: number; total: number; files: number }>(`/api/storage/status?projectId=${projectId}`));
     } catch {
       // The meter is decoration; a failure to read it must not hide the files.
     }
-  }, [dir, projectId]);
+  }, [dir, projectId, t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -351,10 +363,10 @@ function FilesTab({ projectId }: { projectId: number }) {
         setOriginal(text);
         setContent(text);
       } catch {
-        toast.error("Could not open the file.");
+        toast.error(t("files.openFailed"));
       }
     },
-    [projectId],
+    [projectId, t],
   );
 
   async function saveFile() {
@@ -367,13 +379,13 @@ function FilesTab({ projectId }: { projectId: number }) {
       );
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Save failed.");
+        throw new Error(body.error ?? t("files.saveFailed"));
       }
-      toast.success("Saved");
+      toast.success(t("files.saved"));
       setOriginal(content);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Save failed.");
+      toast.error(error instanceof Error ? error.message : t("files.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -396,42 +408,44 @@ function FilesTab({ projectId }: { projectId: number }) {
         });
         if (!response.ok) {
           const body = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(body.error ?? "Upload failed.");
+          throw new Error(body.error ?? t("files.uploadFailed"));
         }
         ok += 1;
       } catch (error) {
-        toast.error(`${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`);
+        toast.error(`${file.name}: ${error instanceof Error ? error.message : t("files.uploadFailed")}`);
       }
     }
-    if (ok > 0) toast.success(`${ok} file${ok === 1 ? "" : "s"} uploaded`);
+    if (ok > 0) toast.success(t("files.uploaded", { count: fmt.number(ok) }));
     await load();
   }
 
   async function deleteFile(path: string, isDirectory = false) {
-    const label = isDirectory ? `${path} and everything inside it` : path;
-    if (!window.confirm(`Delete ${label}?`)) return;
+    const label = isDirectory
+      ? t("files.delete.confirmFolder", { path })
+      : path;
+    if (!window.confirm(t("files.delete.confirm", { label }))) return;
     try {
       await apiDelete(
         `/api/storage/delete?projectId=${projectId}&path=${encodeURIComponent(path)}${isDirectory ? "&prefix=1" : ""}`,
       );
       if (selected === path) setSelected(null);
       setChecked((prev) => prev.filter((entry) => entry !== path));
-      toast.success("Deleted");
+      toast.success(t("files.delete.done"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("files.delete.failed"));
     }
   }
 
   async function deleteChecked(paths: string[]) {
     if (paths.length === 0) return;
-    if (!window.confirm(`Delete ${paths.length} file${paths.length === 1 ? "" : "s"}?`)) return;
+    if (!window.confirm(t("files.delete.confirmCount", { count: fmt.number(paths.length) }))) return;
     for (const path of paths) {
       await apiDelete(`/api/storage/delete?projectId=${projectId}&path=${encodeURIComponent(path)}`).catch(
         () => undefined,
       );
     }
-    toast.success(`${paths.length} deleted`);
+    toast.success(t("files.delete.doneCount", { count: fmt.number(paths.length) }));
     if (selected && paths.includes(selected)) setSelected(null);
     setChecked([]);
     await load();
@@ -461,15 +475,15 @@ function FilesTab({ projectId }: { projectId: number }) {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Rename failed.");
+        throw new Error(body.error ?? t("files.rename.failed"));
       }
-      toast.success(`Renamed to ${to}`);
+      toast.success(t("files.rename.done", { to }));
       setRenameOpen(false);
       setChecked((prev) => prev.map((entry) => (entry === from ? to : entry)));
       await load();
       await openFile(to);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Rename failed.");
+      toast.error(error instanceof Error ? error.message : t("files.rename.failed"));
     } finally {
       setRenameBusy(false);
     }
@@ -488,14 +502,15 @@ function FilesTab({ projectId }: { projectId: number }) {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Could not create the file.");
+        throw new Error(body.error ?? t("files.new.failed"));
       }
       setNewOpen(false);
       setNewPath("");
+      toast.success(t("files.new.created", { name: path }));
       await load();
       await openFile(path);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the file.");
+      toast.error(error instanceof Error ? error.message : t("files.new.failed"));
     }
   }
 
@@ -520,8 +535,8 @@ function FilesTab({ projectId }: { projectId: number }) {
   return (
     <div className="space-y-4">
       <SectionHeader
-        title="Project files"
-        description="Static assets served at your project URL. index.html is the entry point."
+        title={t("files.title")}
+        description={t("files.description")}
         actions={
           <>
             <input
@@ -535,29 +550,31 @@ function FilesTab({ projectId }: { projectId: number }) {
               }}
             />
             <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
-              <FileUp className="h-3.5 w-3.5" /> Upload files
+              <FileUp className="h-3.5 w-3.5" /> {t("files.upload")}
             </Button>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <FilePlus2 className="h-3.5 w-3.5" /> New file
+                  <FilePlus2 className="h-3.5 w-3.5" /> {t("files.new")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>New file</DialogTitle>
-                  <DialogDescription>Project-relative path, e.g. about.html or css/main.css</DialogDescription>
+                  <DialogTitle>{t("files.new")}</DialogTitle>
+                  <DialogDescription>{t("files.new.description")}</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={createFile} className="space-y-4">
                   <Input
                     value={newPath}
                     onChange={(e) => setNewPath(e.target.value)}
                     placeholder="index.html"
+                    className="ltr-input font-mono"
+                    dir="ltr"
                     autoFocus
                     required
                   />
                   <DialogFooter>
-                    <Button type="submit">Create & edit</Button>
+                    <Button type="submit">{t("files.new.submit")}</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -568,56 +585,55 @@ function FilesTab({ projectId }: { projectId: number }) {
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename or move</DialogTitle>
-            <DialogDescription>
-              The destination is project-relative. Typing a new folder creates it.
-            </DialogDescription>
+            <DialogTitle>{t("files.rename.title")}</DialogTitle>
+            <DialogDescription>{t("files.rename.description")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={submitRename} className="space-y-4">
             <Input
               value={renameTo}
               onChange={(e) => setRenameTo(e.target.value)}
-              className="font-mono text-[12.5px]"
+              className="ltr-input font-mono text-12.5px"
+              dir="ltr"
               autoFocus
               required
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={renameBusy}>
-                {renameBusy ? "Moving…" : "Move"}
+                {renameBusy ? t("files.rename.moving") : t("action.move")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
       {usage && (
-        <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
+        <div className="flex items-center gap-3 text-12px text-muted-foreground">
           <div className="h-1.5 w-40 overflow-hidden rounded-full bg-muted">
             <div
               className={cn("h-full rounded-full", usedPct > 90 ? "bg-destructive" : "bg-signal")}
               style={{ width: `${usedPct}%` }}
             />
           </div>
-          <span className="tabular-nums">
-            {formatBytes(usage.used)} of {formatBytes(usage.total)} used
+          <span className="nums">
+            {t("files.usage.used", { used: fmt.bytes(usage.used), total: fmt.bytes(usage.total) })}
           </span>
           <span>·</span>
-          <span className="tabular-nums">{usage.files} files</span>
+          <span className="nums">{t("files.usage.count", { count: fmt.number(usage.files) })}</span>
         </div>
       )}
       {files && files.length > 0 && (
         <Card>
           <CardContent className="p-0">
             <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-              <nav aria-label="Folder path" className="flex min-w-0 items-center gap-1 text-[12.5px]">
+              <nav aria-label={t("label.folder")} className="flex min-w-0 items-center gap-1 text-12.5px">
                 <button
                   type="button"
-                  className={cn("font-mono hover:text-signal", dir === "" && "text-foreground")}
+                  className={cn("ltr-content font-mono hover:text-signal", dir === "" && "text-foreground")}
                   onClick={() => setDir("")}
                 >
-                  root
+                  {t("files.root")}
                 </button>
                 {crumbs.map((crumb, index) => (
                   <span key={crumb + index} className="flex items-center gap-1">
@@ -625,7 +641,7 @@ function FilesTab({ projectId }: { projectId: number }) {
                     <button
                       type="button"
                       className={cn(
-                        "font-mono hover:text-signal",
+                        "ltr-content font-mono hover:text-signal",
                         index === crumbs.length - 1 && "text-foreground",
                       )}
                       onClick={() => setDir(crumbs.slice(0, index + 1).join("/"))}
@@ -638,33 +654,33 @@ function FilesTab({ projectId }: { projectId: number }) {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Filter…"
-                className="ml-auto h-8 w-44 text-[12.5px]"
-                aria-label="Filter files"
+                placeholder={t("files.filter.placeholder")}
+                className="ms-auto h-8 w-44 text-12.5px"
+                aria-label={t("files.filter.ariaLabel")}
               />
               <Select value={sort} onValueChange={(value) => setSort(value as FileSort)}>
-                <SelectTrigger className="h-8 w-36 text-[12.5px]" aria-label="Sort files">
+                <SelectTrigger className="h-8 w-36 text-12.5px" aria-label={t("files.filter.ariaLabel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Sort: name</SelectItem>
-                  <SelectItem value="size">Sort: size</SelectItem>
-                  <SelectItem value="modified">Sort: modified</SelectItem>
+                  <SelectItem value="name">{t("files.sort.name")}</SelectItem>
+                  <SelectItem value="size">{t("files.sort.size")}</SelectItem>
+                  <SelectItem value="modified">{t("files.sort.modified")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <SelectionToolbar
               selected={checked}
-              noun="file"
+              noun="selection.file"
               onClear={() => setChecked([])}
             >
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-[12px] text-muted-foreground hover:text-destructive"
+                className="h-7 text-12px text-muted-foreground hover:text-destructive"
                 onClick={() => void deleteChecked(checked)}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete {checked.length}
+                <Trash2 className="h-3.5 w-3.5" /> {t("transfer.deleteCount", { count: fmt.number(checked.length) })}
               </Button>
             </SelectionToolbar>
             <Table>
@@ -674,7 +690,7 @@ function FilesTab({ projectId }: { projectId: number }) {
                     <SelectAllCheckbox
                       selected={checked}
                       total={filePaths.length}
-                      label="Select every visible file"
+                      label={t("files.selectAll")}
                       allSelected={allFilesChecked}
                       hiddenSelected={checked.length - filePaths.filter((p) => checked.includes(p)).length}
                       onToggle={(all) =>
@@ -686,9 +702,9 @@ function FilesTab({ projectId }: { projectId: number }) {
                       }
                     />
                   </TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-28 text-right">Size</TableHead>
-                  <TableHead className="w-36">Modified</TableHead>
+                  <TableHead>{t("files.table.name")}</TableHead>
+                  <TableHead className="w-28 text-end">{t("files.table.size")}</TableHead>
+                  <TableHead className="w-36">{t("files.table.modified")}</TableHead>
                   <TableHead className="w-28" />
                 </TableRow>
               </TableHeader>
@@ -722,7 +738,7 @@ function FilesTab({ projectId }: { projectId: number }) {
                       {entry.type === "directory" ? (
                         <button
                           type="button"
-                          className="flex items-center gap-1.5 text-[12.5px] font-medium text-blueprint hover:text-signal"
+                          className="ltr-content flex items-center gap-1.5 text-12.5px font-medium text-blueprint hover:text-signal"
                           onClick={() => setDir(entry.path)}
                         >
                           <Folder className="h-3.5 w-3.5 fill-blueprint/25 text-blueprint" />
@@ -731,27 +747,27 @@ function FilesTab({ projectId }: { projectId: number }) {
                       ) : (
                         <button
                           type="button"
-                          className="font-mono text-[12.5px] text-foreground/85 hover:text-signal"
+                          className="ltr-content font-mono text-12.5px text-foreground/85 hover:text-signal"
                           onClick={() => void openFile(entry.path)}
                         >
                           {entry.name}
                         </button>
                       )}
-                      {selected === entry.path && <Badge className="ml-2">editing</Badge>}
+                      {selected === entry.path && <Badge className="ms-2">{t("files.editing")}</Badge>}
                     </TableCell>
-                    <TableCell className="py-0.5 text-right text-[12.5px] text-muted-foreground tabular-nums">
-                      {entry.type === "directory" ? "—" : formatBytes(entry.size)}
+                    <TableCell className="nums py-0.5 text-end text-12.5px text-muted-foreground">
+                      {entry.type === "directory" ? "—" : fmt.bytes(entry.size)}
                     </TableCell>
-                    <TableCell className="py-0.5 text-[12px] text-muted-foreground">
-                      {entry.modified ? new Date(entry.modified).toLocaleString() : ""}
+                    <TableCell className="py-0.5 text-12px text-muted-foreground">
+                      {entry.modified ? fmt.dateTime(new Date(entry.modified).getTime()) : ""}
                     </TableCell>
-                    <TableCell className="py-0.5 text-right">
+                    <TableCell className="py-0.5 text-end">
                       {entry.type === "file" && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0 text-muted-foreground"
-                          title="Rename or move"
+                          title={t("files.rename.title")}
                           onClick={() => startRename(entry.path)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -761,7 +777,7 @@ function FilesTab({ projectId }: { projectId: number }) {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        title="Delete"
+                        title={t("files.delete.title")}
                         onClick={() => void deleteFile(entry.path, entry.type === "directory")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -772,19 +788,15 @@ function FilesTab({ projectId }: { projectId: number }) {
               </TableBody>
             </Table>
             {listed.length === 0 && (
-              <p className="px-3 py-6 text-center text-[13px] text-muted-foreground">
-                {needle ? `Nothing matches “${query}”.` : "This folder is empty."}
+              <p className="px-3 py-6 text-center text-13px text-muted-foreground">
+                {needle ? t("files.empty.filtered", { query }) : t("files.empty.folder")}
               </p>
             )}
           </CardContent>
         </Card>
       )}
       {files && files.length === 0 && (
-        <p className="text-[13px] text-muted-foreground">
-          This project has no files. Upload from disk or create{" "}
-          <span className="font-mono">index.html</span> — it is served at{" "}
-          <span className="font-mono">/</span> without any route.
-        </p>
+        <p className="text-13px text-muted-foreground">{t("files.empty.body")}</p>
       )}
       {selected && isTextPath(selected) ? (
         <div className="space-y-2">
@@ -799,27 +811,27 @@ function FilesTab({ projectId }: { projectId: number }) {
           />
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setContent(original)} disabled={content === original}>
-              Reset
+              {t("action.reset")}
             </Button>
             <Button size="sm" onClick={() => void saveFile()} disabled={saving || content === original}>
-              <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
+              <Save className="h-3.5 w-3.5" /> {saving ? t("action.saving") : t("action.save")}
             </Button>
           </div>
         </div>
       ) : (
         selected && (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed px-3 py-4 text-[13px] text-muted-foreground">
-            <span className="font-mono text-foreground">{selected}</span>
-            <span>is a binary file — the editor does not open it.</span>
-            <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed px-3 py-4 text-13px text-muted-foreground">
+            <span className="ltr-content font-mono text-foreground">{selected}</span>
+            <span>{t("files.binary")}</span>
+            <div className="ms-auto flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => startRename(selected)}>
-                <Pencil className="h-3.5 w-3.5" /> Rename
+                <Pencil className="h-3.5 w-3.5" /> {t("action.rename")}
               </Button>
               <Button asChild variant="outline" size="sm">
                 <a
                   href={`/api/storage/download?projectId=${projectId}&path=${encodeURIComponent(selected)}&download=1`}
                 >
-                  <Download className="h-3.5 w-3.5" /> Download
+                  <Download className="h-3.5 w-3.5" /> {t("action.download")}
                 </a>
               </Button>
             </div>
@@ -846,15 +858,15 @@ interface DocumentRow {
 type RowSort = "id" | "_localme.created" | "_localme.updated";
 
 /** One-line summary of a document for the grid: "3 fields · name=Ada, city=…". */
-function summarizeDocument(row: DocumentRow): string {
+function summarizeDocument(row: DocumentRow, t: Translate, count: (n: number) => string): string {
   const rest = Object.entries(row).filter(([key]) => key !== "id" && key !== "_localme");
-  if (rest.length === 0) return "no fields beyond id";
+  if (rest.length === 0) return t("data.summary.none");
   const preview = rest
     .slice(0, 4)
     .map(([key, value]) => `${key}=${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
     .join(", ");
-  const more = rest.length > 4 ? ` +${rest.length - 4} more` : "";
-  return `${rest.length} field${rest.length === 1 ? "" : "s"} · ${preview}${more}`;
+  const more = rest.length > 4 ? t("data.summary.more", { count: count(rest.length - 4) }) : "";
+  return `${t("data.summary.count", { count: count(rest.length) })} · ${preview}${more}`;
 }
 
 /** True for a value we can print inline in a definition list. */
@@ -880,28 +892,30 @@ function DocumentDialog({
   onDelete: (id: unknown) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const { t, fmt } = useI18n();
   if (!row) return null;
 
   const { _localme, id, ...fields } = row;
   const raw = JSON.stringify(row, null, 2);
 
   const render = (key: string, value: unknown, depth: number): React.ReactNode => {
-    const pad = { paddingLeft: `${depth * 1.1}rem` };
+    // Logical padding, so the tree indents from the correct side in RTL.
+    const pad = { paddingInlineStart: `${depth * 1.1}rem` };
     if (isPrimitive(value)) {
       const isLong = typeof value === "string" && value.length > 80;
       return (
         <div key={key} className="grid grid-cols-[minmax(6rem,14rem)_1fr] gap-3 border-b border-border/60 py-2 last:border-0">
-          <div className="font-mono text-[12px] text-muted-foreground" style={pad}>
+          <div className="ltr-content font-mono text-12px text-muted-foreground" style={pad}>
             {key}
           </div>
           <div
             className={cn(
-              "font-mono text-[12.5px]",
+              "ltr-content font-mono text-12.5px",
               typeof value === "string" ? "break-words text-foreground" : "text-signal",
               isLong && "whitespace-pre-wrap",
             )}
           >
-            {value === null ? <span className="text-muted-foreground">null</span> : String(value)}
+            {value === null ? <span className="text-muted-foreground">{t("data.null")}</span> : String(value)}
           </div>
         </div>
       );
@@ -912,17 +926,19 @@ function DocumentDialog({
     return (
       <div key={key}>
         <div className="flex items-baseline gap-2 py-1.5" style={pad}>
-          <span className="font-mono text-[12px] text-muted-foreground">{key}</span>
-          <Badge variant="outline" className="text-[10px]">
-            {Array.isArray(value) ? `array · ${entries.length}` : `object · ${entries.length}`}
+          <span className="ltr-content font-mono text-12px text-muted-foreground">{key}</span>
+          <Badge variant="outline" className="text-10px">
+            {t(Array.isArray(value) ? "data.value.array" : "data.value.object", {
+              count: fmt.number(entries.length),
+            })}
           </Badge>
         </div>
         {entries.length === 0 ? (
-          <p className="py-1 text-[12px] italic text-muted-foreground" style={pad}>
-            empty
+          <p className="py-1 text-12px italic text-muted-foreground" style={pad}>
+            {t("data.value.empty")}
           </p>
         ) : (
-          <div className="border-l border-border/60 pl-1">
+          <div className="border-s border-border/60 ps-1">
             {entries.map(([childKey, childValue]) => render(childKey, childValue, depth + 1))}
           </div>
         )}
@@ -934,16 +950,20 @@ function DocumentDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-mono">{String(id)}</DialogTitle>
+          <DialogTitle className="ltr-content font-mono">{String(id)}</DialogTitle>
           <DialogDescription>
-            {_localme?.created && <>Created {new Date(_localme.created).toLocaleString("en-US")} · </>}
-            {_localme?.updated && <>Updated {new Date(_localme.updated).toLocaleString("en-US")}</>}
+            {_localme?.created && (
+              <>{t("data.dialog.created", { when: fmt.dateTime(new Date(_localme.created).getTime()) })} · </>
+            )}
+            {_localme?.updated && (
+              <>{t("data.dialog.updated", { when: fmt.dateTime(new Date(_localme.updated).getTime()) })}</>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto rounded-md border border-border px-3 py-1">
           {Object.keys(fields).length === 0 ? (
-            <p className="py-6 text-center text-[13px] text-muted-foreground">
-              This document has no fields beyond its id.
+            <p className="py-6 text-center text-13px text-muted-foreground">
+              {t("data.dialog.empty")}
             </p>
           ) : (
             Object.entries(fields).map(([key, value]) => render(key, value, 0))
@@ -960,19 +980,19 @@ function DocumentDialog({
                     setCopied(true);
                     setTimeout(() => setCopied(false), 1600);
                   },
-                  () => toast.error("Clipboard unavailable."),
+                  () => toast.error(t("data.dialog.clipboardFailed")),
                 );
               }}
             >
-              <Copy className="h-3.5 w-3.5" /> {copied ? "Copied" : "Copy JSON"}
+              <Copy className="h-3.5 w-3.5" /> {copied ? t("action.copied") : t("data.dialog.copyJson")}
             </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose}>
-              Close
+              {t("action.close")}
             </Button>
             <Button variant="destructive" size="sm" onClick={() => onDelete(id)}>
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <Trash2 className="h-3.5 w-3.5" /> {t("action.delete")}
             </Button>
           </div>
         </DialogFooter>
@@ -982,6 +1002,7 @@ function DocumentDialog({
 }
 
 function DataTab({ projectId }: { projectId: number }) {
+  const { t, fmt } = useI18n();
   const [tables, setTables] = useState<TableInfo[] | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [rows, setRows] = useState<DocumentRow[] | null>(null);
@@ -1004,11 +1025,11 @@ function DataTab({ projectId }: { projectId: number }) {
         setPage(1);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not list tables.");
+      toast.error(error instanceof Error ? error.message : t("data.tablesFailed"));
       setTables([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, t]);
 
   const loadRows = useCallback(async () => {
     if (!activeTable) return;
@@ -1028,11 +1049,11 @@ function DataTab({ projectId }: { projectId: number }) {
       setRows(result.data);
       setTotal(result.total ?? result.data.length);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load documents.");
+      toast.error(error instanceof Error ? error.message : t("data.loadFailed"));
       setRows([]);
       setTotal(0);
     }
-  }, [page, pageSize, projectId, activeTable, query, sort, sortDir]);
+  }, [page, pageSize, projectId, activeTable, query, sort, sortDir, t]);
 
   useEffect(() => {
     void Promise.resolve().then(loadTables);
@@ -1056,16 +1077,16 @@ function DataTab({ projectId }: { projectId: number }) {
     try {
       document = JSON.parse(insertJson);
     } catch {
-      toast.error("Document must be valid JSON.");
+      toast.error(t("data.insert.invalidJson"));
       return;
     }
     try {
       await apiPost(`/api/db/insert?projectId=${projectId}`, { table: activeTable, document });
-      toast.success("Document inserted");
+      toast.success(t("data.insert.done"));
       setInsertOpen(false);
       await Promise.all([loadTables(), loadRows()]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Insert failed.");
+      toast.error(error instanceof Error ? error.message : t("data.insert.failed"));
     }
   }
 
@@ -1073,39 +1094,40 @@ function DataTab({ projectId }: { projectId: number }) {
     if (!activeTable) return;
     try {
       await apiPost(`/api/db/delete?projectId=${projectId}`, { table: activeTable, filter: { id } });
-      toast.success("Deleted");
+      toast.success(t("files.delete.done"));
       await Promise.all([loadTables(), loadRows()]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("files.delete.failed"));
     }
   }
 
   return (
     <div className="space-y-4">
       <SectionHeader
-        title="Document database"
-        description="Mongo-style JSON documents. Tables appear on first insert — the same API your app calls."
+        title={t("data.title")}
+        description={t("data.description")}
         actions={
           <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
             <DialogTrigger asChild>
               <Button size="sm" disabled={!activeTable}>
-                <Plus className="h-3.5 w-3.5" /> Insert document
+                <Plus className="h-3.5 w-3.5" /> {t("data.insert")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Insert into {activeTable}</DialogTitle>
-                <DialogDescription>Every document needs a unique id field.</DialogDescription>
+                <DialogTitle className="ltr-content">{t("data.insert.title", { table: activeTable ?? "" })}</DialogTitle>
+                <DialogDescription>{t("data.insert.description")}</DialogDescription>
               </DialogHeader>
               <form onSubmit={insertDoc} className="space-y-4">
                 <Textarea
                   value={insertJson}
                   onChange={(e) => setInsertJson(e.target.value)}
                   rows={8}
-                  className="font-mono text-[12.5px]"
+                  dir="ltr"
+                  className="ltr-content font-mono text-12.5px"
                 />
                 <DialogFooter>
-                  <Button type="submit">Insert</Button>
+                  <Button type="submit">{t("data.insert")}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -1117,16 +1139,14 @@ function DataTab({ projectId }: { projectId: number }) {
           {tables.map((table) => (
             <button key={table.name} type="button" onClick={() => chooseTable(table.name)}>
               <Badge variant={activeTable === table.name ? "default" : "outline"} className="font-mono">
-                {table.name} · {table.count}
+                {table.name} · <span className="nums">{fmt.number(table.count)}</span>
               </Badge>
             </button>
           ))}
         </div>
       )}
       {tables && tables.length === 0 && (
-        <p className="text-[13px] text-muted-foreground">
-          No tables yet — insert a document or let your app call <span className="font-mono">/api/db/insert</span>.
-        </p>
+        <p className="text-13px text-muted-foreground">{t("data.empty.tables")}</p>
       )}
       {rows && activeTable && (
         <Card>
@@ -1138,71 +1158,76 @@ function DataTab({ projectId }: { projectId: number }) {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search every field…"
-                className="h-8 w-64 text-[12.5px]"
-                aria-label="Search documents"
+                placeholder={t("data.search.placeholder")}
+                className="h-8 w-64 text-12.5px"
+                aria-label={t("data.search.ariaLabel")}
               />
               <Select
                 value={sort}
                 onValueChange={(value) => setSort(value as RowSort)}
               >
-                <SelectTrigger className="h-8 w-44 text-[12.5px]" aria-label="Sort documents">
+                <SelectTrigger className="h-8 w-44 text-12.5px" aria-label={t("data.search.ariaLabel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_localme.created">Sort: created</SelectItem>
-                  <SelectItem value="_localme.updated">Sort: updated</SelectItem>
-                  <SelectItem value="id">Sort: id</SelectItem>
+                  <SelectItem value="_localme.created">{t("data.sort.created")}</SelectItem>
+                  <SelectItem value="_localme.updated">{t("data.sort.updated")}</SelectItem>
+                  <SelectItem value="id">{t("data.sort.id")}</SelectItem>
                 </SelectContent>
               </Select>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0"
-                title={sortDir === -1 ? "Newest first" : "Oldest first"}
+                title={sortDir === -1 ? t("data.sort.newest") : t("data.sort.oldest")}
                 onClick={() => setSortDir((prev) => (prev === -1 ? 1 : -1))}
               >
                 {sortDir === -1 ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
               </Button>
-              <span className="text-[12px] tabular-nums text-muted-foreground">
+              <span className="nums text-12px text-muted-foreground">
                 {rows.length === 0
-                  ? "no matches"
-                  : `${(page - 1) * pageSize + 1}–${(page - 1) * pageSize + rows.length} of ${total}`}
+                  ? t("data.noMatches")
+                  : t("pagination.range", {
+                      from: fmt.number((page - 1) * pageSize + 1),
+                      to: fmt.number((page - 1) * pageSize + rows.length),
+                      total: fmt.number(total),
+                      label: t("pagination.documents"),
+                    })}
               </span>
             </div>
             {rows.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-44">id</TableHead>
-                    <TableHead>fields</TableHead>
-                    <TableHead className="w-40">Updated</TableHead>
+                    <TableHead className="w-44">{t("data.table.id")}</TableHead>
+                    <TableHead>{t("data.table.fields")}</TableHead>
+                    <TableHead className="w-40">{t("data.table.updated")}</TableHead>
                     <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
                     <TableRow key={String(row.id)}>
-                      <TableCell className="font-mono text-[12px]">{String(row.id)}</TableCell>
-                      <TableCell className="max-w-0 truncate font-mono text-[12px] text-muted-foreground">
+                      <TableCell className="ltr-content font-mono text-12px">{String(row.id)}</TableCell>
+                      <TableCell className="max-w-0 truncate font-mono text-12px text-muted-foreground">
                         {/* The grid is a summary; the dialog is the readable view. */}
                         <button
                           type="button"
-                          className="block max-w-full truncate text-left hover:text-signal"
+                          className="block max-w-full truncate text-start hover:text-signal"
                           onClick={() => setViewing(row)}
                         >
-                          {summarizeDocument(row)}
+                          {summarizeDocument(row, t, fmt.number)}
                         </button>
                       </TableCell>
-                      <TableCell className="text-[11.5px] text-muted-foreground">
-                        {row._localme?.updated ? new Date(row._localme.updated).toLocaleString("en-US") : "—"}
+                      <TableCell className="text-11.5px text-muted-foreground">
+                        {row._localme?.updated ? fmt.dateTime(new Date(row._localme.updated).getTime()) : "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 text-muted-foreground hover:text-destructive"
-                          title="Delete document"
+                          title={t("data.delete.title")}
                           onClick={() => void deleteDoc(row.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1213,15 +1238,15 @@ function DataTab({ projectId }: { projectId: number }) {
                 </TableBody>
               </Table>
             ) : (
-              <p className="px-3 py-10 text-center text-[13px] text-muted-foreground">
-                {query.trim() ? `No document contains “${query.trim()}”.` : "This table is empty."}
+              <p className="px-3 py-10 text-center text-13px text-muted-foreground">
+                {query.trim() ? t("data.empty.filtered", { query: query.trim() }) : t("data.empty.table")}
               </p>
             )}
             {total > pageSize && (
               <div className="border-t px-3 py-2">
                 <Pagination
                   state={{ page, pageSize, total }}
-                  label="documents"
+                  label="pagination.documents"
                   onPageChange={setPage}
                   onPageSizeChange={(size) => {
                     setPageSize(size);
@@ -1260,6 +1285,7 @@ interface ConsoleRoute {
 }
 
 function RoutesTab({ projectId, base }: { projectId: number; base: string | null }) {
+  const { t, fmt } = useI18n();
   const [routes, setRoutes] = useState<ConsoleRoute[] | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [files, setFiles] = useState<string[]>([]);
@@ -1298,10 +1324,10 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
       );
       setFiles(listing.data.filter((entry) => entry.type !== "directory").map((entry) => entry.path));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load routes.");
+      toast.error(error instanceof Error ? error.message : t("routes.loadFailed"));
       setRoutes([]);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -1321,10 +1347,10 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
         requiredPermission: requiredPermission === "any" ? null : requiredPermission,
         isActive: true,
       });
-      toast.success(`Route ${pathPattern} saved`);
+      toast.success(t("routes.save.done", { path: pathPattern }));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save the route.");
+      toast.error(error instanceof Error ? error.message : t("routes.save.failed"));
     } finally {
       setBusy(false);
     }
@@ -1332,13 +1358,13 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
 
   async function deleteSelectedRoutes() {
     if (selected.length === 0) return;
-    if (!window.confirm(`Delete ${selected.length} route${selected.length === 1 ? "" : "s"}?`)) return;
+    if (!window.confirm(t("routes.delete.confirm", { count: fmt.number(selected.length) }))) return;
     for (const route of routes ?? []) {
       if (selected.includes(route.pathPattern)) {
         await apiDelete(`/api/routes/${route.id}?projectId=${projectId}`).catch(() => undefined);
       }
     }
-    toast.success(`${selected.length} removed`);
+    toast.success(t("routes.delete.doneCount", { count: fmt.number(selected.length) }));
     setSelected([]);
     await load();
   }
@@ -1346,18 +1372,18 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
   async function deleteRoute(id: number) {
     try {
       await apiDelete(`/api/routes/${id}?projectId=${projectId}`);
-      toast.success("Route deleted");
+      toast.success(t("routes.delete.done"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("routes.delete.failed"));
     }
   }
 
   return (
     <div className="space-y-4">
       <SectionHeader
-        title="Routing"
-        description="Exact matches first, then proxy mounts by longest prefix, then static files."
+        title={t("routes.title")}
+        description={t("routes.description")}
         actions={
           <TransferControls
             projectId={projectId}
@@ -1374,16 +1400,12 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
         }
       />
       {routes && routes.length === 0 && (
-        <p className="text-[13px] text-muted-foreground">
-          No routes yet. A project serves <span className="font-mono">index.html</span> at{" "}
-          <span className="font-mono">/</span> without one — add a route to point a path at a
-          different HTML file, gate it behind a login, or forward it to another service.
-        </p>
+        <p className="text-13px text-muted-foreground">{t("routes.empty")}</p>
       )}
       {routes && routes.length > 0 && (
         <Card>
           <CardContent className="p-0">
-            <SelectionToolbar selected={selected} noun="route" onClear={() => setSelected([])} />
+            <SelectionToolbar selected={selected} noun="selection.route" onClear={() => setSelected([])} />
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1391,16 +1413,16 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
                     <SelectAllCheckbox
                       selected={selected}
                       total={routes.length}
-                      label="Select every route"
+                      label={t("routes.selectAll")}
                       onToggle={(all) =>
                         setSelected(all ? routes.map((route) => route.pathPattern) : [])
                       }
                     />
                   </TableHead>
-                  <TableHead>Path</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead className="w-24 text-right">File</TableHead>
-                  <TableHead className="w-24">Auth</TableHead>
+                  <TableHead>{t("routes.table.path")}</TableHead>
+                  <TableHead>{t("routes.table.target")}</TableHead>
+                  <TableHead className="w-24 text-end">{t("routes.table.file")}</TableHead>
+                  <TableHead className="w-24">{t("routes.table.auth")}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -1420,29 +1442,29 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
                       />
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-[12.5px]">{route.pathPattern}</span>
+                      <span className="ltr-content font-mono text-12.5px">{route.pathPattern}</span>
                       {base && (
                         <a
                           href={`${base}${route.pathPattern === "/" ? "/" : route.pathPattern}`}
                           target="_blank"
                           rel="noreferrer"
-                          title={`Open ${route.pathPattern}`}
-                          className="ml-2 align-middle text-[11px] text-signal hover:underline"
+                          title={t("routes.openTitle", { path: route.pathPattern })}
+                          className="ms-2 align-middle text-11px text-signal hover:underline"
                         >
-                          open
+                          {t("routes.open")}
                         </a>
                       )}
                       {!route.isActive && (
-                        <Badge variant="outline" className="ml-2">
-                          disabled
+                        <Badge variant="outline" className="ms-2">
+                          {t("routes.disabled")}
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       {!route.isProxy && (
                         <span
-                          className="text-[11px] text-muted-foreground"
-                          title={`Download ${route.targetFile ?? ""}`}
+                          className="text-11px text-muted-foreground"
+                          title={t("routes.downloadTitle", { file: route.targetFile ?? "" })}
                         >
                           <a
                             className="hover:text-signal hover:underline"
@@ -1450,37 +1472,37 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
                           >
                             {files.length > 0 && route.targetFile && !files.includes(route.targetFile) ? (
                               <span className="inline-flex items-center gap-1 text-destructive">
-                                <TriangleAlert className="h-3 w-3" /> missing
+                                <TriangleAlert className="h-3 w-3" /> {t("routes.missing")}
                               </span>
                             ) : (
-                              "download"
+                              t("routes.download")
                             )}
                           </a>
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-[12.5px]">
+                    <TableCell className="text-12.5px">
                       {route.isProxy ? (
-                        <span className="text-signal">proxy mount</span>
+                        <span className="text-signal">{t("routes.proxyMount")}</span>
                       ) : (
-                        <span className="font-mono text-[12px]">{route.targetFile}</span>
+                        <span className="ltr-content font-mono text-12px">{route.targetFile}</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {route.requiresAuth || route.requiredPermission ? (
                         <span className="flex flex-wrap items-center gap-1">
-                          <Badge variant="outline">{route.requiredRole ?? "any visitor"}</Badge>
+                          <Badge variant="outline">{route.requiredRole ?? t("routes.anyVisitor")}</Badge>
                           {route.requiredPermission && (
-                            <Badge variant="blueprint" className="font-mono text-[11px]">
+                            <Badge variant="blueprint" className="font-mono text-11px">
                               {route.requiredPermission}
                             </Badge>
                           )}
                         </span>
                       ) : (
-                        <span className="text-[12.5px] text-muted-foreground">public</span>
+                        <span className="text-12.5px text-muted-foreground">{t("routes.public")}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1499,34 +1521,36 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
       )}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Add or update a route</CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Saving an existing path updates it.
+          <CardTitle className="text-sm">{t("routes.form.title")}</CardTitle>
+          <CardDescription className="text-12.5px">
+            {t("routes.form.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={saveRoute} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="route-path">Path pattern</Label>
+                <Label htmlFor="route-path">{t("routes.form.pathLabel")}</Label>
                 <Input
                   id="route-path"
                   value={pathPattern}
                   onChange={(e) => setPathPattern(e.target.value)}
-                  className="font-mono text-[12.5px]"
+                  className="ltr-input font-mono text-12.5px"
+                  dir="ltr"
                   placeholder="/"
                   required
                 />
               </div>
               {!isProxy && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="route-target">Target file</Label>
+                  <Label htmlFor="route-target">{t("routes.form.targetLabel")}</Label>
                   <Input
                     id="route-target"
                     list="route-target-options"
                     value={targetFile}
                     onChange={(e) => setTargetFile(e.target.value)}
-                    className={cn("font-mono text-[12.5px]", targetMissing && "border-destructive")}
+                    dir="ltr"
+                    className={cn("ltr-input font-mono text-12.5px", targetMissing && "border-destructive")}
                     placeholder="index.html"
                     required={!isProxy}
                     aria-invalid={targetMissing}
@@ -1537,55 +1561,55 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
                       <option key={path} value={path} />
                     ))}
                   </datalist>
-                  <p id="route-target-hint" className="text-[11.5px] text-muted-foreground">
+                  <p id="route-target-hint" className="text-11.5px text-muted-foreground">
                     {targetMissing ? (
                       <span className="inline-flex items-center gap-1 text-destructive">
-                        <TriangleAlert className="h-3 w-3" />
-                        {targetFile.trim()} does not exist yet — this path will 404 until you create it in
-                        the Code tab.
+                        <TriangleAlert className="h-3 w-3 shrink-0" />
+                        {t("routes.form.targetMissing", { file: targetFile.trim() })}
                       </span>
                     ) : files.length === 0 ? (
-                      "This project has no files yet; create one in the Code tab first."
+                      t("routes.form.targetNoFiles")
                     ) : (
-                      `${files.length} file${files.length === 1 ? "" : "s"} in this project. Paths are
-                      project-relative and resolve against your project base URL.`
+                      t("routes.form.targetCount", { count: fmt.number(files.length) })
                     )}
                   </p>
                 </div>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-6">
-              <label className="flex items-center gap-2 text-[13px]">
-                <Switch checked={isProxy} onCheckedChange={setIsProxy} /> Proxy route
+              <label className="flex items-center gap-2 text-13px">
+                <Switch checked={isProxy} onCheckedChange={setIsProxy} /> {t("routes.form.proxy")}
               </label>
               {isProxy && (
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Input
                     value={proxyTarget}
                     onChange={(e) => setProxyTarget(e.target.value)}
-                    className="font-mono text-[12.5px]"
+                    className="ltr-input font-mono text-12.5px"
+                    dir="ltr"
                     placeholder="https://api.example.com/v1"
                     required={isProxy}
                   />
                 </div>
               )}
-              <label className="flex items-center gap-2 text-[13px]">
-                <Switch checked={requiresAuth} onCheckedChange={setRequiresAuth} /> Requires visitor auth
+              <label className="flex items-center gap-2 text-13px">
+                <Switch checked={requiresAuth} onCheckedChange={setRequiresAuth} /> {t("routes.form.requiresAuth")}
               </label>
               {requiresAuth && (
                 <>
                   <Input
                     value={requiredRole}
                     onChange={(e) => setRequiredRole(e.target.value)}
-                    className="w-40 font-mono text-[12.5px]"
-                    placeholder="Role (optional)"
+                    className="ltr-input w-40 font-mono text-12.5px"
+                    dir="ltr"
+                    placeholder={t("routes.form.rolePlaceholder")}
                   />
                   <Select value={requiredPermission} onValueChange={setRequiredPermission}>
-                    <SelectTrigger className="w-52" aria-label="Required permission">
-                      <SelectValue placeholder="Permission (optional)" />
+                    <SelectTrigger className="w-52" aria-label={t("routes.form.permissionAria")}>
+                      <SelectValue placeholder={t("routes.form.permissionPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="any">Any permission</SelectItem>
+                      <SelectItem value="any">{t("routes.form.anyPermission")}</SelectItem>
                       {permissions.map((permission) => (
                         <SelectItem key={permission} value={permission}>
                           {permission}
@@ -1598,7 +1622,7 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="submit" size="sm" disabled={busy}>
-                {busy ? "Saving…" : "Save route"}
+                {busy ? t("action.saving") : t("routes.form.save")}
               </Button>
               {base && (
                 <Button asChild variant="outline" size="sm">
@@ -1607,7 +1631,7 @@ function RoutesTab({ projectId, base }: { projectId: number; base: string | null
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" /> Test this path
+                    <ExternalLink className="h-3.5 w-3.5" /> {t("routes.form.test")}
                   </a>
                 </Button>
               )}
@@ -1670,6 +1694,7 @@ function RolesPanel({
   visitors: VisitorRow[];
   onChanged: () => void | Promise<void>;
 }) {
+  const { t, fmt } = useI18n();
   const [newRole, setNewRole] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [editing, setEditing] = useState<RoleRow | null>(null);
@@ -1689,10 +1714,10 @@ function RolesPanel({
     try {
       await apiPost(`/api/roles?projectId=${projectId}`, { name, permissions: [] });
       setNewRole("");
-      toast.success(`Role “${name}” created`);
+      toast.success(t("roles.create.done", { name }));
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the role.");
+      toast.error(error instanceof Error ? error.message : t("roles.create.failed"));
     }
   }
 
@@ -1705,11 +1730,11 @@ function RolesPanel({
         name: editName.trim() || editing.name,
         permissions: editPermissions,
       });
-      toast.success("Role updated");
+      toast.success(t("roles.update.done"));
       setEditing(null);
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update the role.");
+      toast.error(error instanceof Error ? error.message : t("roles.update.failed"));
     } finally {
       setBusy(false);
     }
@@ -1725,16 +1750,16 @@ function RolesPanel({
       const count = holders(deleting);
       toast.success(
         onDelete === "delete_visitors"
-          ? `Role and ${count} ${count === 1 ? "visitor" : "visitors"} deleted`
+          ? t("roles.delete.doneVisitors", { count: fmt.number(count) })
           : onDelete === "move_to"
-            ? `Role deleted; ${count} ${count === 1 ? "visitor" : "visitors"} moved`
-            : `Role deleted; ${count} ${count === 1 ? "visitor has" : "visitors have"} no role`,
+            ? t("roles.delete.doneMoved", { count: fmt.number(count) })
+            : t("roles.delete.doneLeft", { count: fmt.number(count) }),
       );
       setDeleting(null);
       setSelected([]);
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not delete the role.");
+      toast.error(error instanceof Error ? error.message : t("roles.delete.failed"));
     } finally {
       setBusy(false);
     }
@@ -1745,23 +1770,24 @@ function RolesPanel({
       <div className="flex flex-wrap items-end gap-2">
         <form onSubmit={createRole} className="flex items-end gap-2">
           <div className="space-y-1.5">
-            <Label htmlFor="role-name">New role</Label>
+            <Label htmlFor="role-name">{t("roles.new.label")}</Label>
             <Input
               id="role-name"
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
-              className="w-44 font-mono text-[12.5px]"
+              className="ltr-input w-44 font-mono text-12.5px"
+              dir="ltr"
               pattern="[a-zA-Z][a-zA-Z0-9_-]{0,31}"
               placeholder="Editor"
               required
             />
           </div>
           <Button type="submit" size="sm" variant="outline">
-            <Plus className="h-3.5 w-3.5" /> Add role
+            <Plus className="h-3.5 w-3.5" /> {t("roles.new.submit")}
           </Button>
         </form>
         {roles.length > 0 && (
-          <div className="ml-auto flex items-end gap-2">
+          <div className="ms-auto flex items-end gap-2">
             <TransferControls
               projectId={projectId}
               feature="roles"
@@ -1776,15 +1802,12 @@ function RolesPanel({
       </div>
 
       {roles.length === 0 ? (
-        <p className="text-[12.5px] text-muted-foreground">
-          No roles yet. A visitor without a role can still sign in; roles are what let a route or an
-          API endpoint require a specific set of permissions.
-        </p>
+        <p className="text-12.5px text-muted-foreground">{t("roles.empty")}</p>
       ) : (
         <div className="overflow-hidden rounded-md border border-border">
           <SelectionToolbar
             selected={selected}
-            noun="role"
+            noun="selection.role"
             onClear={() => setSelected([])}
           />
           <Table>
@@ -1794,13 +1817,13 @@ function RolesPanel({
                   <SelectAllCheckbox
                     selected={selected}
                     total={roles.length}
-                    label="Select every role"
+                    label={t("roles.selectAll")}
                     onToggle={(all) => setSelected(all ? roles.map((role) => role.name) : [])}
                   />
                 </TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="w-24 text-right">Visitors</TableHead>
-                <TableHead>Permissions</TableHead>
+                <TableHead>{t("roles.table.role")}</TableHead>
+                <TableHead className="w-24 text-end">{t("roles.table.visitors")}</TableHead>
+                <TableHead>{t("roles.table.permissions")}</TableHead>
                 <TableHead className="w-40" />
               </TableRow>
             </TableHeader>
@@ -1819,32 +1842,32 @@ function RolesPanel({
                       }
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-[12.5px]">{role.name}</TableCell>
-                  <TableCell className="text-right text-[12.5px] tabular-nums text-muted-foreground">
-                    {holders(role)}
+                  <TableCell className="ltr-content font-mono text-12.5px">{role.name}</TableCell>
+                  <TableCell className="nums text-end text-12.5px text-muted-foreground">
+                    {fmt.number(holders(role))}
                   </TableCell>
                   <TableCell>
                     {role.permissions.length === 0 ? (
-                      <span className="text-[12px] text-muted-foreground">none</span>
+                      <span className="text-12px text-muted-foreground">{t("roles.none")}</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 4).map((permission) => (
-                          <Badge key={permission} variant="outline" className="font-mono text-[10px]">
+                          <Badge key={permission} variant="outline" className="font-mono text-10px">
                             {permission}
                           </Badge>
                         ))}
                         {role.permissions.length > 4 && (
-                          <Badge variant="outline" className="text-[10px]">
-                            +{role.permissions.length - 4}
+                          <Badge variant="outline" className="text-10px">
+                            {t("roles.morePermissions", { count: fmt.number(role.permissions.length - 4) })}
                           </Badge>
                         )}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" title={`Manage ${role.name}`}>
+                        <Button variant="ghost" size="icon-sm" title={t("roles.manageTitle", { name: role.name })}>
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1856,7 +1879,7 @@ function RolesPanel({
                             setEditPermissions(role.permissions);
                           }}
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Edit name &amp; permissions
+                          <Pencil className="h-3.5 w-3.5" /> {t("roles.menu.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -1866,7 +1889,7 @@ function RolesPanel({
                             setMoveTo("");
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete role…
+                          <Trash2 className="h-3.5 w-3.5" /> {t("roles.menu.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1883,28 +1906,27 @@ function RolesPanel({
         <DialogContent className="sm:max-w-lg">
           <form onSubmit={saveEdit} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Edit role</DialogTitle>
-              <DialogDescription>
-                Permissions gate API keys and routes; a role with none can sign in but nothing else.
-              </DialogDescription>
+              <DialogTitle>{t("roles.edit.title")}</DialogTitle>
+              <DialogDescription>{t("roles.edit.description")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-role-name">Name</Label>
+              <Label htmlFor="edit-role-name">{t("roles.edit.nameLabel")}</Label>
               <Input
                 id="edit-role-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="font-mono text-[12.5px]"
+                className="ltr-input font-mono text-12.5px"
+                dir="ltr"
                 pattern="[a-zA-Z][a-zA-Z0-9_-]{0,31}"
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Permissions ({editPermissions.length})</Label>
+              <Label>{t("roles.edit.permissionsLabel", { count: fmt.number(editPermissions.length) })}</Label>
               <div className="max-h-64 overflow-y-auto rounded-md border border-border p-2">
                 {permissions.length === 0 ? (
-                  <p className="px-1 py-2 text-[12px] text-muted-foreground">
-                    No permission catalogue available.
+                  <p className="px-1 py-2 text-12px text-muted-foreground">
+                    {t("roles.edit.noCatalogue")}
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
@@ -1921,7 +1943,7 @@ function RolesPanel({
                             )
                           }
                           className={cn(
-                            "rounded border px-2 py-0.5 font-mono text-[11px] transition-colors",
+                            "rounded border px-2 py-0.5 font-mono text-11px transition-colors",
                             on
                               ? "border-signal bg-signal/10 text-signal"
                               : "border-border text-muted-foreground hover:text-foreground",
@@ -1937,10 +1959,10 @@ function RolesPanel({
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
-                {busy ? "Saving…" : "Save role"}
+                {busy ? t("action.saving") : t("roles.edit.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -1951,11 +1973,14 @@ function RolesPanel({
       <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Delete “{deleting?.name}”</DialogTitle>
+            <DialogTitle className="ltr-content">{t("roles.delete.title", { name: deleting?.name ?? "" })}</DialogTitle>
             <DialogDescription>
-              {holders(deleting ?? { id: 0, name: "", permissions: [] })}{" "}
-              {holders(deleting ?? { id: 0, name: "", permissions: [] }) === 1 ? "visitor has" : "visitors have"}{" "}
-              this role. Choose what happens to them.
+              {(() => {
+                const count = holders(deleting ?? { id: 0, name: "", permissions: [] });
+                return count === 1
+                  ? t("roles.delete.holdersOne")
+                  : t("roles.delete.description", { count: fmt.number(count) });
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -1963,18 +1988,18 @@ function RolesPanel({
               [
                 {
                   value: "leave_role",
-                  title: "Keep them, without a role",
-                  detail: "They still sign in and match routes that need no particular role.",
+                  title: t("roles.delete.option.leave_title"),
+                  detail: t("roles.delete.option.leave_detail"),
                 },
                 {
                   value: "move_to",
-                  title: "Move them to another role",
-                  detail: "Pick the role below; they inherit its permissions immediately.",
+                  title: t("roles.delete.option.move_title"),
+                  detail: t("roles.delete.option.move_detail"),
                 },
                 {
                   value: "delete_visitors",
-                  title: "Delete those visitors",
-                  detail: "Removes the accounts and their password hashes. Cannot be undone.",
+                  title: t("roles.delete.option.remove_title"),
+                  detail: t("roles.delete.option.remove_detail"),
                 },
               ] as const
             ).map((option) => (
@@ -1995,24 +2020,27 @@ function RolesPanel({
                   onChange={() => setOnDelete(option.value)}
                 />
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-medium">{option.title}</span>
-                  <span className="block text-[12px] text-muted-foreground">{option.detail}</span>
+                  <span className="block text-13px font-medium">{option.title}</span>
+                  <span className="block text-12px text-muted-foreground">{option.detail}</span>
                 </span>
               </label>
             ))}
             {onDelete === "move_to" && (
               <div className="space-y-1.5 pt-1">
-                <Label>Move to role</Label>
+                <Label>{t("roles.delete.moveToLabel")}</Label>
                 <Select value={moveTo} onValueChange={setMoveTo}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a role" />
+                    <SelectValue placeholder={t("roles.delete.chooseRole")} />
                   </SelectTrigger>
                   <SelectContent>
                     {roles
                       .filter((role) => role.id !== deleting?.id)
                       .map((role) => (
                         <SelectItem key={role.id} value={String(role.id)}>
-                          {role.name} ({role.permissions.length} permissions)
+                          {t("roles.delete.roleOption", {
+                            name: role.name,
+                            count: fmt.number(role.permissions.length),
+                          })}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -2022,14 +2050,14 @@ function RolesPanel({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button
               variant="destructive"
               disabled={busy || (onDelete === "move_to" && !moveTo)}
               onClick={() => void confirmDelete()}
             >
-              {busy ? "Deleting…" : "Delete role"}
+              {busy ? t("roles.delete.deleting") : t("roles.delete.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2039,6 +2067,7 @@ function RolesPanel({
 }
 
 function AccessTab({ projectId, base }: { projectId: number; base: string | null }) {
+  const { t, fmt } = useI18n();
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [visitors, setVisitors] = useState<VisitorRow[]>([]);
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
@@ -2074,10 +2103,10 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
     if (visitor.role === role) return;
     try {
       await apiPatch(`/api/visitors/${visitor.id}?projectId=${projectId}`, { role });
-      toast.success(`${visitor.username} is now ${role}`);
+      toast.success(t("access.roleChanged", { name: visitor.username, role }));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not change the role.");
+      toast.error(error instanceof Error ? error.message : t("access.roleFailed"));
     }
   }
 
@@ -2091,20 +2120,20 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
       });
       setNewVisitor("");
       setNewVisitorPassword("");
-      toast.success("Visitor created");
+      toast.success(t("access.visitors.done"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the visitor.");
+      toast.error(error instanceof Error ? error.message : t("access.visitors.failed"));
     }
   }
 
   async function deleteVisitor(id: number) {
     try {
       await apiDelete(`/api/visitors/${id}?projectId=${projectId}`);
-      toast.success("Visitor removed");
+      toast.success(t("access.visitors.removed"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("files.delete.failed"));
     }
   }
 
@@ -2120,17 +2149,17 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
       setNewKeyPermissions([]);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the key.");
+      toast.error(error instanceof Error ? error.message : t("access.keys.failed"));
     }
   }
 
   async function deleteSelectedVisitors(ids: string[]) {
     const targets = visitors.filter((visitor) => ids.includes(visitor.username));
-    if (!window.confirm(`Delete ${targets.length} visitor account${targets.length === 1 ? "" : "s"}?`)) return;
+    if (!window.confirm(t("access.visitors.deleteConfirm", { count: fmt.number(targets.length) }))) return;
     for (const visitor of targets) {
       await apiDelete(`/api/visitors/${visitor.id}?projectId=${projectId}`).catch(() => undefined);
     }
-    toast.success(`${targets.length} removed`);
+    toast.success(t("access.visitors.removedCount", { count: fmt.number(targets.length) }));
     setVisitorSelected([]);
     await load();
   }
@@ -2138,10 +2167,10 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
   async function revokeKey(id: number) {
     try {
       await apiDelete(`/api/keys/${id}?projectId=${projectId}`);
-      toast.success("Key revoked");
+      toast.success(t("access.keys.revokeDone"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Revoke failed.");
+      toast.error(error instanceof Error ? error.message : t("access.keys.revokeFailed"));
     }
   }
 
@@ -2150,33 +2179,29 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="h-4 w-4 text-signal" /> Visitor accounts
+            <Users className="h-4 w-4 text-signal" /> {t("access.visitors.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Per-project logins for requires-auth routes. Visitors sign in at{" "}
-            {base ? (
-              <span className="font-mono">{base}/auth/login</span>
-            ) : (
-              "your project URL"
-            )}{" "}
-            or get redirected automatically.
+          <CardDescription className="text-12.5px">
+            {t("access.visitors.description")}{" "}
+            {base ? <span className="ltr-content font-mono">{base}/auth/login</span> : t("access.visitors.urlHint")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={createVisitor} className="flex flex-wrap items-end gap-2">
             <div className="space-y-1.5">
-              <Label htmlFor="visitor-name">Username</Label>
+              <Label htmlFor="visitor-name">{t("label.username")}</Label>
               <Input
                 id="visitor-name"
                 value={newVisitor}
                 onChange={(e) => setNewVisitor(e.target.value)}
-                className="w-40 font-mono text-[12.5px]"
+                className="ltr-input w-40 font-mono text-12.5px"
+                dir="ltr"
                 pattern="[a-z0-9_-]{3,32}"
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="visitor-password">Password</Label>
+              <Label htmlFor="visitor-password">{t("label.password")}</Label>
               <Input
                 id="visitor-password"
                 type="password"
@@ -2188,7 +2213,7 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Role</Label>
+              <Label>{t("label.role")}</Label>
               <Select value={newVisitorRole} onValueChange={setNewVisitorRole}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
@@ -2204,23 +2229,23 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
               </Select>
             </div>
             <Button type="submit" size="sm" variant="outline">
-              <Plus className="h-3.5 w-3.5" /> Add visitor
+              <Plus className="h-3.5 w-3.5" /> {t("access.visitors.add")}
             </Button>
           </form>
           <SelectionToolbar
             selected={visitorSelected}
-            noun="visitor"
+            noun="selection.visitor"
             onClear={() => setVisitorSelected([])}
           >
-            <span className="text-[12px] text-muted-foreground">
-              Use the controls on the list to export, import or copy these accounts.
+            <span className="text-12px text-muted-foreground">
+              {t("access.visitors.selectionHint")}
             </span>
           </SelectionToolbar>
           {visitors.length > 0 && (
             <div className="rounded-lg border border-border">
               <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-                <span className="mono-label">visitors</span>
-                <span className="ml-auto">
+                <span className="mono-label">{t("access.visitors.label")}</span>
+                <span className="ms-auto">
                   <TransferControls
                     projectId={projectId}
                     feature="auth"
@@ -2241,14 +2266,14 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
                     <SelectAllCheckbox
                       selected={visitorSelected}
                       total={visitors.length}
-                      label="Select every visitor"
+                      label={t("access.visitors.selectAll")}
                       onToggle={(all) =>
                         setVisitorSelected(all ? visitors.map((visitor) => visitor.username) : [])
                       }
                     />
                   </TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>{t("label.username")}</TableHead>
+                  <TableHead>{t("label.role")}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -2271,7 +2296,7 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-[12.5px]">{visitor.username}</TableCell>
+                    <TableCell className="ltr-content font-mono text-12.5px">{visitor.username}</TableCell>
                     <TableCell>
                       {/* Changing a role in place, rather than only at creation
                           time: promoting somebody used to mean deleting their
@@ -2282,8 +2307,8 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
                         onValueChange={(value) => void changeVisitorRole(visitor, value)}
                       >
                         <SelectTrigger
-                          className="h-7 w-40 text-[12px]"
-                          aria-label={`Role for ${visitor.username}`}
+                          className="h-7 w-40 text-12px"
+                          aria-label={t("access.visitors.roleFor", { name: visitor.username })}
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -2296,11 +2321,12 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 text-muted-foreground hover:text-destructive"
+                        title={t("action.delete")}
                         onClick={() => void deleteVisitor(visitor.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -2325,45 +2351,46 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-signal" /> API keys
+            <KeyRound className="h-4 w-4 text-signal" /> {t("access.keys.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Machine access pinned to this project: <span className="font-mono">Authorization: Bearer sk_…</span>
+          <CardDescription className="text-12.5px">
+            {t("access.keys.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {freshKey && (
             <div className="rounded-lg border border-signal/40 bg-signal/5 p-3">
-              <p className="text-[12px] text-muted-foreground">
-                Copy this key now — it is shown only once.
+              <p className="text-12px text-muted-foreground">
+                {t("access.keys.once")}
               </p>
-              <code className="mt-1 block break-all font-mono text-[12.5px]">{freshKey}</code>
+              <code className="mt-1 block break-all font-mono text-12.5px">{freshKey}</code>
             </div>
           )}
           <form onSubmit={createKey} className="flex items-end gap-2">
             <div className="space-y-1.5">
-              <Label htmlFor="key-name">Key name</Label>
+              <Label htmlFor="key-name">{t("access.keys.nameLabel")}</Label>
               <Input
                 id="key-name"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
-                className="w-48"
+                className="ltr-input w-48"
+                dir="ltr"
                 placeholder="ci-deploy"
                 required
               />
             </div>
             <Button type="submit" size="sm" variant="outline">
-              <Plus className="h-3.5 w-3.5" /> Create key
+              <Plus className="h-3.5 w-3.5" /> {t("access.keys.create")}
             </Button>
           </form>
           {availablePermissions.length > 0 && (
             <div className="rounded-md border border-border p-3">
-              <div className="text-[11px] font-medium">
-                Permissions — leave all unchecked for full project access
+              <div className="text-11px font-medium">
+                {t("access.keys.permissionsHint")}
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {availablePermissions.map((permission) => (
-                  <label key={permission} className="flex items-center gap-2 font-mono text-[11.5px]">
+                  <label key={permission} className="flex items-center gap-2 font-mono text-11.5px">
                     <Checkbox
                       checked={newKeyPermissions.includes(permission)}
                       onCheckedChange={(checked) =>
@@ -2384,37 +2411,38 @@ function AccessTab({ projectId, base }: { projectId: number; base: string | null
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("access.keys.table.name")}</TableHead>
+                  <TableHead>{t("access.keys.table.prefix")}</TableHead>
+                  <TableHead>{t("access.keys.table.status")}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {keys.map((key) => (
                   <TableRow key={key.id}>
-                    <TableCell className="text-[12.5px]">
+                    <TableCell className="text-12.5px">
                       {key.name}
                       {key.permissions.length > 0 && (
-                        <span className="ml-2 font-mono text-[10.5px] text-muted-foreground">
-                          {key.permissions.length} permissions
+                        <span className="ms-2 font-mono text-10.5px text-muted-foreground">
+                          {t("access.keys.permissionCount", { count: fmt.number(key.permissions.length) })}
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-[12px] text-muted-foreground">{key.prefix}…</TableCell>
+                    <TableCell className="ltr-content font-mono text-12px text-muted-foreground">{key.prefix}…</TableCell>
                     <TableCell>
                       {key.revokedAt ? (
-                        <Badge variant="outline">revoked</Badge>
+                        <Badge variant="outline">{t("access.keys.revoked")}</Badge>
                       ) : (
-                        <Badge variant="default">active</Badge>
+                        <Badge variant="default">{t("access.keys.active")}</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       {!key.revokedAt && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 text-muted-foreground hover:text-destructive"
+                          title={t("action.delete")}
                           onClick={() => void revokeKey(key.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -2440,6 +2468,7 @@ interface SecretRow {
 }
 
 function SecretsTab({ projectId }: { projectId: number }) {
+  const { t, fmt } = useI18n();
   const [secrets, setSecrets] = useState<SecretRow[]>([]);
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -2462,9 +2491,9 @@ function SecretsTab({ projectId }: { projectId: number }) {
         return next;
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load secrets.");
+      toast.error(error instanceof Error ? error.message : t("secrets.loadFailed"));
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -2476,10 +2505,10 @@ function SecretsTab({ projectId }: { projectId: number }) {
       await apiPut(`/api/secrets?projectId=${projectId}`, { key: newKey, value: newValue });
       setNewKey("");
       setNewValue("");
-      toast.success("Secret sealed");
+      toast.success(t("secrets.sealed"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save the secret.");
+      toast.error(error instanceof Error ? error.message : t("secrets.saveFailed"));
     }
   }
 
@@ -2492,28 +2521,28 @@ function SecretsTab({ projectId }: { projectId: number }) {
       const result = await apiPost<{ value: string }>(`/api/secrets/get?projectId=${projectId}`, { key });
       setRevealed((prev) => ({ ...prev, [key]: result.value }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not decrypt.");
+      toast.error(error instanceof Error ? error.message : t("secrets.revealFailed"));
     }
   }
 
   async function remove(key: string) {
-    if (!window.confirm(`Delete secret ${key}?`)) return;
+    if (!window.confirm(t("secrets.deleteConfirm", { key }))) return;
     try {
       await apiDelete(`/api/secrets?key=${encodeURIComponent(key)}&projectId=${projectId}`);
-      toast.success("Secret deleted");
+      toast.success(t("secrets.deleted"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("secrets.deleteFailed"));
     }
   }
 
   async function deleteSelected(keys: string[]) {
     if (keys.length === 0) return;
-    if (!window.confirm(`Delete ${keys.length} secret${keys.length === 1 ? "" : "s"}?`)) return;
+    if (!window.confirm(t("secrets.deleteConfirmCount", { count: fmt.number(keys.length) }))) return;
     for (const key of keys) {
       await apiDelete(`/api/secrets?key=${encodeURIComponent(key)}&projectId=${projectId}`).catch(() => undefined);
     }
-    toast.success(`${keys.length} removed`);
+    toast.success(t("secrets.removedCount", { count: fmt.number(keys.length) }));
     setSelected([]);
   }
 
@@ -2532,8 +2561,8 @@ function SecretsTab({ projectId }: { projectId: number }) {
   return (
     <div className="space-y-4">
       <SectionHeader
-        title="Secrets"
-        description="AES-256-GCM sealed. Reference them in proxy headers as {{KEY}} — plaintext never appears in config or logs."
+        title={t("secrets.title")}
+        description={t("secrets.description")}
         actions={
           <TransferControls
             projectId={projectId}
@@ -2555,24 +2584,24 @@ function SecretsTab({ projectId }: { projectId: number }) {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Filter keys…"
-                className="h-8 w-56 text-[12.5px]"
-                aria-label="Filter secrets"
+                placeholder={t("secrets.filter.placeholder")}
+                className="h-8 w-56 text-12.5px"
+                aria-label={t("secrets.filter.ariaLabel")}
               />
-              <span className="text-[12px] text-muted-foreground">
-                {visible.length} of {secrets.length}
+              <span className="nums text-12px text-muted-foreground">
+                {t("secrets.shownOf", { shown: fmt.number(visible.length), total: fmt.number(secrets.length) })}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
-                className="ml-auto h-8"
+                className="ms-auto h-8"
                 onClick={() => void hideAll()}
                 disabled={Object.keys(revealed).length === 0}
               >
-                <EyeOff className="h-3.5 w-3.5" /> Hide all
+                <EyeOff className="h-3.5 w-3.5" /> {t("secrets.hideAll")}
               </Button>
             </div>
-            <SelectionToolbar selected={selected} noun="secret" onClear={() => setSelected([])} />
+            <SelectionToolbar selected={selected} noun="selection.secret" onClear={() => setSelected([])} />
             <Table>
               <TableHeader>
                 <TableRow>
@@ -2580,7 +2609,7 @@ function SecretsTab({ projectId }: { projectId: number }) {
                     <SelectAllCheckbox
                       selected={selected}
                       total={visibleKeys.length}
-                      label="Select every visible secret"
+                      label={t("secrets.selectAll")}
                       allSelected={allVisibleSelected}
                       hiddenSelected={selected.length - visibleKeys.filter((k) => selected.includes(k)).length}
                       onToggle={(all) =>
@@ -2590,8 +2619,8 @@ function SecretsTab({ projectId }: { projectId: number }) {
                       }
                     />
                   </TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Value</TableHead>
+                  <TableHead>{t("label.key")}</TableHead>
+                  <TableHead>{t("secrets.table.value")}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -2610,8 +2639,8 @@ function SecretsTab({ projectId }: { projectId: number }) {
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-[12.5px]">{secret.key}</TableCell>
-                    <TableCell className="max-w-0 truncate font-mono text-[12px]">
+                    <TableCell className="ltr-content font-mono text-12.5px">{secret.key}</TableCell>
+                    <TableCell className="max-w-0 truncate font-mono text-12px">
                       {revealed[secret.key] ? (
                         revealed[secret.key]
                       ) : (
@@ -2620,15 +2649,16 @@ function SecretsTab({ projectId }: { projectId: number }) {
                           className="text-signal hover:underline"
                           onClick={() => void reveal(secret.key)}
                         >
-                          reveal once
+                          {t("secrets.reveal")}
                         </button>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 text-muted-foreground hover:text-destructive"
+                        title={t("action.delete")}
                         onClick={() => void remove(secret.key)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -2639,40 +2669,37 @@ function SecretsTab({ projectId }: { projectId: number }) {
               </TableBody>
             </Table>
             {visible.length === 0 && (
-              <p className="px-3 py-6 text-center text-[13px] text-muted-foreground">
-                No secret matches <span className="font-mono">{query}</span>.
+              <p className="px-3 py-6 text-center text-13px text-muted-foreground">
+                {t("secrets.empty.filtered", { query })}
               </p>
             )}
           </CardContent>
         </Card>
       )}
       {secrets.length === 0 && (
-        <p className="text-[13px] text-muted-foreground">
-          No secrets yet. Add one below and reference it from a proxy route header as{" "}
-          <span className="font-mono">{"{{KEY}}"}</span> — the value is decrypted at request time and
-          never written to a file.
-        </p>
+        <p className="text-13px text-muted-foreground">{t("secrets.empty.body")}</p>
       )}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Add or update a secret</CardTitle>
+          <CardTitle className="text-sm">{t("secrets.form.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={saveSecret} className="flex flex-wrap items-end gap-2">
             <div className="space-y-1.5">
-              <Label htmlFor="secret-key">Key</Label>
+              <Label htmlFor="secret-key">{t("label.key")}</Label>
               <Input
                 id="secret-key"
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value.toUpperCase())}
-                className="w-44 font-mono text-[12.5px]"
+                className="ltr-input w-44 font-mono text-12.5px"
+                dir="ltr"
                 pattern="[a-zA-Z_][a-zA-Z0-9_]{0,63}"
                 placeholder="STRIPE_KEY"
                 required
               />
             </div>
             <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="secret-value">Value</Label>
+              <Label htmlFor="secret-value">{t("secrets.form.valueLabel")}</Label>
               <Input
                 id="secret-value"
                 type="password"
@@ -2682,7 +2709,7 @@ function SecretsTab({ projectId }: { projectId: number }) {
               />
             </div>
             <Button type="submit" size="sm" variant="outline">
-              Seal secret
+              {t("secrets.form.submit")}
             </Button>
           </form>
         </CardContent>
@@ -2735,6 +2762,7 @@ interface DeliveryRow {
 }
 
 function AutomateTab({ projectId }: { projectId: number }) {
+  const { t, fmt } = useI18n();
   const [cron, setCron] = useState<CronRow[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
   const [hookUrl, setHookUrl] = useState("");
@@ -2763,17 +2791,17 @@ function AutomateTab({ projectId }: { projectId: number }) {
       await apiPut(`/api/cron?projectId=${projectId}`, { task, isEnabled });
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Toggle failed.");
+      toast.error(error instanceof Error ? error.message : t("automate.cron.toggleFailed"));
     }
   }
 
   async function runTask(task: string) {
     try {
       await apiPost(`/api/cron/run?projectId=${projectId}`, { task });
-      toast.success(`${task} executed`);
+      toast.success(t("automate.cron.done", { task }));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Run failed.");
+      toast.error(error instanceof Error ? error.message : t("automate.cron.failed"));
     }
   }
 
@@ -2786,20 +2814,20 @@ function AutomateTab({ projectId }: { projectId: number }) {
       });
       setFreshSecret(result.secret);
       setHookUrl("");
-      toast.success("Webhook created");
+      toast.success(t("automate.hooks.created"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the webhook.");
+      toast.error(error instanceof Error ? error.message : t("automate.hooks.createFailed"));
     }
   }
 
   async function deleteWebhook(id: number) {
     try {
       await apiDelete(`/api/webhooks?id=${id}&projectId=${projectId}`);
-      toast.success("Webhook deleted");
+      toast.success(t("automate.hooks.deleted"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("automate.hooks.deleteFailed"));
     }
   }
 
@@ -2817,12 +2845,12 @@ function AutomateTab({ projectId }: { projectId: number }) {
       );
       toast.success(
         result.delivered.delivered > 0
-          ? "Test payload delivered"
-          : "Nothing delivered — check the URL and the delivery log.",
+          ? t("automate.hooks.testDelivered")
+          : t("automate.hooks.testNothing"),
       );
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Test failed.");
+      toast.error(error instanceof Error ? error.message : t("automate.hooks.testFailed"));
     }
   }
 
@@ -2831,36 +2859,35 @@ function AutomateTab({ projectId }: { projectId: number }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 text-signal" /> Built-in cron jobs
+            <RefreshCw className="h-4 w-4 text-signal" /> {t("automate.cron.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Database-backed schedule. The platform runner calls /api/cron/run with the platform
-            cron token and executes every task whose next run is due.
+          <CardDescription className="text-12.5px">
+            {t("automate.cron.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead className="w-28">Last run</TableHead>
-                <TableHead className="w-24">Enabled</TableHead>
+                <TableHead>{t("automate.cron.table.task")}</TableHead>
+                <TableHead className="w-28">{t("automate.cron.table.lastRun")}</TableHead>
+                <TableHead className="w-24">{t("label.enabled")}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {cron.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-[13px] text-muted-foreground">
-                    Loading tasks…
+                  <TableCell colSpan={4} className="text-13px text-muted-foreground">
+                    {t("state.loading")}
                   </TableCell>
                 </TableRow>
               )}
               {cron.map((row) => (
                 <TableRow key={row.task}>
-                  <TableCell className="font-mono text-[12.5px]">{row.task}</TableCell>
-                  <TableCell className="text-[12px] text-muted-foreground">
-                    {row.lastRunAt ? new Date(row.lastRunAt).toLocaleString("en-US") : "never"}
+                  <TableCell className="ltr-content font-mono text-12.5px">{row.task}</TableCell>
+                  <TableCell className="text-12px text-muted-foreground">
+                    {row.lastRunAt ? fmt.dateTime(new Date(row.lastRunAt).getTime()) : t("state.never")}
                   </TableCell>
                   <TableCell>
                     <Switch
@@ -2868,9 +2895,9 @@ function AutomateTab({ projectId }: { projectId: number }) {
                       onCheckedChange={(checked) => void toggleTask(row.task, checked)}
                     />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     <Button variant="outline" size="sm" className="h-7" onClick={() => void runTask(row.task)}>
-                      Run now
+                      {t("automate.cron.runNow")}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -2883,34 +2910,36 @@ function AutomateTab({ projectId }: { projectId: number }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Webhook className="h-4 w-4 text-signal" /> Webhooks
+            <Webhook className="h-4 w-4 text-signal" /> {t("automate.hooks.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Deliveries are signed with HMAC-SHA256 in <span className="font-mono">x-webhook-signature</span>.
+          <CardDescription className="text-12.5px">
+            {t("automate.hooks.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {freshSecret && (
             <div className="rounded-lg border border-signal/40 bg-signal/5 p-3">
-              <p className="text-[12px] text-muted-foreground">Signing secret — shown only once:</p>
-              <code className="mt-1 block break-all font-mono text-[12.5px]">{freshSecret}</code>
+              <p className="text-12px text-muted-foreground">{t("automate.hooks.once")}</p>
+              <code className="mt-1 block break-all font-mono text-12.5px">{freshSecret}</code>
             </div>
           )}
           <form onSubmit={createWebhook} className="space-y-3">
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
-                <Label htmlFor="hook-url">Endpoint URL</Label>
+                <Label htmlFor="hook-url">{t("automate.hooks.urlLabel")}</Label>
                 <Input
                   id="hook-url"
                   type="url"
                   value={hookUrl}
                   onChange={(e) => setHookUrl(e.target.value)}
                   placeholder="https://example.com/hooks/localme"
+                  dir="ltr"
+                  className="ltr-input"
                   required
                 />
               </div>
               <Button type="submit" size="sm" variant="outline">
-                <Plus className="h-3.5 w-3.5" /> Add webhook
+                <Plus className="h-3.5 w-3.5" /> {t("automate.hooks.add")}
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -2930,8 +2959,8 @@ function AutomateTab({ projectId }: { projectId: number }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[22rem]">Endpoint URL</TableHead>
-                  <TableHead>Events</TableHead>
+                  <TableHead className="w-[22rem]">{t("automate.hooks.urlLabel")}</TableHead>
+                  <TableHead>{t("automate.hooks.table.events")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -2942,44 +2971,45 @@ function AutomateTab({ projectId }: { projectId: number }) {
                         instead of being cut off: a truncated URL cannot be
                         pasted into curl to reproduce a failing delivery. */}
                     <TableCell className="align-top">
-                      <span className="block break-all font-mono text-[12px] leading-relaxed">{hook.url}</span>
+                      <span className="ltr-content block break-all font-mono text-12px leading-relaxed">{hook.url}</span>
                       {!hook.isActive && (
                         <Badge variant="outline" className="mt-1">
-                          disabled
+                          {t("routes.disabled")}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex flex-wrap gap-1">
                         {hook.events.map((name) => (
-                          <Badge key={name} variant="signal" className="font-mono text-[10px]">
+                          <Badge key={name} variant="signal" className="font-mono text-10px">
                             {name}
                           </Badge>
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right align-top">
+                    <TableCell className="text-end align-top">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          title="Copy URL"
+                          title={t("automate.hooks.copyTitle")}
                           onClick={() => {
                             void navigator.clipboard.writeText(hook.url).then(
-                              () => toast.success("URL copied"),
-                              () => toast.error("Clipboard unavailable."),
+                              () => toast.success(t("automate.hooks.copied")),
+                              () => toast.error(t("automate.hooks.clipboardFailed")),
                             );
                           }}
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="outline" size="sm" className="h-7" onClick={() => void sendTest(hook.id)}>
-                          Test
+                          {t("automate.hooks.test")}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 text-muted-foreground hover:text-destructive"
+                          title={t("action.delete")}
                           onClick={() => void deleteWebhook(hook.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -2993,40 +3023,40 @@ function AutomateTab({ projectId }: { projectId: number }) {
           )}
           {deliveries.length > 0 && (
             <div className="border-t border-border pt-4">
-              <Label className="mb-2 block text-[12.5px]">Recent deliveries</Label>
+              <Label className="mb-2 block text-12.5px">{t("automate.hooks.deliveries")}</Label>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead className="w-64">Endpoint</TableHead>
-                    <TableHead className="w-20 text-right">Status</TableHead>
-                    <TableHead className="w-40">When</TableHead>
+                    <TableHead>{t("automate.hooks.table.event")}</TableHead>
+                    <TableHead className="w-64">{t("automate.hooks.table.endpoint")}</TableHead>
+                    <TableHead className="w-20 text-end">{t("label.status")}</TableHead>
+                    <TableHead className="w-40">{t("automate.hooks.table.when")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {deliveries.slice(0, 10).map((delivery) => (
                     <TableRow key={delivery.id}>
-                      <TableCell className="font-mono text-[12px]">{delivery.event}</TableCell>
+                      <TableCell className="ltr-content font-mono text-12px">{delivery.event}</TableCell>
                       <TableCell className="align-top">
-                        <span className="block break-all font-mono text-[11.5px] leading-relaxed text-muted-foreground">
+                        <span className="ltr-content block break-all font-mono text-11.5px leading-relaxed text-muted-foreground">
                           {delivery.url}
                         </span>
                         {delivery.error && (
-                          <span className="mt-0.5 block text-[11.5px] text-destructive">{delivery.error}</span>
+                          <span className="mt-0.5 block text-11.5px text-destructive">{delivery.error}</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Badge
                           variant={
                             delivery.responseStatus && delivery.responseStatus < 300 ? "default" : "outline"
                           }
-                          className="font-mono text-[10px]"
+                          className="font-mono text-10px"
                         >
-                          {delivery.responseStatus ?? "error"}
+                          {delivery.responseStatus ?? t("automate.hooks.error")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="align-top text-[11.5px] text-muted-foreground">
-                        {delivery.deliveredAt ? new Date(delivery.deliveredAt).toLocaleString("en-US") : "—"}
+                      <TableCell className="align-top text-11.5px text-muted-foreground">
+                        {delivery.deliveredAt ? fmt.dateTime(new Date(delivery.deliveredAt).getTime()) : "—"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -3035,9 +3065,9 @@ function AutomateTab({ projectId }: { projectId: number }) {
             </div>
           )}
           <div className="border-t border-border pt-4">
-            <Label className="mb-2 block text-[12.5px]">Named API endpoints</Label>
-            <p className="mb-3 text-[12px] text-muted-foreground">
-              Disabled endpoints return 403 for this project (api_endpoints).
+            <Label className="mb-2 block text-12.5px">{t("automate.endpoints.title")}</Label>
+            <p className="mb-3 text-12px text-muted-foreground">
+              {t("automate.endpoints.description")}
             </p>
             <EndpointToggles projectId={projectId} />
           </div>
@@ -3062,6 +3092,7 @@ interface EndpointPolicy {
 }
 
 function EndpointToggles({ projectId }: { projectId: number }) {
+  const { t } = useI18n();
   const [state, setState] = useState<Record<string, EndpointPolicy>>({});
 
   useEffect(() => {
@@ -3098,24 +3129,24 @@ function EndpointToggles({ projectId }: { projectId: number }) {
       });
     } catch (error) {
       setState((prev) => ({ ...prev, [endpoint]: current }));
-      toast.error(error instanceof Error ? error.message : "Update failed.");
+      toast.error(error instanceof Error ? error.message : t("automate.endpoints.updateFailed"));
     }
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-        <span>Endpoint</span>
+      <div className="flex items-center justify-between text-10px uppercase tracking-[0.14em] text-muted-foreground">
+        <span>{t("label.endpoint")}</span>
         <span className="flex gap-6">
-          <span>Enabled</span>
-          <span className="w-14 text-right">Public</span>
+          <span>{t("label.enabled")}</span>
+          <span className="w-14 text-end">{t("automate.endpoints.public")}</span>
         </span>
       </div>
       {NAMED_ENDPOINTS.map(({ id, label }) => {
         const policy = state[id] ?? { isEnabled: true, requiresAuth: true };
         return (
           <div key={id} className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2">
-            <span className="font-mono text-[12.5px]">{label}</span>
+            <span className="ltr-content font-mono text-12.5px">{label}</span>
             <span className="flex items-center gap-6">
               <Switch
                 checked={policy.isEnabled}
@@ -3130,10 +3161,7 @@ function EndpointToggles({ projectId }: { projectId: number }) {
           </div>
         );
       })}
-      <p className="text-[11px] text-muted-foreground">
-        Turning Public on allows anonymous, project-scoped calls to that endpoint — use it for public
-        read APIs and form submissions. Everything else requires a session or API key.
-      </p>
+      <p className="text-11px text-muted-foreground">{t("automate.endpoints.hint")}</p>
     </div>
   );
 }
@@ -3167,27 +3195,21 @@ function isoWeekStart(date: string): string {
   return parsed.toISOString().slice(0, 10);
 }
 
-function monthLabel(key: string): string {
-  const [year, month] = key.split("-");
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+/** The last day of the ISO week that starts on `start`. */
+function isoWeekEnd(start: string): string {
+  const parsed = new Date(`${start}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + 6);
+  return parsed.toISOString().slice(0, 10);
 }
 
-function shortDate(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function weekLabel(start: string): string {
-  const from = new Date(`${start}T00:00:00Z`);
-  const to = new Date(from);
-  to.setUTCDate(to.getUTCDate() + 6);
-  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-  return `Week of ${fmt(from)} – ${fmt(to)}`;
+/** A timestamp back to a local `YYYY-MM-DD` day key. */
+function toIsoDay(value: number): string {
+  const date = new Date(value);
+  return [
+    String(date.getFullYear()).padStart(4, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 /**
@@ -3199,6 +3221,7 @@ function weekLabel(start: string): string {
  * Months start open because the current month is what you came to look at.
  */
 function UsageTree({ days }: { days: UsageDay[] }) {
+  const { t, fmt } = useI18n();
   const months = useMemo(() => {
     const grouped = new Map<string, UsageDay[]>();
     for (const day of days) {
@@ -3245,21 +3268,23 @@ function UsageTree({ days }: { days: UsageDay[] }) {
               type="button"
               aria-expanded={monthOpen}
               onClick={() => toggle(setOpenMonths, month.key)}
-              className="flex w-full items-center gap-2 bg-muted/40 px-3 py-2 text-left hover:bg-muted/70"
+              className="flex w-full items-center gap-2 bg-muted/40 px-3 py-2 text-start hover:bg-muted/70"
             >
               {monthOpen ? (
                 <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 rtl-flip text-muted-foreground" />
               )}
-              <span className="text-[13px] font-medium">{monthLabel(month.key)}</span>
-              <span className="text-[11.5px] text-muted-foreground">{month.days.length} days</span>
-              <span className="ml-auto flex items-center gap-4 text-[12px] tabular-nums">
+              <span className="text-13px font-medium">{fmt.isoMonth(month.key)}</span>
+              <span className="nums text-11.5px text-muted-foreground">
+                {t("usage.days", { count: fmt.number(month.days.length) })}
+              </span>
+              <span className="ms-auto flex items-center gap-4 text-12px tabular-nums">
                 <span className="text-muted-foreground">
-                  visits <span className="ml-1 text-foreground">{monthTotals.visits.toLocaleString("en-US")}</span>
+                  {t("usage.visits")} <span className="ms-1 text-foreground">{fmt.number(monthTotals.visits)}</span>
                 </span>
                 <span className="text-muted-foreground">
-                  unique <span className="ml-1 text-foreground">{monthTotals.uniqueVisitors.toLocaleString("en-US")}</span>
+                  {t("usage.unique")} <span className="ms-1 text-foreground">{fmt.number(monthTotals.uniqueVisitors)}</span>
                 </span>
               </span>
             </button>
@@ -3274,22 +3299,27 @@ function UsageTree({ days }: { days: UsageDay[] }) {
                         type="button"
                         aria-expanded={weekOpen}
                         onClick={() => toggle(setOpenWeeks, entry.week)}
-                        className="flex w-full items-center gap-2 border-t border-border/60 py-1.5 pl-8 pr-3 text-left hover:bg-muted/40"
+                        className="flex w-full items-center gap-2 border-t border-border/60 py-1.5 pe-3 ps-8 text-start hover:bg-muted/40"
                       >
                         {weekOpen ? (
                           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 rtl-flip text-muted-foreground" />
                         )}
-                        <span className="text-[12.5px]">{weekLabel(entry.week)}</span>
-                        <span className="ml-auto flex items-center gap-4 text-[12px] tabular-nums">
+                        <span className="text-12.5px">
+                          {t("usage.week", {
+                            from: fmt.dateShort(new Date(`${entry.week}T00:00:00Z`).getTime()),
+                            to: fmt.dateShort(new Date(`${isoWeekEnd(entry.week)}T00:00:00Z`).getTime()),
+                          })}
+                        </span>
+                        <span className="ms-auto flex items-center gap-4 text-12px tabular-nums">
                           <span className="text-muted-foreground">
-                            visits <span className="ml-1 text-foreground">{weekTotals.visits.toLocaleString("en-US")}</span>
+                            {t("usage.visits")} <span className="ms-1 text-foreground">{fmt.number(weekTotals.visits)}</span>
                           </span>
                           <span className="text-muted-foreground">
-                            unique{" "}
-                            <span className="ml-1 text-foreground">
-                              {weekTotals.uniqueVisitors.toLocaleString("en-US")}
+                            {t("usage.unique")}{" "}
+                            <span className="ms-1 text-foreground">
+                              {fmt.number(weekTotals.uniqueVisitors)}
                             </span>
                           </span>
                         </span>
@@ -3300,10 +3330,10 @@ function UsageTree({ days }: { days: UsageDay[] }) {
                             {entry.days.map((day) => (
                               <TableRow key={day.date} className="border-t border-border/40">
                                 <TableCell className="w-2" />
-                                <TableCell className="pl-8 font-mono text-[12px]">{shortDate(day.date)}</TableCell>
-                                <TableCell className="text-right tabular-nums">{day.visits}</TableCell>
-                                <TableCell className="w-24 text-right tabular-nums text-muted-foreground">
-                                  {day.uniqueVisitors}
+                                <TableCell className="ps-8 text-12px">{fmt.isoDate(day.date, true)}</TableCell>
+                                <TableCell className="nums text-end tabular-nums">{fmt.number(day.visits)}</TableCell>
+                                <TableCell className="nums w-24 text-end tabular-nums text-muted-foreground">
+                                  {fmt.number(day.uniqueVisitors)}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -3329,12 +3359,17 @@ function SettingsTab({
   project: Project;
   onProjectChanged: (patch: Partial<Project>) => void;
 }) {
+  const { t, fmt } = useI18n();
   const [name, setName] = useState(project.name);
   const [watermark, setWatermark] = useState(project.watermarkEnabled);
   const [domains, setDomains] = useState<DomainRow[]>([]);
   const [newDomain, setNewDomain] = useState("");
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
+  // Usage is day-keyed, so the range is held as `YYYY-MM-DD` bounds and the
+  // filter is a string comparison — no timezone can shift a day across the
+  // boundary, which is exactly the bug a `Date` range would reintroduce.
+  const [range, setRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
   const [importing, setImporting] = useState(false);
 
   async function importArchive(event: React.FormEvent) {
@@ -3350,12 +3385,17 @@ function SettingsTab({
         credentials: "include",
       });
       const payload = (await response.json()) as { files?: number; features?: number; error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Import failed.");
-      toast.success(`Restored ${payload.files ?? 0} files and ${payload.features ?? 0} config sections`);
+      if (!response.ok) throw new Error(payload.error ?? t("backup.restoreFailed"));
+      toast.success(
+        t("backup.restoreDone", {
+          files: fmt.number(payload.files ?? 0),
+          features: fmt.number(payload.features ?? 0),
+        }),
+      );
       setImportFile(null);
       await loadDomainData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Import failed.");
+      toast.error(error instanceof Error ? error.message : t("backup.restoreFailed"));
     } finally {
       setImporting(false);
     }
@@ -3369,6 +3409,13 @@ function SettingsTab({
       setDomains([]);
     }
   }, [project.id]);
+
+  const visibleUsage = useMemo(() => {
+    const days = usage?.data ?? [];
+    const { from, to } = range;
+    if (!from && !to) return days;
+    return days.filter((day) => (!from || day.date >= from) && (!to || day.date <= to));
+  }, [range, usage]);
 
   useEffect(() => {
     void Promise.resolve().then(loadDomainData);
@@ -3394,9 +3441,9 @@ function SettingsTab({
         ...(watermark !== project.watermarkEnabled ? { watermarkEnabled: watermark } : {}),
       });
       onProjectChanged(data);
-      toast.success("Settings saved");
+      toast.success(t("settings.general.saved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Save failed.");
+      toast.error(error instanceof Error ? error.message : t("settings.general.saveFailed"));
     }
   }
 
@@ -3404,9 +3451,11 @@ function SettingsTab({
     try {
       const { data } = await apiPatch<{ data: Project }>(`/api/projects/${project.id}`, { isActive });
       onProjectChanged(data);
-      toast.success(isActive ? "Project resumed" : "Project suspended (serving now 403s)");
+      toast.success(
+        isActive ? t("settings.general.resumed") : t("settings.general.suspended"),
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed.");
+      toast.error(error instanceof Error ? error.message : t("settings.general.updateFailed"));
     }
   }
 
@@ -3415,10 +3464,10 @@ function SettingsTab({
     try {
       await apiPost(`/api/domains?projectId=${project.id}`, { domain: newDomain });
       setNewDomain("");
-      toast.success("Domain attached — publish the TXT record, then verify");
+      toast.success(t("settings.domains.attached"));
       await loadDomainData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not attach the domain.");
+      toast.error(error instanceof Error ? error.message : t("settings.domains.attachFailed"));
     }
   }
 
@@ -3428,13 +3477,13 @@ function SettingsTab({
         `/api/domains/verify?projectId=${project.id}&domain=${encodeURIComponent(domain)}`,
       );
       if (result.verified) {
-        toast.success(`${domain} verified`);
+        toast.success(t("settings.domains.verified", { domain }));
       } else {
-        toast.error("TXT record not found yet — DNS can take a few minutes");
+        toast.error(t("settings.domains.notFound"));
       }
       await loadDomainData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Verification failed.");
+      toast.error(error instanceof Error ? error.message : t("settings.domains.verifyFailed"));
     }
   }
 
@@ -3443,7 +3492,7 @@ function SettingsTab({
       await apiDelete(`/api/domains/${id}?projectId=${project.id}`);
       await loadDomainData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("settings.domains.removeFailed"));
     }
   }
 
@@ -3451,38 +3500,39 @@ function SettingsTab({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">General</CardTitle>
-          <CardDescription className="text-[12.5px]">
-            The name is the public URL segment — renaming breaks old links.
+          <CardTitle className="text-sm">{t("settings.general.title")}</CardTitle>
+          <CardDescription className="text-12.5px">
+            {t("settings.general.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={saveGeneral} className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="project-name">Project name</Label>
+              <Label htmlFor="project-name">{t("settings.general.nameLabel")}</Label>
               <Input
                 id="project-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-56 font-mono text-[12.5px]"
+                className="ltr-input w-56 font-mono text-12.5px"
+                dir="ltr"
                 pattern="[a-z0-9][a-z0-9_-]{0,62}"
                 required
               />
             </div>
-            <label className="flex items-center gap-2 pb-1 text-[13px]">
-              <Switch checked={watermark} onCheckedChange={setWatermark} /> Hosted-on watermark
+            <label className="flex items-center gap-2 pb-1 text-13px">
+              <Switch checked={watermark} onCheckedChange={setWatermark} /> {t("settings.general.watermark")}
             </label>
             <Button type="submit" size="sm" variant="outline" disabled={name === project.name && watermark === project.watermarkEnabled}>
-              Save settings
+              {t("settings.general.save")}
             </Button>
           </form>
           <div className="flex items-center gap-3 border-t border-border pt-4">
-            <label className="flex items-center gap-2 text-[13px]">
+            <label className="flex items-center gap-2 text-13px">
               <Switch checked={project.isActive} onCheckedChange={(checked) => void toggleActive(checked)} />
-              Project live
+              {t("settings.general.live")}
             </label>
-            <span className="text-[12px] text-muted-foreground">
-              Suspended projects return 403 on every serving path.
+            <span className="text-12px text-muted-foreground">
+              {t("settings.general.liveHint")}
             </span>
           </div>
         </CardContent>
@@ -3491,49 +3541,51 @@ function SettingsTab({
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Globe2 className="h-4 w-4 text-signal" /> Custom domains
+            <Globe2 className="h-4 w-4 text-signal" /> {t("settings.domains.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Point the domain at this host, publish the TXT record, then verify. Verified domains serve
-            this project directly.
+          <CardDescription className="text-12.5px">
+            {t("settings.domains.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={addDomain} className="flex items-end gap-2">
             <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="domain">Domain</Label>
+              <Label htmlFor="domain">{t("settings.domains.label")}</Label>
               <Input
                 id="domain"
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
                 placeholder="app.example.com"
+                dir="ltr"
+                className="ltr-input"
                 pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+"
                 required
               />
             </div>
             <Button type="submit" size="sm" variant="outline">
-              <Plus className="h-3.5 w-3.5" /> Attach
+              <Plus className="h-3.5 w-3.5" /> {t("settings.domains.attach")}
             </Button>
           </form>
           {domains.map((domain) => (
             <div key={domain.id} className="rounded-lg border border-border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <span className="font-mono text-[12.5px]">{domain.domain}</span>{" "}
-                  <Badge variant={domain.isVerified ? "default" : "outline"} className="ml-1">
-                    {domain.isVerified ? "verified" : "pending"}
+                  <span className="ltr-content font-mono text-12.5px">{domain.domain}</span>{" "}
+                  <Badge variant={domain.isVerified ? "default" : "outline"} className="ms-1">
+                    {domain.isVerified ? t("settings.domains.badge.verified") : t("settings.domains.badge.pending")}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   {!domain.isVerified && (
                     <Button variant="outline" size="sm" className="h-7" onClick={() => void verifyDomain(domain.domain)}>
-                      Verify
+                      {t("settings.domains.verify")}
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-muted-foreground hover:text-destructive"
+                    title={t("action.delete")}
                     onClick={() => void removeDomain(domain.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -3541,7 +3593,7 @@ function SettingsTab({
                 </div>
               </div>
               {!domain.isVerified && (
-                <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                <p className="ltr-content mt-2 font-mono text-11px text-muted-foreground">
                   TXT _localme-verify.{domain.domain} = {domain.verificationToken}
                 </p>
               )}
@@ -3553,20 +3605,56 @@ function SettingsTab({
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Activity className="h-4 w-4 text-signal" /> Usage
+            <Activity className="h-4 w-4 text-signal" /> {t("usage.title")}
           </CardTitle>
-          <CardDescription className="text-[12.5px]">
+          <CardDescription className="text-12.5px">
             {usage
-              ? `${usage.thisMonth.toLocaleString("en-US")} visits this month of ${usage.freeVisitsPerMonth.toLocaleString("en-US")} free`
-              : "Loading…"}
+              ? t("usage.summary", {
+                  visits: fmt.number(usage.thisMonth),
+                  free: fmt.number(usage.freeVisitsPerMonth),
+                })
+              : t("state.loading")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {usage && usage.data.length > 0 ? (
-            <UsageTree days={usage.data} />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-full space-y-1.5 sm:w-56">
+              <Label htmlFor="usage-from" className="text-11.5px">{t("usage.filter.from")}</Label>
+              <CultureDateTimePicker
+                id="usage-from"
+                value={range.from ? parseIsoDay(range.from)?.getTime() ?? null : null}
+                onChange={(next) =>
+                  setRange((prev) => ({ ...prev, from: next ? toIsoDay(next) : "" }))
+                }
+                placeholder={t("usage.filter.any")}
+              />
+            </div>
+            <div className="w-full space-y-1.5 sm:w-56">
+              <Label htmlFor="usage-to" className="text-11.5px">{t("usage.filter.to")}</Label>
+              <CultureDateTimePicker
+                id="usage-to"
+                value={range.to ? parseIsoDay(range.to)?.getTime() ?? null : null}
+                onChange={(next) =>
+                  setRange((prev) => ({ ...prev, to: next ? toIsoDay(next) : "" }))
+                }
+                placeholder={t("usage.filter.any")}
+              />
+            </div>
+            {(range.from || range.to) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRange({ from: "", to: "" })}
+              >
+                {t("action.reset")}
+              </Button>
+            )}
+          </div>
+          {visibleUsage.length > 0 ? (
+            <UsageTree days={visibleUsage} />
           ) : (
-            <p className="text-[12.5px] text-muted-foreground">
-              Daily rollups appear after the stats cron runs (or run it from Automate).
+            <p className="text-12.5px text-muted-foreground">
+              {usage && usage.data.length > 0 ? t("usage.filter.noMatch") : t("usage.empty")}
             </p>
           )}
         </CardContent>
@@ -3574,30 +3662,27 @@ function SettingsTab({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Backup</CardTitle>
-          <CardDescription className="text-[12.5px]">
-            ZIP export of every file in this project (Blueprint §4.3).
+          <CardTitle className="text-sm">{t("backup.title")}</CardTitle>
+          <CardDescription className="text-12.5px">
+            {t("backup.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
               <a href={`/api/storage/export?projectId=${project.id}`} download>
-                <FileUp className="h-3.5 w-3.5" /> Files only (.zip)
+                <FileUp className="h-3.5 w-3.5" /> {t("backup.filesOnly")}
               </a>
             </Button>
             <Button asChild size="sm" variant="signal">
               <a href={`/api/export/all?projectId=${project.id}`} download>
-                <FileUp className="h-3.5 w-3.5" /> Full export — files, library, config, secrets (.zip)
+                <FileUp className="h-3.5 w-3.5" /> {t("backup.full")}
               </a>
             </Button>
           </div>
           <div className="rounded-md border border-border p-3">
-            <Label className="text-[12.5px]">Restore from an export</Label>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              Upload a full export archive to overwrite the files and configuration of this project.
-              Imported visitors start disabled — password hashes are never exported.
-            </p>
+            <Label className="text-12.5px">{t("backup.restoreTitle")}</Label>
+            <p className="mt-1 text-12px text-muted-foreground">{t("backup.restoreDescription")}</p>
             <form
               className="mt-3 flex flex-wrap items-end gap-2"
               onSubmit={(event) => void importArchive(event)}
@@ -3609,7 +3694,7 @@ function SettingsTab({
                 className="w-64"
               />
               <Button type="submit" size="sm" variant="outline" disabled={!importFile || importing}>
-                <Upload className="h-3.5 w-3.5" /> {importing ? "Restoring…" : "Restore archive"}
+                <Upload className="h-3.5 w-3.5" /> {importing ? t("backup.restoring") : t("backup.restoreSubmit")}
               </Button>
             </form>
           </div>

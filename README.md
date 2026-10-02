@@ -22,7 +22,9 @@ the optional `SESSION_SECRET` and the first-boot administrator in
 [ADR 006](./docs/adr/006-optional-session-secret-and-first-boot-admin.md); the
 library as a reserved per-user CDN namespace, visitor sessions as first-class API
 principals, and the forwarded-host hotlink comparison in
-[ADR 007](./docs/adr/007-library-as-a-reserved-cdn-namespace.md).
+[ADR 007](./docs/adr/007-library-as-a-reserved-cdn-namespace.md); the
+two-culture layer — RTL, the Shamsi calendar, Persian digits and runtime-editable
+wording — in [ADR 008](./docs/adr/008-multi-culture-rtl-and-shamsi-calendar.md).
 
 ---
 
@@ -36,6 +38,7 @@ principals, and the forwarded-host hotlink comparison in
 | Database   | Drizzle ORM over **SQLite by default** (`DB_DRIVER=sqlite`) — Postgres fully implemented and switchable via `DB_DRIVER=postgres` (ADR 003) |
 | Files      | Blobs in the database with quota enforcement (see ADR 002)                  |
 | Passwords  | scrypt (Node crypto), secrets encrypted with AES-256-GCM                   |
+| Cultures   | `fa-IR` (default, RTL, Shamsi, Persian digits) and `en-US` — see ADR 008 |
 | Tooling    | Bun, ESLint 9 (flat config), Vitest, GitHub Actions                        |
 
 No server-side user code is ever executed. A project is static assets plus calls to the documented
@@ -190,6 +193,36 @@ Most runtime behaviour is a **system config row**, editable at `/admin/settings`
 | `ssl.renewal_days_before_expiry` | `30` | Renewal window, matching the spec. |
 | `cron.task.renew_ssl_certificates.enabled` | `true` | Platform-wide switch for the 6-hourly renewal sweep. |
 
+## Cultures
+
+LocalMe ships **two cultures, both first-class**. `fa-IR` is the default:
+right-to-left, the Iransans and Vazir typefaces, Shamsi dates, Persian digits.
+`en-US` is not an English fallback — it has its own direction, calendar and
+numerals like any other. See [ADR 008](./docs/adr/008-multi-culture-rtl-and-shamsi-calendar.md).
+
+Choosing a culture flips the document direction, the typeface, the calendar and
+the numeral system, and it is available in **every** panel — the landing page,
+`/auth`, the dashboard, a project workspace, `/docs`, `/account` and `/admin` —
+because a control that exists on only some pages is a control people cannot find.
+
+**Wording is editable at runtime.** Every user-visible string is a key in
+`lib/i18n/messages/*` with a value for each culture. The catalog ships in the
+bundle as the floor; the admin console's **Translations** tab writes *overrides*
+to the `translations` table, and they survive a deploy. Resolution is
+override → shipped → the key itself, so an untranslated key is visibly broken
+rather than silently falling back to English.
+
+**Dates are computed, not re-skinned.** `lib/jalali.ts` is a real Shamsi
+implementation — leap-year-correct month lengths, a week starting on شنبه, and
+typed entry in Persian or Arabic-Indic digits. Every number, byte count, date
+and relative time in the UI goes through `lib/i18n/format.ts`, which binds the
+arithmetic to a `t()` so the *words* stay editable too: `۳ دقیقه پیش`, `۵ مگابایت`.
+
+Adding a culture is a change to `lib/i18n/locales.ts` plus a catalog, not a
+sweep through the UI. `MessageGroup` is used as a `satisfies` target and never
+as a declared type, so a renamed key is a build error instead of an English
+sentence leaking into the Persian console.
+
 ## Repository layout
 
 ```
@@ -199,6 +232,8 @@ app/            Next.js App Router: pages, layouts and route handlers
   page.tsx      Marketing landing page with the live in-browser demo
 components/     Console and UI components (design system in components/ui)
 lib/            Shared client/server code (formatting, theme, SEO)
+lib/i18n/       Culture layer: locales, catalog, formatters, Jalali engine
+lib/jalali.ts   Shamsi date engine (the only calendar implementation in the app)
 lib/server/db/  Dialect-agnostic data layer (Drizzle + DSL compiler; see ADR 003)
 db/sqlite/      SQLite migrations (default dialect)
 db/postgres/    Postgres migrations (production dialect)

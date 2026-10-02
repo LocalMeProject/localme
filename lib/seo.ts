@@ -1,7 +1,14 @@
 export const SITE_NAME = "LocalMe";
-export const DEFAULT_TITLE = "LocalMe — Ship a full-stack web app with frontend code only";
+/**
+ * Site-wide fallback copy for routes that do not generate their own metadata.
+ * The landing route overrides both from the message catalog so it can follow
+ * the visitor's culture; this string is what search engines and link previews
+ * see before that happens, so it carries the positioning rather than a feature
+ * list. Plain, because the audience is people who do not write code.
+ */
+export const DEFAULT_TITLE = "LocalMe — Give your app a database, files and user accounts";
 export const DEFAULT_DESCRIPTION =
-  "Write HTML, CSS and JavaScript and get the backend for free: a document database, file storage, visitor accounts, routing, encrypted secrets, a reverse proxy, cron jobs, webhooks and custom domains. Free tier, no credit card.";
+  "Every project you make here gets a place to keep its information and files, accounts for the people who use it, and a real web address — ready the moment you sign up. Free forever, no credit card, no server to rent.";
 export const DEFAULT_IMAGE = "/og.png";
 
 /**

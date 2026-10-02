@@ -1,6 +1,11 @@
 /**
  * Console client helpers: every page talks to the platform API with session
  * cookies and the documented `{ error, code }` error body.
+ *
+ * Formatting deliberately does *not* live here. Byte counts and dates are
+ * culture-dependent — "5 MB" is "۵ مگابایت" in `fa-IR` and a Shamsi date is
+ * not a reformat of a Gregorian one — so they come from `useI18n().fmt`,
+ * which is bound to the active culture and to editable wording.
  */
 "use client";
 
@@ -58,11 +63,4 @@ export function apiDelete<T>(path: string, body?: unknown): Promise<T> {
     method: "DELETE",
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-}
-
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }

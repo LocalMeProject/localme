@@ -23,7 +23,7 @@ export function BrandMark({ className, compact = false }: { className?: string; 
       {!compact && (
         <span className="flex flex-col leading-none">
           <span className="text-sm font-semibold tracking-tight">LocalMe</span>
-          <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-9px uppercase tracking-[0.18em] text-muted-foreground">
             backend as a service
           </span>
         </span>

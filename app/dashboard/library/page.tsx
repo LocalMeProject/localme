@@ -15,7 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, SectionHeader } from "@/components/page-header";
-import { apiDelete, apiGet, apiPost, formatBytes } from "@/app/console";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/catalog";
+import { apiDelete, apiGet, apiPost } from "@/app/console";
 
 interface LibraryRow {
   path: string;
@@ -37,6 +39,7 @@ function blockedExtension(path: string): boolean {
 }
 
 export default function LibraryPage() {
+  const { t, fmt } = useI18n();
   const [state, setState] = useState<LibraryResponse | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
@@ -51,9 +54,9 @@ export default function LibraryPage() {
       setState(result);
       setSelected((prev) => prev.filter((path) => result.data.some((entry) => entry.path === path)));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load the library.");
+      toast.error(error instanceof Error ? error.message : t("library.loadFailed"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -79,7 +82,7 @@ export default function LibraryPage() {
       // is what they meant: `css/theme.css`, not `css/css/theme.css`.
       if (stripRoot) relative = relative.split("/").slice(1).join("/") || file.name;
       if (blockedExtension(relative)) {
-        toast.error(`${relative}: HTML cannot be published to the library.`);
+        toast.error(t("library.publish.blockedHtml", { path: relative }));
         continue;
       }
       try {
@@ -92,17 +95,17 @@ export default function LibraryPage() {
         await apiPost("/api/library/upload", { path: relative, contentBase64: btoa(binary) });
         ok += 1;
       } catch (error) {
-        toast.error(`${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`);
+        toast.error(`${file.name}: ${error instanceof Error ? error.message : t("library.publish.failed")}`);
       }
     }
     setUploading(false);
-    if (ok > 0) toast.success(`${ok} asset${ok === 1 ? "" : "s"} published`);
+    if (ok > 0) toast.success(t("library.publish.done", { count: fmt.number(ok) }));
     await load();
   }
 
   async function remove(paths: string[]) {
     if (paths.length === 0) return;
-    if (!window.confirm(`Remove ${paths.length} asset${paths.length === 1 ? "" : "s"} from the library?`)) {
+    if (!window.confirm(t("library.remove.confirm", { count: fmt.number(paths.length) }))) {
       return;
     }
     setBusy(true);
@@ -111,14 +114,14 @@ export default function LibraryPage() {
     }
     setSelected([]);
     setBusy(false);
-    toast.success(`${paths.length} removed`);
+    toast.success(t("library.remove.done", { count: fmt.number(paths.length) }));
     await load();
   }
 
-  async function copy(text: string, what: string) {
+  async function copy(text: string, what: MessageKey) {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${what} copied`);
+      toast.success(t("library.copied", { what: t(what) }));
     } catch {
       toast.error(text);
     }
@@ -132,12 +135,12 @@ export default function LibraryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Shared"
-        title="Library"
-        description="Upload an asset once and every project you own references it from a single stable URL. Nothing is copied between projects."
+        eyebrow={t("library.eyebrow")}
+        title={t("library.title")}
+        description={t("library.description")}
         actions={
           <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" /> {t("action.refresh")}
           </Button>
         }
       />
@@ -145,8 +148,8 @@ export default function LibraryPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Usage</CardTitle>
-            <CardDescription className="text-[12.5px]">Separate from your project file budget.</CardDescription>
+            <CardTitle className="text-sm">{t("library.stat.usage")}</CardTitle>
+            <CardDescription className="text-12.5px">{t("library.stat.usageDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -155,30 +158,30 @@ export default function LibraryPage() {
                 style={{ width: `${usedPct}%` }}
               />
             </div>
-            <p className="text-[13px] tabular-nums">
-              {formatBytes(usage?.used ?? 0)} of {formatBytes(usage?.cap ?? 0)}
+            <p className="nums text-13px">
+              {fmt.bytes(usage?.used ?? 0)} / {fmt.bytes(usage?.cap ?? 0)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Assets</CardTitle>
-            <CardDescription className="text-[12.5px]">One copy each, shared by every project.</CardDescription>
+            <CardTitle className="text-sm">{t("library.stat.assets")}</CardTitle>
+            <CardDescription className="text-12.5px">{t("library.stat.assetsDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{state?.data.length ?? 0}</p>
+            <p className="nums text-2xl font-semibold">{fmt.number(state?.data.length ?? 0)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Your base URL</CardTitle>
-            <CardDescription className="text-[12.5px]">Every asset lives under this path.</CardDescription>
+            <CardTitle className="text-sm">{t("library.stat.baseUrl")}</CardTitle>
+            <CardDescription className="text-12.5px">{t("library.stat.baseUrlDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <button
               type="button"
-              onClick={() => void copy(`${window.location.origin}${prefix}`, "Base URL")}
-              className="group inline-flex items-center gap-1.5 font-mono text-[12.5px] text-foreground hover:text-signal"
+              onClick={() => void copy(`${window.location.origin}${prefix}`, "library.copy.baseUrl")}
+              className="group inline-flex items-center gap-1.5 font-mono text-12.5px text-foreground hover:text-signal"
             >
               {prefix}
               <Copy className="h-3 w-3 text-muted-foreground group-hover:text-signal" />
@@ -189,8 +192,8 @@ export default function LibraryPage() {
 
       <Card>
         <SectionHeader
-          title="Publish an asset"
-          description="Any file type except .html and .htm. The URL it gets is shown in the list below."
+          title={t("library.publish.title")}
+          description={t("library.publish.description")}
         />
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -219,30 +222,26 @@ export default function LibraryPage() {
               }}
             />
             <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
-              <FileUp className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Choose files"}
+              <FileUp className="h-3.5 w-3.5" /> {uploading ? t("library.publish.uploading") : t("library.publish.chooseFiles")}
             </Button>
             <Button variant="outline" onClick={() => dirRef.current?.click()} disabled={uploading}>
-              <FolderUp className="h-3.5 w-3.5" /> Upload a folder
+              <FolderUp className="h-3.5 w-3.5" /> {t("library.publish.uploadFolder")}
             </Button>
           </div>
-          <p className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
+          <p className="flex items-start gap-1.5 text-12px text-muted-foreground">
             <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-            Library files are served from the platform origin, so HTML is refused: it would run scripts
-            against your own console session. Project pages can host HTML in the Code tab instead.
+            {t("library.publish.warning")}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Reference an asset</CardTitle>
-          <CardDescription className="text-[12.5px]">
-            Link it from any project. <code className="font-mono">library/</code> is a reserved folder name, so
-            a relative reference resolves to your library on a custom domain too.
-          </CardDescription>
+          <CardTitle className="text-sm">{t("library.reference.title")}</CardTitle>
+          <CardDescription className="text-12.5px">{t("library.reference.description")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 font-mono text-[12px] leading-relaxed">{`<link rel="stylesheet" href="${prefix}/theme.css">
+          <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 font-mono text-12px leading-relaxed">{`<link rel="stylesheet" href="${prefix}/theme.css">
 <script src="${prefix}/analytics.js" defer></script>
 
 <!-- or, from inside a project (works on custom domains too) -->
@@ -257,22 +256,22 @@ export default function LibraryPage() {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Filter assets…"
-              className="h-8 w-56 text-[12.5px]"
-              aria-label="Filter library assets"
+              placeholder={t("library.filter.placeholder")}
+              className="h-8 w-56 text-12.5px"
+              aria-label={t("library.filter.ariaLabel")}
             />
-            <span className="text-[12px] text-muted-foreground">
-              {listed.length} of {state?.data.length ?? 0}
+            <span className="nums text-12px text-muted-foreground">
+              {t("library.list.of", { shown: fmt.number(listed.length), total: fmt.number(state?.data.length ?? 0) })}
             </span>
             {selected.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="ml-auto h-8 text-muted-foreground hover:text-destructive"
+                className="ms-auto h-8 text-muted-foreground hover:text-destructive"
                 disabled={busy}
                 onClick={() => void remove(selected)}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Remove {selected.length}
+                <Trash2 className="h-3.5 w-3.5" /> {t("library.remove.selected", { count: fmt.number(selected.length) })}
               </Button>
             )}
           </div>
@@ -280,10 +279,10 @@ export default function LibraryPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Path</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead className="w-24 text-right">Size</TableHead>
-                  <TableHead className="w-36">Modified</TableHead>
+                  <TableHead>{t("label.path")}</TableHead>
+                  <TableHead>{t("library.table.url")}</TableHead>
+                  <TableHead className="w-24 text-end">{t("label.size")}</TableHead>
+                  <TableHead className="w-36">{t("label.updatedAt")}</TableHead>
                   <TableHead className="w-10" />
                   <TableHead className="w-24" />
                 </TableRow>
@@ -307,33 +306,33 @@ export default function LibraryPage() {
                               )
                             }
                           />
-                          <span className="font-mono text-[12.5px]">{row.path}</span>
+                          <span className="font-mono text-12.5px">{row.path}</span>
                         </label>
                       </TableCell>
                       <TableCell>
                         <button
                           type="button"
-                          onClick={() => void copy(`${window.location.origin}${url}`, "Public URL")}
-                          title="Copy the public URL"
-                          className="group inline-flex max-w-[22rem] items-center gap-1.5 truncate font-mono text-[12px] text-muted-foreground hover:text-signal"
+                          onClick={() => void copy(`${window.location.origin}${url}`, "library.copy.publicUrl")}
+                          title={t("library.table.copyTitle")}
+                          className="group inline-flex max-w-[22rem] items-center gap-1.5 truncate font-mono text-12px text-muted-foreground hover:text-signal"
                         >
                           <span className="truncate">{url}</span>
                           <Copy className="h-3 w-3 shrink-0 group-hover:text-signal" />
                         </button>
                       </TableCell>
-                      <TableCell className="text-right text-[12.5px] tabular-nums text-muted-foreground">
-                        {formatBytes(row.size)}
+                      <TableCell className="nums text-end text-12.5px text-muted-foreground">
+                        {fmt.bytes(row.size)}
                       </TableCell>
-                      <TableCell className="text-[12px] text-muted-foreground">
-                        {row.modified ? new Date(row.modified).toLocaleString() : ""}
+                      <TableCell className="nums text-12px text-muted-foreground">
+                        {row.modified ? fmt.dateTime(new Date(row.modified).getTime()) : ""}
                       </TableCell>
                       <TableCell />
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                          title="Remove"
+                          title={t("library.remove.one")}
                           onClick={() => void remove([row.path])}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -345,10 +344,10 @@ export default function LibraryPage() {
               </TableBody>
             </Table>
           ) : (
-            <p className="px-5 py-10 text-center text-[13px] text-muted-foreground">
+            <p className="px-5 py-10 text-center text-13px text-muted-foreground">
               {query
-                ? `Nothing matches “${query}”.`
-                : "Your library is empty. Publish a stylesheet or a font and every project can link to it."}
+                ? t("library.empty.filtered", { query })
+                : t("library.empty.body")}
             </p>
           )}
           {listedPaths.length > 0 && selected.length === 0 && (
@@ -356,10 +355,10 @@ export default function LibraryPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-[12px] text-muted-foreground"
+                className="h-7 text-12px text-muted-foreground"
                 onClick={() => setSelected(listedPaths)}
               >
-                Select all {listedPaths.length}
+                {t("library.selectAll", { count: fmt.number(listedPaths.length) })}
               </Button>
             </div>
           )}

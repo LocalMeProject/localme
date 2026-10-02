@@ -21,7 +21,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
-import { KeyRound, Webhook } from "lucide-react";
+import { KeyRound, Languages, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiDelete, apiGet, apiPatch, apiPost, apiPut, formatBytes } from "@/app/console";
+import { AdminTranslationsPanel } from "@/components/admin-translations-panel";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/app/console";
+import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ types */
@@ -159,6 +161,7 @@ const EMPTY_PAGING: PaginationState = { page: 1, pageSize: 25, total: 0 };
 
 export default function AdminPage() {
   const router = useRouter();
+  const { t, fmt } = useI18n();
   const [stats, setStats] = useState<Stats | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [configs, setConfigs] = useState<Record<string, unknown>>({});
@@ -239,13 +242,13 @@ export default function AdminPage() {
     try {
       await Promise.all([loadSidePanels(), loadUsers(), loadProjects()]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not load admin data.";
+      const message = error instanceof Error ? error.message : t("admin.loadFailed");
       if (/403|Admin/.test(message)) setForbidden(true);
       else toast.error(message);
     } finally {
       setRefreshing(false);
     }
-  }, [loadProjects, loadSidePanels, loadUsers]);
+  }, [loadProjects, loadSidePanels, loadUsers, t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -260,10 +263,10 @@ export default function AdminPage() {
         toast.success(success);
         await load();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Update failed.");
+        toast.error(error instanceof Error ? error.message : t("admin.updateFailed"));
       }
     },
-    [load],
+    [load, t],
   );
 
   const patchProjects = useCallback(
@@ -273,10 +276,10 @@ export default function AdminPage() {
         toast.success(success);
         await load();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Update failed.");
+        toast.error(error instanceof Error ? error.message : t("admin.updateFailed"));
       }
     },
-    [load],
+    [load, t],
   );
 
   async function impersonate(user: AdminUser) {
@@ -288,7 +291,7 @@ export default function AdminPage() {
       router.replace("/dashboard");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not start impersonating.");
+      toast.error(error instanceof Error ? error.message : t("admin.impersonate.failed"));
     }
   }
 
@@ -297,44 +300,42 @@ export default function AdminPage() {
       const { data } = await apiGet<{ data: UserDetail }>(`/api/admin/users?userId=${user.id}`);
       setDetail(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load the account.");
+      toast.error(error instanceof Error ? error.message : t("admin.detail.failed"));
     }
   }
 
   async function deleteUser(user: AdminUser) {
-    const typed = window.prompt(
-      `Deleting "${user.username}" removes every project, file and visitor they own. This cannot be undone.\n\nType the username to confirm:`,
-    );
+    const typed = window.prompt(t("admin.deleteAccountPrompt", { name: user.username }));
     if (typed === null) return;
     try {
       await apiDelete("/api/admin/users", { userId: user.id, confirmUsername: typed });
-      toast.success(`${user.username} deleted`);
+      toast.success(t("admin.done.deleted", { name: user.username }));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.deleteFailed"));
     }
   }
 
   async function deleteProject(project: AdminProject) {
     const typed = window.prompt(
-      `Deleting "${project.username}/${project.name}" removes its files, data and configuration. This cannot be undone.\n\nType the project name to confirm:`,
+      t("admin.deleteProjectPrompt", { name: `${project.username}/${project.name}` }),
     );
     if (typed === null) return;
     try {
       await apiDelete("/api/admin/projects", { projectId: project.id, confirmName: typed });
-      toast.success(`${project.name} deleted`);
+      toast.success(t("admin.done.deleted", { name: project.name }));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.deleteFailed"));
     }
   }
 
   async function revokeSessions(user: AdminUser) {
     try {
       await apiDelete(`/api/admin/sessions?userId=${user.id}`);
-      toast.success(`Signed ${user.username} out everywhere`);
+      toast.success(t("admin.done.signedOut", { name: user.username }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not revoke sessions.");
+      toast.error(error instanceof Error ? error.message : t("admin.revoke.failed"));
     }
   }
 
@@ -347,20 +348,25 @@ export default function AdminPage() {
     }
     try {
       await apiPut("/api/admin/config", { key, value });
-      toast.success(`${key} saved`);
+      toast.success(t("admin.config.saved", { key }));
       await loadSidePanels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Config save failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.config.failed"));
     }
   }
 
   async function toggleGlobalTask(task: AdminCronTask) {
     try {
       await apiPut("/api/admin/cron", { task: task.task, isEnabled: !task.globallyEnabled });
-      toast.success(`${task.task} ${task.globallyEnabled ? "disabled" : "enabled"} globally`);
+      toast.success(
+        t("admin.cron.done", {
+          task: task.task,
+          state: t(task.globallyEnabled ? "admin.cron.state.disabled" : "admin.cron.state.enabled"),
+        }),
+      );
       await loadSidePanels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.updateFailed"));
     }
   }
 
@@ -372,22 +378,22 @@ export default function AdminPage() {
         credentials: "include",
       });
       const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Upload failed.");
-      toast.success(`/~public/${path} published`);
+      if (!response.ok) throw new Error(payload.error ?? t("error.generic"));
+      toast.success(t("admin.library.published", { path }));
       setPublicPath("");
       await loadSidePanels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
+      toast.error(error instanceof Error ? error.message : t("error.generic"));
     }
   }
 
   async function deletePublicAsset(path: string) {
     try {
       await apiDelete(`/api/admin/public-library?path=${encodeURIComponent(path)}`);
-      toast.success("Removed");
+      toast.success(t("admin.library.removed"));
       await loadSidePanels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.deleteFailed"));
     }
   }
 
@@ -401,13 +407,13 @@ export default function AdminPage() {
     return (
       <div className="panel mx-auto mt-16 max-w-md p-8 text-center">
         <ShieldCheck className="mx-auto h-8 w-8 text-destructive" />
-        <h1 className="mt-3 text-lg font-semibold">Admin access required</h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          This console is restricted to platform operators.
+        <h1 className="mt-3 text-lg font-semibold">{t("admin.forbidden.title")}</h1>
+        <p className="mt-1 text-13px text-muted-foreground">
+          {t("admin.forbidden.body")}
         </p>
         <Button asChild variant="outline" size="sm" className="mt-4">
           <Link href="/dashboard">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to dashboard
+            <ArrowLeft className="rtl-flip h-3.5 w-3.5" /> {t("admin.forbidden.back")}
           </Link>
         </Button>
       </div>
@@ -417,107 +423,119 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Operator"
-        title="Admin console"
-        description="Accounts, projects and platform configuration across every deployment."
+        eyebrow={t("admin.eyebrow")}
+        title={t("admin.title")}
+        description={t("admin.description")}
         actions={
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={refreshing}>
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            {refreshing ? "Refreshing…" : "Refresh"}
+            {refreshing ? t("admin.refreshing") : t("action.refresh")}
           </Button>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Accounts"
-          value={overview ? overview.users.toLocaleString("en-US") : "…"}
+          label={t("label.accounts")}
+          value={overview ? fmt.number(overview.users) : "…"}
           icon={Users}
           tone="signal"
           hint={
             overview
-              ? `${overview.suspendedUsers} suspended · ${overview.lockedUsers} locked out · ${overview.week.newUsers} new this week`
+              ? t("admin.stat.accountsHint", {
+                  suspended: fmt.number(overview.suspendedUsers),
+                  locked: fmt.number(overview.lockedUsers),
+                  newUsers: fmt.number(overview.week.newUsers),
+                })
               : undefined
           }
         />
         <StatCard
-          label="Projects"
-          value={stats ? stats.projects.toLocaleString("en-US") : "…"}
+          label={t("label.projects")}
+          value={stats ? fmt.number(stats.projects) : "…"}
           icon={Building2}
-          hint={overview ? `${overview.newProjectsThisWeek} created this week` : undefined}
+          hint={
+            overview ? t("admin.stat.projectsHint", { count: fmt.number(overview.newProjectsThisWeek) }) : undefined
+          }
         />
         <StatCard
-          label="Visits"
-          value={overview ? overview.last24h.visits.toLocaleString("en-US") : "…"}
+          label={t("projects.stat.visits")}
+          value={overview ? fmt.number(overview.last24h.visits) : "…"}
           hint={
             overview
-              ? `last 24h · ${overview.last24h.uniqueVisitors.toLocaleString("en-US")} unique · ${overview.week.visits.toLocaleString("en-US")} this week`
+              ? t("admin.stat.visitsHint", {
+                  unique: fmt.number(overview.last24h.uniqueVisitors),
+                  week: fmt.number(overview.week.visits),
+                })
               : undefined
           }
           icon={Activity}
         />
         <StatCard
-          label="Storage used"
-          value={stats ? formatBytes(stats.storageBytes) : "…"}
+          label={t("projects.stat.storage")}
+          value={stats ? fmt.bytes(stats.storageBytes) : "…"}
           icon={HardDrive}
           tone="blueprint"
-          hint={stats ? `${stats.visitsAllTime.toLocaleString("en-US")} visits all time` : undefined}
+          hint={
+            stats ? t("admin.stat.storageHint", { count: fmt.number(stats.visitsAllTime) }) : undefined
+          }
         />
       </div>
 
       {overview && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Live sessions"
-            value={overview.health.liveSessions.toLocaleString("en-US")}
+            label={t("admin.stat.sessions")}
+            value={fmt.number(overview.health.liveSessions)}
             icon={Activity}
             tone="blueprint"
-            hint="console sessions not yet expired"
+            hint={t("admin.stat.sessionsHint")}
           />
           <StatCard
-            label="Active API keys"
-            value={overview.health.activeApiKeys.toLocaleString("en-US")}
+            label={t("admin.stat.apiKeys")}
+            value={fmt.number(overview.health.activeApiKeys)}
             icon={KeyRound}
             tone={overview.health.idleApiKeys > 0 ? "signal" : "blueprint"}
-            hint={`${overview.health.idleApiKeys} unused for 30 days`}
+            hint={t("admin.stat.apiKeysHint", { count: fmt.number(overview.health.idleApiKeys) })}
           />
           <StatCard
-            label="Webhooks"
-            value={overview.health.activeWebhooks.toLocaleString("en-US")}
+            label={t("landing.feature.automation")}
+            value={fmt.number(overview.health.activeWebhooks)}
             icon={Webhook}
             tone={overview.health.failedDeliveriesThisWeek > 0 ? "destructive" : "blueprint"}
-            hint={`${overview.health.failedDeliveriesThisWeek} failed deliveries this week`}
+            hint={t("admin.stat.webhooksHint", { count: fmt.number(overview.health.failedDeliveriesThisWeek) })}
           />
           <StatCard
-            label="Scheduled work"
-            value={overview.health.enabledCronTasks.toLocaleString("en-US")}
+            label={t("admin.stat.scheduled")}
+            value={fmt.number(overview.health.enabledCronTasks)}
             icon={Cpu}
-            hint={`${overview.health.verifiedDomains} verified custom domains`}
+            hint={t("admin.stat.scheduledHint", { count: fmt.number(overview.health.verifiedDomains) })}
           />
         </div>
       )}
 
       {overview && !overview.viewer.isAdmin && (
-        <p className="panel px-4 py-3 text-[12.5px] text-muted-foreground">
-          You are signed in as an <strong className="text-foreground">operator</strong>. You can run the
-          platform day to day; changing roles and deleting accounts or projects are reserved for an
-          admin, so those controls are hidden rather than failing with a 403.
+        <p className="panel px-4 py-3 text-12.5px text-muted-foreground">
+          {t("admin.operatorNote")}
         </p>
       )}
 
       <Tabs defaultValue="accounts">
         <TabsList>
           <TabsTrigger value="accounts">
-            <Users className="h-3.5 w-3.5" /> Accounts
+            <Users className="h-3.5 w-3.5" /> {t("admin.tab.accounts")}
           </TabsTrigger>
           <TabsTrigger value="projects">
-            <FolderTree className="h-3.5 w-3.5" /> Projects
+            <FolderTree className="h-3.5 w-3.5" /> {t("admin.tab.projects")}
           </TabsTrigger>
           <TabsTrigger value="platform">
-            <Cpu className="h-3.5 w-3.5" /> Platform
+            <Cpu className="h-3.5 w-3.5" /> {t("admin.tab.platform")}
           </TabsTrigger>
           <TabsTrigger value="config">
-            <Gauge className="h-3.5 w-3.5" /> Configuration
+            <Gauge className="h-3.5 w-3.5" /> {t("admin.tab.config")}
+          </TabsTrigger>
+          <TabsTrigger value="i18n">
+            <Languages className="h-3.5 w-3.5" /> {t("admin.tab.i18n")}
           </TabsTrigger>
         </TabsList>
 
@@ -529,21 +547,21 @@ export default function AdminPage() {
               setUserQuery(value);
               setUserPaging((prev) => ({ ...prev, page: 1 }));
             }}
-            placeholder="Search username or email"
+            placeholder={t("admin.searchUsers")}
             filters={[
               { value: userStatus, onChange: setUserStatus, options: [
-                ["all", "All accounts"],
-                ["active", "Active"],
-                ["suspended", "Suspended"],
-                ["locked", "Locked out"],
-                ["admin", "Administrators"],
+                ["all", t("admin.filter.allAccounts")],
+                ["active", t("admin.filter.active")],
+                ["suspended", t("admin.filter.suspended")],
+                ["locked", t("admin.filter.locked")],
+                ["admin", t("admin.filter.admins")],
               ] },
               { value: userSort, onChange: setUserSort, options: [
-                ["id", "Newest first"],
-                ["username", "Username A–Z"],
-                ["storage", "Most storage"],
-                ["projects", "Most projects"],
-                ["lastLogin", "Recently active"],
+                ["id", t("admin.sort.newest")],
+                ["username", t("admin.sort.username")],
+                ["storage", t("admin.sort.storage")],
+                ["projects", t("admin.sort.projects")],
+                ["lastLogin", t("admin.sort.recent")],
               ] },
             ]}
           />
@@ -551,54 +569,57 @@ export default function AdminPage() {
           <div className="panel overflow-hidden">
             <SelectionToolbar
               selected={userSelected}
-              noun="account"
+              noun="selection.account"
               onClear={() => setUserSelected([])}
             >
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[12px]"
+                className="h-7 text-12px"
                 onClick={() =>
                   void patchUsers(
                     { userIds: userSelected.map(Number), isSuspended: true },
-                    `${userSelected.length} accounts suspended`,
+                    t("admin.done.suspended", { count: fmt.number(userSelected.length) }),
                   ).then(() => setUserSelected([]))
                 }
               >
-                Suspend
+                {t("admin.suspend")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[12px]"
+                className="h-7 text-12px"
                 onClick={() =>
                   void patchUsers(
                     { userIds: userSelected.map(Number), isSuspended: false },
-                    `${userSelected.length} accounts resumed`,
+                    t("admin.done.resumed", { count: fmt.number(userSelected.length) }),
                   ).then(() => setUserSelected([]))
                 }
               >
-                Resume
+                {t("admin.resume")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[12px]"
+                className="h-7 text-12px"
                 onClick={() =>
                   void patchUsers(
                     { userIds: userSelected.map(Number), unlock: true },
-                    `${userSelected.length} lockouts cleared`,
+                    t("admin.done.unlocked", { count: fmt.number(userSelected.length) }),
                   ).then(() => setUserSelected([]))
                 }
               >
-                Clear lockout
+                {t("admin.clearLockout")}
               </Button>
               {isViewerAdmin && (
                 <RoleSelect
                   onApply={(patch, label) =>
                     void patchUsers(
                       { userIds: userSelected.map(Number), ...patch },
-                      `${userSelected.length} accounts ${label}`,
+                      t("admin.bulk.roleCount", {
+                        count: fmt.number(userSelected.length),
+                        label,
+                      }),
                     ).then(() => setUserSelected([]))
                   }
                 />
@@ -612,25 +633,25 @@ export default function AdminPage() {
                     <SelectAllCheckbox
                       selected={userSelected}
                       total={users.length}
-                      label="Select every account on this page"
+                      label={t("admin.selectAll.accounts")}
                       onToggle={(selectAll) =>
                         setUserSelected(selectAll ? users.map((user) => String(user.id)) : [])
                       }
                     />
                   </TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead className="text-right">Projects</TableHead>
-                  <TableHead className="w-44">Storage</TableHead>
-                  <TableHead className="w-32">Last login</TableHead>
-                  <TableHead className="w-28">Status</TableHead>
-                  <TableHead className="w-56 text-right">Actions</TableHead>
+                  <TableHead>{t("admin.th.account")}</TableHead>
+                  <TableHead className="text-end">{t("label.projects")}</TableHead>
+                  <TableHead className="w-44">{t("projects.stat.storage")}</TableHead>
+                  <TableHead className="w-32">{t("label.lastSeen")}</TableHead>
+                  <TableHead className="w-28">{t("label.status")}</TableHead>
+                  <TableHead className="w-56 text-end">{t("admin.th.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-[13px] text-muted-foreground">
-                      No accounts match this filter.
+                    <TableCell colSpan={7} className="py-10 text-center text-13px text-muted-foreground">
+                      {t("admin.noAccounts")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -648,20 +669,22 @@ export default function AdminPage() {
                     <TableCell>
                       <button
                         type="button"
-                        className="text-left font-mono text-[12.5px] hover:text-signal"
+                        className="ltr-content text-start font-mono text-12.5px hover:text-signal"
                         onClick={() => void openDetail(user)}
                       >
                         {user.username}
                       </button>
                       <div className="mt-0.5 flex flex-wrap gap-1">
-                        {user.isAdmin && <Badge variant="signal">admin</Badge>}
-                        {user.isOperator && !user.isAdmin && <Badge variant="blueprint">operator</Badge>}
+                        {user.isAdmin && <Badge variant="signal">{t("admin.badge.admin")}</Badge>}
+                        {user.isOperator && !user.isAdmin && (
+                          <Badge variant="blueprint">{t("admin.badge.operator")}</Badge>
+                        )}
                         {user.email && (
-                          <span className="text-[11px] text-muted-foreground">{user.email}</span>
+                          <span className="ltr-content text-11px text-muted-foreground">{user.email}</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-[12.5px] tabular-nums">{user.projectCount}</TableCell>
+                    <TableCell className="nums text-end text-12.5px tabular-nums">{fmt.number(user.projectCount)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <MeterBar
@@ -670,13 +693,15 @@ export default function AdminPage() {
                           className="w-20"
                           tone={user.storageUsedBytes > user.storageCapBytes ? "destructive" : "signal"}
                         />
-                        <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                          {formatBytes(user.storageUsedBytes)} / {formatBytes(user.storageCapBytes)}
+                        <span className="nums font-mono text-11px text-muted-foreground tabular-nums">
+                          {fmt.bytes(user.storageUsedBytes)} / {fmt.bytes(user.storageCapBytes)}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[11.5px] text-muted-foreground">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleString("en-US") : "never"}
+                    <TableCell className="text-11.5px text-muted-foreground">
+                      {user.lastLogin
+                        ? fmt.relative(new Date(user.lastLogin).getTime())
+                        : t("state.never")}
                     </TableCell>
                     <TableCell>
                       <StatusBadges user={user} />
@@ -686,7 +711,7 @@ export default function AdminPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          title={`Sign in as ${user.username}`}
+                          title={t("admin.detail.signInAs", { username: user.username })}
                           onClick={() => void impersonate(user)}
                           disabled={!isViewerAdmin && user.isAdmin}
                         >
@@ -695,7 +720,7 @@ export default function AdminPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          title="Account detail"
+                          title={t("admin.tooltip.detail")}
                           onClick={() => void openDetail(user)}
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -705,7 +730,9 @@ export default function AdminPage() {
                           onCheckedChange={(checked) =>
                             void patchUsers(
                               { userId: user.id, isSuspended: checked },
-                              `${user.username} ${checked ? "suspended" : "resumed"}`,
+                              checked
+                                ? t("admin.done.userSuspended", { name: user.username })
+                                : t("admin.done.userResumed", { name: user.username }),
                             )
                           }
                         />
@@ -714,7 +741,7 @@ export default function AdminPage() {
                             variant="ghost"
                             size="icon-sm"
                             className="text-muted-foreground hover:text-destructive"
-                            title="Delete account and everything it owns"
+                            title={t("admin.tooltip.deleteAccount")}
                             onClick={() => void deleteUser(user)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -728,7 +755,7 @@ export default function AdminPage() {
             </Table>
             <Pagination
               state={userPaging}
-              label="accounts"
+              label="pagination.accounts"
               className="border-t border-border"
               onPageChange={(page) => setUserPaging((prev) => ({ ...prev, page }))}
               onPageSizeChange={(pageSize) => setUserPaging({ ...userPaging, page: 1, pageSize })}
@@ -744,20 +771,20 @@ export default function AdminPage() {
               setProjectQuery(value);
               setProjectPaging((prev) => ({ ...prev, page: 1 }));
             }}
-            placeholder="Search project or owner"
+            placeholder={t("admin.searchProjects")}
             filters={[
               { value: projectStatus, onChange: setProjectStatus, options: [
-                ["all", "All projects"],
-                ["active", "Live"],
-                ["suspended", "Suspended"],
-                ["owner-suspended", "Owner suspended"],
+                ["all", t("admin.filter.allProjects")],
+                ["active", t("admin.filter.live")],
+                ["suspended", t("admin.filter.suspended")],
+                ["owner-suspended", t("admin.filter.ownerSuspended")],
               ] },
               { value: projectSort, onChange: setProjectSort, options: [
-                ["id", "Newest first"],
-                ["name", "Name A–Z"],
-                ["files", "Most files"],
-                ["storage", "Most storage"],
-                ["visits", "Most visits"],
+                ["id", t("admin.sort.newest")],
+                ["name", t("admin.sort.name")],
+                ["files", t("admin.sort.files")],
+                ["storage", t("admin.sort.storage")],
+                ["visits", t("admin.sort.visits")],
               ] },
             ]}
           />
@@ -765,34 +792,34 @@ export default function AdminPage() {
           <div className="panel overflow-hidden">
             <SelectionToolbar
               selected={projectSelected}
-              noun="project"
+              noun="selection.project"
               onClear={() => setProjectSelected([])}
             >
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[12px]"
+                className="h-7 text-12px"
                 onClick={() =>
                   void patchProjects(
                     { projectIds: projectSelected.map(Number), isActive: true },
-                    `${projectSelected.length} projects resumed`,
+                    t("admin.bulk.projectsResumed", { count: fmt.number(projectSelected.length) }),
                   ).then(() => setProjectSelected([]))
                 }
               >
-                Activate
+                {t("admin.activate")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[12px]"
+                className="h-7 text-12px"
                 onClick={() =>
                   void patchProjects(
                     { projectIds: projectSelected.map(Number), isActive: false },
-                    `${projectSelected.length} projects suspended`,
+                    t("admin.bulk.projectsSuspended", { count: fmt.number(projectSelected.length) }),
                   ).then(() => setProjectSelected([]))
                 }
               >
-                Suspend
+                {t("admin.suspend")}
               </Button>
             </SelectionToolbar>
 
@@ -803,26 +830,26 @@ export default function AdminPage() {
                     <SelectAllCheckbox
                       selected={projectSelected}
                       total={projects.length}
-                      label="Select every project on this page"
+                      label={t("admin.selectAll.projects")}
                       onToggle={(selectAll) =>
                         setProjectSelected(selectAll ? projects.map((p) => String(p.id)) : [])
                       }
                     />
                   </TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead className="w-32">Owner</TableHead>
-                  <TableHead className="text-right">Files</TableHead>
-                  <TableHead className="text-right">Visits</TableHead>
-                  <TableHead className="w-28">Free quota</TableHead>
-                  <TableHead className="w-28">Status</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
+                  <TableHead>{t("label.project")}</TableHead>
+                  <TableHead className="w-32">{t("label.owner")}</TableHead>
+                  <TableHead className="text-end">{t("label.files")}</TableHead>
+                  <TableHead className="text-end">{t("projects.meter.visits")}</TableHead>
+                  <TableHead className="w-28">{t("admin.th.freeQuota")}</TableHead>
+                  <TableHead className="w-28">{t("label.status")}</TableHead>
+                  <TableHead className="w-24 text-end">{t("admin.th.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {projects.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-[13px] text-muted-foreground">
-                      No projects match this filter.
+                    <TableCell colSpan={8} className="py-10 text-center text-13px text-muted-foreground">
+                      {t("admin.noProjects")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -845,33 +872,36 @@ export default function AdminPage() {
                         href={`/${project.username}/${project.name}/`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-[12.5px] hover:text-signal"
+                        className="ltr-content font-mono text-12.5px hover:text-signal"
                       >
                         {project.name}
                       </a>
-                      <div className="text-[11px] text-muted-foreground">
-                        {formatBytes(project.storageBytes)} stored
+                      <div className="text-11px text-muted-foreground">
+                        {t("admin.project.stored", { bytes: fmt.bytes(project.storageBytes) })}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-[12px] text-muted-foreground">
+                    <TableCell className="ltr-content font-mono text-12px text-muted-foreground">
                       {project.username}
                     </TableCell>
-                    <TableCell className="text-right text-[12.5px] tabular-nums">{project.fileCount}</TableCell>
-                    <TableCell className="text-right text-[12.5px] tabular-nums">
-                      {project.visitCount.toLocaleString("en-US")}
+                    <TableCell className="nums text-end text-12.5px tabular-nums">{fmt.number(project.fileCount)}</TableCell>
+                    <TableCell className="nums text-end text-12.5px tabular-nums">
+                      {fmt.number(project.visitCount)}
                     </TableCell>
                     <TableCell>
                       <Input
                         type="number"
                         min={0}
                         defaultValue={project.freeVisitsPerMonth}
-                        className="h-8 w-24"
+                        className="nums h-8 w-24"
                         onBlur={(event) => {
                           const visits = Number(event.target.value);
                           if (Number.isFinite(visits) && visits >= 0 && visits !== project.freeVisitsPerMonth) {
                             void patchProjects(
                               { projectId: project.id, freeVisitsPerMonth: visits },
-                              `${project.name} quota set to ${visits}`,
+                              t("admin.done.quotaSet", {
+                                name: project.name,
+                                value: fmt.number(visits),
+                              }),
                             );
                           }
                         }}
@@ -879,11 +909,11 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell>
                       {project.ownerSuspended ? (
-                        <Badge variant="outline">owner suspended</Badge>
+                        <Badge variant="outline">{t("admin.filter.ownerSuspended")}</Badge>
                       ) : project.isActive ? (
-                        <Badge>live</Badge>
+                        <Badge>{t("projects.badge.live")}</Badge>
                       ) : (
-                        <Badge variant="destructive">suspended</Badge>
+                        <Badge variant="destructive">{t("admin.badge.suspended")}</Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -893,7 +923,9 @@ export default function AdminPage() {
                           onCheckedChange={(checked) =>
                             void patchProjects(
                               { projectId: project.id, isActive: checked },
-                              `${project.name} ${checked ? "resumed" : "suspended"}`,
+                              checked
+                                ? t("admin.done.userResumed", { name: project.name })
+                                : t("admin.done.userSuspended", { name: project.name }),
                             )
                           }
                         />
@@ -902,7 +934,7 @@ export default function AdminPage() {
                             variant="ghost"
                             size="icon-sm"
                             className="text-muted-foreground hover:text-destructive"
-                            title="Delete project and its data"
+                            title={t("admin.tooltip.deleteProject")}
                             onClick={() => void deleteProject(project)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -916,7 +948,7 @@ export default function AdminPage() {
             </Table>
             <Pagination
               state={projectPaging}
-              label="projects"
+              label="pagination.projects"
               className="border-t border-border"
               onPageChange={(page) => setProjectPaging((prev) => ({ ...prev, page }))}
               onPageSizeChange={(pageSize) => setProjectPaging({ ...projectPaging, page: 1, pageSize })}
@@ -928,14 +960,14 @@ export default function AdminPage() {
         <TabsContent value="platform" className="space-y-4">
           {overview && overview.topProjects.length > 0 && (
             <div className="panel p-5">
-              <div className="mono-label">Busiest projects this week</div>
+              <div className="mono-label">{t("admin.busiest")}</div>
               <ol className="mt-3 space-y-2">
                 {overview.topProjects.map((project, index) => (
-                  <li key={project.id} className="flex items-center gap-3 text-[13px]">
-                    <span className="w-4 font-mono text-[11px] text-muted-foreground">{index + 1}</span>
-                    <span className="font-mono">{project.username}/{project.name}</span>
-                    <span className="ml-auto tabular-nums text-muted-foreground">
-                      {project.visits.toLocaleString("en-US")}
+                  <li key={project.id} className="flex items-center gap-3 text-13px">
+                    <span className="nums w-4 font-mono text-11px text-muted-foreground">{fmt.number(index + 1)}</span>
+                    <span className="ltr-content font-mono">{project.username}/{project.name}</span>
+                    <span className="nums ms-auto tabular-nums text-muted-foreground">
+                      {fmt.number(project.visits)}
                     </span>
                   </li>
                 ))}
@@ -945,24 +977,24 @@ export default function AdminPage() {
 
           <div className="panel overflow-hidden">
             <div className="border-b border-border px-5 py-3.5">
-              <div className="text-sm font-semibold">Global cron switches</div>
-              <div className="mt-0.5 text-[12.5px] text-muted-foreground">
-                Turn a task off across the whole platform. Projects keep their own toggles.
+              <div className="text-sm font-semibold">{t("admin.cron.title")}</div>
+              <div className="mt-0.5 text-12.5px text-muted-foreground">
+                {t("admin.cron.description")}
               </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Task</TableHead>
-                  <TableHead className="w-32 text-right">Due projects</TableHead>
-                  <TableHead className="w-24">Enabled</TableHead>
+                  <TableHead>{t("admin.cron.th.task")}</TableHead>
+                  <TableHead className="w-32 text-end">{t("admin.cron.th.due")}</TableHead>
+                  <TableHead className="w-24">{t("label.enabled")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cronTasks.map((task) => (
                   <TableRow key={task.task}>
-                    <TableCell className="font-mono text-[12.5px]">{task.task}</TableCell>
-                    <TableCell className="text-right text-[12.5px] tabular-nums">{task.dueProjects}</TableCell>
+                    <TableCell className="ltr-content font-mono text-12.5px">{task.task}</TableCell>
+                    <TableCell className="nums text-end text-12.5px tabular-nums">{fmt.number(task.dueProjects)}</TableCell>
                     <TableCell>
                       <Switch
                         checked={task.globallyEnabled}
@@ -977,21 +1009,21 @@ export default function AdminPage() {
 
           <div className="panel overflow-hidden">
             <div className="border-b border-border px-5 py-3.5">
-              <div className="text-sm font-semibold">Public library</div>
-              <div className="mt-0.5 text-[12.5px] text-muted-foreground">
-                Assets served at <span className="font-mono">/~public/&lt;path&gt;</span> to every
-                project on the platform.
+              <div className="text-sm font-semibold">{t("admin.library.title")}</div>
+              <div className="mt-0.5 text-12.5px text-muted-foreground">
+                {t("admin.library.description")}
               </div>
             </div>
             <div className="space-y-3 border-b border-border px-5 py-4">
               <div className="flex flex-wrap items-end gap-2">
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <Label htmlFor="public-path">Path</Label>
+                  <Label htmlFor="public-path">{t("label.path")}</Label>
                   <Input
                     id="public-path"
                     value={publicPath}
                     onChange={(event) => setPublicPath(event.target.value)}
-                    className="font-mono"
+                    dir="ltr"
+                    className="ltr-input font-mono"
                     placeholder="theme.css"
                   />
                 </div>
@@ -1012,40 +1044,37 @@ export default function AdminPage() {
                   disabled={!publicPath.trim()}
                   onClick={() => publicUploadRef.current?.click()}
                 >
-                  Publish asset
+                  {t("admin.library.publish")}
                 </Button>
               </div>
-              <p className="text-[11.5px] text-muted-foreground">
-                Pick the file, set the path it should be served at, then publish. HTML is refused —
-                <span className="font-mono"> /~public/</span> is for shared stylesheets, scripts and
-                images.
-              </p>
+              <p className="text-11.5px text-muted-foreground">{t("admin.library.hint")}</p>
             </div>
             {publicAssets.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Path</TableHead>
-                    <TableHead className="w-28 text-right">Size</TableHead>
-                    <TableHead className="w-28">Modified</TableHead>
+                    <TableHead>{t("label.path")}</TableHead>
+                    <TableHead className="w-28 text-end">{t("label.size")}</TableHead>
+                    <TableHead className="w-28">{t("files.table.modified")}</TableHead>
                     <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {publicAssets.map((asset) => (
                     <TableRow key={asset.path}>
-                      <TableCell className="font-mono text-[12px]">/~public/{asset.path}</TableCell>
-                      <TableCell className="text-right text-[12px] tabular-nums">
-                        {formatBytes(asset.size)}
+                      <TableCell className="ltr-content font-mono text-12px">/~public/{asset.path}</TableCell>
+                      <TableCell className="nums text-end text-12px tabular-nums">
+                        {fmt.bytes(asset.size)}
                       </TableCell>
-                      <TableCell className="text-[11.5px] text-muted-foreground">
-                        {asset.modified ? new Date(asset.modified).toLocaleString("en-US") : "—"}
+                      <TableCell className="text-11.5px text-muted-foreground">
+                        {asset.modified ? fmt.dateTime(new Date(asset.modified).getTime()) : "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Button
                           variant="ghost"
                           size="icon-sm"
                           className="text-muted-foreground hover:text-destructive"
+                          title={t("action.delete")}
                           onClick={() => void deletePublicAsset(asset.path)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1056,8 +1085,8 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="px-5 py-8 text-center text-[13px] text-muted-foreground">
-                The public library is empty.
+              <p className="px-5 py-8 text-center text-13px text-muted-foreground">
+                {t("admin.library.empty")}
               </p>
             )}
           </div>
@@ -1066,6 +1095,11 @@ export default function AdminPage() {
         {/* --------------------------------------------------------- config */}
         <TabsContent value="config">
           <ConfigEditor configs={configs} defaults={defaults} onSave={saveConfig} />
+        </TabsContent>
+
+        {/* ------------------------------------------------------ i18n */}
+        <TabsContent value="i18n">
+          <AdminTranslationsPanel />
         </TabsContent>
       </Tabs>
 
@@ -1082,12 +1116,15 @@ export default function AdminPage() {
         }}
         onToggleSuspend={(user, suspended) => {
           setDetail(null);
-          void patchUsers({ userId: user.id, isSuspended: suspended }, `${user.username} updated`);
+          void patchUsers(
+            { userId: user.id, isSuspended: suspended },
+            t("admin.done.updated", { name: user.username }),
+          );
         }}
         onSetCap={(user, capMb) => {
           void patchUsers(
             { userId: user.id, storageCapBytes: Math.round(capMb * 1024 * 1024) },
-            `${user.username} cap set to ${capMb} MB`,
+            t("admin.done.capSet", { name: user.username, value: fmt.number(capMb) }),
           );
           void openDetail(user);
         }}
@@ -1099,9 +1136,17 @@ export default function AdminPage() {
               : role === "operator"
                 ? { isOperator: true }
                 : { isOperator: false, isAdmin: false };
-          const label = role === "admin" ? "is now an admin" : role === "operator" ? "is now an operator" : "is now a member";
+          const label =
+            role === "admin"
+              ? t("admin.role.isNowAdmin")
+              : role === "operator"
+                ? t("admin.role.isNowOperator")
+                : t("admin.role.isNowMember");
           setDetail(null);
-          void patchUsers({ userId: user.id, ...patch }, `${user.username} ${label}`);
+          void patchUsers(
+            { userId: user.id, ...patch },
+            t("admin.detail.roleChanged", { name: user.username, label }),
+          );
         }}
       />
     </div>
@@ -1122,24 +1167,25 @@ function RoleSelect({
 }: {
   onApply: (patch: { isAdmin?: boolean; isOperator?: boolean }, label: string) => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState("");
 
   return (
     <div className="flex items-center gap-1.5">
       <Select value={value} onValueChange={setValue}>
-        <SelectTrigger className="h-7 w-44 text-[12px]" aria-label="Console role">
-          <SelectValue placeholder="Set console role…" />
+        <SelectTrigger className="h-7 w-44 text-12px" aria-label={t("admin.role.aria")}>
+          <SelectValue placeholder={t("admin.role.placeholder")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="member">Remove operator access</SelectItem>
-          <SelectItem value="operator">Make operator</SelectItem>
-          <SelectItem value="admin">Make admin</SelectItem>
+          <SelectItem value="member">{t("admin.role.removeAccess")}</SelectItem>
+          <SelectItem value="operator">{t("admin.role.makeOperator")}</SelectItem>
+          <SelectItem value="admin">{t("admin.role.makeAdmin")}</SelectItem>
         </SelectContent>
       </Select>
       <Button
         variant="outline"
         size="sm"
-        className="h-7 text-[12px]"
+        className="h-7 text-12px"
         disabled={!value}
         onClick={() => {
           const patch =
@@ -1148,11 +1194,18 @@ function RoleSelect({
               : value === "operator"
                 ? { isOperator: true }
                 : { isOperator: false, isAdmin: false };
-          void onApply(patch, value === "admin" ? "made admins" : value === "operator" ? "made operators" : "demoted");
+          void onApply(
+            patch,
+            value === "admin"
+              ? t("admin.role.madeAdmins")
+              : value === "operator"
+                ? t("admin.role.madeOperators")
+                : t("admin.role.demoted"),
+          );
           setValue("");
         }}
       >
-        Apply
+        {t("admin.role.apply")}
       </Button>
     </div>
   );
@@ -1176,12 +1229,12 @@ function Toolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative min-w-56 flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}
           onChange={(event) => onQuery(event.target.value)}
           placeholder={placeholder}
-          className="pl-8"
+          className="ps-8"
           aria-label={placeholder}
         />
       </div>
@@ -1191,7 +1244,7 @@ function Toolbar({
           value={filter.value}
           onChange={(event) => filter.onChange(event.target.value)}
           aria-label={filter.options[0]?.[1]}
-          className="h-10 rounded-md border border-input bg-background px-2.5 text-[13px] text-foreground"
+          className="h-10 rounded-md border border-input bg-background px-2.5 text-13px text-foreground"
         >
           {filter.options.map(([value, label]) => (
             <option key={value} value={value}>
@@ -1205,10 +1258,11 @@ function Toolbar({
 }
 
 function StatusBadges({ user }: { user: Pick<AdminUser, "isSuspended" | "lockedUntil"> }) {
+  const { t } = useI18n();
   const locked = user.lockedUntil !== null && new Date(user.lockedUntil) > new Date();
-  if (user.isSuspended) return <Badge variant="destructive">suspended</Badge>;
-  if (locked) return <Badge variant="warning">locked out</Badge>;
-  return <Badge variant="outline">active</Badge>;
+  if (user.isSuspended) return <Badge variant="destructive">{t("admin.badge.suspended")}</Badge>;
+  if (locked) return <Badge variant="warning">{t("admin.badge.lockedOut")}</Badge>;
+  return <Badge variant="outline">{t("admin.badge.active")}</Badge>;
 }
 
 function UserDetailDialog({
@@ -1297,50 +1351,51 @@ function UserDetailPanel({
   onSetRole: (user: AdminUser, role: "member" | "operator" | "admin") => void;
 }) {
   const used = detail.projects.reduce((sum, project) => sum + project.storageBytes, 0);
+  const { t, fmt } = useI18n();
   return (
     <>
       <DialogHeader>
               <DialogTitle className="flex flex-wrap items-center gap-2">
-                <span className="font-mono">{detail.username}</span>
+                <span className="ltr-content font-mono">{detail.username}</span>
                 <StatusBadges user={detail} />
-                {detail.isAdmin && <Badge variant="signal">admin</Badge>}
+                {detail.isAdmin && <Badge variant="signal">{t("admin.badge.admin")}</Badge>}
               </DialogTitle>
               <DialogDescription>
-                {detail.email ?? "no email on file"} · joined{" "}
-                {new Date(detail.createdAt).toLocaleDateString("en-US")} ·{" "}
+                {detail.email ?? t("admin.detail.noEmail")} ·{" "}
+                {t("admin.detail.joined", { date: fmt.date(new Date(detail.createdAt).getTime()) })} ·{" "}
                 {detail.lastLogin
-                  ? `last seen ${new Date(detail.lastLogin).toLocaleString("en-US")}`
-                  : "never signed in"}
+                  ? t("admin.detail.lastSeen", { date: fmt.relative(new Date(detail.lastLogin).getTime()) })
+                  : t("admin.detail.neverSignedIn")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg border border-border p-3">
-                  <div className="mono-label">Projects</div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums">{detail.projects.length}</div>
+                  <div className="mono-label">{t("admin.detail.projects")}</div>
+                  <div className="nums mt-1 text-lg font-semibold tabular-nums">{fmt.number(detail.projects.length)}</div>
                 </div>
                 <div className="rounded-lg border border-border p-3">
-                  <div className="mono-label">Visitors</div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums">{detail.visitorCount}</div>
+                  <div className="mono-label">{t("admin.detail.visitors")}</div>
+                  <div className="nums mt-1 text-lg font-semibold tabular-nums">{fmt.number(detail.visitorCount)}</div>
                 </div>
                 <div className="rounded-lg border border-border p-3">
-                  <div className="mono-label">Storage</div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums">{formatBytes(used)}</div>
+                  <div className="mono-label">{t("admin.th.storage")}</div>
+                  <div className="nums mt-1 text-lg font-semibold">{fmt.bytes(used)}</div>
                   <MeterBar value={used} max={detail.storageCapBytes} className="mt-2" />
                 </div>
               </div>
 
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="detail-cap">Storage cap (MB)</Label>
+                  <Label htmlFor="detail-cap">{t("admin.detail.capLabel")}</Label>
                   <Input
                     id="detail-cap"
                     type="number"
                     min={0}
                     value={cap}
                     onChange={(event) => onCapChange(event.target.value)}
-                    className="w-28"
+                    className="nums w-28"
                   />
                 </div>
                 <Button
@@ -1349,20 +1404,20 @@ function UserDetailPanel({
                   onClick={() => asUser && onSetCap(asUser, Number(cap))}
                   disabled={Number.isNaN(Number(cap))}
                 >
-                  Update cap
+                  {t("admin.detail.capUpdate")}
                 </Button>
               </div>
 
               <div>
-                <div className="mono-label mb-2">Projects</div>
-                <div className="max-h-56 overflow-y-auto rounded-lg border border-border scrollbar-thin">
+                <div className="mono-label mb-2">{t("admin.detail.projects")}</div>
+                <div className="scrollbar-thin max-h-56 overflow-y-auto rounded-lg border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="text-right">Files</TableHead>
-                        <TableHead className="text-right">Size</TableHead>
-                        <TableHead className="w-20">Status</TableHead>
+                        <TableHead>{t("label.name")}</TableHead>
+                        <TableHead className="text-end">{t("admin.detail.th.files")}</TableHead>
+                        <TableHead className="text-end">{t("label.size")}</TableHead>
+                        <TableHead className="w-20">{t("label.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1371,25 +1426,29 @@ function UserDetailPanel({
                           <TableCell>
                             <Link
                               href={`/dashboard/projects/${project.id}`}
-                              className="font-mono text-[12.5px] hover:text-signal"
+                              className="ltr-content font-mono text-12.5px hover:text-signal"
                               onClick={onClose}
                             >
                               {project.name}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-right text-[12px] tabular-nums">{project.fileCount}</TableCell>
-                          <TableCell className="text-right text-[12px] tabular-nums">
-                            {formatBytes(project.storageBytes)}
+                          <TableCell className="nums text-end text-12px tabular-nums">{fmt.number(project.fileCount)}</TableCell>
+                          <TableCell className="nums text-end text-12px tabular-nums">
+                            {fmt.bytes(project.storageBytes)}
                           </TableCell>
                           <TableCell>
-                            {project.isActive ? <Badge>live</Badge> : <Badge variant="destructive">suspended</Badge>}
+                            {project.isActive ? (
+                              <Badge>{t("projects.badge.live")}</Badge>
+                            ) : (
+                              <Badge variant="destructive">{t("admin.badge.suspended")}</Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
                       {detail.projects.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-[13px] text-muted-foreground">
-                            No projects.
+                          <TableCell colSpan={4} className="text-13px text-muted-foreground">
+                            {t("admin.detail.noProjects")}
                           </TableCell>
                         </TableRow>
                       )}
@@ -1403,30 +1462,30 @@ function UserDetailPanel({
               {asUser && (
                 <>
                   <Button size="sm" onClick={() => onImpersonate(asUser)}>
-                    <UserCog className="h-3.5 w-3.5" /> Sign in as {detail.username}
+                    <UserCog className="h-3.5 w-3.5" /> {t("admin.detail.signInAs", { username: detail.username })}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => onRevoke(asUser)}>
-                    Sign out everywhere
+                    {t("admin.detail.signOutEverywhere")}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleSuspend(asUser, !detail.isSuspended)}
                   >
-                    {detail.isSuspended ? "Resume account" : "Suspend account"}
+                    {detail.isSuspended ? t("admin.detail.resumeAccount") : t("admin.detail.suspendAccount")}
                   </Button>
                   {canManageRoles && (
                     <Select
                       value={detail.isAdmin ? "admin" : detail.isOperator ? "operator" : "member"}
                       onValueChange={(value) => onSetRole(asUser, value as "member" | "operator" | "admin")}
                     >
-                      <SelectTrigger className="w-48" aria-label="Console role">
+                      <SelectTrigger className="w-48" aria-label={t("admin.role.aria")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="member">Member — dashboard only</SelectItem>
-                        <SelectItem value="operator">Operator — runs the platform</SelectItem>
-                        <SelectItem value="admin">Admin — full control</SelectItem>
+                        <SelectItem value="member">{t("admin.role.memberDesc")}</SelectItem>
+                        <SelectItem value="operator">{t("admin.role.operatorDesc")}</SelectItem>
+                        <SelectItem value="admin">{t("admin.role.adminDesc")}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -1448,6 +1507,7 @@ function ConfigEditor({
   onSave: (key: string, raw: string) => void | Promise<void>;
 }) {
   const [filter, setFilter] = useState("");
+  const { t, fmt } = useI18n();
   const groups = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const key of Object.keys(defaults)) {
@@ -1463,12 +1523,13 @@ function ConfigEditor({
   return (
     <div className="space-y-4">
       <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
-          placeholder="Filter configuration keys"
-          className="pl-8"
+          placeholder={t("admin.config.filter")}
+          aria-label={t("admin.config.filter")}
+          className="ps-8"
         />
       </div>
       {groups.map(([group, keys]) => {
@@ -1477,31 +1538,34 @@ function ConfigEditor({
         return (
           <div key={group} className="panel overflow-hidden">
             <div className="flex items-center gap-2 border-b border-border px-5 py-3">
-              <span className="font-mono text-[12.5px] font-medium">{group}</span>
-              <Badge variant="outline" className="tabular-nums">
-                {shown.length}
+              <span className="ltr-content font-mono text-12.5px font-medium">{group}</span>
+              <Badge variant="outline" className="nums tabular-nums">
+                {fmt.number(shown.length)}
               </Badge>
             </div>
             <div className="divide-y divide-border">
               {shown.map((key) => (
                 <div key={key} className="flex flex-wrap items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
-                    <Label htmlFor={`cfg-${key}`} className="font-mono text-[11.5px]">
+                    <Label htmlFor={`cfg-${key}`} className="ltr-content font-mono text-11.5px">
                       {key}
                     </Label>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      default {String(defaults[key])}
+                    <p className="mt-0.5 text-11px text-muted-foreground">
+                      {t("admin.config.default", { value: String(defaults[key]) })}
                       {configs[key] !== undefined && (
                         <>
                           {" "}
-                          · currently <span className="font-mono">{JSON.stringify(configs[key])}</span>
+                          {t("admin.config.currently", {
+                            value: JSON.stringify(configs[key]),
+                          })}
                         </>
                       )}
                     </p>
                   </div>
                   <Input
                     id={`cfg-${key}`}
-                    className="w-44 font-mono text-[12.5px]"
+                    dir="ltr"
+                    className="ltr-input w-44 font-mono text-12.5px"
                     defaultValue={JSON.stringify(configs[key] ?? defaults[key])}
                     onBlur={(event) => {
                       const next = JSON.stringify(configs[key] ?? defaults[key]);
@@ -1515,8 +1579,8 @@ function ConfigEditor({
         );
       })}
       {groups.every(([, keys]) => !keys.some(visible)) && (
-        <p className="flex items-center justify-center gap-2 py-10 text-[13px] text-muted-foreground">
-          <TriangleAlert className="h-4 w-4" /> No configuration key matches “{filter}”.
+        <p className="flex items-center justify-center gap-2 py-10 text-13px text-muted-foreground">
+          <TriangleAlert className="h-4 w-4 shrink-0" /> {t("admin.config.noMatch", { filter })}
         </p>
       )}
     </div>

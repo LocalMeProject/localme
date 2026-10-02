@@ -11,7 +11,7 @@ export default function NotFoundPage() {
       <div>
         <div className="font-mono text-5xl font-semibold text-signal">404</div>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">This route does not exist in the console.</h1>
-        <p className="mt-2 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-md text-13px leading-relaxed text-muted-foreground">
           Project pages are served from the hosting origin, not from here. Check the URL, or head back to your
           workspace.
         </p>

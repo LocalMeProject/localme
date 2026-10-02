@@ -21,7 +21,8 @@ import { PageHeader, SectionHeader } from "@/components/page-header";
 import { StatCard, MeterBar } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiDelete, apiGet, apiPost, formatBytes } from "@/app/console";
+import { apiDelete, apiGet, apiPost } from "@/app/console";
+import { useI18n } from "@/lib/i18n/client";
 
 interface Project {
   id: number;
@@ -43,6 +44,7 @@ interface ProjectWithUsage extends Project {
 }
 
 export default function DashboardPage() {
+  const { t, fmt } = useI18n();
   const [projects, setProjects] = useState<ProjectWithUsage[] | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -69,10 +71,10 @@ export default function DashboardPage() {
       );
       setProjects(withUsage);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load projects.");
+      toast.error(error instanceof Error ? error.message : t("projects.loadFailed"));
       setProjects([]);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -83,25 +85,25 @@ export default function DashboardPage() {
     setBusy(true);
     try {
       await apiPost("/api/projects", { name: newName });
-      toast.success(`Project "${newName}" created`);
+      toast.success(t("projects.create.done", { name: newName }));
       setNewName("");
       setCreating(false);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the project.");
+      toast.error(error instanceof Error ? error.message : t("projects.create.failed"));
     } finally {
       setBusy(false);
     }
   }
 
   async function removeProject(project: ProjectWithUsage) {
-    if (!window.confirm(`Delete "${project.name}" and all of its data? This cannot be undone.`)) return;
+    if (!window.confirm(t("projects.delete.confirm", { name: project.name }))) return;
     try {
       await apiDelete(`/api/projects/${project.id}`);
-      toast.success("Project deleted");
+      toast.success(t("projects.delete.done"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not delete the project.");
+      toast.error(error instanceof Error ? error.message : t("projects.delete.failed"));
     }
   }
 
@@ -112,26 +114,27 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Console"
-        title="Projects"
-        description="Every project ships a document database, file storage, visitor accounts and a serving pipeline — frontend code only."
+        eyebrow={t("projects.eyebrow")}
+        title={t("projects.title")}
+        description={t("projects.description")}
         actions={
           <Dialog open={creating} onOpenChange={setCreating}>
             <DialogTrigger asChild>
               <Button>
-                <FolderPlus className="h-4 w-4" /> New project
+                <FolderPlus className="h-4 w-4" /> {t("projects.new")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create a project</DialogTitle>
+                <DialogTitle>{t("projects.create.dialogTitle")}</DialogTitle>
                 <DialogDescription>
-                  The name becomes your public URL: <span className="font-mono">/{username ?? "you"}/{"{project}"}/</span>
+                  {t("projects.create.dialogDescription")}{" "}
+                  <span className="font-mono">/{username ?? "you"}/{"{project}"}/</span>
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={createProject} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="project-name">Project name</Label>
+                  <Label htmlFor="project-name">{t("projects.create.nameLabel")}</Label>
                   <Input
                     id="project-name"
                     value={newName}
@@ -141,14 +144,13 @@ export default function DashboardPage() {
                     autoFocus
                     required
                   />
-                  <p className="text-[11.5px] text-muted-foreground">
-                    Lowercase letters, digits, <span className="font-mono">_</span> and{" "}
-                    <span className="font-mono">-</span>.
+                  <p className="text-11.5px text-muted-foreground">
+                    {t("projects.create.nameHint")}
                   </p>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={busy || !newName.trim()}>
-                    {busy ? "Creating…" : "Create project"}
+                    {busy ? t("projects.create.working") : t("projects.create.submit")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -159,29 +161,29 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Storage used"
-          value={formatBytes(totalStorage)}
-          hint={`${totalFiles} file${totalFiles === 1 ? "" : "s"} across all projects`}
+          label={t("projects.stat.storage")}
+          value={fmt.bytes(totalStorage)}
+          hint={t("projects.stat.storageHint", { count: fmt.number(totalFiles) })}
           icon={HardDrive}
           tone="signal"
         />
         <StatCard
-          label="Visits this month"
-          value={totalVisits.toLocaleString("en-US")}
-          hint="5-minute dedupe window"
+          label={t("projects.stat.visits")}
+          value={fmt.number(totalVisits)}
+          hint={t("projects.stat.visitsHint")}
           icon={Activity}
         />
         <StatCard
-          label="Projects"
-          value={projects?.length ?? "…"}
-          hint="Free tier · 5 MB storage"
+          label={t("projects.stat.count")}
+          value={projects ? fmt.number(projects.length) : "…"}
+          hint={t("projects.stat.countHint")}
           icon={Database}
           tone="blueprint"
         />
       </div>
 
       <section>
-        <SectionHeader title="Your projects" description="Open a project to manage code, data and access." />
+        <SectionHeader title={t("projects.section.title")} description={t("projects.section.description")} />
         {projects === null ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Skeleton className="h-44 rounded-xl" />
@@ -191,11 +193,11 @@ export default function DashboardPage() {
           <EmptyState
             className="mt-4"
             icon={Globe2}
-            title="No projects yet"
-            description="Create your first project, upload static files, and call /api/db from your JavaScript — the platform is your backend."
+            title={t("projects.empty.title")}
+            description={t("projects.empty.description")}
             action={
               <Button onClick={() => setCreating(true)}>
-                <FolderPlus className="h-4 w-4" /> Create your first project
+                <FolderPlus className="h-4 w-4" /> {t("projects.empty.action")}
               </Button>
             }
           />
@@ -213,10 +215,10 @@ export default function DashboardPage() {
                         {project.name}
                       </Link>
                       <Badge variant={project.isActive ? "default" : "outline"}>
-                        {project.isActive ? "live" : "suspended"}
+                        {project.isActive ? t("projects.badge.live") : t("projects.badge.suspended")}
                       </Badge>
                     </div>
-                    <div className="mt-1 font-mono text-[11.5px] text-muted-foreground">
+                    <div className="mt-1 font-mono text-11.5px text-muted-foreground">
                       /{username ?? "…"}/{project.name}/
                     </div>
                   </div>
@@ -226,24 +228,24 @@ export default function DashboardPage() {
                     className="text-muted-foreground hover:text-destructive"
                     onClick={() => void removeProject(project)}
                   >
-                    Delete
+                    {t("action.delete")}
                   </Button>
                 </div>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <div className="mb-1 flex justify-between text-[11.5px] text-muted-foreground">
-                      <span>Storage</span>
-                      <span className="tabular-nums">
-                        {formatBytes(project.storage.used)} / {formatBytes(project.storage.total || 5_242_880)}
+                    <div className="mb-1 flex justify-between text-11.5px text-muted-foreground">
+                      <span>{t("projects.meter.storage")}</span>
+                      <span className="nums">
+                        {fmt.bytes(project.storage.used)} / {fmt.bytes(project.storage.total || 5_242_880)}
                       </span>
                     </div>
                     <MeterBar value={project.storage.used} max={project.storage.total || 5_242_880} />
                   </div>
                   <div>
-                    <div className="mb-1 flex justify-between text-[11.5px] text-muted-foreground">
-                      <span>Visits this month</span>
-                      <span className="tabular-nums">
-                        {project.visits.toLocaleString("en-US")} / {project.freeVisitsPerMonth.toLocaleString("en-US")}
+                    <div className="mb-1 flex justify-between text-11.5px text-muted-foreground">
+                      <span>{t("projects.meter.visits")}</span>
+                      <span className="nums">
+                        {fmt.number(project.visits)} / {fmt.number(project.freeVisitsPerMonth)}
                       </span>
                     </div>
                     <MeterBar value={project.visits} max={project.freeVisitsPerMonth} tone="blueprint" />
@@ -251,7 +253,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/dashboard/projects/${project.id}`}>Open workspace</Link>
+                    <Link href={`/dashboard/projects/${project.id}`}>{t("projects.openWorkspace")}</Link>
                   </Button>
                   <Button asChild size="sm" variant="ghost">
                     <a
@@ -260,7 +262,7 @@ export default function DashboardPage() {
                       rel="noreferrer"
                       aria-disabled={!username}
                     >
-                      View live
+                      {t("projects.viewLive")}
                     </a>
                   </Button>
                 </div>

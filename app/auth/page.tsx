@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/logo";
+import { CultureSwitch } from "@/components/culture-switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/lib/i18n/client";
 import { apiGet, apiPost } from "@/app/console";
 
 /**
@@ -25,6 +27,7 @@ export default function AuthPage() {
 function AuthForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const { t } = useI18n();
   // ?mode=signup seeds the toggle; explicit user choice wins over the param.
   const paramMode = params.get("mode") === "signup" ? ("signup" as const) : ("login" as const);
   const [userMode, setUserMode] = useState<"login" | "signup" | null>(null);
@@ -64,10 +67,10 @@ function AuthForm() {
           ? { captchaId: captcha.challengeId, captchaAnswer }
           : {}),
       });
-      toast.success(mode === "signup" ? "Welcome to LocalMe" : "Welcome back");
+      toast.success(mode === "signup" ? t("auth.toast.welcome") : t("auth.toast.welcomeBack"));
       router.push(result.redirectUrl || "/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed.");
+      setError(err instanceof Error ? err.message : t("auth.toast.failed"));
       setCaptcha(null); // fresh challenge for the next attempt
       setCaptchaAnswer("");
     } finally {
@@ -78,23 +81,22 @@ function AuthForm() {
   return (
     <main className="blueprint-grid flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <Link href="/" aria-label="LocalMe home">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <Link href="/" aria-label="LocalMe">
             <BrandMark />
           </Link>
+          <CultureSwitch />
         </div>
         <div className="panel p-6 sm:p-8">
           <h1 className="text-xl font-semibold tracking-tight">
-            {mode === "signup" ? "Create your account" : "Sign in to the console"}
+            {mode === "signup" ? t("auth.title.signup") : t("auth.title.login")}
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-            {mode === "signup"
-              ? "One account hosts every project. No card, no backend code."
-              : "Back to your projects, databases and deploy pipelines."}
+          <p className="mt-1.5 text-13px leading-relaxed text-muted-foreground">
+            {mode === "signup" ? t("auth.subtitle.signup") : t("auth.subtitle.login")}
           </p>
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t("label.username")}</Label>
               <Input
                 id="username"
                 value={username}
@@ -106,7 +108,7 @@ function AuthForm() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("label.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -117,12 +119,12 @@ function AuthForm() {
                 minLength={8}
               />
               {mode === "signup" && (
-                <p className="text-[11.5px] text-muted-foreground">At least 8 characters.</p>
+                <p className="text-11.5px text-muted-foreground">{t("auth.password.hint")}</p>
               )}
             </div>
             {mode === "login" && captcha && (
               <div className="space-y-1.5">
-                <Label htmlFor="captcha">Captcha</Label>
+                <Label htmlFor="captcha">{t("auth.captcha.label")}</Label>
                 <div
                   className="w-full overflow-hidden rounded-md border border-border"
                   dangerouslySetInnerHTML={{ __html: captcha.svg }}
@@ -133,50 +135,52 @@ function AuthForm() {
                   onChange={(e) => setCaptchaAnswer(e.target.value)}
                   inputMode="numeric"
                   autoComplete="off"
-                  placeholder="Answer"
+                  placeholder={t("auth.captcha.placeholder")}
                   required
                 />
               </div>
             )}
             {error && (
-              <p className="text-[13px] text-destructive" role="alert">
+              <p className="text-13px text-destructive" role="alert">
                 {error}
               </p>
             )}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Working…" : mode === "signup" ? "Create account" : "Sign in"}
+              {busy
+                ? t("auth.submit.working")
+                : mode === "signup"
+                  ? t("auth.submit.signup")
+                  : t("auth.submit.login")}
             </Button>
           </form>
-          <div className="mt-5 border-t border-border pt-4 text-center text-[13px] text-muted-foreground">
+          <div className="mt-5 border-t border-border pt-4 text-center text-13px text-muted-foreground">
             {mode === "signup" ? (
               <>
-                Already have an account?{" "}
+                {t("auth.switch.haveAccount")}{" "}
                 <button
                   type="button"
                   className="text-signal hover:underline"
                   onClick={() => setUserMode("login")}
                 >
-                  Sign in
+                  {t("action.signIn")}
                 </button>
               </>
             ) : (
               <>
-                New here?{" "}
+                {t("auth.switch.newHere")}{" "}
                 <button
                   type="button"
                   className="text-signal hover:underline"
                   onClick={() => setUserMode("signup")}
                 >
-                  Create an account
+                  {t("auth.switch.create")}
                 </button>
               </>
             )}
           </div>
         </div>
-        <p className="mt-6 text-center text-[12.5px] text-muted-foreground">
-          Looking for a hosted project&apos;s login? Visit{" "}
-          <code className="font-mono text-[11.5px]">/your-project/…</code> — visitor accounts are
-          per project.
+        <p className="mt-6 text-center text-12.5px text-muted-foreground">
+          {t("auth.visitorNote")}
         </p>
       </div>
     </main>

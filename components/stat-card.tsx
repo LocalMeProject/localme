@@ -35,7 +35,7 @@ export function StatCard({
         )}
       </div>
       <div className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
-      {hint && <div className="mt-1.5 text-[11.5px] text-muted-foreground">{hint}</div>}
+      {hint && <div className="mt-1.5 text-11.5px text-muted-foreground">{hint}</div>}
     </div>
   );
 }
