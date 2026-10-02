@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LogOut, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Persistent "you are acting as someone else" banner.
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
  */
 export function ImpersonationBanner({ operator }: { operator: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
 
   async function stop() {
@@ -25,7 +27,7 @@ export function ImpersonationBanner({ operator }: { operator: string }) {
       router.replace("/admin");
       router.refresh();
     } catch {
-      toast.error("Could not end the impersonation session.");
+      toast.error(t("impersonation.failed"));
     } finally {
       setBusy(false);
     }
@@ -34,18 +36,18 @@ export function ImpersonationBanner({ operator }: { operator: string }) {
   return (
     <div
       role="alert"
-      className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-signal/40 bg-signal/10 px-4 py-2 text-[12.5px]"
+      className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-signal/40 bg-signal/10 px-4 py-2 text-12.5px"
     >
       <span className="flex items-center gap-2">
         <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-signal" aria-hidden />
         <span>
-          Signed in as <span className="font-mono font-medium">{operator}</span> — everything you do
-          here happens as them.
+          {t("impersonation.bodyPrefix")} <span className="font-mono font-medium">{operator}</span>{" "}
+          {t("impersonation.bodySuffix")}
         </span>
       </span>
       <Button variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void stop()}>
-        <LogOut className="h-3.5 w-3.5" />
-        {busy ? "Returning…" : "Return to my account"}
+        <LogOut className="h-3.5 w-3.5 rtl-flip" />
+        {busy ? t("impersonation.returning") : t("impersonation.return")}
       </Button>
     </div>
   );

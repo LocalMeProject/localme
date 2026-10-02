@@ -1,7 +1,7 @@
 {
   "name": "LocalMe",
   "short_name": "LocalMe",
-  "description": "Ship a full-stack web app with frontend code only.",
+  "description": "Give your app a place to keep its information and files, accounts for the people who use it, and a real web address. Free forever, no credit card.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0e14",

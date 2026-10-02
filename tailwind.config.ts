@@ -2,6 +2,38 @@ import animate from "tailwindcss-animate";
 import plugin from "tailwindcss/plugin";
 import type { Config } from "tailwindcss";
 
+/**
+ * Font sizes are multiplied by `--font-scale` so a culture can shrink its own
+ * type without touching a single component.
+ *
+ * Persian faces (Iransans, Vazir) have a larger apparent size than Inter at
+ * the same nominal px — wider, taller and with more vertical whitespace — so
+ * `fa-IR` renders everything at a fraction smaller. Doing it here rather than
+ * with `html { font-size }` matters: a root-font-size change would scale
+ * padding, gaps and icon boxes along with the text, reflowing layouts that
+ * have nothing to do with reading. `--font-scale` only ever multiplies
+ * `font-size`.
+ *
+ * Line heights are unitless for the same reason — they track the size they
+ * belong to, so they shrink with it.
+ */
+type Size = [string, { lineHeight: string; letterSpacing?: string }];
+
+/**
+ * `lineHeight` is `inherit` for the sizes that used to be arbitrary values
+ * (`text-[13px]`), which emits no line-height of its own. `line-height` is an
+ * inherited property, so naming it explicitly is the same rendering as
+ * omitting it — but it satisfies the config type, which requires the pair.
+ *
+ * Numbers are accepted for readability and emitted as unitless strings, which
+ * is what makes the leading shrink along with the size.
+ */
+function scaled(size: string, lineHeight: string | number = "inherit", letterSpacing?: string): Size {
+  const fontSize = `calc(${size} * var(--font-scale))`;
+  const value = String(lineHeight);
+  return [fontSize, letterSpacing ? { lineHeight: value, letterSpacing } : { lineHeight: value }];
+}
+
 const tailwindConfig: Config = {
   darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
@@ -47,12 +79,55 @@ const tailwindConfig: Config = {
           "monospace",
         ],
       },
+      // The whole scale is redefined rather than extended, so nothing can slip
+      // through unscaled: the Tailwind defaults are rem literals, and a single
+      // `text-lg` left behind would be the one size `fa-IR` cannot shrink.
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
-        "display-sm": ["1.75rem", { lineHeight: "1.15", letterSpacing: "-0.02em" }],
-        "display-md": ["2.25rem", { lineHeight: "1.1", letterSpacing: "-0.025em" }],
-        "display-lg": ["3rem", { lineHeight: "1.05", letterSpacing: "-0.03em" }],
-        "display-xl": ["3.75rem", { lineHeight: "1.02", letterSpacing: "-0.035em" }],
+        "2xs": scaled("0.6875rem", 1),
+        xs: scaled("0.75rem", 1),
+        sm: scaled("0.875rem", 1.25),
+        base: scaled("1rem", 1.5),
+        lg: scaled("1.125rem", 1.75),
+        xl: scaled("1.25rem", 1.75),
+        "2xl": scaled("1.5rem", 2),
+        "3xl": scaled("1.875rem", 2.25),
+        "4xl": scaled("2.25rem", 2.5),
+        "5xl": scaled("3rem", 1),
+        "6xl": scaled("3.75rem", 1),
+        "7xl": scaled("4.5rem", 1),
+        "8xl": scaled("6rem", 1),
+        "9xl": scaled("8rem", 1),
+
+        // Sizes the design uses below Tailwind's own scale, named after the
+        // px value they produce at the 16px root. They replace what used to be
+        // `text-[13px]` and friends, which bypassed the scale entirely.
+        "9px": scaled("0.5625rem"),
+        "10px": scaled("0.625rem"),
+        "10.5px": scaled("0.65625rem"),
+        "11px": scaled("0.6875rem"),
+        "11.5px": scaled("0.71875rem"),
+        "12px": scaled("0.75rem"),
+        "12.5px": scaled("0.78125rem"),
+        "13px": scaled("0.8125rem"),
+        "14px": scaled("0.875rem"),
+        "15px": scaled("0.9375rem"),
+        "16px": scaled("1rem"),
+        "18px": scaled("1.125rem"),
+        "20px": scaled("1.25rem"),
+        "22px": scaled("1.375rem"),
+        "24px": scaled("1.5rem"),
+        "28px": scaled("1.75rem"),
+        "30px": scaled("1.875rem"),
+        "34px": scaled("2.125rem"),
+        "36px": scaled("2.25rem"),
+        "40px": scaled("2.5rem"),
+        "48px": scaled("3rem"),
+        "56px": scaled("3.5rem"),
+
+        "display-sm": scaled("1.75rem", 1.15, "-0.02em"),
+        "display-md": scaled("2.25rem", 1.1, "-0.025em"),
+        "display-lg": scaled("3rem", 1.05, "-0.03em"),
+        "display-xl": scaled("3.75rem", 1.02, "-0.035em"),
       },
       colors: {
         border: "hsl(var(--border))",

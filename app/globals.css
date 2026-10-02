@@ -3,7 +3,86 @@
 @tailwind utilities;
 
 @layer base {
+  /* ---- Persian typefaces --------------------------------------------- *
+   * Two self-hosted Iranian faces, split by role:
+   *
+   *   Iransans → `--font-sans`, all body and interface text. Drawn for UI
+   *               legibility at small sizes; a Persian console is mostly
+   *               12–14px labels, so the face has to survive being small.
+   *   Vazir     → `--font-display`, headings and marketing type. Geometric,
+   *               high-contrast, and holds up at hero sizes where Iransans
+   *               goes soft.
+   *
+   * Both are declared Arabic-only (`unicode-range`). Neither family ships
+   * good Latin, and a mixed-script paragraph like "پروژه atlas" should not
+   * switch face mid-word — so Latin codepoints fall through to Inter and the
+   * join across the boundary stays clean.
+   *
+   * Vazir is a single variable file covering 100–900. Iransans ships static
+   * faces only, so 300/400/500/700 are declared individually and `font-weight:
+   * 600` resolves up to Bold per the CSS font-matching rules.             */
+  @font-face {
+    font-family: "Iransans";
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url("/fonts/iransans-light.woff2") format("woff2");
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+      U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF,
+      U+FE70-FE74, U+FE76-FEFC;
+  }
+
+  @font-face {
+    font-family: "Iransans";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/iransans-regular.woff2") format("woff2");
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+      U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF,
+      U+FE70-FE74, U+FE76-FEFC;
+  }
+
+  @font-face {
+    font-family: "Iransans";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("/fonts/iransans-medium.woff2") format("woff2");
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+      U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF,
+      U+FE70-FE74, U+FE76-FEFC;
+  }
+
+  @font-face {
+    font-family: "Iransans";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/fonts/iransans-bold.woff2") format("woff2");
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+      U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF,
+      U+FE70-FE74, U+FE76-FEFC;
+  }
+
+  @font-face {
+    font-family: "Vazir";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("/fonts/vazir-variable.woff2") format("woff2");
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
+      U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF,
+      U+FE70-FE74, U+FE76-FEFC;
+  }
+
   :root {
+    /* Every Tailwind font size is `calc(<size> * var(--font-scale))`. Latin is
+     * the reference rendering, so it is exactly 1; `[dir="rtl"]` lowers it.
+     * Defined here rather than relying on the unset fallback so the value is
+     * discoverable next to the rest of the theme tokens. */
+    --font-scale: 1;
+
     /* Blueprint light theme — paper surfaces, ink text, signal-orange accents */
     --background: 45 20% 97%;
     --foreground: 220 39% 11%;
@@ -108,6 +187,79 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* ---- Culture: typography ------------------------------------------ *
+   * `fa-IR` puts Iransans and Vazir ahead of the Latin faces. Because both
+   * are declared Arabic-only, Latin text on a Persian page still resolves to
+   * Inter from the next/font stack below — so "پروژه atlas" renders Persian
+   * in Iransans and Latin in Inter without splitting a word.
+   *
+   * `body` rather than `html`, because next/font assigns its variables on the
+   * body element and would otherwise win on specificity.                     */
+  [dir="rtl"] body {
+    --font-sans: "Iransans", "Inter", "Segoe UI", Tahoma, sans-serif;
+    --font-display: "Vazir", "Iransans", "Inter", "Segoe UI", Tahoma, sans-serif;
+    /* JetBrains Mono has no Arabic glyphs at all, so Persian inside a
+     * `.font-mono` run — a code block, a `.mono-label`, a file name — used to
+     * fall through to whatever the OS felt like, which on most machines is a
+     * face that does not match the rest of the page. Vazir carries the
+     * Persian side of those runs; JetBrains Mono still handles the Latin and
+     * punctuation, so code keeps its own look. */
+    --font-mono: "JetBrains Mono", "Vazir", "Iransans", ui-monospace, monospace;
+  }
+
+  /* Persian needs more leading than Latin at the same size, and a tracking
+   * value is meaningless on a cursive-joining script — it breaks the joins. */
+  [dir="rtl"] body {
+    line-height: 1.75;
+  }
+
+  /* Iransans and Vazir read larger than Inter at the same nominal size: they
+   * are wider, taller in the frame, and carry more air around the glyphs. Left
+   * alone, a Persian page looks one step larger than the same page in
+   * English, which reads as "different product" rather than "same product,
+   * different language".
+   *
+   * This is a multiplier on `font-size` only — every Tailwind size in the
+   * theme is `calc(<size> * var(--font-scale))`. It deliberately does not
+   * touch spacing, gaps or icon boxes: shrinking the whole root font size
+   * would reflow layouts that have nothing to do with reading. */
+  [dir="rtl"] {
+    --font-scale: 0.92;
+  }
+
+  [dir="rtl"] .mono-label {
+    letter-spacing: normal;
+    font-family: var(--font-sans);
+  }
+
+  /* Code, file contents and JSON are data, not prose: they stay
+   * left-to-right inside a right-to-left page. Applied globally because a
+   * missed one is a mangled tree diagram, and because it is the single rule
+   * that makes "RTL everywhere except content" true by default. */
+  [dir="rtl"] pre,
+  [dir="rtl"] code,
+  [dir="rtl"] kbd,
+  [dir="rtl"] samp,
+  [dir="rtl"] pre {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+  }
+
+  [dir="rtl"] input,
+  [dir="rtl"] textarea,
+  [dir="rtl"] select {
+    /* Arabic-script input fields read right-to-left, but a field holding a
+     * URL, path or key must not. The caller marks those with `.ltr-input`. */
+    text-align: right;
+  }
+
+  [dir="rtl"] .ltr-input {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+  }
+
   h1,
   h2,
   h3,
@@ -170,7 +322,7 @@
   }
 
   .mono-label {
-    @apply font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground;
+    @apply font-mono text-11px uppercase tracking-[0.16em] text-muted-foreground;
   }
 
   .panel {
@@ -273,9 +425,14 @@
     background-size: 100% 1px;
   }
 
+  /* In a right-to-left page the wipe has to start at the right edge. */
+  [dir="rtl"] .link-slide {
+    background-position: 100% 100%;
+  }
+
   /* Long-form marketing / docs copy that needs to breathe. */
   .copy {
-    @apply text-[13px] leading-relaxed text-muted-foreground sm:text-sm;
+    @apply text-13px leading-relaxed text-muted-foreground sm:text-sm;
   }
 }
 
@@ -325,6 +482,47 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* ---- RTL helpers ---------------------------------------------------- *
+   * The layout itself is handled by Tailwind's logical properties
+   * (`ms-*`, `pe-*`, `start-*`, `text-start`), so these are for the cases
+   * logical properties cannot express.  */
+
+  /* Icons that encode a reading direction — "next", "forward", "external" —
+   * mirror in RTL. Opt-in, because a folder or a database icon must not flip. */
+  .rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  /* Content that is data rather than prose: code, file bodies, JSON, paths,
+   * URLs. Forces LTR and isolates its own bidi run so neighbouring Persian
+   * text cannot leak punctuation into it. */
+  .ltr-content {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+  }
+
+  /* Numeric runs (counts, sizes, percentages) get tabular figures and their
+   * own bidi run so neighbouring Persian punctuation cannot leak in.
+   *
+   * It deliberately does NOT force `direction: ltr`. Digits are already
+   * written left to right in both cultures — Persian digits included — so
+   * ordering was never the problem, and forcing LTR changed the *alignment*
+   * of every element that carries the class: a block-level `.nums` in a
+   * right-to-left card resolved `text-align: start` to the left and sat
+   * visibly out of place. Mixed content like "۱۲ مگابایت / ۲ مگابایت" needs to
+   * inherit the paragraph direction to read the way a Persian speaker expects. */
+  .nums {
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A scrollable region whose content is wider than the box has to start at
+   * the right edge in RTL, or the first column is off-screen on open. */
+  [dir="rtl"] .scroll-initial-end {
+    direction: rtl;
   }
 
   /* Terminal caret for the hero headline. */

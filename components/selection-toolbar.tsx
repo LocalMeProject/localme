@@ -3,6 +3,8 @@
 import { CheckSquare, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/catalog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,15 +18,17 @@ export function SelectionToolbar({
   selected,
   onClear,
   children,
-  noun = "row",
+  noun = "selection.row",
   className,
 }: {
   selected: string[];
   onClear: () => void;
   children?: React.ReactNode;
-  noun?: string;
+  /** Message key for the thing being selected; pluralisation is the message's job. */
+  noun?: MessageKey;
   className?: string;
 }) {
+  const { t, fmt } = useI18n();
   if (selected.length === 0) return null;
   return (
     <div
@@ -33,22 +37,22 @@ export function SelectionToolbar({
         className,
       )}
       role="region"
-      aria-label={`${selected.length} ${noun} selected`}
+      aria-label={t("selection.aria", { count: fmt.number(selected.length), noun: t(noun) })}
     >
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 text-[12px]"
+        className="h-7 text-12px"
         onClick={onClear}
-        title="Clear selection"
+        title={t("selection.clearTitle")}
       >
         <X className="h-3.5 w-3.5" />
-        Clear
+        {t("selection.clear")}
       </Button>
-      <span className="text-[12px] font-medium tabular-nums">
-        {selected.length} {noun}{selected.length === 1 ? "" : "s"} selected
+      <span className="nums text-12px font-medium">
+        {t("selection.selected", { count: fmt.number(selected.length), noun: t(noun) })}
       </span>
-      <div className="ml-auto flex flex-wrap items-center gap-1.5">{children}</div>
+      <div className="ms-auto flex flex-wrap items-center gap-1.5">{children}</div>
     </div>
   );
 }
@@ -85,7 +89,7 @@ export function SelectAllCheckbox({
         onCheckedChange={(checked) => onToggle(checked === true)}
         aria-label={label}
       />
-      {some && <span className="font-mono text-[10px] text-muted-foreground">{selected.length}</span>}
+      {some && <span className="font-mono text-10px text-muted-foreground">{selected.length}</span>}
     </span>
   );
 }
@@ -100,13 +104,14 @@ export function RowCheckbox({
   selected: string[];
   onToggle: (id: string, next: boolean) => void;
 }) {
+  const { t } = useI18n();
   const checked = selected.includes(id);
   return (
     <span className="flex items-center gap-2">
       <Checkbox
         checked={checked}
         onCheckedChange={(value) => onToggle(id, value === true)}
-        aria-label={`Select ${id}`}
+        aria-label={t("selection.selectItem", { id })}
       />
       {checked ? (
         <CheckSquare className="h-3.5 w-3.5 text-signal sm:hidden" aria-hidden />

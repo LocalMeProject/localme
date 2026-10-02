@@ -14,6 +14,157 @@
 
 export type DemoId = "todo" | "guestbook" | "poll";
 
+/**
+ * Per-culture wording for the demo applications.
+ *
+ * These strings live here rather than in `lib/i18n/messages/*` on purpose. The
+ * demo is a *file*: "View source" shows the exact bytes the signup flow writes
+ * into your own project, and `demoFile()` is what lands on disk. If an operator
+ * could edit a demo string from the console, the source view would stop
+ * matching the file — the one promise the demo makes. So the demo's own copy
+ * travels with the demo, and the landing page's copy stays in the catalog.
+ *
+ * Values are looked up two ways: `{{key}}` placeholders inside the markup, and
+ * `t("key")` inside the demo's own scripts (see `injectStrings`).
+ */
+const DEMO_STRINGS = {
+  "en-US": {
+    "todo.title": "Tasks",
+    "todo.heading": "Today",
+    "todo.ready": "ready",
+    "todo.busy": "request…",
+    "todo.placeholder": "What needs doing?",
+    "todo.newTask": "New task",
+    "todo.add": "Add",
+    "todo.filter": "Filter",
+    "todo.all": "All",
+    "todo.open": "Open",
+    "todo.done": "Done",
+    "todo.saved": "Saved",
+    "todo.deleted": "Deleted",
+    "todo.insertFailed": "Insert failed",
+    "todo.empty": "Nothing here yet",
+    "todo.emptyHint": "Add your first task above — it is a single POST to /api/db/insert.",
+    "todo.toggle": "Toggle",
+    "todo.delete": "Delete",
+    "todo.countSuffix": "tasks",
+    "todo.countLine": "{open} open · {shown} shown",
+    "todo.seed1": "Wire up the task list",
+    "todo.seed2": "Point a custom domain at it",
+    "todo.seed3": "Invite a teammate as Member",
+    "guest.title": "Guestbook",
+    "guest.heading": "Guestbook",
+    "guest.name": "Your name",
+    "guest.note": "Leave a note for the team",
+    "guest.sign": "Sign the guestbook",
+    "guest.saved": "Saved",
+    "guest.first": "Be the first to sign",
+    "guest.firstHint": "Every entry is stored and paged with a single query.",
+    "guest.seed1": "Shipped a customer dashboard in an afternoon. No backend repo at all.",
+    "guest.seed2": "The proxy route with {{OPENAI_KEY}} is the part that sold my team.",
+    "guest.anonymous": "Anonymous",
+    "poll.title": "Feature poll",
+    "poll.question": "What should we ship next?",
+    "poll.voted": "Vote recorded",
+    "poll.votedAgain": "Vote updated",
+    "poll.alreadyVoted": "Already voted as this visitor",
+    "poll.justNow": "just now",
+    "poll.votesLabel": "votes",
+    "poll.leadingLabel": "leading",
+    "poll.updatedLabel": "updated",
+    "poll.hint": "One vote per visitor, tracked by the platform's visitor cookie.",
+    "poll.footNote": "vote stored as a document",
+    "poll.opt1": "Realtime subscriptions",
+    "poll.opt2": "File versioning",
+    "poll.opt3": "Built-in email",
+    "common.empty": "Nothing yet",
+  },
+  "fa-IR": {
+    "todo.title": "کارها",
+    "todo.heading": "امروز",
+    "todo.ready": "آماده",
+    "todo.busy": "در حال درخواست…",
+    "todo.placeholder": "چه کاری باید شود؟",
+    "todo.newTask": "کار تازه",
+    "todo.add": "اضافه",
+    "todo.filter": "فیلتر",
+    "todo.all": "همه",
+    "todo.open": "باز",
+    "todo.done": "انجام‌شده",
+    "todo.saved": "ذخیره شد",
+    "todo.deleted": "پاک شد",
+    "todo.insertFailed": "ثبت نشد",
+    "todo.empty": "هنوز چیزی اینجا نیست",
+    "todo.emptyHint": "اولین کار را بالا اضافه کن؛ فقط یک POST به ‎/api/db/insert است.",
+    "todo.toggle": "تغییر وضعیت",
+    "todo.delete": "پاک کردن",
+    "todo.countSuffix": "کار",
+    "todo.seed1": "لیست کارها را وصل کن",
+    "todo.seed2": "دامنه اختصاصی را وصل کن",
+    "todo.seed3": "یک همکار را با نقش عضو دعوت کن",
+    "todo.countLine": "{open} باز · {shown} نمایش",
+    "guest.title": "کتاب یادداشت",
+    "guest.heading": "کتاب یادداشت",
+    "guest.name": "اسمت",
+    "guest.note": "یادداشتی برای تیم بگذار",
+    "guest.sign": "امضا میکنم",
+    "guest.saved": "ثبت شد",
+    "guest.first": "اولین امضاکننده باش",
+    "guest.firstHint": "هر یادداشت ذخیره میشود و با یک کوئری صفحه‌بندی میشود.",
+    "guest.seed1": "یک داشبورد برای مشتری ساختم، در یک بعدازظهر. بدون هیچ ریپوی بک‌اند.",
+    "guest.seed2": "مسیر پروکسی با {{OPENAI_KEY}} همان چیزی بود که تیمم را قانع کرد.",
+    "poll.title": "نظرسنجی امکانات",
+    "poll.question": "چه چیزی را بعدا بسازیم؟",
+    "poll.voted": "رأیت ثبت شد",
+    "poll.votedAgain": "رأیت به‌روز شد",
+    "poll.alreadyVoted": "به‌عنوان همین بازدیدکننده قبلا رأی داده‌ای",
+    "poll.justNow": "همین الان",
+    "poll.votesLabel": "رأی",
+    "poll.leadingLabel": "صدرنشین",
+    "poll.updatedLabel": "به‌روزرسانی",
+    "poll.hint": "هر بازدیدکننده یک رأی. پلتفرم با کوکی خودش تشخیص میدهد چه کسی رای داده.",
+    "poll.footNote": "هر رأی یک سند است",
+    "poll.opt1": "اشتراک زنده",
+    "poll.opt2": "نسخه‌بندی فایل",
+    "poll.opt3": "ارسال ایمیل داخلی",
+    "common.empty": "هنوز چیزی نیست",
+  },
+} as const satisfies Record<string, Record<string, string>>;
+
+type DemoStringKey = keyof (typeof DEMO_STRINGS)["en-US"];
+
+/** Translate a demo string, falling back to English for any key Persian lacks. */
+export function demoText(locale: string, key: DemoStringKey): string {
+  const table = DEMO_STRINGS[locale as keyof typeof DEMO_STRINGS] ?? DEMO_STRINGS["en-US"];
+  return table[key as keyof typeof table] ?? DEMO_STRINGS["en-US"][key];
+}
+
+/**
+ * Fill `{{key}}` placeholders in the demo markup.
+ *
+ * The pattern is built from the *known key set*, not a loose `\{\{\w+\}\}`.
+ * The guestbook seed contains the literal `{{OPENAI_KEY}}` to show secret
+ * substitution, and a generic pattern would happily replace it with
+ * `undefined`.
+ *
+ * A replacer function, not a replacement string: the markup contains `$&` and
+ * friends inside its inline JavaScript, which `String.replace` would otherwise
+ * interpret.
+ */
+const PLACEHOLDER = new RegExp(
+  `\\{\\{(${Object.keys(DEMO_STRINGS["en-US"]).join("|")
+    .split(".")
+    .map((part) => part.replace(/\./g, "\\."))
+    .join("|")})\\}\\}`,
+  "g",
+);
+
+export function localize(markup: string, locale: string): string {
+  return markup.replace(PLACEHOLDER, (_match, key: string) =>
+    demoText(locale, key as DemoStringKey),
+  );
+}
+
 export interface DemoApp {
   id: DemoId;
   name: string;
@@ -246,26 +397,66 @@ const API_SHIM = `
 })();
 `;
 
-function head(extra: string) {
-  return `<head>\n${extra}\n<style>${BASE_CSS}</style>`;
+/**
+ * Persian typefaces for the demo document.
+ *
+ * A `srcdoc` iframe gets its own document and does not inherit the parent's
+ * `@font-face` rules, so the demo has to declare the ones it needs. The paths
+ * are absolute so they resolve against the platform host. On a custom domain
+ * they 404 and the stack falls through to the system Persian face, which is a
+ * fine degradation — the demo still works.
+ */
+const PERSIAN_FONT_CSS = `
+@font-face { font-family: "Iransans"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/iransans-regular.woff2") format("woff2"); }
+@font-face { font-family: "Iransans"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/iransans-bold.woff2") format("woff2"); }
+`;
+
+/** Right-to-left layout for the Persian document: mirror the flex/grid boxes. */
+const RTL_CSS = `
+html[dir="rtl"] .row, html[dir="rtl"] .app-head, html[dir="rtl"] .item, html[dir="rtl"] .foot,
+html[dir="rtl"] .item-body, html[dir="rtl"] .field { direction: rtl; text-align: right; }
+html[dir="rtl"] .app-sub, html[dir="rtl"] .item-meta, html[dir="rtl"] .foot { direction: ltr; text-align: right; }
+html[dir="rtl"] .foot span:first-child { direction: rtl; }
+`;
+
+function head(extra: string, locale: string) {
+  const rtl = locale === "fa-IR";
+  const extraCss = rtl ? `${PERSIAN_FONT_CSS}${RTL_CSS}` : "";
+  const fontOverride = rtl
+    ? `font-family: "Iransans", Tahoma, "Segoe UI", sans-serif;`
+    : "";
+  return `<head>\n${extra}\n<style>${BASE_CSS}${extraCss}</style>\n<style>body{${fontOverride}}</style>`;
+}
+
+/** The document attributes for a culture, for the demo's own `<html>`. */
+function htmlAttrs(locale: string): string {
+  return locale === "fa-IR" ? `lang="fa" dir="rtl"` : `lang="en" dir="ltr"`;
 }
 
 /**
  * The exact file that belongs in a project: complete, standalone and styled.
  * This is what the console writes when a visitor keeps the demo app.
+ *
+ * A replacer function, not a replacement string: the payload contains `$'`
+ * and similar sequences that `String.replace` would otherwise treat as
+ * patterns.
  */
-export function demoFile(demo: DemoApp) {
-  // A replacer function, not a string: the payload contains `$'` and similar
-  // sequences that `String.replace` would otherwise treat as patterns.
-  return demo.html.replace("<head>", () => head(""));
+export function demoFile(demo: DemoApp, locale = "en-US") {
+  return localize(demo.html, locale)
+    .replace("<head>", () => head("", locale))
+    .replace(/<html [^>]*>/, () => `<html ${htmlAttrs(locale)}>`);
 }
 
 /** The sandboxed document: the same file plus a seed and the simulated API. */
-function buildDocument(demo: DemoApp) {
+function buildDocument(demo: DemoApp, locale: string) {
   const injected =
-    `<script>window.__LOCALME_SEED__ = ${JSON.stringify(seedFor(demo.id))};</script>\n` +
+    `<script>window.__LOCALME_SEED__ = ${JSON.stringify(seedFor(demo.id, locale))};</script>\n` +
     `<script>${API_SHIM}</script>`;
-  return demo.html.replace("<head>", () => head(injected));
+  return localize(demo.html, locale)
+    .replace("<head>", () => head(injected, locale))
+    .replace(/<html [^>]*>/, () => `<html ${htmlAttrs(locale)}>`);
 }
 
 /** The demo apps, in the order the landing page offers them. */
@@ -284,32 +475,32 @@ export const DEMOS: DemoApp[] = [
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tasks</title>
+<title>{{todo.title}}</title>
 </head>
 <body>
 <div class="app">
   <header class="app-head">
     <div>
-      <h1 class="app-title">Today</h1>
+      <h1 class="app-title">{{todo.heading}}</h1>
       <p class="app-sub">table: todos</p>
     </div>
-    <span class="pill"><i class="dot" id="status"></i><span id="status-text">ready</span></span>
+    <span class="pill"><i class="dot" id="status"></i><span id="status-text">{{todo.ready}}</span></span>
   </header>
   <div class="body">
     <form class="row" id="form">
-      <input class="field" id="text" placeholder="What needs doing?" autocomplete="off" aria-label="New task">
-      <button class="btn btn-primary" type="submit">Add</button>
+      <input class="field" id="text" placeholder="{{todo.placeholder}}" autocomplete="off" aria-label="{{todo.newTask}}">
+      <button class="btn btn-primary" type="submit">{{todo.add}}</button>
     </form>
-    <div class="chips" role="group" aria-label="Filter">
-      <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
-      <button class="chip" type="button" data-filter="open" aria-pressed="false">Open</button>
-      <button class="chip" type="button" data-filter="done" aria-pressed="false">Done</button>
+    <div class="chips" role="group" aria-label="{{todo.filter}}">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">{{todo.all}}</button>
+      <button class="chip" type="button" data-filter="open" aria-pressed="false">{{todo.open}}</button>
+      <button class="chip" type="button" data-filter="done" aria-pressed="false">{{todo.done}}</button>
     </div>
     <ul class="list" id="list"></ul>
   </div>
-  <div class="foot"><span id="count">0 tasks</span><span>GET /api/db/find</span></div>
+  <div class="foot"><span id="count">0 {{todo.countSuffix}}</span><span>GET /api/db/find</span></div>
 </div>
-<div class="toast" id="toast">Saved</div>
+<div class="toast" id="toast">{{todo.saved}}</div>
 <script>
 (function () {
   var seed = window.__LOCALME_SEED__ || { todos: [] };
@@ -320,7 +511,7 @@ export const DEMOS: DemoApp[] = [
   function setBusy(busy) {
     state.busy = busy;
     document.getElementById('status').className = 'dot' + (busy ? ' busy' : '');
-    document.getElementById('status-text').textContent = busy ? 'request…' : 'ready';
+    document.getElementById('status-text').textContent = busy ? '{{todo.busy}}' : '{{todo.ready}}';
   }
   function api(action, body) {
     setBusy(true);
@@ -336,21 +527,21 @@ export const DEMOS: DemoApp[] = [
     var visible = rows.filter(function (row) { return state.filter === 'all' || (state.filter === 'done') === !!row.done; });
     list.innerHTML = '';
     if (!visible.length) {
-      list.innerHTML = '<li class="empty"><strong>Nothing here yet</strong>Add your first task above — it is a single POST to /api/db/insert.</li>';
+      list.innerHTML = '<li class="empty"><strong>{{todo.empty}}</strong>{{todo.emptyHint}}</li>';
     }
     visible.forEach(function (row) {
       var li = document.createElement('li');
       li.className = 'item';
-      li.innerHTML = '<button class="check" role="checkbox" aria-checked="' + (row.done ? 'true' : 'false') + '" aria-label="Toggle"><span>✓</span></button>' +
+      li.innerHTML = '<button class="check" role="checkbox" aria-checked="' + (row.done ? 'true' : 'false') + '" aria-label="{{todo.toggle}}"><span>✓</span></button>' +
         '<div class="item-body"><div class="item-title' + (row.done ? ' done' : '') + '"></div><div class="item-meta"></div></div>' +
-        '<button class="btn-icon" aria-label="Delete">✕</button>';
+        '<button class="btn-icon" aria-label="{{todo.delete}}">✕</button>';
       li.querySelector('.item-title').textContent = row.text;
       li.querySelector('.item-meta').textContent = 'id ' + row.id;
       li.querySelector('.check').addEventListener('click', function () {
         api('update', { table: 'todos', filter: { id: row.id }, update: { done: !row.done }, many: false }).then(load);
       });
       li.querySelector('.btn-icon').addEventListener('click', function () {
-        api('delete', { table: 'todos', filter: { id: row.id } }).then(function () { toast('Deleted'); load(); });
+        api('delete', { table: 'todos', filter: { id: row.id } }).then(function () { toast('{{todo.deleted}}'); load(); });
       });
       list.appendChild(li);
     });
@@ -368,7 +559,7 @@ export const DEMOS: DemoApp[] = [
     input.value = '';
     api('insert', { table: 'todos', document: { id: 'task-' + Date.now(), text: text, done: false, createdAt: new Date().toISOString() } })
       .then(function (result) {
-        if (result.status !== 201 && result.status !== 200) toast(result.payload.error || 'Insert failed');
+        if (result.status !== 201 && result.status !== 200) toast(result.payload.error || '{{todo.insertFailed}}');
         return load();
       });
   });
@@ -402,36 +593,36 @@ export const DEMOS: DemoApp[] = [
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Guestbook</title>
+<title>{{guest.title}}</title>
 </head>
 <body>
 <div class="app">
   <header class="app-head">
     <div>
-      <h1 class="app-title">Guestbook</h1>
+      <h1 class="app-title">{{guest.heading}}</h1>
       <p class="app-sub">table: entries</p>
     </div>
-    <span class="pill"><i class="dot" id="status"></i><span id="status-text">ready</span></span>
+    <span class="pill"><i class="dot" id="status"></i><span id="status-text">{{todo.ready}}</span></span>
   </header>
   <div class="body">
     <form class="stack" id="form">
-      <input class="field" id="name" placeholder="Your name" autocomplete="name" aria-label="Your name">
-      <textarea class="field" id="message" rows="2" placeholder="Leave a note for the team" aria-label="Message"
+      <input class="field" id="name" placeholder="{{guest.name}}" autocomplete="name" aria-label="{{guest.name}}">
+      <textarea class="field" id="message" rows="2" placeholder="{{guest.note}}" aria-label="{{guest.note}}"
         style="resize:vertical; min-height:60px; font-family:inherit;"></textarea>
-      <button class="btn btn-primary" type="submit">Sign the guestbook</button>
+      <button class="btn btn-primary" type="submit">{{guest.sign}}</button>
     </form>
     <ul class="list" id="list"></ul>
   </div>
   <div class="foot"><span id="count">0 entries</span><span>POST /api/db/insert</span></div>
 </div>
-<div class="toast" id="toast">Saved</div>
+<div class="toast" id="toast">{{guest.saved}}</div>
 <script>
 (function () {
   var list = document.getElementById('list');
   function toast(text) { var node = document.getElementById('toast'); node.textContent = text; node.classList.add('on'); setTimeout(function () { node.classList.remove('on'); }, 1200); }
   function setBusy(busy) {
     document.getElementById('status').className = 'dot' + (busy ? ' busy' : '');
-    document.getElementById('status-text').textContent = busy ? 'request…' : 'ready';
+    document.getElementById('status-text').textContent = busy ? '{{todo.busy}}' : '{{todo.ready}}';
   }
   function api(action, body) {
     setBusy(true);
@@ -449,16 +640,16 @@ export const DEMOS: DemoApp[] = [
   function render(rows) {
     list.innerHTML = '';
     if (!rows.length) {
-      list.innerHTML = '<li class="empty"><strong>Be the first to sign</strong>Every entry is one document in the entries table.</li>';
+      list.innerHTML = '<li class="empty"><strong>{{guest.first}}</strong>{{guest.firstHint}}</li>';
     }
     rows.forEach(function (row) {
       var li = document.createElement('li');
       li.className = 'item';
-      li.innerHTML = '<div class="item-body"><div class="item-title"></div><div class="item-meta"></div></div><button class="btn-icon" aria-label="Delete entry">✕</button>';
+      li.innerHTML = '<div class="item-body"><div class="item-title"></div><div class="item-meta"></div></div><button class="btn-icon" aria-label="{{todo.delete}}">✕</button>';
       li.querySelector('.item-title').textContent = row.message;
       li.querySelector('.item-meta').textContent = row.name + ' · ' + ago(row.createdAt);
       li.querySelector('.btn-icon').addEventListener('click', function () {
-        api('delete', { table: 'entries', filter: { id: row.id } }).then(function () { toast('Removed'); load(); });
+        api('delete', { table: 'entries', filter: { id: row.id } }).then(function () { toast('{{todo.deleted}}'); load(); });
       });
       list.appendChild(li);
     });
@@ -476,7 +667,7 @@ export const DEMOS: DemoApp[] = [
     api('insert', {
       table: 'entries',
       document: { id: 'entry-' + Date.now(), name: name.value.trim() || 'Anonymous', message: message.value.trim(), createdAt: new Date().toISOString() }
-    }).then(function () { message.value = ''; toast('Thanks!'); return load(); });
+    }).then(function () { message.value = ''; toast('{{guest.saved}}'); return load(); });
   });
   load();
 })();
@@ -498,37 +689,37 @@ export const DEMOS: DemoApp[] = [
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Feature poll</title>
+<title>{{poll.title}}</title>
 </head>
 <body>
 <div class="app">
   <header class="app-head">
     <div>
-      <h1 class="app-title">What should we ship next?</h1>
+      <h1 class="app-title">{{poll.question}}</h1>
       <p class="app-sub">table: votes</p>
     </div>
-    <span class="pill"><i class="dot" id="status"></i><span id="status-text">ready</span></span>
+    <span class="pill"><i class="dot" id="status"></i><span id="status-text">{{todo.ready}}</span></span>
   </header>
   <div class="body">
     <div class="options" id="options"></div>
     <div class="kv">
-      <div><b id="total">0</b><span>votes</span></div>
-      <div><b id="leader">—</b><span>leading</span></div>
-      <div><b id="updated">now</b><span>updated</span></div>
+      <div><b id="total">0</b><span>{{poll.votesLabel}}</span></div>
+      <div><b id="leader">—</b><span>{{poll.leadingLabel}}</span></div>
+      <div><b id="updated">now</b><span>{{poll.updatedLabel}}</span></div>
     </div>
-    <p class="app-sub" style="margin-top:14px">One vote per visitor, tracked by the platform's visitor cookie.</p>
+    <p class="app-sub" style="margin-top:14px">{{poll.hint}}</p>
   </div>
-  <div class="foot"><span id="query">GET /api/db/find</span><span>vote stored as a document</span></div>
+  <div class="foot"><span id="query">GET /api/db/find</span><span>{{poll.footNote}}</span></div>
 </div>
-<div class="toast" id="toast">Vote recorded</div>
+<div class="toast" id="toast">{{poll.voted}}</div>
 <script>
 (function () {
-  var OPTIONS = ['Realtime subscriptions', 'File versioning', 'Built-in email'];
+  var OPTIONS = ['{{poll.opt1}}', '{{poll.opt2}}', '{{poll.opt3}}'];
   var voted = null;
   function toast(text) { var node = document.getElementById('toast'); node.textContent = text; node.classList.add('on'); setTimeout(function () { node.classList.remove('on'); }, 1200); }
   function setBusy(busy) {
     document.getElementById('status').className = 'dot' + (busy ? ' busy' : '');
-    document.getElementById('status-text').textContent = busy ? 'request…' : 'ready';
+    document.getElementById('status-text').textContent = busy ? '{{todo.busy}}' : '{{todo.ready}}';
   }
   function api(action, body) {
     setBusy(true);
@@ -550,7 +741,7 @@ export const DEMOS: DemoApp[] = [
     var leader = OPTIONS.slice().sort(function (a, b) { return counts[b] - counts[a]; })[0];
     document.getElementById('total').textContent = String(total);
     document.getElementById('leader').textContent = total ? leader.split(' ')[0] : '—';
-    document.getElementById('updated').textContent = 'just now';
+    document.getElementById('updated').textContent = '{{poll.justNow}}';
     var container = document.getElementById('options');
     container.innerHTML = '';
     OPTIONS.forEach(function (option) {
@@ -563,10 +754,10 @@ export const DEMOS: DemoApp[] = [
         '<span class="option-label"></span><span class="option-count">' + counts[option] + ' · ' + share + '%</span>';
       button.querySelector('.option-label').textContent = option;
       button.addEventListener('click', function () {
-        if (voted) { toast('Already voted as this visitor'); return; }
+        if (voted) { toast('{{poll.alreadyVoted}}'); return; }
         voted = option;
         api('insert', { table: 'votes', document: { id: 'vote-' + Date.now(), option: option, createdAt: new Date().toISOString() } })
-          .then(function () { toast('Vote recorded'); return load(); });
+          .then(function () { toast('{{poll.voted}}'); return load(); });
       });
       container.appendChild(button);
     });
@@ -584,14 +775,14 @@ export const DEMOS: DemoApp[] = [
 ];
 
 /** Seed rows injected into the sandbox so demos never start empty. */
-function seedFor(id: DemoId) {
+function seedFor(id: DemoId, locale: string) {
   const now = Date.now();
   if (id === "todo") {
     return {
       todos: [
-        { id: "task-1", text: "Wire up the task list", done: true, createdAt: new Date(now - 900_000).toISOString(), _localme: {} },
-        { id: "task-2", text: "Point a custom domain at it", done: false, createdAt: new Date(now - 600_000).toISOString(), _localme: {} },
-        { id: "task-3", text: "Invite a teammate as Member", done: false, createdAt: new Date(now - 300_000).toISOString(), _localme: {} },
+        { id: "task-1", text: demoText(locale, "todo.seed1"), done: true, createdAt: new Date(now - 900_000).toISOString(), _localme: {} },
+        { id: "task-2", text: demoText(locale, "todo.seed2"), done: false, createdAt: new Date(now - 600_000).toISOString(), _localme: {} },
+        { id: "task-3", text: demoText(locale, "todo.seed3"), done: false, createdAt: new Date(now - 300_000).toISOString(), _localme: {} },
       ],
     };
   }
@@ -601,14 +792,14 @@ function seedFor(id: DemoId) {
         {
           id: "entry-1",
           name: "Priya",
-          message: "Shipped a customer dashboard in an afternoon. No backend repo at all.",
+          message: demoText(locale, "guest.seed1"),
           createdAt: new Date(now - 1_800_000).toISOString(),
           _localme: {},
         },
         {
           id: "entry-2",
           name: "Sam",
-          message: "The proxy route with {{OPENAI_KEY}} is the part that sold my team.",
+          message: demoText(locale, "guest.seed2"),
           createdAt: new Date(now - 420_000).toISOString(),
           _localme: {},
         },
@@ -616,9 +807,9 @@ function seedFor(id: DemoId) {
     };
   }
   const votes = [
-    { option: "Realtime subscriptions", n: 7 },
-    { option: "File versioning", n: 4 },
-    { option: "Built-in email", n: 5 },
+    { option: demoText(locale, "poll.opt1"), n: 7 },
+    { option: demoText(locale, "poll.opt2"), n: 4 },
+    { option: demoText(locale, "poll.opt3"), n: 5 },
   ];
   const rows: Record<string, unknown>[] = [];
   votes.forEach((vote, index) => {
@@ -635,8 +826,8 @@ function seedFor(id: DemoId) {
 }
 
 /** Full `srcdoc` document for the sandboxed demo iframe. */
-export function demoDocument(demo: DemoApp) {
-  return buildDocument(demo);
+export function demoDocument(demo: DemoApp, locale = "en-US") {
+  return buildDocument(demo, locale);
 }
 
 export function getDemo(id: string | null | undefined) {

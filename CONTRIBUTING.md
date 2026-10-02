@@ -65,6 +65,30 @@ A change that only passes one dialect is a bug, not a platform limitation.
   strip the `file:/` prefix itself and drifted from `resolveDriver`; the two then
   opened different databases with no error anywhere. Environment parsing that
   both the app and a script depend on belongs in one shared module.
+- **No user-visible string in a component.** Every one is a key in
+  `lib/i18n/messages/*`, with a value for every culture. A hard-coded English
+  sentence in JSX is a bug, not a TODO: it is invisible to an operator and it
+  ships to every Persian reader. Declare a group with
+  `export const x = { ... } satisfies MessageGroup` — as a *satisfies* target,
+  never as a declared type, so `MessageKey` stays a literal union and a renamed
+  key is a build error.
+- **No culture logic in a component either.** Numbers, byte counts, dates and
+  relative times go through `useI18n().fmt`, not `toLocaleString`, not
+  `Intl.DateTimeFormat`, not a hand-rolled `formatBytes`. `fmt` is bound to a
+  `t()`, so a unit in Persian ("مگابایت") is an editable catalog entry.
+- **Logical properties, not physical ones.** `ms-*` / `pe-*` / `text-end` /
+  `paddingInlineStart`, never `ml-*` / `pr-*` / `text-right` / `paddingLeft`.
+  Directional icons take `rtl-flip`; identifiers, paths, monospace and code
+  spans take `ltr-content`; fields a user types a URL into take `ltr-input`.
+  Identifiers and file contents stay left-to-right in a Persian paragraph —
+  a JSON body and an API path are not Persian text.
+- **Day-keyed data is compared as `YYYY-MM-DD` strings.** `new Date(s)` on a
+  bare date string is UTC midnight, which reads back as the previous day
+  anywhere west of Greenwich. Use `lib/i18n`'s `parseIsoDay` when you need a
+  `Date`, and `fmt.isoDate` / `fmt.isoMonth` when you only need to print one.
+- **The calendar is computed, never re-skinned.** Do not format a Gregorian date
+  with translated labels; `fmt` does the Shamsi conversion in `lib/jalali.ts`
+  and that is the only place that calendar is implemented.
 
 ## Before you open a pull request
 

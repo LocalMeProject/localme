@@ -3,6 +3,7 @@ import { Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 export function JsonField({
@@ -23,15 +24,16 @@ export function JsonField({
   className?: string;
 }) {
   const [touched, setTouched] = useState(false);
+  const { t } = useI18n();
   const error = useMemo(() => {
     if (!value.trim()) return null;
     try {
       JSON.parse(value);
       return null;
     } catch (parseError) {
-      return parseError instanceof Error ? parseError.message : "Invalid JSON";
+      return parseError instanceof Error ? parseError.message : t("error.invalidJson");
     }
-  }, [value]);
+  }, [t, value]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -42,7 +44,7 @@ export function JsonField({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-[11px]"
+            className="h-6 px-2 text-11px"
             onClick={() => {
               try {
                 onChange(JSON.stringify(JSON.parse(value), null, 2));
@@ -53,7 +55,7 @@ export function JsonField({
             }}
           >
             <Wand2 className="h-3 w-3" />
-            Format
+            {t("jsonField.format")}
           </Button>
         </div>
       )}
@@ -66,12 +68,12 @@ export function JsonField({
           onChange(event.target.value);
           setTouched(true);
         }}
-        className="font-mono text-[12.5px] leading-5"
+        className="ltr-content font-mono text-12.5px leading-5"
       />
       {error && touched ? (
-        <p className="font-mono text-[11px] text-destructive">{error}</p>
+        <p className="font-mono text-11px text-destructive">{error}</p>
       ) : (
-        hint && <p className="text-[11px] text-muted-foreground">{hint}</p>
+        hint && <p className="text-11px text-muted-foreground">{hint}</p>
       )}
     </div>
   );

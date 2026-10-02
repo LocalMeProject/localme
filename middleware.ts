@@ -11,10 +11,22 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Platform reserved prefixes never treated as project serving (docs §3.3.3). */
-const RESERVED_PREFIXES = [
+/**
+ * Platform reserved prefixes never treated as project serving (docs §3.3.3).
+ *
+ * Exported so `tests/server/serving.test.ts` can assert the `matcher` regex
+ * stays in step with it — the two are separate mechanisms and a prefix added
+ * to one but not the other is silently swallowed.
+ */
+export const RESERVED_PREFIXES = [
   "/api", "/auth", "/admin", "/dashboard", "/account", "/library", "/health",
   "/~public", "/~serving", "/_next", "/docs", "/favicon.ico",
+  // The platform's own web fonts (public/fonts/*.woff2). Without this,
+  // /fonts/iransans-regular.woff2 parses as user="fonts",
+  // project="iransans-regular.woff2" and gets rewritten to the serving
+  // route, which 404s — every Persian page would silently fall back to a
+  // system font.
+  "/fonts",
 ];
 
 /**
@@ -61,8 +73,20 @@ export const config = {
   // `~serving` is this file's own rewrite target: excluding it keeps the
   // internal route from being re-entered (and reached directly) by a request
   // for /~serving/... on the platform host.
-  matcher: ["/((?!api|auth|admin|dashboard|account|library|health|~public|~serving|_next|docs).*)"],
+  //
+  // Everything in `RESERVED_PREFIXES` must also appear in this lookahead. The
+  // matcher is a regex and the prefix list is a prefix test; keeping them in
+  // step by hand is how `/fonts/*.woff2` ends up rewritten to the serving
+  // route and 404s. `tests/server/middleware-prefixes.test.ts` asserts they
+  // agree.
+  matcher: [
+    "/((?!api|auth|admin|dashboard|account|library|health|~public|~serving|_next|docs|favicon.ico|fonts).*)",
+  ],
 };
+
+/** The compiled matcher, for tests that need to ask "does this path run middleware?". */
+export const MATCHER_PATTERN =
+  /^\/((?!api|auth|admin|dashboard|account|library|health|~public|~serving|_next|docs|favicon.ico|fonts).*)$/;
 
 /**
  * ACME HTTP-01 validation (Blueprint §5.6 step 5) must reach the platform on
