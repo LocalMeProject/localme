@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolvePrincipal } from "@/lib/server/api-auth";
-import { MCP_TOOLS, DOC_TOPICS, executeMcpTool } from "@/lib/server/mcp";
+import {
+  MCP_TOOLS,
+  MCP_PROMPTS,
+  MCP_RESOURCE_TEMPLATES,
+  DOC_TOPICS,
+  executeMcpTool,
+  executeMcpPrompt,
+} from "@/lib/server/mcp";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
@@ -35,13 +42,17 @@ async function handleRpcMethod(
           result: {
             protocolVersion: "2024-11-05",
             capabilities: {
-              tools: {},
-              resources: {},
+              tools: { listChanged: false },
+              resources: { subscribe: false, listChanged: false },
+              prompts: { listChanged: false },
+              logging: {},
             },
             serverInfo: {
               name: "localme-mcp",
               version: "1.0.0",
             },
+            instructions:
+              "LocalMe Model Context Protocol (MCP) server enables autonomous management of projects, static file hosting, document databases, routes/proxies, and official platform documentation.",
           },
         };
       }
@@ -53,7 +64,15 @@ async function handleRpcMethod(
         return { jsonrpc: "2.0", id, result: {} };
       }
 
+      case "notifications/cancelled": {
+        return null;
+      }
+
       case "ping": {
+        return { jsonrpc: "2.0", id, result: {} };
+      }
+
+      case "logging/setLevel": {
         return { jsonrpc: "2.0", id, result: {} };
       }
 
@@ -78,6 +97,16 @@ async function handleRpcMethod(
           jsonrpc: "2.0",
           id,
           result: { resources },
+        };
+      }
+
+      case "resources/templates/list": {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resourceTemplates: MCP_RESOURCE_TEMPLATES,
+          },
         };
       }
 
@@ -111,25 +140,73 @@ async function handleRpcMethod(
         };
       }
 
+      case "prompts/list": {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            prompts: MCP_PROMPTS,
+          },
+        };
+      }
+
+      case "prompts/get": {
+        const name = String(rpc.params?.name || "");
+        const args = (rpc.params?.arguments as Record<string, string>) || {};
+        try {
+          const prompt = executeMcpPrompt(name, args);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: prompt,
+          };
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32602,
+              message: err instanceof Error ? err.message : String(err),
+            },
+          };
+        }
+      }
+
       case "tools/call": {
         const toolName = String(rpc.params?.name || "");
         const toolArgs = (rpc.params?.arguments as Record<string, unknown>) || {};
 
         // Docs can be read anonymously
         if (toolName === "localme_get_docs") {
-          const res = await executeMcpTool(0, toolName, toolArgs);
-          return {
-            jsonrpc: "2.0",
-            id,
-            result: {
-              content: [
-                {
-                  type: "text",
-                  text: typeof res === "string" ? res : JSON.stringify(res, null, 2),
-                },
-              ],
-            },
-          };
+          try {
+            const res = await executeMcpTool(0, toolName, toolArgs);
+            return {
+              jsonrpc: "2.0",
+              id,
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: typeof res === "string" ? res : JSON.stringify(res, null, 2),
+                  },
+                ],
+              },
+            };
+          } catch (err) {
+            return {
+              jsonrpc: "2.0",
+              id,
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: `Tool error: ${err instanceof Error ? err.message : String(err)}`,
+                  },
+                ],
+                isError: true,
+              },
+            };
+          }
         }
 
         // All other tools require authentication
@@ -212,6 +289,7 @@ export async function GET(): Promise<NextResponse> {
     description: "LocalMe Model Context Protocol endpoint. Send JSON-RPC 2.0 POST requests to interact.",
     toolsCount: MCP_TOOLS.length,
     resourcesCount: Object.keys(DOC_TOPICS).length,
+    promptsCount: MCP_PROMPTS.length,
   });
 }
 
@@ -247,7 +325,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (body && typeof body === "object" && "method" in body) {
     const response = await handleRpcMethod(request, body as JsonRpcRequest);
     if (!response) {
-      // Notification handled with 204
+      // Notification handled with 204 No Content
       return new NextResponse(null, { status: 204 });
     }
     return NextResponse.json(response);

@@ -2,7 +2,7 @@
 /**
  * LocalMe Stdio MCP Server Bridge
  *
- * Exposes LocalMe tools and docs over standard input/output (stdio JSON-RPC 2.0).
+ * Exposes LocalMe tools, resources, and prompts over standard input/output (stdio JSON-RPC 2.0).
  * Connects to a running LocalMe instance (local or remote on Runflare).
  *
  * Usage:
@@ -19,15 +19,17 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === "--url" && args[i + 1]) {
     serverUrl = args[i + 1];
     i++;
-  } else if (args[i] === "--key" && args[i + 1]) {
+  } else if ((args[i] === "--key" || args[i] === "--api-key") && args[i + 1]) {
     apiKey = args[i + 1];
     i++;
   } else if (args[i] === "--help" || args[i] === "-h") {
     process.stderr.write(
-      "LocalMe MCP stdio server\n" +
+      "LocalMe Model Context Protocol (MCP) stdio server bridge\n\n" +
       "Flags:\n" +
-      "  --url <url>   LocalMe base URL (default: http://localhost:3000 or $LOCALME_URL)\n" +
-      "  --key <key>   User API Key (or $LOCALME_API_KEY)\n"
+      "  --url <url>        LocalMe base URL (default: http://localhost:3000 or $LOCALME_URL)\n" +
+      "  --key <key>        User API Key (or $LOCALME_API_KEY)\n" +
+      "  --help, -h         Show help\n\n" +
+      "Protocol: MCP 2024-11-05 (JSON-RPC 2.0 over stdio)\n"
     );
     process.exit(0);
   }
@@ -50,7 +52,10 @@ rl.on("line", async (line) => {
     const payload = JSON.parse(trimmed);
     requestId = payload.id ?? null;
 
-    const headers = { "Content-Type": "application/json" };
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
     if (apiKey) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
@@ -80,4 +85,12 @@ rl.on("line", async (line) => {
   }
 });
 
-process.stderr.write(`[localme-mcp] Bridge listening on stdio -> forwarding to ${serverUrl}/api/mcp\n`);
+process.on("SIGINT", () => {
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  process.exit(0);
+});
+
+process.stderr.write(`[localme-mcp] Bridge active (MCP 2024-11-05) -> forwarding to ${serverUrl}/api/mcp\n`);

@@ -265,6 +265,124 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
 ];
 
+export interface McpPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+export interface McpPromptDefinition {
+  name: string;
+  description: string;
+  arguments?: McpPromptArgument[];
+}
+
+export const MCP_PROMPTS: McpPromptDefinition[] = [
+  {
+    name: "deploy-static-site",
+    description: "Step-by-step workflow to create a project, configure routes, and upload static site files.",
+    arguments: [
+      { name: "projectName", description: "Name of the project to create", required: true },
+      { name: "indexHtml", description: "Main HTML content to upload to index.html", required: true },
+      { name: "stylesCss", description: "Optional CSS styles to upload", required: false },
+    ],
+  },
+  {
+    name: "manage-document-db",
+    description: "Workflow to explore, query, and insert records into a project document database.",
+    arguments: [
+      { name: "projectId", description: "ID of the target project", required: true },
+      { name: "table", description: "Target collection/table name", required: true },
+    ],
+  },
+  {
+    name: "configure-reverse-proxy",
+    description: "Workflow to route incoming paths to an external upstream service.",
+    arguments: [
+      { name: "projectId", description: "Target project ID", required: true },
+      { name: "pathPattern", description: "Path pattern (e.g. /api/*)", required: true },
+      { name: "proxyTarget", description: "Target upstream URL (e.g. https://httpbin.org/anything)", required: true },
+    ],
+  },
+];
+
+export const MCP_RESOURCE_TEMPLATES = [
+  {
+    uriTemplate: "localme://docs/{topic}",
+    name: "LocalMe Documentation Topic",
+    description: "Read documentation for overview, api, database, files, routes, cron, webhooks, subscriptions, runflare",
+    mimeType: "text/markdown",
+  },
+];
+
+export function executeMcpPrompt(
+  promptName: string,
+  args: Record<string, string> = {},
+): { description: string; messages: Array<{ role: "user"; content: { type: "text"; text: string } }> } {
+  switch (promptName) {
+    case "deploy-static-site": {
+      const proj = args.projectName || "my-web-app";
+      return {
+        description: "Deploy a static website on LocalMe",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Please deploy a static web application to LocalMe with the following steps:
+1. Create a project named "${proj}" using \`localme_create_project\`.
+2. Upload the HTML file to "index.html" using \`localme_write_file\`.
+3. If CSS is provided, upload it using \`localme_write_file\`.
+4. Create a default route for "/" mapping to "index.html" using \`localme_create_route\`.
+5. Verify the files with \`localme_list_files\` and return the live URL.`,
+            },
+          },
+        ],
+      };
+    }
+    case "manage-document-db": {
+      const pId = args.projectId || "1";
+      const tbl = args.table || "items";
+      return {
+        description: "Explore and manage LocalMe document database",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Please inspect the document collection "${tbl}" for project #${pId}:
+1. Use \`localme_db_query\` with project #${pId} and table "${tbl}" to inspect existing records.
+2. If new records need to be added, use \`localme_db_insert\`.
+3. Report the result clearly.`,
+            },
+          },
+        ],
+      };
+    }
+    case "configure-reverse-proxy": {
+      const pId = args.projectId || "1";
+      const pattern = args.pathPattern || "/api/*";
+      const target = args.proxyTarget || "https://httpbin.org/anything";
+      return {
+        description: "Configure reverse proxy rule on LocalMe",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Please configure a reverse proxy route for project #${pId}:
+1. Use \`localme_create_route\` with projectId=${pId}, pathPattern="${pattern}", isProxy=true, proxyTarget="${target}".
+2. Verify existing routes using \`localme_list_routes\`.`,
+            },
+          },
+        ],
+      };
+    }
+    default:
+      throw new ApiError("not_found", `Prompt '${promptName}' not found.`);
+  }
+}
+
 export const DOC_TOPICS: Record<string, string> = {
   overview: `# LocalMe Platform Architecture Overview
 LocalMe is an all-in-one local & cloud hosting platform designed for simplicity and autonomous developer operations.

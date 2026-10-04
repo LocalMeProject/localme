@@ -17,10 +17,15 @@ export const DEFAULT_IMAGE = "/og.png";
  * production; dev falls back to localhost.
  */
 export function siteOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const configured =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.SITE_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return "https://localme.ir";
   }
   return "http://localhost:3000";
 }

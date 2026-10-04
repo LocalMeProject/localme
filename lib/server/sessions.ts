@@ -169,14 +169,23 @@ export async function getSessionUser(): Promise<{
   impersonatedBy?: string;
 } | null> {
   let sessionId: string | null = null;
+  let rawCookie: string | undefined;
   try {
     const store = await cookies();
-    sessionId = await unpack(store.get(SESSION_COOKIE)?.value);
-  } catch {
-    // `cookies()` throws outside a request scope (static rendering, tests); no session.
+    rawCookie = store.get(SESSION_COOKIE)?.value;
+    sessionId = await unpack(rawCookie);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[session] Failed to read cookies:", err);
+    }
     return null;
   }
-  if (!sessionId) return null;
+  if (!sessionId) {
+    if (rawCookie && process.env.NODE_ENV !== "test") {
+      console.warn("[session] Session cookie present but signature failed verification.");
+    }
+    return null;
+  }
 
   const db = getDb();
   const p = db.driver;
@@ -189,7 +198,18 @@ export async function getSessionUser(): Promise<{
   );
 
   const row = rows[0];
-  if (!row || toBool(row.is_suspended)) return null;
+  if (!row) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn(`[session] No active session found in DB for session_id: ${sessionId.slice(0, 8)}…`);
+    }
+    return null;
+  }
+  if (toBool(row.is_suspended)) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn(`[session] User ${row.username} is suspended.`);
+    }
+    return null;
+  }
   const data = await readSessionData(sessionId);
 
   // Slide the idle window on activity.

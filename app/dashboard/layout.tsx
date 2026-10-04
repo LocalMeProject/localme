@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import DashboardShell from "./dashboard-shell";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Server-side gate for the console.
  *

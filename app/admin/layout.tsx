@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { PlatformHeader } from "@/components/platform-header";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Server-side gate and chrome for the operator console.
  *

@@ -256,6 +256,7 @@ export default function AdminPage() {
   const [isSeedingSetup, setIsSeedingSetup] = useState(false);
   const [seedDemoOption, setSeedDemoOption] = useState(true);
   const [seedExamplesOption, setSeedExamplesOption] = useState(true);
+  const [merchantIdInput, setMerchantIdInput] = useState<string>("");
 
   const loadSidePanels = useCallback(async () => {
     const [statsRes, overviewRes, configRes, cronRes, libraryRes, subRes, sysRes, plansRes, setupRes] = await Promise.all([
@@ -273,6 +274,9 @@ export default function AdminPage() {
     setOverview(overviewRes);
     setConfigs(configRes.data);
     setDefaults(configRes.defaults);
+    if (typeof configRes.data["zarinpal.merchant_id"] === "string") {
+      setMerchantIdInput(configRes.data["zarinpal.merchant_id"] as string);
+    }
     setCronTasks(cronRes.data);
     setPublicAssets(libraryRes.data);
     if (subRes?.data) {
@@ -1132,6 +1136,36 @@ export default function AdminPage() {
 
         {/* -------------------------------------------------- subscriptions */}
         <TabsContent value="subscriptions" className="space-y-6">
+          {/* ZarinPal Gateway Settings */}
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">{locale === "fa-IR" ? "تنظیمات درگاه پرداخت زرین‌پال" : "ZarinPal Payment Gateway Configuration"}</div>
+                <div className="mt-0.5 text-12.5px text-muted-foreground">
+                  {locale === "fa-IR" ? "شناسه مرچنت زرین‌پال نسخه ۴ جهت پرداخت آنلاین پلن‌های پلاس و پرو" : "ZarinPal v4 Merchant ID for online tier purchases"}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!isViewerAdmin}
+                onClick={() => void saveConfig("zarinpal.merchant_id", merchantIdInput.trim())}
+              >
+                {locale === "fa-IR" ? "ذخیره شناسه مرچنت" : "Save Merchant ID"}
+              </Button>
+            </div>
+            <div className="p-5 max-w-lg space-y-2">
+              <Label className="text-12px">{locale === "fa-IR" ? "شناسه مرچنت (UUID ۳۶ کاراکتری)" : "Merchant ID (36-character UUID)"}</Label>
+              <Input
+                type="text"
+                placeholder="00000000-0000-0000-0000-000000000000"
+                value={merchantIdInput}
+                onChange={(e) => setMerchantIdInput(e.target.value)}
+                className="font-mono text-12.5px"
+              />
+            </div>
+          </div>
+
           {/* Subscription Plans Tier Editor */}
           <div className="panel overflow-hidden">
             <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">

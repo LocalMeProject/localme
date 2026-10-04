@@ -84,4 +84,62 @@ describe("Model Context Protocol (MCP) Server", () => {
     expect(data.result.isError).toBe(true);
     expect(data.result.content[0].text).toContain("Authentication error");
   });
+
+  it("handles prompts/list and prompts/get", async () => {
+    const listReq = new NextRequest("http://localhost:3000/api/mcp", {
+      method: "POST",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "prompts/list",
+      }),
+    });
+    const listRes = await POST(listReq);
+    const listData = await listRes.json();
+    expect(listData.result.prompts.length).toBeGreaterThanOrEqual(3);
+
+    const getReq = new NextRequest("http://localhost:3000/api/mcp", {
+      method: "POST",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 6,
+        method: "prompts/get",
+        params: {
+          name: "deploy-static-site",
+          arguments: { projectName: "my-portfolio" },
+        },
+      }),
+    });
+    const getRes = await POST(getReq);
+    const getData = await getRes.json();
+    expect(getData.result.description).toBe("Deploy a static website on LocalMe");
+    expect(getData.result.messages[0].content.text).toContain("my-portfolio");
+  });
+
+  it("handles resources/templates/list and ping", async () => {
+    const tmplReq = new NextRequest("http://localhost:3000/api/mcp", {
+      method: "POST",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 7,
+        method: "resources/templates/list",
+      }),
+    });
+    const tmplRes = await POST(tmplReq);
+    const tmplData = await tmplRes.json();
+    expect(tmplData.result.resourceTemplates.length).toBeGreaterThanOrEqual(1);
+
+    const pingReq = new NextRequest("http://localhost:3000/api/mcp", {
+      method: "POST",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 8,
+        method: "ping",
+      }),
+    });
+    const pingRes = await POST(pingReq);
+    const pingData = await pingRes.json();
+    expect(pingData.result).toEqual({});
+  });
 });
+

@@ -101,6 +101,8 @@ export const SYSTEM_CONFIG_DEFAULTS: Record<string, number | string | boolean> =
   "cron.task.storage_audit.enabled": true,
   "cron.task.heartbeat.enabled": true,
   "cron.task.renew_ssl_certificates.enabled": true,
+  // ZarinPal Payment Gateway (editable by superadmin in settings)
+  "zarinpal.merchant_id": "",
 };
 
 /** Set of config keys that are per-task global cron switches. */

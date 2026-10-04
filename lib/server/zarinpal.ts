@@ -4,13 +4,9 @@ import { configValue } from "@/lib/server/system-config";
 import { ApiError } from "@/lib/server/errors";
 import { getSubscriptionPlans } from "@/lib/server/subscriptions";
 
-const ZARINPAL_SANDBOX_REQUEST_URL = "https://sandbox.zarinpal.com/pg/v4/payment/request.json";
-const ZARINPAL_SANDBOX_VERIFY_URL = "https://sandbox.zarinpal.com/pg/v4/payment/verify.json";
-const ZARINPAL_SANDBOX_GATEWAY_URL = "https://sandbox.zarinpal.com/pg/StartPay/";
-
-const ZARINPAL_PROD_REQUEST_URL = "https://payment.zarinpal.com/pg/v4/payment/request.json";
-const ZARINPAL_PROD_VERIFY_URL = "https://payment.zarinpal.com/pg/v4/payment/verify.json";
-const ZARINPAL_PROD_GATEWAY_URL = "https://payment.zarinpal.com/pg/StartPay/";
+const ZARINPAL_REQUEST_URL = "https://payment.zarinpal.com/pg/v4/payment/request.json";
+const ZARINPAL_VERIFY_URL = "https://payment.zarinpal.com/pg/v4/payment/verify.json";
+const ZARINPAL_GATEWAY_URL = "https://payment.zarinpal.com/pg/StartPay/";
 
 export interface PaymentTransactionRecord {
   id: number;
@@ -28,24 +24,15 @@ export interface PaymentTransactionRecord {
   verifiedAt: string | null;
 }
 
-export function isZarinpalSandbox(): boolean {
-  if (process.env.ZARINPAL_SANDBOX !== undefined) {
-    return process.env.ZARINPAL_SANDBOX === "true";
-  }
-  // Default to sandbox if no merchant ID is provided or it matches sandbox uuid
-  const merchant = process.env.ZARINPAL_MERCHANT_ID || "";
-  return !merchant || merchant.startsWith("00000000");
-}
-
 export async function getZarinpalMerchantId(): Promise<string> {
-  if (process.env.ZARINPAL_MERCHANT_ID) {
-    return process.env.ZARINPAL_MERCHANT_ID;
-  }
   const configMerchant = await configValue<string>("zarinpal.merchant_id");
-  if (configMerchant && typeof configMerchant === "string") {
-    return configMerchant;
+  if (configMerchant && typeof configMerchant === "string" && configMerchant.trim().length > 0) {
+    return configMerchant.trim();
   }
-  return "00000000-0000-0000-0000-000000000000";
+  if (process.env.ZARINPAL_MERCHANT_ID && process.env.ZARINPAL_MERCHANT_ID.trim().length > 0) {
+    return process.env.ZARINPAL_MERCHANT_ID.trim();
+  }
+  return "";
 }
 
 /** Request payment from ZarinPal and create a pending transaction */
@@ -59,9 +46,12 @@ export async function requestZarinpalPayment(options: {
   mobile?: string | null;
 }): Promise<{ authority: string; paymentUrl: string }> {
   const merchantId = await getZarinpalMerchantId();
-  const sandbox = isZarinpalSandbox();
-  const endpoint = sandbox ? ZARINPAL_SANDBOX_REQUEST_URL : ZARINPAL_PROD_REQUEST_URL;
-  const gatewayUrl = sandbox ? ZARINPAL_SANDBOX_GATEWAY_URL : ZARINPAL_PROD_GATEWAY_URL;
+  if (!merchantId) {
+    throw new ApiError("bad_request", "درگاه پرداخت زرین‌پال پیکربندی نشده است. لطفاً شناسه مرچنت را در تنظیمات مدیریت ثبت کنید.");
+  }
+  const endpoint = ZARINPAL_REQUEST_URL;
+  const gatewayUrl = ZARINPAL_GATEWAY_URL;
+
 
   const payload = {
     merchant_id: merchantId,
@@ -172,8 +162,10 @@ export async function verifyZarinpalPayment(options: {
   }
 
   const merchantId = await getZarinpalMerchantId();
-  const sandbox = isZarinpalSandbox();
-  const verifyEndpoint = sandbox ? ZARINPAL_SANDBOX_VERIFY_URL : ZARINPAL_PROD_VERIFY_URL;
+  if (!merchantId) {
+    throw new ApiError("bad_request", "شناسه مرچنت زرین‌پال یافت نشد.");
+  }
+  const verifyEndpoint = ZARINPAL_VERIFY_URL;
 
   const verifyPayload = {
     merchant_id: merchantId,

@@ -161,6 +161,18 @@ function createSqlite(endpoint: DbEndpoint): SqliteDb {
     } catch {
       /* ignore directory creation errors */
     }
+  } else if (!endpoint.sqliteDatabase && process.env.NODE_ENV !== "test") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { join } = require("node:path") as typeof import("node:path");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { mkdirSync } = require("node:fs") as typeof import("node:fs");
+      const dataDir = join(process.cwd(), "data");
+      mkdirSync(dataDir, { recursive: true });
+      dbPath = join(dataDir, "localme.db");
+    } catch {
+      /* ignore and use :memory: */
+    }
   }
 
   const database = endpoint.sqliteDatabase

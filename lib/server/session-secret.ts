@@ -23,6 +23,8 @@
  * hardcoded default everyone on the internet already knows.
  */
 import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getDb } from "./db/index";
 import { placeholder } from "./db/sql";
 
@@ -47,6 +49,30 @@ export function sessionSecretConfigured(): boolean {
  * Throws if the database is unreachable and there is no environment value —
  * there is no safe way to invent a key that silently changes on every restart.
  */
+
+function readSecretFromFile(): string | null {
+  try {
+    const filePath = join(process.cwd(), "data", ".session_secret");
+    if (existsSync(filePath)) {
+      const content = readFileSync(filePath, "utf8").trim();
+      if (content.length > 0) return content;
+    }
+  } catch {
+    // Ignore file read errors
+  }
+  return null;
+}
+
+function writeSecretToFile(val: string): void {
+  try {
+    const dir = join(process.cwd(), "data");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, ".session_secret"), val, "utf8");
+  } catch {
+    // Ignore file write errors
+  }
+}
+
 export async function resolveSessionSecret(): Promise<string> {
   const fromEnv = sessionSecretFromEnv();
   if (fromEnv) return fromEnv;
@@ -55,18 +81,31 @@ export async function resolveSessionSecret(): Promise<string> {
   if (cached && cached.source === "") return cached.value;
 
   const db = getDb();
-  const existing = await db.raw<{ config_value: unknown }>(
-    `SELECT config_value FROM system_configs WHERE config_key = ${placeholder(db.driver, 0)}`,
-    [FALLBACK_KEY],
-  );
-  const stored = existing[0]?.config_value;
-  if (typeof stored === "string" && stored.length > 0) {
-    cached = { source: "", value: stored };
-    warnOnce(stored);
-    return stored;
+  try {
+    const existing = await db.raw<{ config_value: unknown }>(
+      `SELECT config_value FROM system_configs WHERE config_key = ${placeholder(db.driver, 0)}`,
+      [FALLBACK_KEY],
+    );
+    const stored = existing[0]?.config_value;
+    if (typeof stored === "string" && stored.length > 0) {
+      cached = { source: "", value: stored };
+      writeSecretToFile(stored);
+      warnOnce(stored);
+      return stored;
+    }
+  } catch {
+    // DB might be unready; check file fallback
+    const fromFile = readSecretFromFile();
+    if (fromFile) {
+      cached = { source: "", value: fromFile };
+      warnOnce(fromFile);
+      return fromFile;
+    }
   }
 
   const generated = randomBytes(32).toString("base64url");
+  writeSecretToFile(generated);
+
   try {
     await db.run(
       `INSERT INTO system_configs (config_key, config_value, description, updated_at)
@@ -83,13 +122,12 @@ export async function resolveSessionSecret(): Promise<string> {
     const winner = after[0]?.config_value;
     const value = typeof winner === "string" && winner.length > 0 ? winner : generated;
     cached = { source: "", value };
+    writeSecretToFile(value);
     warnOnce(value);
     return value;
   } catch {
-    // The table may not exist yet on a very first boot; fall back to a
-    // process-lifetime value so the app still starts. Sessions will not
-    // survive a restart, which is the correct trade for not crashing.
-    const ephemeral = cached?.value ?? randomBytes(32).toString("base64url");
+    const fromFile = readSecretFromFile();
+    const ephemeral = fromFile ?? generated;
     cached = { source: "", value: ephemeral };
     warnOnce(ephemeral);
     return ephemeral;
@@ -113,5 +151,13 @@ function warnOnce(value: string): void {
 /** Test seam: forget the cached secret. */
 export function resetSessionSecretCache(): void {
   cached = null;
+  if (process.env.NODE_ENV === "test") {
+    try {
+      const { unlinkSync } = require("node:fs") as typeof import("node:fs");
+      unlinkSync(join(process.cwd(), "data", ".session_secret"));
+    } catch {
+      // ignore
+    }
+  }
   warned = false;
-}
+}
