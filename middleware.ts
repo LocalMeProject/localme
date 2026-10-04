@@ -19,7 +19,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * to one but not the other is silently swallowed.
  */
 export const RESERVED_PREFIXES = [
-  "/api", "/auth", "/admin", "/dashboard", "/account", "/library", "/health",
+  "/api", "/auth", "/admin", "/dashboard", "/account", "/profile", "/library", "/health",
   "/skills", "/policy",
   "/~public", "/~serving", "/_next", "/docs", "/favicon.ico",
   // The platform's own web fonts (public/fonts/*.woff2). Without this,
@@ -89,13 +89,13 @@ export const config = {
   // route and 404s. `tests/server/middleware-prefixes.test.ts` asserts they
   // agree.
   matcher: [
-    "/((?!api|auth|admin|dashboard|account|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)",
+    "/((?!api|auth|admin|dashboard|account|profile|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)",
   ],
 };
 
 /** The compiled matcher, for tests that need to ask "does this path run middleware?". */
 export const MATCHER_PATTERN =
-  /^\/((?!api|auth|admin|dashboard|account|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)$/;
+  /^\/((?!api|auth|admin|dashboard|account|profile|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)$/;
 
 /**
  * ACME HTTP-01 validation (Blueprint §5.6 step 5) must reach the platform on

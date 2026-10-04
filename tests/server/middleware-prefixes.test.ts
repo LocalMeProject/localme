@@ -66,7 +66,7 @@ describe("serving middleware prefixes", () => {
   });
 
   it("leaves the landing page and other top-level routes alone", () => {
-    for (const route of ["/", "/docs", "/auth", "/dashboard", "/skills/localme/SKILL.md", "/policy"]) {
+    for (const route of ["/", "/docs", "/auth", "/dashboard", "/skills/localme/SKILL.md", "/policy", "/profile"]) {
       expect(destination(route), `${route} must not be rewritten`).toBeNull();
     }
   });

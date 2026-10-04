@@ -98,9 +98,11 @@ export function TokenSection({ allowAgentRequestsInitial, isRtl }: TokenSectionP
   const [audits, setAudits] = useState<AuditItem[]>([]);
   const [showAudits, setShowAudits] = useState(false);
 
-  useEffect(() => {
+  const [prevInitial, setPrevInitial] = useState(allowAgentRequestsInitial);
+  if (prevInitial !== allowAgentRequestsInitial) {
+    setPrevInitial(allowAgentRequestsInitial);
     setAllowAgents(allowAgentRequestsInitial);
-  }, [allowAgentRequestsInitial]);
+  }
 
   useEffect(() => {
     loadPats();

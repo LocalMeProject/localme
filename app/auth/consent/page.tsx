@@ -38,19 +38,19 @@ function ConsentForm() {
   const { isRtl } = useI18n();
   const requestId = searchParams.get("requestId");
 
-  const [loading, setLoading] = useState(true);
+  const missingError = !requestId ? (isRtl ? "شناسه درخواست مشخص نشده است." : "Missing request ID.") : null;
+
+  const [loading, setLoading] = useState(Boolean(requestId));
   const [busy, setBusy] = useState(false);
   const [data, setData] = useState<ConsentData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<"4h" | "1d">("4h");
   const [decision, setDecision] = useState<"approved" | "denied" | null>(null);
 
+  const activeError = error || missingError;
+
   useEffect(() => {
-    if (!requestId) {
-      setError(isRtl ? "شناسه درخواست مشخص نشده است." : "Missing request ID.");
-      setLoading(false);
-      return;
-    }
+    if (!requestId) return;
 
     let isMounted = true;
     apiGet<ConsentData>(`/api/auth/consent?requestId=${encodeURIComponent(requestId)}`)
@@ -117,13 +117,13 @@ function ConsentForm() {
               <Clock className="w-8 h-8 animate-spin mx-auto mb-3 opacity-60" />
               {isRtl ? "در حال دریافت اطلاعات درخواست..." : "Loading consent details..."}
             </div>
-          ) : error ? (
+          ) : activeError ? (
             <div className="py-8 text-center space-y-4">
               <ShieldAlert className="w-12 h-12 text-red-500 mx-auto" />
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                 {isRtl ? "خطا در درخواست" : "Request Error"}
               </h2>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">{error}</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">{activeError}</p>
               <Button variant="outline" onClick={() => router.push("/dashboard")}>
                 {isRtl ? "بازگشت به پیشخوان" : "Back to Dashboard"}
               </Button>

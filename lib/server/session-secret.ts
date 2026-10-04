@@ -23,7 +23,7 @@
  * hardcoded default everyone on the internet already knows.
  */
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { getDb } from "./db/index";
 import { placeholder } from "./db/sql";
@@ -153,7 +153,6 @@ export function resetSessionSecretCache(): void {
   cached = null;
   if (process.env.NODE_ENV === "test") {
     try {
-      const { unlinkSync } = require("node:fs") as typeof import("node:fs");
       unlinkSync(join(process.cwd(), "data", ".session_secret"));
     } catch {
       // ignore
