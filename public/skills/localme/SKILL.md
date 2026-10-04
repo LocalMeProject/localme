@@ -169,16 +169,86 @@ Each project comes with an embedded JSON document database:
 
 ---
 
-## 5. Runflare Deployment Best Practices
+## 5. Instant Live Serving & Autonomous E2E Testing
 
-When deploying LocalMe to Runflare:
-1. **GitHub Continuous Deployment**: Link the repository to Runflare with auto-deploy on push.
-2. **Persistent Storage Volume**:
-   - Runflare containers are stateless by default.
+LocalMe hosts projects with zero-build static serving and immediate live execution. Every file written via MCP (`localme_write_file`) or the REST API is instantly accessible on the public web.
+
+### Project URLs
+- **Standard Platform URL**:
+  `https://localme.ir/{username}/{project}/` (or `http://localhost:3000/{username}/{project}/` in development)
+- **Subdomain URL**:
+  `https://{project}.localme.ir/` (when project subdomain routing is enabled)
+- **Custom Domain**:
+  `https://custom-domain.com/` (when attached and verified)
+
+### Cache Update Grace Period (5–10 Seconds)
+LocalMe utilizes high-performance memory caching and HTTP headers (`stale-while-revalidate`, etags, and fast-path serving).
+- Whenever you upload, modify, or delete project files or update route configurations, **wait 5 to 10 seconds** before initiating automated E2E tests.
+- This grace period guarantees that in-memory serving caches, reverse proxy mounts, and edge CDN nodes synchronize with the newest revision.
+
+### Autonomous E2E Testing Workflow
+Agents should never assume a deployment succeeded merely because the file write API returned `200`. Conduct full End-to-End (E2E) verification by directly visiting the live project URL:
+
+1. **Verify HTTP Status & Content Integrity**:
+   - Issue an HTTP GET request to `https://localme.ir/{username}/{project}/` (or your active platform origin).
+   - Confirm status code is `200 OK`.
+   - Inspect the HTML payload to ensure the `<title>`, essential navigation elements, and primary UI containers render correctly without server errors or 404s.
+2. **Verify Static Asset Resolution**:
+   - Fetch linked CSS stylesheets, JavaScript scripts, and images (e.g., `/{username}/{project}/style.css` or shared `/library/...` files).
+   - Confirm each asset returns `200 OK` with the appropriate `Content-Type` header (`text/css`, `application/javascript`, image MIME types).
+3. **Verify Interactive & Database Flows**:
+   - If the application submits data to LocalMe's embedded document database (via `POST /api/db/insert` or project-relative APIs):
+     - Send a test payload simulating user interaction.
+     - Call `localme_db_query` to verify that the newly submitted record actually exists in the collection.
+4. **Verify Route Rewrites & Auth Protection**:
+   - If the project configures custom route rules or `requiresAuth`:
+     - Test unauthenticated requests to protected endpoints to verify they reject or redirect appropriately.
+     - Test authenticated or public routes to confirm proxy forwarding works cleanly.
+5. **Report Direct Live Link to User**:
+   - Conclude your operation by providing the clickable, verified live URL so the user can inspect the final result in their browser.
+
+---
+
+## 6. Container & Runflare Deployment Best Practices
+
+When deploying LocalMe to a container runtime or PaaS (Runflare, Docker, Railway, Coolify, VPS):
+
+### Sequence of Commands to Publish the Project
+For a complete and reliable deployment on a container, the following sequence of commands should be executed:
+1. **Dependency Installation**:
+   ```bash
+   npm ci
+   ```
+   *(or `npm install` if no lockfile is present, ensuring all production packages are installed).*
+2. **Type Check (Optional Quality Gate)**:
+   ```bash
+   npm run typecheck
+   ```
+   *(runs `node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit` to ensure type integrity).*
+3. **Database Schema Migrations**:
+   ```bash
+   npm run db:migrate
+   ```
+   *(executes `node scripts/migrate.mjs`, running any pending SQLite or PostgreSQL migrations safely and idempotently).*
+4. **Optimized Production Build**:
+   ```bash
+   npm run build
+   ```
+   *(runs `node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build`, compiling all platform routes and components).*
+5. **Start Production Server**:
+   ```bash
+   npm run start
+   ```
+   *(runs `next start --hostname 0.0.0.0 --port ${PORT:-3000}`).*
+
+### Persistent Storage & Networking
+1. **Persistent Storage Volume**:
+   - Runflare and Docker containers are ephemeral by default.
    - Mount a persistent volume to `/app/storage_data` to ensure uploaded static assets and SQLite databases persist across restarts.
    - Set environment variable: `STORAGE_DATA_DIR=/app/storage_data`.
-3. **Port & Host Binding**:
-   - LocalMe starts with `next start --hostname 0.0.0.0 --port ${PORT:-3000}`.
+2. **Port & Host Binding**:
+   - Next.js binds to `0.0.0.0` and listens on `${PORT:-3000}`.
    - Runflare automatically injects `$PORT`.
-4. **Health Check**:
+3. **Health Check**:
    - Healthcheck URL: `/api/health` returns `{ "status": "ok" }`.
+
