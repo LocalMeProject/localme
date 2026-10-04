@@ -20,6 +20,7 @@ import {
   TriangleAlert,
   UserCog,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { KeyRound, Languages, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,43 @@ interface UserDetail {
   }>;
 }
 
+interface SubscriptionUser {
+  id: number;
+  username: string;
+  email: string | null;
+  isAdmin: boolean;
+  isOperator: boolean;
+  isSuspended: boolean;
+  subscriptionTier: string;
+  maxProjects: number;
+  projectStorageCapBytes: number;
+  libraryStorageCapBytes: number;
+  subscriptionExpiresAt: string | null;
+  createdAt: string;
+  projectCount: number;
+  totalStorageBytes: number;
+}
+
+interface PaymentTransaction {
+  id: number;
+  userId: number;
+  username: string;
+  tier: string;
+  amount: number;
+  currency: string;
+  authority: string;
+  status: string;
+  refId: string | null;
+  createdAt: string;
+  verifiedAt: string | null;
+}
+
+interface SystemState {
+  totalUsers: number;
+  totalProjects: number;
+  isDemo: boolean;
+}
+
 const EMPTY_PAGING: PaginationState = { page: 1, pageSize: 25, total: 0 };
 
 /* ------------------------------------------------------------------- page */
@@ -190,13 +228,29 @@ export default function AdminPage() {
 
   const [detail, setDetail] = useState<UserDetail | null>(null);
 
+  const [subUsers, setSubUsers] = useState<SubscriptionUser[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+  const [systemState, setSystemState] = useState<SystemState | null>(null);
+  const [editingSubUser, setEditingSubUser] = useState<SubscriptionUser | null>(null);
+  const [subTier, setSubTier] = useState<string>("free");
+  const [subMaxProjects, setSubMaxProjects] = useState<number>(3);
+  const [subProjectCapMb, setSubProjectCapMb] = useState<number>(3);
+  const [subLibraryCapMb, setSubLibraryCapMb] = useState<number>(3);
+  const [subExpiresAt, setSubExpiresAt] = useState<string>("");
+  const [prodConfirmText, setProdConfirmText] = useState("");
+  const [prodModalOpen, setProdModalOpen] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
+
   const loadSidePanels = useCallback(async () => {
-    const [statsRes, overviewRes, configRes, cronRes, libraryRes] = await Promise.all([
+    const [statsRes, overviewRes, configRes, cronRes, libraryRes, subRes, sysRes] = await Promise.all([
       apiGet<Stats>("/api/admin"),
       apiGet<Overview>("/api/admin/overview"),
       apiGet<{ data: Record<string, unknown>; defaults: Record<string, unknown> }>("/api/admin/config"),
       apiGet<{ data: AdminCronTask[] }>("/api/admin/cron"),
       apiGet<{ data: PublicAsset[] }>("/api/admin/public-library"),
+      apiGet<{ data: { users: SubscriptionUser[]; transactions: PaymentTransaction[] } }>("/api/admin/subscriptions").catch(() => ({ data: { users: [], transactions: [] } })),
+      apiGet<SystemState>("/api/admin/system").catch(() => null),
     ]);
     setStats(statsRes);
     setOverview(overviewRes);
@@ -204,6 +258,13 @@ export default function AdminPage() {
     setDefaults(configRes.defaults);
     setCronTasks(cronRes.data);
     setPublicAssets(libraryRes.data);
+    if (subRes?.data) {
+      setSubUsers(subRes.data.users);
+      setTransactions(subRes.data.transactions);
+    }
+    if (sysRes) {
+      setSystemState(sysRes);
+    }
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -281,6 +342,62 @@ export default function AdminPage() {
     },
     [load, t],
   );
+
+  async function saveSubscriptionPlan() {
+    if (!editingSubUser) return;
+    try {
+      await apiPatch("/api/admin/subscriptions", {
+        userId: editingSubUser.id,
+        tier: subTier,
+        maxProjects: subMaxProjects,
+        projectStorageCapBytes: Math.round(subProjectCapMb * 1024 * 1024),
+        libraryStorageCapBytes: Math.round(subLibraryCapMb * 1024 * 1024),
+        subscriptionExpiresAt: subExpiresAt ? new Date(subExpiresAt).toISOString() : null,
+      });
+      toast.success("Subscription plan updated successfully.");
+      setEditingSubUser(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update subscription.");
+    }
+  }
+
+  async function handleConvertToProduction() {
+    if (prodConfirmText !== "CONFIRM_PRODUCTION") {
+      toast.error("You must enter 'CONFIRM_PRODUCTION' to confirm.");
+      return;
+    }
+    setIsPurging(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>("/api/admin/system", {
+        action: "convert_to_production",
+        confirmation: "CONFIRM_PRODUCTION",
+      });
+      toast.success(res.message || "Successfully converted to production!");
+      setProdModalOpen(false);
+      setProdConfirmText("");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to convert to production.");
+    } finally {
+      setIsPurging(false);
+    }
+  }
+
+  async function handlePopulateDemo() {
+    setIsPopulating(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>("/api/admin/system", {
+        action: "populate_demo",
+      });
+      toast.success(res.message || "Demo data populated successfully!");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to populate demo data.");
+    } finally {
+      setIsPopulating(false);
+    }
+  }
 
   async function impersonate(user: AdminUser) {
     try {
@@ -527,6 +644,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="projects">
             <FolderTree className="h-3.5 w-3.5" /> {t("admin.tab.projects")}
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions">
+            <CreditCard className="h-3.5 w-3.5" /> {t("admin.tab.subscriptions")}
           </TabsTrigger>
           <TabsTrigger value="platform">
             <Cpu className="h-3.5 w-3.5" /> {t("admin.tab.platform")}
@@ -956,8 +1076,170 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
+        {/* -------------------------------------------------- subscriptions */}
+        <TabsContent value="subscriptions" className="space-y-6">
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5">
+              <div className="text-sm font-semibold">{t("admin.subscriptions.title")}</div>
+              <div className="mt-0.5 text-12.5px text-muted-foreground">
+                {t("admin.subscriptions.description")}
+              </div>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("label.username")}</TableHead>
+                  <TableHead className="w-24">{t("admin.subscriptions.tier")}</TableHead>
+                  <TableHead className="w-28 text-end">{t("admin.subscriptions.maxProjects")}</TableHead>
+                  <TableHead className="w-32 text-end">{t("admin.subscriptions.projectCap")}</TableHead>
+                  <TableHead className="w-32 text-end">{t("admin.subscriptions.libraryCap")}</TableHead>
+                  <TableHead className="w-36">{t("admin.subscriptions.expiresAt")}</TableHead>
+                  <TableHead className="w-28 text-end" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {subUsers.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{u.username}</span>
+                        {u.isAdmin && <Badge variant="outline" className="text-10px">Admin</Badge>}
+                      </div>
+                      {u.email && <div className="text-11px text-muted-foreground font-mono">{u.email}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={u.subscriptionTier === "plus" ? "default" : "outline"}>
+                        {u.subscriptionTier.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-end nums text-12px tabular-nums">
+                      {u.projectCount} / {u.maxProjects}
+                    </TableCell>
+                    <TableCell className="text-end nums text-12px tabular-nums">
+                      {fmt.bytes(u.projectStorageCapBytes)}
+                    </TableCell>
+                    <TableCell className="text-end nums text-12px tabular-nums">
+                      {fmt.bytes(u.libraryStorageCapBytes)}
+                    </TableCell>
+                    <TableCell className="text-11.5px text-muted-foreground">
+                      {u.subscriptionExpiresAt ? fmt.dateTime(new Date(u.subscriptionExpiresAt).getTime()) : "Never (Perpetual)"}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-12px"
+                        disabled={!isViewerAdmin}
+                        onClick={() => {
+                          setEditingSubUser(u);
+                          setSubTier(u.subscriptionTier);
+                          setSubMaxProjects(u.maxProjects);
+                          setSubProjectCapMb(Math.round(u.projectStorageCapBytes / (1024 * 1024)));
+                          setSubLibraryCapMb(Math.round(u.libraryStorageCapBytes / (1024 * 1024)));
+                          setSubExpiresAt(u.subscriptionExpiresAt ? u.subscriptionExpiresAt.slice(0, 10) : "");
+                        }}
+                      >
+                        {t("admin.subscriptions.editPlan")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5">
+              <div className="text-sm font-semibold">{t("admin.subscriptions.transactions")}</div>
+            </div>
+            {transactions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">ID</TableHead>
+                    <TableHead>{t("label.username")}</TableHead>
+                    <TableHead className="w-20">Tier</TableHead>
+                    <TableHead className="w-28 text-end">Amount</TableHead>
+                    <TableHead className="w-28">Status</TableHead>
+                    <TableHead className="w-36">Authority / Ref ID</TableHead>
+                    <TableHead className="w-36">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="font-mono text-12px">#{tx.id}</TableCell>
+                      <TableCell className="font-medium text-12px">{tx.username}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{tx.tier.toUpperCase()}</Badge>
+                      </TableCell>
+                      <TableCell className="text-end nums text-12px tabular-nums">
+                        {fmt.number(tx.amount)} {tx.currency}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={tx.status === "completed" ? "default" : tx.status === "pending" ? "outline" : "destructive"}>
+                          {tx.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-11px text-muted-foreground truncate max-w-xs">
+                        {tx.refId || tx.authority}
+                      </TableCell>
+                      <TableCell className="text-11.5px text-muted-foreground">
+                        {tx.createdAt ? fmt.dateTime(new Date(tx.createdAt).getTime()) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No payment transactions recorded yet.
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
         {/* ------------------------------------------------------- platform */}
         <TabsContent value="platform" className="space-y-4">
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">{t("admin.system.title")}</div>
+                <div className="mt-0.5 text-12.5px text-muted-foreground">
+                  {t("admin.system.description")}
+                </div>
+              </div>
+              {systemState && (
+                <Badge variant={systemState.isDemo ? "outline" : "default"}>
+                  {systemState.isDemo ? "Demo Environment" : "Production Environment"}
+                </Badge>
+              )}
+            </div>
+            <div className="p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1 text-12.5px text-muted-foreground max-w-xl">
+                <p>Total Users: <strong className="text-foreground">{systemState?.totalUsers ?? 0}</strong> · Total Projects: <strong className="text-foreground">{systemState?.totalProjects ?? 0}</strong></p>
+                <p>Converting to clean production purges all demo accounts, demo projects, database tables, and physical storage folders while preserving your SuperAdmin account. Populating demo initializes demo templates on an empty deployment.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!isViewerAdmin || isPurging}
+                  onClick={() => setProdModalOpen(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("admin.system.convertToProd")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!isViewerAdmin || isPopulating || (systemState ? systemState.totalProjects > 0 : false)}
+                  onClick={() => void handlePopulateDemo()}
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5 mr-1", isPopulating && "animate-spin")} /> {t("admin.system.populateDemo")}
+                </Button>
+              </div>
+            </div>
+          </div>
           {overview && overview.topProjects.length > 0 && (
             <div className="panel p-5">
               <div className="mono-label">{t("admin.busiest")}</div>
@@ -1149,6 +1431,128 @@ export default function AdminPage() {
           );
         }}
       />
+
+      {/* ------------------------------------------------ Edit Plan Dialog */}
+      <Dialog open={editingSubUser !== null} onOpenChange={(open) => !open && setEditingSubUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Plan: {editingSubUser?.username}</DialogTitle>
+            <DialogDescription>
+              Adjust user subscription tier, project quota, storage caps, and expiry date.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Subscription Tier</Label>
+              <Select
+                value={subTier}
+                onValueChange={(val) => {
+                  setSubTier(val);
+                  if (val === "plus") {
+                    setSubMaxProjects(50);
+                    setSubProjectCapMb(50);
+                    setSubLibraryCapMb(50);
+                  } else if (val === "free") {
+                    setSubMaxProjects(3);
+                    setSubProjectCapMb(3);
+                    setSubLibraryCapMb(3);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free Tier (3 Projects, 3MB Storage)</SelectItem>
+                  <SelectItem value="plus">Plus Tier (50 Projects, 50MB Storage)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1.5">
+                <Label>Max Projects</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={subMaxProjects}
+                  onChange={(e) => setSubMaxProjects(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Project Cap (MB)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={subProjectCapMb}
+                  onChange={(e) => setSubProjectCapMb(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Library Cap (MB)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={subLibraryCapMb}
+                  onChange={(e) => setSubLibraryCapMb(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Expiry Date (Leave empty for perpetual)</Label>
+              <Input
+                type="date"
+                value={subExpiresAt}
+                onChange={(e) => setSubExpiresAt(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSubUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void saveSubscriptionPlan()}>
+              Save Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* -------------------------------------- Convert to Production Dialog */}
+      <Dialog open={prodModalOpen} onOpenChange={setProdModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <TriangleAlert className="h-5 w-5" /> Convert to Clean Production
+            </DialogTitle>
+            <DialogDescription>
+              This action is destructive and irreversible. It will wipe all demo users, demo projects, database entries, and physical disk files. Your current SuperAdmin account will be preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-12.5px text-muted-foreground">
+              To confirm, type <strong className="font-mono text-destructive">CONFIRM_PRODUCTION</strong> below:
+            </p>
+            <Input
+              value={prodConfirmText}
+              onChange={(e) => setProdConfirmText(e.target.value)}
+              placeholder="CONFIRM_PRODUCTION"
+              className="font-mono text-center tracking-wider"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProdModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={prodConfirmText !== "CONFIRM_PRODUCTION" || isPurging}
+              onClick={() => void handleConvertToProduction()}
+            >
+              {isPurging ? "Purging..." : "Purge & Convert to Production"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

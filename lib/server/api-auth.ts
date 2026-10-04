@@ -40,11 +40,24 @@ export async function resolvePrincipal(
     : request.headers.get("x-api-key")?.trim();
 
   if (apiKeyValue) {
+    if (apiKeyValue.startsWith("pat_") || apiKeyValue.startsWith("aat_")) {
+      const { resolveApiToken } = await import("@/lib/server/tokens");
+      const token = await resolveApiToken(apiKeyValue);
+      if (!token) return null;
+      return {
+        kind: "api_key",
+        userId: token.userId,
+        username: null,
+        projectId: null,
+        apiKeyName: token.name,
+        permissions: token.permissions,
+      };
+    }
     const apiKey = await resolveApiKey(apiKeyValue);
     if (!apiKey) return null;
     return {
       kind: "api_key",
-      userId: null,
+      userId: apiKey.userId,
       username: null,
       projectId: apiKey.projectId,
       apiKeyName: apiKey.name,
@@ -137,6 +150,13 @@ export async function requireProjectScoped(
   projectIdParam?: string | null,
 ): Promise<ProjectRecord> {
   if (principal.kind === "api_key") {
+    if (principal.projectId == null && principal.userId != null) {
+      const projectId = Number(projectIdParam);
+      if (!Number.isInteger(projectId) || projectId <= 0) {
+        throw new ApiError("bad_request", "projectId query parameter is required.");
+      }
+      return requireOwnedProject(principal.userId, projectId);
+    }
     const project = await getProjectById(principal.projectId!);
     if (!project) throw new ApiError("not_found", "Project not found.");
     return project;

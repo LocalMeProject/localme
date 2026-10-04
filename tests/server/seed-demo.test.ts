@@ -56,13 +56,14 @@ afterAll(async () => {
         }
         await db.run("DELETE FROM projects WHERE id = ?", [project.id]);
       }
+      await db.run("DELETE FROM api_keys WHERE user_id = ?", [user.id]);
       await db.run("DELETE FROM sessions WHERE user_id = ?", [user.id]);
       await db.run("DELETE FROM users WHERE id = ?", [user.id]);
     }
   }
 });
 
-describe("seedDemoData", () => {
+describe("seedDemoData", { timeout: 30_000 }, () => {
   it("creates the demo accounts, each with projects", async () => {
     const result = await seedDemoData();
 

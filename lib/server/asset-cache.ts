@@ -140,6 +140,25 @@ export function clearAssetCache(): void {
   misses = 0;
 }
 
+/**
+ * Immediately refresh or prime the hot asset cache with the newly written content.
+ */
+export function refreshCachedAsset(
+  projectId: number,
+  path: string,
+  content: Buffer,
+  updatedAt: string,
+  contentType: string,
+): void {
+  setCachedAsset(projectId, path, {
+    content,
+    etag: etagFor(content, content.byteLength, updatedAt),
+    updatedAt,
+    sizeBytes: content.byteLength,
+    contentType,
+  });
+}
+
 export function assetCacheStats(): { entries: number; bytes: number; hits: number; misses: number } {
   return { entries: entries.size, bytes: currentBytes, hits, misses };
 }

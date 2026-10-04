@@ -10,6 +10,7 @@ import { join } from "node:path";
 const tmp = mkdtempSync(join(tmpdir(), "serving-"));
 process.env.DB_DRIVER = "sqlite";
 process.env.DB_PATH = `file:${join(tmp, "test.db")}`;
+process.env.STORAGE_DATA_DIR = join(tmp, "storage_data");
 process.env.SESSION_SECRET = "test-session-secret";
 process.env.SECRETS_ENCRYPTION_KEY = "test-encryption-key-32-bytes!!";
 
@@ -86,7 +87,12 @@ beforeAll(async () => {
 }, 30_000);
 
 afterAll(() => {
-  rmSync(tmp, { recursive: true, force: true });
+  db.close?.();
+  try {
+    rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock fallback */
+  }
 });
 
 function get(path: string, headers: Record<string, string> = {}): Request {
@@ -328,16 +334,15 @@ describe("visits", () => {
     expect(byIp.get("6.6.6.6")).toBe(1);
   });
 
-  it("enforces the free-visit quota with 402", async () => {
+  it("allows visits without 402 paywall now that monthly visit cap is removed", async () => {
     const resolved = (await resolveProject("serveowner", "site")) as ResolvedProject;
-    // Fill the month's quota.
-    for (let i = 0; i < resolved.freeVisitsPerMonth; i++) {
+    for (let i = 0; i < 5; i++) {
       await db.run(
         "INSERT INTO visit_logs (project_id, route, ip, visited_at) VALUES (?, 'quota', ?, ?)",
         [project.id, `quota-ip-${i}`, new Date().toISOString()],
       );
     }
-    await expect(checkVisitQuota(resolved)).rejects.toMatchObject({ code: "payment_required" });
+    await expect(checkVisitQuota(resolved)).resolves.toBeUndefined();
   });
 });
 
@@ -356,13 +361,9 @@ describe("serving route handler (§5.6/§5.7 contract)", () => {
   // every verb but GET — only exist at that layer.
   const ctx = { params: Promise.resolve({ user: "serveowner", project: "site", path: [] }) };
 
-  it("answers 402, not 500, when the project is over its visit quota", async () => {
+  it("serves 200 without visit quota 402 blocking", async () => {
     const capped = await createUser("quotaowner", "password123");
     const cappedProject = await createProject(capped.id, "quotaapp");
-    await db.run(
-      "UPDATE projects SET free_visits_per_month = 1 WHERE id = ?",
-      [cappedProject.id],
-    );
     await putFile(capped.id, cappedProject.id, "index.html", Buffer.from("<html><body>q</body></html>"));
     await db.run(
       "INSERT INTO visit_logs (project_id, route, ip, visited_at) VALUES (?, 'index.html', '7.7.7.7', ?)",
@@ -373,9 +374,7 @@ describe("serving route handler (§5.6/§5.7 contract)", () => {
       new Request("https://app.test/quotaowner/quotaapp/", { headers: { "x-forwarded-for": "8.8.8.8" } }),
       { params: Promise.resolve({ user: "quotaowner", project: "quotaapp", path: [] }) },
     );
-    expect(response.status).toBe(402);
-    const body = (await response.json()) as { code?: string };
-    expect(body.code).toBe("payment_required");
+    expect(response.status).toBe(200);
     void ctx;
   });
 

@@ -20,14 +20,8 @@ export interface ProxyConfig {
 }
 
 export interface ProxyForwardOptions {
-  /**
-   * The route pattern that matched, when forwarding comes from project serving.
-   * A proxy route acts as a mount (docs §3.3.3, Blueprint §5.7): the caller's
-   * path *after* the mount is appended to the target path, so `/api/stripe/*`
-   * can front `https://api.stripe.com/v1`. An exact match leaves the target
-   * path untouched, which is what the Blueprint's Stripe example needs.
-   */
   mountPath?: string;
+  callerPath?: string;
 }
 
 export const DEFAULT_PROXY_TIMEOUT_MS = 15_000;
@@ -98,8 +92,11 @@ export async function forwardProxyRequest(
   if (contentType) headers.set("content-type", contentType);
 
   const targetUrl = new URL(config.target);
-  targetUrl.search = url.search;
-  const remainder = mountRemainder(options.mountPath, url.pathname);
+  for (const [key, val] of url.searchParams.entries()) {
+    targetUrl.searchParams.append(key, val);
+  }
+  const callerPath = options.callerPath ?? url.pathname;
+  const remainder = mountRemainder(options.mountPath, callerPath);
   if (remainder) {
     targetUrl.pathname = `${targetUrl.pathname.replace(/\/+$/, "")}/${remainder.replace(/^\/+/, "")}`;
   }

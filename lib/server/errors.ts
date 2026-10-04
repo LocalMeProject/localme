@@ -60,3 +60,17 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+
+export function handleApiError(error: unknown): Response {
+  if (error instanceof ApiError) {
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: STATUS_BY_CODE[error.code] ?? 500, headers: error.headers },
+    );
+  }
+  const message = error instanceof Error ? error.message : "Something went wrong.";
+  return Response.json(
+    { error: message, code: "internal_error" },
+    { status: 500 },
+  );
+}

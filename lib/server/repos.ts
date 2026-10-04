@@ -11,9 +11,12 @@ import { quote, placeholder } from "./db/sql";
 import { ApiError } from "./http";
 import { configNumber, setting } from "./system-config";
 import { createLogger } from "./logger";
-import { invalidateAsset } from "./asset-cache";
+import { invalidateAsset, refreshCachedAsset } from "./asset-cache";
 import { withProjectWriteLock } from "./write-lock";
 import { CRON_TASKS, DEFAULT_TASK_PARAMETERS, nextRunAtFor } from "./cron-tasks";
+import { writeDiskFile, readDiskFile, deleteDiskFile } from "./storage-disk";
+import { encryptSecret, decryptSecret } from "./secrets-crypto";
+import { contentTypeFor } from "./content-types";
 
 const DEFAULT_STORAGE_CAP = 2_097_152; // 2 MB free tier (spec §10 storage.default_user_cap_bytes)
 const log = createLogger("repos");
@@ -58,11 +61,17 @@ export interface UserRecord {
   isOperator: boolean;
   isSuspended: boolean;
   storageCapBytes: number;
+  maxProjects: number;
+  projectStorageCapBytes: number;
+  libraryStorageCapBytes: number;
+  subscriptionTier: string;
+  subscriptionExpiresAt: string | null;
   createdAt: string;
   /** Last successful console login, or null if the account has never signed in. */
   lastLogin: string | null;
   /** Set while repeated failures have locked the account out (§7.2). */
   lockedUntil: string | null;
+  allowAgentRequests: boolean;
 }
 
 function mapUser(row: Record<string, unknown>): UserRecord {
@@ -75,9 +84,15 @@ function mapUser(row: Record<string, unknown>): UserRecord {
     isOperator: bool(row.is_operator),
     isSuspended: bool(row.is_suspended),
     storageCapBytes: Number(row.storage_cap_bytes ?? DEFAULT_STORAGE_CAP),
+    maxProjects: Number(row.max_projects ?? 3),
+    projectStorageCapBytes: Number(row.project_storage_cap_bytes ?? 3145728),
+    libraryStorageCapBytes: Number(row.library_storage_cap_bytes ?? 3145728),
+    subscriptionTier: String(row.subscription_tier ?? "free"),
+    subscriptionExpiresAt: (row.subscription_expires_at as string | null) ?? null,
     createdAt: String(row.created_at ?? ""),
     lastLogin: (row.last_login as string | null) ?? null,
     lockedUntil: (row.locked_until as string | null) ?? null,
+    allowAgentRequests: bool(row.allow_agent_requests),
   };
 }
 
@@ -108,9 +123,29 @@ export async function createUser(username: string, password: string, email?: str
   try {
     const id = await insertReturningId(
       "users",
-      ["username", "password_hash", "email", "storage_cap_bytes"],
-      [usernameNorm, passwordHash, email ?? null, cap > 0 ? cap : DEFAULT_STORAGE_CAP],
+      [
+        "username",
+        "password_hash",
+        "email",
+        "storage_cap_bytes",
+        "max_projects",
+        "project_storage_cap_bytes",
+        "library_storage_cap_bytes",
+        "subscription_tier",
+      ],
+      [
+        usernameNorm,
+        passwordHash,
+        email ?? null,
+        cap > 0 ? cap : DEFAULT_STORAGE_CAP,
+        3,
+        3145728,
+        3145728,
+        "free",
+      ],
     );
+    // Auto-generate master API key for the new user
+    await createMasterApiKey(id, "Master Key");
     return (await getUserById(id))!;
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -203,6 +238,14 @@ export async function assertNotLocked(username: string): Promise<void> {
   if (lockedUntil && new Date(lockedUntil).getTime() > Date.now()) {
     throw new ApiError("unauthorized", "Account temporarily locked. Try again later.");
   }
+}
+
+export async function verifyUserPassword(userId: number, password: string): Promise<boolean> {
+  const user = await getUserById(userId);
+  if (!user) return false;
+  const record = await getUserByUsername(user.username);
+  if (!record) return false;
+  return verifyPassword(password, record.passwordHash);
 }
 
 export async function changePassword(userId: number, currentPassword: string, newPassword: string): Promise<void> {
@@ -327,6 +370,21 @@ export async function createProject(userId: number, name: string): Promise<Proje
     throw new ApiError(
       "bad_request",
       "“library” is reserved — it is where your shared assets are served from.",
+    );
+  }
+  const user = await getUserById(userId);
+  if (!user) throw new ApiError("unauthorized", "User not found.");
+  const maxProjects = user.maxProjects ?? (await configNumber("limits.max_projects_per_user", 3));
+  const db = getDb();
+  const countRows = await db.raw<{ cnt: number | string }>(
+    `SELECT COUNT(*) AS cnt FROM projects WHERE user_id = ${placeholder(db.driver, 0)} AND name <> ${placeholder(db.driver, 1)}`,
+    [userId, LIBRARY_PROJECT_NAME],
+  );
+  const currentCount = Number(countRows[0]?.cnt ?? 0);
+  if (currentCount >= maxProjects) {
+    throw new ApiError(
+      "payment_required",
+      `Project limit reached. You have ${currentCount} of ${maxProjects} allowed projects.`,
     );
   }
   try {
@@ -553,7 +611,8 @@ export async function updateProject(
 
 export interface ApiKeyRecord {
   id: number;
-  projectId: number;
+  userId: number | null;
+  projectId: number | null;
   name: string;
   prefix: string;
   /** Granular permissions (§5.5); empty means "full project access". */
@@ -578,7 +637,8 @@ function parsePermissions(raw: unknown): string[] {
 function mapApiKey(row: Record<string, unknown>): ApiKeyRecord {
   return {
     id: Number(row.id),
-    projectId: Number(row.project_id),
+    userId: row.user_id != null ? Number(row.user_id) : null,
+    projectId: row.project_id != null ? Number(row.project_id) : null,
     name: String(row.name),
     prefix: String(row.prefix),
     permissions: parsePermissions(row.permissions),
@@ -586,6 +646,71 @@ function mapApiKey(row: Record<string, unknown>): ApiKeyRecord {
     createdAt: String(row.created_at ?? ""),
     revokedAt: (row.revoked_at as string | null) ?? null,
   };
+}
+
+/** Create a user-level master API key with reversible encryption for reveal. */
+export async function createMasterApiKey(
+  userId: number,
+  name = "Master Key",
+): Promise<{ record: ApiKeyRecord; key: string }> {
+  const key = `sk_${generateToken(32)}`;
+  const db = getDb();
+  const encryptedKey = await encryptSecret(key);
+  const id = await insertReturningId(
+    "api_keys",
+    ["user_id", "project_id", "name", "key_hash", "prefix", "permissions", "encrypted_key"],
+    [
+      userId,
+      null,
+      name.trim() || "Master Key",
+      hashToken(key),
+      key.slice(0, KEY_PREFIX_LEN),
+      JSON.stringify(["*"]),
+      encryptedKey,
+    ],
+  );
+  const rows = await db.raw<Record<string, unknown>>(
+    `SELECT * FROM api_keys WHERE id = ${placeholder(db.driver, 0)}`,
+    [id],
+  );
+  return { record: mapApiKey(rows[0]!), key };
+}
+
+/** Get the active user-level master API key with decrypted value. */
+export async function getUserMasterApiKey(
+  userId: number,
+): Promise<{ record: ApiKeyRecord; key: string | null } | null> {
+  const db = getDb();
+  const p = db.driver;
+  const rows = await db.raw<Record<string, unknown>>(
+    `SELECT * FROM api_keys WHERE user_id = ${placeholder(p, 0)} AND project_id IS NULL AND revoked_at IS NULL ORDER BY id DESC LIMIT 1`,
+    [userId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  const record = mapApiKey(row);
+  let decrypted: string | null = null;
+  if (row.encrypted_key) {
+    try {
+      decrypted = await decryptSecret(String(row.encrypted_key));
+    } catch {
+      decrypted = null;
+    }
+  }
+  return { record, key: decrypted };
+}
+
+/** Regenerate the user-level master API key. */
+export async function regenerateUserMasterApiKey(
+  userId: number,
+): Promise<{ record: ApiKeyRecord; key: string }> {
+  const db = getDb();
+  const p = db.driver;
+  await db.run(
+    `UPDATE api_keys SET revoked_at = ${placeholder(p, 0)} WHERE user_id = ${placeholder(p, 1)} AND project_id IS NULL AND revoked_at IS NULL`,
+    [new Date().toISOString(), userId],
+  );
+  return createMasterApiKey(userId, "Master Key");
 }
 
 /** Generate `sk_<43 chars>`; only the SHA-256 hash is stored. */
@@ -596,13 +721,21 @@ export async function createApiKey(
   permissions: string[] = [],
 ): Promise<{ record: ApiKeyRecord; key: string }> {
   await requireOwnedProject(userId, projectId);
-  const key = `sk_${generateToken(32)}`;
   const db = getDb();
   const p = db.driver;
+  const countRows = await db.raw<{ total: number | string }>(
+    `SELECT COUNT(*) AS total FROM api_keys WHERE user_id = ${placeholder(p, 0)} AND revoked_at IS NULL`,
+    [userId],
+  );
+  if (Number(countRows[0]?.total ?? 0) >= 10) {
+    throw new ApiError("bad_request", "Maximum limit of 10 API keys reached for this account.");
+  }
+  const key = `sk_${generateToken(32)}`;
   const id = await insertReturningId(
     "api_keys",
-    ["project_id", "name", "key_hash", "prefix", "permissions"],
+    ["user_id", "project_id", "name", "key_hash", "prefix", "permissions"],
     [
+      userId,
       projectId,
       name.trim() || "default",
       hashToken(key),
@@ -723,21 +856,24 @@ export async function projectStorageUsedBytes(userId: number): Promise<number> {
 export async function assertStorageCap(
   userId: number,
   incomingBytes: number,
-  options: { library?: boolean } = {},
+  options: { library?: boolean; projectId?: number; existingBytes?: number } = {},
 ): Promise<void> {
   const user = await getUserById(userId);
   if (!user) throw new ApiError("unauthorized", "Sign in required.");
+  const existingBytes = options.existingBytes ?? 0;
+  const db = getDb();
+
   if (options.library) {
-    const cap = await setting("storage.library_cap_bytes");
+    const userCap = user.libraryStorageCapBytes;
+    const cap = userCap && userCap > 0 ? userCap : await setting("storage.library_cap_bytes");
     const library = await ensureLibraryProject(userId);
-    const db = getDb();
     const rows = await db.raw<{ total: number | string }>(
       `SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files
        WHERE project_id = ${placeholder(db.driver, 0)}`,
       [library.id],
     );
     const used = Number(rows[0]?.total ?? 0);
-    if (used + incomingBytes > cap) {
+    if (used - existingBytes + incomingBytes > cap) {
       throw new ApiError(
         "payment_required",
         `Library cap exceeded — this account has ${Math.round(cap / 1024 / 1024)} MB for shared assets.`,
@@ -745,8 +881,26 @@ export async function assertStorageCap(
     }
     return;
   }
+
+  // Check per-project storage cap if projectId is known
+  if (options.projectId) {
+    const projectCap = user.projectStorageCapBytes ?? (await configNumber("limits.project_storage_cap_bytes", 3145728));
+    const projRows = await db.raw<{ total: number | string }>(
+      `SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files
+       WHERE project_id = ${placeholder(db.driver, 0)}`,
+      [options.projectId],
+    );
+    const projectUsed = Number(projRows[0]?.total ?? 0);
+    if (projectUsed - existingBytes + incomingBytes > projectCap) {
+      throw new ApiError(
+        "payment_required",
+        `Project storage cap exceeded. Maximum allowed per project is ${Math.round(projectCap / 1024 / 1024)} MB.`,
+      );
+    }
+  }
+
   const used = await projectStorageUsedBytes(userId);
-  if (used + incomingBytes > user.storageCapBytes) {
+  if (used - existingBytes + incomingBytes > user.storageCapBytes) {
     throw new ApiError(
       "payment_required",
       `Storage cap exceeded. This account has ${Math.round(user.storageCapBytes / 1024 / 1024)} MB for project files.`,
@@ -783,35 +937,42 @@ export async function putFile(
   const contentText = isText ? content.toString("utf8") : null;
   const sizeBytes = content.byteLength;
 
-  // §8.4: the cap check and the write are one serialized step. Checking before
-  // the lock let two concurrent uploads both observe room for themselves and
-  // then both land, overshooting the account cap.
   return withProjectWriteLock(projectId, async () => {
-    await assertStorageCap(userId, sizeBytes, { library: isLibrary });
-    // Upsert on (project_id, path).
-    const existing = await db.raw<{ id: number }>(
-      `SELECT id FROM files WHERE project_id = ${placeholder(p, 0)} AND path = ${placeholder(p, 1)}`,
+    // Check if file already exists
+    const existing = await db.raw<{ id: number; size_bytes: number }>(
+      `SELECT id, size_bytes FROM files WHERE project_id = ${placeholder(p, 0)} AND path = ${placeholder(p, 1)}`,
       [projectId, storedPath],
     );
-    // Postgres BOOLEAN rejects integer binds; SQLite INTEGER rejects booleans.
+    const existingBytes = existing[0] ? Number(existing[0].size_bytes ?? 0) : 0;
+    await assertStorageCap(userId, sizeBytes, { library: isLibrary, projectId, existingBytes });
+
+    // Store file content on disk (files off SQLite)
+    const { diskPath } = await writeDiskFile(projectId, storedPath, content);
+
     const isTextValue = p === "sqlite" ? (isText ? 1 : 0) : isText;
+    const now = new Date().toISOString();
     if (existing[0]) {
       await db.run(
-        `UPDATE files SET content_text = ${placeholder(p, 0)}, content_blob = ${placeholder(p, 1)},
+        `UPDATE files SET content_text = ${placeholder(p, 0)}, content_blob = NULL, disk_path = ${placeholder(p, 1)},
          size_bytes = ${placeholder(p, 2)}, is_text = ${placeholder(p, 3)}, updated_at = ${placeholder(p, 4)}
        WHERE id = ${placeholder(p, 5)}`,
-        [contentText, content, sizeBytes, isTextValue, new Date().toISOString(), existing[0].id],
+        [contentText, diskPath, sizeBytes, isTextValue, now, existing[0].id],
       );
-      invalidateAsset(projectId, storedPath);
-      return (await getFile(projectId, storedPath))!;
+    } else {
+      await db.run(
+        `INSERT INTO files (project_id, path, content_text, content_blob, disk_path, size_bytes, is_text, updated_at)
+         VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, NULL, ${placeholder(p, 3)}, ${placeholder(p, 4)}, ${placeholder(p, 5)}, ${placeholder(p, 6)})`,
+        [projectId, storedPath, contentText, diskPath, sizeBytes, isTextValue, now],
+      );
     }
-    const insertedId = await insertReturningId(
-      "files",
-      ["project_id", "path", "content_text", "content_blob", "size_bytes", "is_text"],
-      [projectId, storedPath, contentText, content, sizeBytes, isTextValue],
-    );
-    void insertedId;
-    invalidateAsset(projectId, storedPath);
+
+    // Immediately refresh the hot asset cache in memory
+    if (!storedPath.endsWith(".html")) {
+      refreshCachedAsset(projectId, storedPath, content, now, contentTypeFor(storedPath));
+    } else {
+      invalidateAsset(projectId, storedPath);
+    }
+
     return (await getFile(projectId, storedPath))!;
   });
 }
@@ -840,12 +1001,23 @@ export async function getFile(projectId: number, path: string): Promise<FileReco
 export async function getFileBlob(projectId: number, path: string): Promise<{ record: FileRecord; content: Buffer } | null> {
   const record = await getFile(projectId, path);
   if (!record) return null;
+  // Try disk first
+  const diskContent = await readDiskFile(projectId, path);
+  if (diskContent) {
+    return { record, content: diskContent };
+  }
+  // Fallback to DB blob for backwards compatibility
   const db = getDb();
   const rows = await db.raw<{ content_blob: Buffer }>(
     `SELECT content_blob FROM files WHERE id = ${placeholder(db.driver, 0)}`,
     [record.id],
   );
-  return { record, content: Buffer.from(rows[0]?.content_blob ?? Buffer.alloc(0)) };
+  if (rows[0]?.content_blob) {
+    const buffer = Buffer.from(rows[0].content_blob);
+    await writeDiskFile(projectId, path, buffer).catch(() => {});
+    return { record, content: buffer };
+  }
+  return { record, content: Buffer.alloc(0) };
 }
 
 export async function listFiles(projectId: number, dir = ""): Promise<FileRecord[]> {
@@ -878,9 +1050,6 @@ export async function deleteFile(
 ): Promise<number> {
   await requireOwnedProject(userId, projectId);
   const db = getDb();
-  // Directories are synthesized from file paths by §13.2, so deleting one is
-  // deleting everything beneath it. The trailing slash keeps "app" from also
-  // matching a sibling file literally named "app".
   const p = (index: number) => placeholder(db.driver, index);
   const result = options?.prefix
     ? await db.run(
@@ -891,6 +1060,7 @@ export async function deleteFile(
         `DELETE FROM files WHERE project_id = ${p(0)} AND path = ${p(1)}`,
         [projectId, path],
       );
+  await deleteDiskFile(projectId, path, Boolean(options?.prefix)).catch(() => {});
   // A deleted file must not be served from the §8.1 cache.
   invalidateAsset(projectId, path);
   if (options?.prefix) invalidateAsset(projectId, `${path}/`);

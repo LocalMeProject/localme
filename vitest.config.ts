@@ -7,6 +7,12 @@ export default defineConfig({
     exclude: ["isolate/**", "node_modules/**"],
     environment: "node",
     setupFiles: ["tests/setup-env.ts"],
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
   resolve: {
     alias: {

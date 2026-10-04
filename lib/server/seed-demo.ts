@@ -56,7 +56,7 @@ export interface SeedResult {
 /** Every demo account shares one password, documented in the console. */
 const DEMO_PASSWORD = "demopassword";
 
-const DEMO_USERS = [
+export const DEMO_USERS = [
   {
     username: "ada",
     email: "ada@example.com",
@@ -432,6 +432,7 @@ export async function seedDemoData(options: SeedOptions = {}): Promise<SeedResul
         }
         await db.run(`DELETE FROM projects WHERE id = ${placeholder(p, 0)}`, [project.id]);
       }
+      await db.run(`DELETE FROM api_keys WHERE user_id = ${placeholder(p, 0)}`, [id]);
       await db.run(`DELETE FROM sessions WHERE user_id = ${placeholder(p, 0)}`, [id]);
       await db.run(`DELETE FROM users WHERE id = ${placeholder(p, 0)}`, [id]);
     }

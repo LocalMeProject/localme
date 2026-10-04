@@ -153,43 +153,44 @@ export interface RateLimitResult {
  * the session-cookie identity — visitors are anonymous). Same fixed-window
  * semantics as checkRateLimit, keyed as `session_id = identity`.
  */
+async function incrementRateLimit(identity: string, group: string, windowStart: string): Promise<number> {
+  const db = getDb();
+  const p = db.driver;
+  try {
+    const rows = await db.raw<{ request_count: number | string }>(
+      `INSERT INTO rate_limits (session_id, route_pattern, window_start, request_count)
+       VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, 1)
+       ON CONFLICT (session_id, window_start, route_pattern)
+       DO UPDATE SET request_count = rate_limits.request_count + 1
+       RETURNING request_count`,
+      [identity, group, windowStart],
+    );
+    if (rows[0]?.request_count != null) {
+      return Number(rows[0].request_count);
+    }
+  } catch {
+    // Dialect fallback if RETURNING is not supported
+  }
+  const rows = await db.raw<{ request_count: number | string }>(
+    `SELECT request_count FROM rate_limits
+     WHERE session_id = ${placeholder(p, 0)} AND route_pattern = ${placeholder(p, 1)} AND window_start = ${placeholder(p, 2)}`,
+    [identity, group, windowStart],
+  );
+  return Number(rows[0]?.request_count ?? 1);
+}
+
 export async function checkRateLimitForIdentity(
   identity: string,
   group: RouteGroup,
   limitOverride?: number,
 ): Promise<RateLimitResult> {
   const { windowSeconds } = ROUTE_GROUPS[group];
-  // Identity-keyed checks are the serving paths: anonymous visitors (HTML) draw
-  // on the IP-fallback tier, assets/library on their own documented tiers.
   const tierKey = GROUP_TIER_KEY[group]
     ?? (group === "default" ? "rate_limits.ip_fallback_requests_per_minute" : "rate_limits.authenticated_requests_per_minute");
   const effectiveLimit = limitOverride ?? Math.max(1, await setting(tierKey));
   const windowStart = currentWindowStart(windowSeconds);
-  const db = getDb();
-  const p = db.driver;
 
-  const rows = await db.raw<{ request_count: number | string }>(
-    `SELECT request_count FROM rate_limits
-     WHERE session_id = ${placeholder(p, 0)} AND route_pattern = ${placeholder(p, 1)} AND window_start = ${placeholder(p, 2)}`,
-    [identity, group, windowStart],
-  );
-  const count = Number(rows[0]?.request_count ?? 0) + 1;
-
-  if (rows.length > 0) {
-    await db.run(
-      `UPDATE rate_limits SET request_count = ${placeholder(p, 0)} WHERE id = (
-         SELECT id FROM rate_limits
-         WHERE session_id = ${placeholder(p, 1)} AND route_pattern = ${placeholder(p, 2)} AND window_start = ${placeholder(p, 3)}
-       )`,
-      [count, identity, group, windowStart],
-    );
-  } else {
-    await db.run(
-      `INSERT INTO rate_limits (session_id, route_pattern, window_start, request_count)
-       VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)})`,
-      [identity, group, windowStart, count],
-    );
-  }
+  const count = await incrementRateLimit(identity, group, windowStart);
 
   const allowed = count <= effectiveLimit;
   const retryAfterSeconds = allowed ? 0 : Math.max(1, windowSeconds - Math.floor((Date.now() - Date.parse(windowStart)) / 1000));
@@ -202,35 +203,17 @@ export async function checkRateLimit(request: Request, group: RouteGroup): Promi
   const limit = await resolveLimit(request, group);
   const identity = await identityFor(request);
   const windowStart = currentWindowStart(windowSeconds);
-  const db = getDb();
-  const p = db.driver;
 
-  const rows = await db.raw<{ request_count: number | string }>(
-    `SELECT request_count FROM rate_limits
-     WHERE session_id = ${placeholder(p, 0)} AND route_pattern = ${placeholder(p, 1)} AND window_start = ${placeholder(p, 2)}`,
-    [identity, group, windowStart],
-  );
-  const count = Number(rows[0]?.request_count ?? 0) + 1;
+  const count = await incrementRateLimit(identity, group, windowStart);
 
-  if (rows.length > 0) {
-    await db.run(
-      `UPDATE rate_limits SET request_count = ${placeholder(p, 0)} WHERE id = (
-         SELECT id FROM rate_limits
-         WHERE session_id = ${placeholder(p, 1)} AND route_pattern = ${placeholder(p, 2)} AND window_start = ${placeholder(p, 3)}
-       )`,
-      [count, identity, group, windowStart],
-    );
-  } else {
-    // Housekeeping: drop this identity's windows older than an hour.
+  // Periodic cleanup of stale windows for this identity (older than 1h)
+  if (count === 1) {
+    const db = getDb();
+    const p = db.driver;
     await db.run(
       `DELETE FROM rate_limits WHERE session_id = ${placeholder(p, 0)} AND window_start < ${placeholder(p, 1)}`,
       [identity, new Date(Date.now() - 3_600_000).toISOString()],
-    );
-    await db.run(
-      `INSERT INTO rate_limits (session_id, route_pattern, window_start, request_count)
-       VALUES (${placeholder(p, 0)}, ${placeholder(p, 1)}, ${placeholder(p, 2)}, ${placeholder(p, 3)})`,
-      [identity, group, windowStart, count],
-    );
+    ).catch(() => {});
   }
 
   const allowed = count <= limit;

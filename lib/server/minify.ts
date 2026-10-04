@@ -117,8 +117,34 @@ export function minifyJs(source: string): string {
 }
 
 export function minifyHtml(source: string): string {
-  // Inter-tag whitespace and indentation between elements is never significant.
-  return scan(source, { comments: HTML_COMMENTS, keepNewlines: false }).replace(/>\s+</g, "><");
+  // Preserve <pre>, <code>, <script>, and <style> blocks byte-for-byte
+  const preservedBlocks: string[] = [];
+  const placeholderPrefix = "___LOCALME_PRESERVED_";
+
+  const protectedHtml = source.replace(
+    /<(pre|code|script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
+    (match) => {
+      const token = `${placeholderPrefix}${preservedBlocks.length}___`;
+      preservedBlocks.push(match);
+      return token;
+    },
+  );
+
+  // Remove HTML comments
+  const noComments = protectedHtml.replace(/<!--[\s\S]*?-->/g, "");
+
+  // Collapse whitespace between tags and reduce repeated spaces
+  let minified = noComments
+    .replace(/>\s+</g, "><")
+    .replace(/[ \t\r\n]+/g, " ")
+    .trim();
+
+  // Restore preserved blocks
+  for (let i = 0; i < preservedBlocks.length; i++) {
+    minified = minified.replace(`${placeholderPrefix}${i}___`, preservedBlocks[i]!);
+  }
+
+  return minified;
 }
 
 /** Minify by asset kind; non-minifiable paths come back untouched. */

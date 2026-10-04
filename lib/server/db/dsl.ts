@@ -137,9 +137,8 @@ function compileOperators(ctx: Ctx, field: FieldExprs, ops: FilterObject): strin
         } else {
           // SQLite has no native regexp; the `regexp()` scalar function is
           // registered by the SQLite driver (JS RegExp semantics, like pg's ~).
-          const escaped = value.replace(/'/g, "''");
           parts.push(
-            `(COALESCE(${field.text}, '') REGEXP ${addParam(ctx, escaped)})`,
+            `(COALESCE(${field.text}, '') REGEXP ${addParam(ctx, value)})`,
           );
         }
         break;

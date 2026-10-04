@@ -31,9 +31,31 @@ export const admin = {
   // --------------------------------------------------------------- tabs
   "admin.tab.accounts": { "en-US": "Accounts", "fa-IR": "حساب‌ها" },
   "admin.tab.projects": { "en-US": "Projects", "fa-IR": "پروژه‌ها" },
+  "admin.tab.subscriptions": { "en-US": "Subscriptions", "fa-IR": "اشتراک‌ها" },
   "admin.tab.platform": { "en-US": "Platform", "fa-IR": "پلتفرم" },
   "admin.tab.config": { "en-US": "Configuration", "fa-IR": "پیکربندی" },
   "admin.tab.i18n": { "en-US": "Translations", "fa-IR": "ترجمه‌ها" },
+
+  // ------------------------------------------------------- subscriptions
+  "admin.subscriptions.title": { "en-US": "Subscription Management", "fa-IR": "مدیریت اشتراک‌ها" },
+  "admin.subscriptions.description": {
+    "en-US": "Manage user tiers, quotas, storage caps, and review ZarinPal payment transactions.",
+    "fa-IR": "مدیریت سطح کاربران، سهمیه‌ها، سقف فضای ذخیره‌سازی و بررسی تراکنش‌های زرین‌پال.",
+  },
+  "admin.subscriptions.editPlan": { "en-US": "Edit Plan", "fa-IR": "ویرایش پلن" },
+  "admin.subscriptions.tier": { "en-US": "Subscription Tier", "fa-IR": "سطح اشتراک" },
+  "admin.subscriptions.maxProjects": { "en-US": "Max Projects", "fa-IR": "حداکثر پروژه‌ها" },
+  "admin.subscriptions.projectCap": { "en-US": "Project Cap (MB)", "fa-IR": "سقف هر پروژه (مگابایت)" },
+  "admin.subscriptions.libraryCap": { "en-US": "Library Cap (MB)", "fa-IR": "سقف کتابخانه (مگابایت)" },
+  "admin.subscriptions.expiresAt": { "en-US": "Expires At", "fa-IR": "تاریخ انقضا" },
+  "admin.subscriptions.transactions": { "en-US": "Payment Transactions", "fa-IR": "تراکنش‌های پرداخت" },
+  "admin.system.title": { "en-US": "System & Demo State", "fa-IR": "وضعیت سیستم و دمو" },
+  "admin.system.description": {
+    "en-US": "Convert demo deployment to clean production or populate fresh demo data.",
+    "fa-IR": "تبدیل استقرار دمو به محیط تمیز پروداکشن یا بازتولید داده‌های نمایشی دمو.",
+  },
+  "admin.system.convertToProd": { "en-US": "Convert to Clean Production", "fa-IR": "تبدیل به پروداکشن تمیز" },
+  "admin.system.populateDemo": { "en-US": "Populate Demo Data", "fa-IR": "تولید داده‌های نمایشی دمو" },
 
   // --------------------------------------------------------- stat cards
   "admin.stat.accountsHint": {

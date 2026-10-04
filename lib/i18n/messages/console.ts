@@ -15,7 +15,7 @@ export const consoleMessages = {
   "projects.create.dialogTitle": { "en-US": "Create a project", "fa-IR": "ساخت یک پروژه" },
   "projects.create.dialogDescription": {
     "en-US": "The name becomes your public URL:",
-    "fa-IR": "این نام میشود آدرس عمومی تو:",
+    "fa-IR": "این نام نشانی عمومی شما خواهد بود:",
   },
   "projects.create.nameLabel": { "en-US": "Project name", "fa-IR": "نام پروژه" },
   "projects.create.nameHint": {
@@ -42,18 +42,18 @@ export const consoleMessages = {
   "projects.section.title": { "en-US": "Your projects", "fa-IR": "پروژه‌های شما" },
   "projects.section.description": {
     "en-US": "Open a project to manage code, data and access.",
-    "fa-IR": "یک پروژه را باز کن تا کد، داده و دسترسی‌ها را مدیریت کنی.",
+    "fa-IR": "یک پروژه را باز کنید تا کد، داده و دسترسی‌ها را مدیریت کنید.",
   },
-  "projects.empty.title": { "en-US": "No projects yet", "fa-IR": "هنوز پروژه‌ای نداری" },
+  "projects.empty.title": { "en-US": "No projects yet", "fa-IR": "هنوز پروژه‌ای ندارید" },
   "projects.empty.description": {
     "en-US":
       "Create your first project, upload static files, and call /api/db from your JavaScript — the platform is your backend.",
     "fa-IR":
-      "اولین پروژه‌ات را بساز، فایل‌های استاتیک را بارگذاری کن و از جاوااسکریپتت ‎/api/db را صدا بزن — پلتفرم بک‌اند توست.",
+      "نخستین پروژه‌تان را بسازید، فایل‌های استاتیک را بارگذاری کنید و از جاوااسکریپت‌تان ‎/api/db را فراخوانی کنید — پلتفرم بک‌اند شماست.",
   },
   "projects.empty.action": {
     "en-US": "Create your first project",
-    "fa-IR": "اولین پروژه‌ات را بساز",
+    "fa-IR": "نخستین پروژه‌تان را بسازید",
   },
   "projects.badge.live": { "en-US": "live", "fa-IR": "فعال" },
   "projects.badge.suspended": { "en-US": "suspended", "fa-IR": "تعلیق‌شده" },
@@ -84,7 +84,7 @@ export const consoleMessages = {
     "en-US":
       "Upload an asset once and every project you own references it from a single stable URL. Nothing is copied between projects.",
     "fa-IR":
-      "یک فایل را یک بار بارگذاری کن و همهٔ پروژه‌هایت از یک آ ثابت به آن ارجاع دهند. چیزی بین پروژه‌ها کپی نمیشود.",
+      "یک فایل را یک بار بارگذاری کنید تا همهٔ پروژه‌هایتان از یک نشانی ثابت به آن ارجاع دهند. چیزی بین پروژه‌ها کپی نمیشود.",
   },
   "library.stat.usage": { "en-US": "Usage", "fa-IR": "مصرف" },
   "library.stat.usageDescription": {
@@ -104,7 +104,7 @@ export const consoleMessages = {
   "library.publish.title": { "en-US": "Publish an asset", "fa-IR": "انتشار یک فایل" },
   "library.publish.description": {
     "en-US": "Any file type except .html and .htm. The URL it gets is shown in the list below.",
-    "fa-IR": "هر نوع فایلی به‌جز ‎.html و ‎.htm. آدرسی که میگیرد در فهرست پایین دیده میشود.",
+    "fa-IR": "هر نوع فایلی به‌جز ‎.html و ‎.htm. نشانی دریافتی در فهرست زیر نمایش داده میشود.",
   },
   "library.publish.chooseFiles": { "en-US": "Choose files", "fa-IR": "انتخاب فایل" },
   "library.publish.uploadFolder": { "en-US": "Upload a folder", "fa-IR": "بارگذاری یک پوشه" },
@@ -113,7 +113,7 @@ export const consoleMessages = {
     "en-US":
       "Library files are served from the platform origin, so HTML is refused: it would run scripts against your own console session. Project pages can host HTML in the Code tab instead.",
     "fa-IR":
-      "فایل‌های کتابخانه از مبدأ پلتفرم سرو میشوند، بنابراین HTML پذیرفته نمیشود: روی نشست کنسول خودت اسکریپت اجرا میکرد. صفحه‌های پروژه میتوانند HTML را در تب کد داشته باشند.",
+      "فایل‌های کتابخانه از مبدأ پلتفرم سرو میشوند، بنابراین HTML پذیرفته نمیشود: روی نشست کنسول خودتان اسکریپت اجرا میکرد. صفحه‌های پروژه میتوانند HTML را در تب کد داشته باشند.",
   },
   "library.publish.done": {
     "en-US": "{count} assets published",
@@ -129,7 +129,7 @@ export const consoleMessages = {
     "en-US":
       "Link it from any project. library/ is a reserved folder name, so a relative reference resolves to your library on a custom domain too.",
     "fa-IR":
-      "از هر پروژه‌ای به آن لینک بده. ‎library/ نام پوشهٔ رزروشده است، پس ارجاع نسبی روی دامنهٔ اختصاصی هم به کتابخانهٔ تو میرسد.",
+      "از هر پروژه‌ای به آن پیوند دهید. ‎library/ نام پوشهٔ رزروشده است، پس ارجاع نسبی روی دامنهٔ اختصاصی هم به کتابخانهٔ شما میرسد.",
   },
   "library.filter.placeholder": { "en-US": "Filter assets…", "fa-IR": "فیلتر فایل‌ها…" },
   "library.filter.ariaLabel": { "en-US": "Filter library assets", "fa-IR": "فیلتر فایل‌های کتابخانه" },

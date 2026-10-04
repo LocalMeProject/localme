@@ -38,12 +38,18 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   isOperator: boolean("is_operator").notNull().default(false),
   storageCapBytes: bigint("storage_cap_bytes", { mode: "number" }).notNull().default(2097152),
+  maxProjects: integer("max_projects").notNull().default(3),
+  projectStorageCapBytes: bigint("project_storage_cap_bytes", { mode: "number" }).notNull().default(3145728),
+  libraryStorageCapBytes: bigint("library_storage_cap_bytes", { mode: "number" }).notNull().default(3145728),
+  subscriptionTier: text("subscription_tier").notNull().default("free"),
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   lastLogin: timestamp("last_login"),
   isSuspended: boolean("is_suspended").notNull().default(false),
   failedLoginCount: integer("failed_login_count").notNull().default(0),
   lockedUntil: timestamp("locked_until"),
+  allowAgentRequests: boolean("allow_agent_requests").notNull().default(false),
 });
 
 export const projects = pgTable(
@@ -298,16 +304,118 @@ export const apiKeys = pgTable(
   "api_keys",
   {
     id: serial("id").primaryKey(),
-    projectId: integer("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull(),
     prefix: text("prefix").notNull(),
     permissions: jsonb("permissions").notNull().default(sql`'{}'::jsonb`),
+    encryptedKey: text("encrypted_key"),
     lastUsedAt: timestamp("last_used_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     revokedAt: timestamp("revoked_at"),
   },
-  (t) => [uniqueIndex("api_keys_hash_uq").on(t.keyHash), index("idx_api_keys_project").on(t.projectId)],
+  (t) => [
+    uniqueIndex("api_keys_hash_uq").on(t.keyHash),
+    index("idx_api_keys_project").on(t.projectId),
+    index("idx_api_keys_user").on(t.userId),
+  ],
 );
+
+export const paymentTransactions = pgTable(
+  "payment_transactions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tier: text("tier").notNull().default("plus"),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    currency: text("currency").notNull().default("IRT"),
+    authority: text("authority").notNull().unique(),
+    status: text("status").notNull().default("pending"),
+    refId: text("ref_id"),
+    cardPan: text("card_pan"),
+    cardHash: text("card_hash"),
+    fee: bigint("fee", { mode: "number" }).default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    verifiedAt: timestamp("verified_at"),
+  },
+  (t) => [
+    index("idx_payments_user").on(t.userId),
+    index("idx_payments_authority").on(t.authority),
+  ],
+);
+
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenType: text("token_type").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    tokenHash: text("token_hash").notNull().unique(),
+    tokenEncrypted: text("token_encrypted"),
+    prefix: text("prefix").notNull(),
+    permissions: text("permissions").notNull().default('["*"]'),
+    rotationInterval: text("rotation_interval"),
+    nextRotationAt: timestamp("next_rotation_at"),
+    rotationGraceUntil: timestamp("rotation_grace_until"),
+    previousTokenHash: text("previous_token_hash"),
+    expiresAt: timestamp("expires_at"),
+    lastUsedAt: timestamp("last_used_at"),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_api_tokens_user").on(t.userId, t.tokenType),
+    index("idx_api_tokens_hash").on(t.tokenHash),
+    index("idx_api_tokens_prev_hash").on(t.previousTokenHash),
+    index("idx_api_tokens_expiry").on(t.expiresAt),
+  ],
+);
+
+export const tokenConsentRequests = pgTable(
+  "token_consent_requests",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientName: text("client_name").notNull(),
+    tokenName: text("token_name").notNull(),
+    description: text("description"),
+    requestedDuration: text("requested_duration").notNull(),
+    approvedDuration: text("approved_duration"),
+    status: text("status").notNull().default("pending"),
+    issuedTokenId: integer("issued_token_id").references(() => apiTokens.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("idx_token_consent_user").on(t.userId, t.status)],
+);
+
+export const tokenAuditLogs = pgTable(
+  "token_audit_logs",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    tokenId: integer("token_id"),
+    tokenType: text("token_type").notNull(),
+    tokenPrefix: text("token_prefix"),
+    actor: text("actor").notNull(),
+    ipAddress: text("ip_address"),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("idx_token_audit_user").on(t.userId, t.createdAt)],
+);
+

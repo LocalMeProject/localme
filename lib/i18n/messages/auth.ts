@@ -38,8 +38,8 @@ export const auth = {
   "account.title": { "en-US": "Account", "fa-IR": "حساب کاربری" },
   "account.eyebrow": { "en-US": "Console", "fa-IR": "کنسول" },
   "account.description": {
-    "en-US": "Password and email for your platform account.",
-    "fa-IR": "رمز عبور و ایمیل حساب پلتفرم تو.",
+    "en-US": "Manage your profile, resource limits and master API key.",
+    "fa-IR": "مدیریت نمایه، سقف منابع و کلید اصلی API شما.",
   },
   "account.backToDashboard": { "en-US": "Dashboard", "fa-IR": "پیشخوان" },
   "account.signedInAs": { "en-US": "Signed-in account", "fa-IR": "حساب واردشده" },
@@ -51,9 +51,50 @@ export const auth = {
   },
   "account.currentPassword": { "en-US": "Current password", "fa-IR": "رمز عبور فعلی" },
   "account.newPassword": { "en-US": "New password", "fa-IR": "رمز عبور جدید" },
-  "account.keepBlank": { "en-US": "Leave blank to keep", "fa-IR": "خالی بگذار تا تغییر نکند" },
+  "account.keepBlank": { "en-US": "Leave blank to keep", "fa-IR": "برای عدم تغییر، خالی بگذارید" },
   "account.toast.updated": { "en-US": "Account updated", "fa-IR": "حساب به‌روزرسانی شد" },
   "account.toast.failed": { "en-US": "Update failed.", "fa-IR": "به‌روزرسانی ناموفق بود." },
+
+  // limits & quota
+  "account.limits.title": { "en-US": "Resource Limits", "fa-IR": "سقف منابع و سهمیه‌ها" },
+  "account.limits.description": {
+    "en-US": "Your plan's project and storage allowances.",
+    "fa-IR": "سهمیه تعداد پروژه و فضای ذخیره‌سازی سطح کاربری شما.",
+  },
+  "account.limits.projects": { "en-US": "Projects", "fa-IR": "پروژه‌ها" },
+  "account.limits.projectSize": { "en-US": "Per-project cap", "fa-IR": "سقف حجم هر پروژه" },
+  "account.limits.totalStorage": { "en-US": "Total storage", "fa-IR": "کل فضای ذخیره‌سازی" },
+  "account.limits.used": { "en-US": "{used} of {total}", "fa-IR": "{used} از {total}" },
+
+  // master API key
+  "account.apiKey.title": { "en-US": "Master API Key", "fa-IR": "کلید اصلی API" },
+  "account.apiKey.description": {
+    "en-US": "User-level key that grants full access across all your projects.",
+    "fa-IR": "کلید سطح کاربری با دسترسی کامل به همه پروژه‌های شما.",
+  },
+  "account.apiKey.reveal": { "en-US": "Reveal", "fa-IR": "نمایش" },
+  "account.apiKey.hide": { "en-US": "Hide", "fa-IR": "مخفی‌سازی" },
+  "account.apiKey.copy": { "en-US": "Copy", "fa-IR": "کپی" },
+  "account.apiKey.copied": { "en-US": "Master API key copied", "fa-IR": "کلید اصلی کپی شد" },
+  "account.apiKey.regenerate": { "en-US": "Regenerate key", "fa-IR": "تولید مجدد کلید" },
+  "account.apiKey.regenerateConfirmTitle": {
+    "en-US": "Regenerate Master API Key?",
+    "fa-IR": "تولید مجدد کلید اصلی API؟",
+  },
+  "account.apiKey.regenerateConfirmDescription": {
+    "en-US":
+      "The current key will immediately stop working. Any scripts or integrations using it will fail.",
+    "fa-IR":
+      "کلید فعلی بلافاصله از کار خواهد افتاد. اسکریپت‌ها یا سرویس‌هایی که از آن استفاده میکنند با خطا مواجه میشوند.",
+  },
+  "account.apiKey.regenerated": {
+    "en-US": "Master API key regenerated",
+    "fa-IR": "کلید اصلی با موفقیت بازتولید شد",
+  },
+  "account.apiKey.prefix": { "en-US": "Prefix", "fa-IR": "پیشوند" },
+  "account.apiKey.created": { "en-US": "Created", "fa-IR": "تاریخ ساخت" },
+  "account.apiKey.lastUsed": { "en-US": "Last used", "fa-IR": "آخرین استفاده" },
+  "account.apiKey.neverUsed": { "en-US": "Never", "fa-IR": "هرگز" },
 
   // ---------------------------------------------------------- impersonate
   "impersonation.bodyPrefix": {

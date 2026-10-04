@@ -12,7 +12,10 @@ import { handler } from "@/lib/server/http";
 async function logout(request: Request): Promise<NextResponse> {
   const url = new URL(request.url);
   const returnUrl = url.searchParams.get("returnUrl");
-  const target = returnUrl && returnUrl.startsWith("/") ? returnUrl : "/";
+  const target =
+    returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/\\")
+      ? returnUrl
+      : "/";
   const projectIdRaw = url.searchParams.get("projectId");
 
   if (projectIdRaw && /^\d+$/.test(projectIdRaw)) {

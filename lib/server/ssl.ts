@@ -23,7 +23,7 @@
  * the certificate, so an operator turns it on deliberately. Everything else
  * (renewal selection, the challenge store, certificate reads) works regardless.
  */
-import { createHash, X509Certificate } from "node:crypto";
+import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { ApiError } from "@/lib/server/http";
@@ -183,12 +183,12 @@ function acmeIssuer(): AcmeIssuer {
         };
       };
 
-      // A per-platform account key, derived from SESSION_SECRET so a fresh
-      // deployment needs no extra configuration. It is derived rather than
-      // generated so a redeploy keeps the same ACME account.
-      const accountKey = createHash("sha256")
-        .update(`localme-acme-account:${process.env.SESSION_SECRET ?? "localme"}`)
-        .digest("hex");
+      // Valid RSA 2048 private key in PEM format required by acme-client
+      const { privateKey: accountKey } = generateKeyPairSync("rsa", {
+        modulusLength: 2048,
+        publicKeyEncoding: { type: "spki", format: "pem" },
+        privateKeyEncoding: { type: "pkcs8", format: "pem" },
+      });
 
       const [privateKeyBuffer, csr] = await acme.crypto.createCsr({
         altNames: [request.domain, ...(request.sans ?? [])],

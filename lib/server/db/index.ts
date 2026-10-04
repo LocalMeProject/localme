@@ -23,6 +23,7 @@ export interface Db {
   run: (sqlText: string, params?: unknown[]) => Promise<{ changes: number }>;
   exec: (sqlText: string) => Promise<void>;
   transaction: <T>(fn: (tx: Db) => Promise<T>) => Promise<T>;
+  close?: () => void | Promise<void>;
 }
 
 class SqliteDb implements Db {
@@ -73,6 +74,14 @@ class SqliteDb implements Db {
       throw error;
     }
   }
+
+  close(): void {
+    try {
+      this.#runner.close();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 class PostgresDb implements Db {
@@ -117,6 +126,14 @@ class PostgresDb implements Db {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  async close(): Promise<void> {
+    try {
+      await this.#pool.end();
+    } catch {
+      /* ignore */
     }
   }
 }
@@ -195,7 +212,13 @@ function installRegexp(database: import("better-sqlite3").Database): void {
   database.function("regexp", (pattern: string | null, text: string | null) => {
     if (typeof pattern !== "string" || typeof text !== "string") return 0;
     try {
-      return new RegExp(pattern).test(text) ? 1 : 0;
+      let re = pattern;
+      let flags = "";
+      if (re.startsWith("(?i)")) {
+        flags += "i";
+        re = re.slice(4);
+      }
+      return new RegExp(re, flags).test(text) ? 1 : 0;
     } catch {
       return 0;
     }
@@ -213,6 +236,16 @@ export function getDb(endpoint?: DbEndpoint): Db {
   const db = resolved.driver === "postgres" ? createPostgres(resolved) : createSqlite(resolved);
   if (!endpoint) cached = { endpoint: resolved, db };
   return db;
+}
+
+/** Close the cached database connection if open, and clear cache. */
+export function closeDb(): void {
+  if (cached) {
+    if (typeof cached.db.close === "function") {
+      cached.db.close();
+    }
+    cached = undefined;
+  }
 }
 
 export { pgSchema, sqSchema };

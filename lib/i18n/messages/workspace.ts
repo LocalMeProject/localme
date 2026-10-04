@@ -562,7 +562,7 @@ export const workspace = {
     "en-US":
       "Upload a full export archive to overwrite the files and configuration of this project. Imported visitors start disabled — password hashes are never exported.",
     "fa-IR":
-      "یک آرشیو برون‌بری کامل را بارگذاری کن تا فایل‌ها و تنظیمات این پروژه بازنویسی شود. بازدیدکننده‌های درون‌ریزی‌شده از ابتدا غیرفعال‌اند — هش رمزها هرگز برون‌بری نمیشوند.",
+      "یک آرشیو برون‌بری کامل را بارگذاری کنید تا فایل‌ها و تنظیمات این پروژه بازنویسی شود. بازدیدکننده‌های درون‌ریزی‌شده از ابتدا غیرفعال‌اند — هش رمزها هرگز برون‌بری نمیشوند.",
   },
   "backup.restoreSubmit": { "en-US": "Restore archive", "fa-IR": "بازیابی آرشیو" },
   "backup.restoring": { "en-US": "Restoring…", "fa-IR": "در حال بازیابی…" },
@@ -571,4 +571,26 @@ export const workspace = {
     "fa-IR": "‎{files} فایل و {features} بخش تنظیمات بازیابی شد",
   },
   "backup.restoreFailed": { "en-US": "Import failed.", "fa-IR": "درون‌ریزی ناموفق بود." },
+  "backup.conflict.title": { "en-US": "Library Conflict Detected", "fa-IR": "تداخل فایل‌های کتابخانه" },
+  "backup.conflict.description": {
+    "en-US":
+      "Your account library has {existing} asset(s), and this archive includes {incoming} library asset(s). Choose how to handle your shared library:",
+    "fa-IR":
+      "کتابخانهٔ مشترک شما دارای {existing} فایل است و این آرشیو شامل {incoming} فایل کتابخانه است. نحوهٔ اعمال تغییرات را انتخاب کنید:",
+  },
+  "backup.conflict.overwrite": { "en-US": "Overwrite completely", "fa-IR": "جایگزینی کامل" },
+  "backup.conflict.overwriteDesc": {
+    "en-US": "Dump current library completely and replace with archive assets.",
+    "fa-IR": "پاک‌سازی کامل کتابخانهٔ فعلی و جایگزینی با فایل‌های آرشیو.",
+  },
+  "backup.conflict.append": { "en-US": "Append & overwrite", "fa-IR": "افزودن و بازنویسی" },
+  "backup.conflict.appendDesc": {
+    "en-US": "Add new assets and update existing duplicates; preserve other files.",
+    "fa-IR": "افزودن فایل‌های جدید و به‌روزرسانی فایل‌های هم‌نام؛ حفظ سایر فایل‌ها.",
+  },
+  "backup.conflict.skip": { "en-US": "Skip library", "fa-IR": "صرف‌نظر از کتابخانه" },
+  "backup.conflict.skipDesc": {
+    "en-US": "Restore only project files and configuration; do not modify library.",
+    "fa-IR": "فقط فایل‌ها و تنظیمات پروژه بازیابی شوند و کتابخانه تغییر نکند.",
+  },
 } satisfies MessageGroup;

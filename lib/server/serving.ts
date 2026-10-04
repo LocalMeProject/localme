@@ -39,6 +39,8 @@ import { isHotlink } from "@/lib/server/hotlink";
 import { createLogger } from "@/lib/server/logger";
 import { etagFor, getCachedAsset, setCachedAsset } from "@/lib/server/asset-cache";
 import { encodedResponseAsync } from "@/lib/server/compress";
+import { readDiskFile } from "@/lib/server/storage-disk";
+import { injectSocialMeta, generateSocialCardSvg } from "@/lib/server/social-card";
 
 /** Serving logs (§9.4): refusals and upstream faults, never page content. */
 const log = createLogger("serving");
@@ -164,6 +166,22 @@ async function serveLibraryAsset(
     return new Response("Not found.", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   }
   const library = await libraryProjectFor(userId);
+  if (library) {
+    const ifNoneMatch = request.headers.get("if-none-match");
+    if (ifNoneMatch) {
+      const cached = getCachedAsset(library.projectId, path);
+      if (cached && ifNoneMatch.split(",").some((tag) => tag.trim() === cached.etag)) {
+        return new Response(null, {
+          status: 304,
+          headers: {
+            etag: cached.etag,
+            "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+            "x-content-type-options": "nosniff",
+          },
+        });
+      }
+    }
+  }
   const bytes = library ? await readFileBytes(library.projectId, path, { cacheable: true }) : null;
   if (!bytes) return platformNotFound("Asset not found.");
 
@@ -187,6 +205,7 @@ async function serveLibraryAsset(
   const headers = new Headers({
     "content-type": contentTypeFor(path),
     "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+    "x-content-type-options": "nosniff",
   });
   const etag = library ? getCachedAsset(library.projectId, path)?.etag ?? etagFor(bytes) : null;
   if (etag) {
@@ -338,6 +357,20 @@ async function readFileBytes(
     const cached = getCachedAsset(projectId, path);
     if (cached) return cached.content;
   }
+  // Try disk first (files off SQLite)
+  const diskContent = await readDiskFile(projectId, path);
+  if (diskContent) {
+    if (options.cacheable) {
+      setCachedAsset(projectId, path, {
+        content: diskContent,
+        etag: etagFor(diskContent, diskContent.byteLength),
+        updatedAt: new Date().toISOString(),
+        sizeBytes: diskContent.byteLength,
+        contentType: contentTypeFor(path),
+      });
+    }
+    return diskContent;
+  }
   const db = getDb();
   const rows = await db.raw<Record<string, unknown>>(
     `SELECT content_blob, content_text, size_bytes, updated_at FROM files
@@ -348,7 +381,9 @@ async function readFileBytes(
   const row = rows[0];
   if (!row) return null;
   const content =
-    row.content_text != null ? Buffer.from(String(row.content_text), "utf8") : Buffer.from(row.content_blob as Buffer);
+    row.content_text != null
+      ? Buffer.from(String(row.content_text), "utf8")
+      : Buffer.from((row.content_blob as Buffer) ?? Buffer.alloc(0));
   if (options.cacheable) {
     const updatedAt = String(row.updated_at ?? "");
     setCachedAsset(projectId, path, {
@@ -467,12 +502,11 @@ async function visitsThisMonth(projectId: number): Promise<number> {
   return Number(rows[0]?.n ?? 0);
 }
 
-/** Projects over their free-visit quota are paywalled (402). */
-export async function checkVisitQuota(project: ResolvedProject): Promise<void> {
-  const visits = await visitsThisMonth(project.projectId);
-  if (visits >= project.freeVisitsPerMonth) {
-    throw new ApiError("payment_required", "Project has exceeded its free visit quota.");
-  }
+/**
+ * Monthly visit cap check: dropped per user request (visits are logged for analytics, but not paywalled).
+ */
+export async function checkVisitQuota(_project: ResolvedProject): Promise<void> {
+  // Visit caps dropped; visits continue to be logged for analytics without blocking visitors.
 }
 
 /** Inject the watermark just before </body> (docs §14), unless the project opts out. */
@@ -610,6 +644,16 @@ async function serveResolvedProject(
   target: ServingTarget,
   options: { baseHref: string },
 ): Promise<Response> {
+  if (target.path === "/~og-image" || target.path === "~og-image") {
+    return new Response(generateSocialCardSvg(target.user, project.projectName), {
+      status: 200,
+      headers: {
+        "content-type": "image/svg+xml; charset=utf-8",
+        "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    });
+  }
+
   if (!project.isActive) {
     log.warn("suspended_project", { projectId: project.projectId, path: target.path });
     return new Response("Project is suspended.", { status: 403 });
@@ -644,7 +688,10 @@ async function serveResolvedProject(
     try {
       const config = parseProxyConfig(route.proxy_config);
       const secrets = await loadSecrets(project.projectId);
-      return await forwardProxyRequest(request, config, secrets, { mountPath: route.path_pattern });
+      return await forwardProxyRequest(request, config, secrets, {
+        mountPath: route.path_pattern,
+        callerPath: requestPath,
+      });
     } catch (error) {
       if (error instanceof ApiError) {
         log.warn("proxy_route_failed", { projectId: project.projectId, path: requestPath, error });
@@ -682,9 +729,25 @@ async function serveResolvedProject(
       cacheable = true;
     }
   }
+  const ifNoneMatch = request.headers.get("if-none-match");
   for (const candidate of libraryRef ? [] : lookupPaths) {
     const cleanPath = candidate.replace(/^\//, "");
     const candidateCacheable = !isHtmlPath(cleanPath);
+    if (candidateCacheable && ifNoneMatch) {
+      const cached = getCachedAsset(project.projectId, cleanPath);
+      if (cached && ifNoneMatch.split(",").some((tag) => tag.trim() === cached.etag)) {
+        log.debug("asset_fast_path_not_modified", { projectId: project.projectId, path: cleanPath });
+        return new Response(null, {
+          status: 304,
+          headers: {
+            etag: cached.etag,
+            "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+          },
+        });
+      }
+    }
     const found = await readFileBytes(project.projectId, cleanPath, { cacheable: candidateCacheable });
     if (found) {
       bytes = found;
@@ -733,7 +796,7 @@ async function serveResolvedProject(
     headers.set("cache-control", "no-store");
     // Slide-renew the visitor session (docs §6.2) on authenticated page loads.
     if (visitorPayload) {
-      const renewed = signVisitorToken({
+      const renewed = await signVisitorToken({
         sub: visitorPayload.sub,
         project_id: visitorPayload.project_id,
         role: visitorPayload.role,
@@ -751,10 +814,14 @@ async function serveResolvedProject(
     const compressed = await encodedResponseAsync(
       request,
       Buffer.from(
-        injectWatermark(
-          injectBaseHref(bytes.toString("utf8"), options.baseHref),
-          project.watermarkEnabled,
-          await watermarkMarkup(),
+        injectSocialMeta(
+          injectWatermark(
+            injectBaseHref(bytes.toString("utf8"), options.baseHref),
+            project.watermarkEnabled,
+            await watermarkMarkup(),
+          ),
+          target.user,
+          project.projectName,
         ),
         "utf8",
       ),

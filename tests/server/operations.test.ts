@@ -11,6 +11,7 @@ import { join } from "node:path";
 const tmp = mkdtempSync(join(tmpdir(), "operations-"));
 process.env.DB_DRIVER = "sqlite";
 process.env.DB_PATH = `file:${join(tmp, "test.db")}`;
+process.env.STORAGE_DATA_DIR = join(tmp, "storage_data");
 process.env.SESSION_SECRET = "test-session-secret";
 process.env.SECRETS_ENCRYPTION_KEY = "test-encryption-key-32-bytes!!";
 process.env.NEXT_PUBLIC_SITE_URL = "https://app.test";
@@ -85,7 +86,12 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  rmSync(tmp, { recursive: true, force: true });
+  db.close?.();
+  try {
+    rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock fallback */
+  }
 });
 
 function setConfig(key: string, value: unknown): Promise<void> {

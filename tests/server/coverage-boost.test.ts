@@ -54,7 +54,12 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  rmSync(tmp, { recursive: true, force: true });
+  getDb().close?.();
+  try {
+    rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock fallback */
+  }
 });
 
 describe("Coverage Boost Suite", () => {

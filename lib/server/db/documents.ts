@@ -232,7 +232,9 @@ export function createDocumentStore(db: Db) {
         const params =
           flavor === "postgres"
             ? [...compiled.params, ...fixedAndFilter]
-            : [...compiled.params, ...fixedAndFilter, ...fixedAndFilter];
+            : many
+              ? [...compiled.params, ...fixedAndFilter]
+              : [...compiled.params, ...fixedAndFilter, ...fixedAndFilter];
         const result = await db.run(sqlText, params);
         return result.changes;
       });

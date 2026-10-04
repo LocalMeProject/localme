@@ -56,7 +56,12 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  rmSync(tmp, { recursive: true, force: true });
+  db?.close?.();
+  try {
+    rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock fallback */
+  }
 });
 
 /** Insert a session row directly and return the raw session id. */

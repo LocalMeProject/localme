@@ -19,12 +19,18 @@ export const users = sqliteTable("users", {
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   isOperator: integer("is_operator", { mode: "boolean" }).notNull().default(false),
   storageCapBytes: integer("storage_cap_bytes").notNull().default(2097152),
+  maxProjects: integer("max_projects").notNull().default(3),
+  projectStorageCapBytes: integer("project_storage_cap_bytes").notNull().default(3145728),
+  libraryStorageCapBytes: integer("library_storage_cap_bytes").notNull().default(3145728),
+  subscriptionTier: text("subscription_tier").notNull().default("free"),
+  subscriptionExpiresAt: text("subscription_expires_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   lastLogin: text("last_login"),
   isSuspended: integer("is_suspended", { mode: "boolean" }).notNull().default(false),
   failedLoginCount: integer("failed_login_count").notNull().default(0),
   lockedUntil: text("locked_until"),
+  allowAgentRequests: integer("allow_agent_requests", { mode: "boolean" }).notNull().default(false),
 });
 
 export const projects = sqliteTable(
@@ -285,17 +291,119 @@ export const apiKeys = sqliteTable(
   "api_keys",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    projectId: integer("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull(),
     prefix: text("prefix").notNull(),
     /** JSON-serialized permissions map. */
     permissions: text("permissions").notNull().default("{}"),
+    encryptedKey: text("encrypted_key"),
     lastUsedAt: text("last_used_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     revokedAt: text("revoked_at"),
   },
-  (t) => [uniqueIndex("api_keys_hash_uq").on(t.keyHash), index("idx_api_keys_project").on(t.projectId)],
+  (t) => [
+    uniqueIndex("api_keys_hash_uq").on(t.keyHash),
+    index("idx_api_keys_project").on(t.projectId),
+    index("idx_api_keys_user").on(t.userId),
+  ],
 );
+
+export const paymentTransactions = sqliteTable(
+  "payment_transactions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tier: text("tier").notNull().default("plus"),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("IRT"),
+    authority: text("authority").notNull().unique(),
+    status: text("status").notNull().default("pending"),
+    refId: text("ref_id"),
+    cardPan: text("card_pan"),
+    cardHash: text("card_hash"),
+    fee: integer("fee").default(0),
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    verifiedAt: text("verified_at"),
+  },
+  (t) => [
+    index("idx_payments_user").on(t.userId),
+    index("idx_payments_authority").on(t.authority),
+  ],
+);
+
+export const apiTokens = sqliteTable(
+  "api_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenType: text("token_type").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    tokenHash: text("token_hash").notNull().unique(),
+    tokenEncrypted: text("token_encrypted"),
+    prefix: text("prefix").notNull(),
+    permissions: text("permissions").notNull().default('["*"]'),
+    rotationInterval: text("rotation_interval"),
+    nextRotationAt: text("next_rotation_at"),
+    rotationGraceUntil: text("rotation_grace_until"),
+    previousTokenHash: text("previous_token_hash"),
+    expiresAt: text("expires_at"),
+    lastUsedAt: text("last_used_at"),
+    revokedAt: text("revoked_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    index("idx_api_tokens_user").on(t.userId, t.tokenType),
+    index("idx_api_tokens_hash").on(t.tokenHash),
+    index("idx_api_tokens_prev_hash").on(t.previousTokenHash),
+    index("idx_api_tokens_expiry").on(t.expiresAt),
+  ],
+);
+
+export const tokenConsentRequests = sqliteTable(
+  "token_consent_requests",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientName: text("client_name").notNull(),
+    tokenName: text("token_name").notNull(),
+    description: text("description"),
+    requestedDuration: text("requested_duration").notNull(),
+    approvedDuration: text("approved_duration"),
+    status: text("status").notNull().default("pending"),
+    issuedTokenId: integer("issued_token_id").references(() => apiTokens.id, { onDelete: "set null" }),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [index("idx_token_consent_user").on(t.userId, t.status)],
+);
+
+export const tokenAuditLogs = sqliteTable(
+  "token_audit_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    tokenId: integer("token_id"),
+    tokenType: text("token_type").notNull(),
+    tokenPrefix: text("token_prefix"),
+    actor: text("actor").notNull(),
+    ipAddress: text("ip_address"),
+    metadata: text("metadata"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [index("idx_token_audit_user").on(t.userId, t.createdAt)],
+);
+
