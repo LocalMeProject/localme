@@ -2,6 +2,7 @@ import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { configValue } from "@/lib/server/system-config";
 import { ApiError } from "@/lib/server/errors";
+import { getSubscriptionPlans } from "@/lib/server/subscriptions";
 
 const ZARINPAL_SANDBOX_REQUEST_URL = "https://sandbox.zarinpal.com/pg/v4/payment/request.json";
 const ZARINPAL_SANDBOX_VERIFY_URL = "https://sandbox.zarinpal.com/pg/v4/payment/verify.json";
@@ -50,7 +51,7 @@ export async function getZarinpalMerchantId(): Promise<string> {
 /** Request payment from ZarinPal and create a pending transaction */
 export async function requestZarinpalPayment(options: {
   userId: number;
-  tier: "plus";
+  tier: "plus" | "pro";
   amountToman: number;
   callbackUrl: string;
   description: string;
@@ -234,24 +235,32 @@ export async function verifyZarinpalPayment(options: {
     [refId, cardPan, cardHash, fee, now, tx.id],
   );
 
-  // 2. Upgrade user to Plus tier (50 projects, 50MB per project, 50MB library, 30 days validity)
+  // 2. Upgrade user to requested tier (dynamically read from subscription plans)
+  const plans = await getSubscriptionPlans();
+  const plan = plans.find((p) => p.id === tx.tier);
+
+  const maxProjects = plan?.maxProjects ?? (tx.tier === "pro" ? 200 : 50);
+  const projectCapBytes = plan ? plan.projectStorageCapMb * 1024 * 1024 : (tx.tier === "pro" ? 262144000 : 52428800);
+  const libraryCapBytes = plan ? plan.libraryStorageCapMb * 1024 * 1024 : (tx.tier === "pro" ? 262144000 : 52428800);
+  const tierName = plan ? (plan.nameFa || plan.name) : tx.tier.toUpperCase();
+
   const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
   await db.run(
     `UPDATE users
-     SET subscription_tier = 'plus',
-         max_projects = 50,
-         project_storage_cap_bytes = 52428800,
-         library_storage_cap_bytes = 52428800,
-         subscription_expires_at = ${placeholder(p, 0)}
-     WHERE id = ${placeholder(p, 1)}`,
-    [expiresAt, tx.userId],
+     SET subscription_tier = ${placeholder(p, 0)},
+         max_projects = ${placeholder(p, 1)},
+         project_storage_cap_bytes = ${placeholder(p, 2)},
+         library_storage_cap_bytes = ${placeholder(p, 3)},
+         subscription_expires_at = ${placeholder(p, 4)}
+     WHERE id = ${placeholder(p, 5)}`,
+    [tx.tier, maxProjects, projectCapBytes, libraryCapBytes, expiresAt, tx.userId],
   );
 
   return {
     success: true,
-    message: "پرداخت با موفقیت انجام شد و اشتراک پلاس شما فعال گردید.",
+    message: `پرداخت با موفقیت انجام شد و اشتراک ${tierName} شما فعال گردید.`,
     refId,
-    tier: "plus",
+    tier: tx.tier,
     transaction: {
       ...tx,
       status: "completed",

@@ -30,10 +30,15 @@ export const GET = handler(async (request) => {
     id: user.id,
     username: user.username,
     email: user.email,
+    phoneNumber: null, // Phone number field reserved for future authentication
     isAdmin: user.isAdmin,
+    isOperator: user.isOperator,
+    subscriptionTier: user.subscriptionTier || "free",
+    subscriptionExpiresAt: user.subscriptionExpiresAt,
     storageCapBytes: user.storageCapBytes,
     maxProjects: user.maxProjects,
     projectStorageCapBytes: user.projectStorageCapBytes,
+    libraryStorageCapBytes: user.libraryStorageCapBytes,
     projectCount: userProjects.length,
     usedStorageBytes,
     allowAgentRequests: Boolean(user.allowAgentRequests),
@@ -42,7 +47,7 @@ export const GET = handler(async (request) => {
 });
 
 const accountSchema = z.object({
-  currentPassword: z.string().min(1).max(256),
+  currentPassword: z.string().min(1).max(256).optional(),
   newPassword: z.string().min(8).max(256).optional(),
   email: z.string().email().max(255).nullable().optional(),
 });
@@ -51,17 +56,25 @@ export const PATCH = handler(async (request) => {
   const principal = await requireSessionUser(request);
   const body = await parseJson(request, accountSchema);
 
-  // Always verify current password before making any changes
-  const valid = await verifyUserPassword(principal.userId!, body.currentPassword);
-  if (!valid) {
-    throw new ApiError("unauthorized", "Current password is incorrect.");
+  if (body.newPassword) {
+    if (!body.currentPassword) {
+      throw new ApiError("bad_request", "Current password is required to change password.");
+    }
+    const valid = await verifyUserPassword(principal.userId!, body.currentPassword);
+    if (!valid) {
+      throw new ApiError("unauthorized", "Current password is incorrect.");
+    }
+    await changePassword(principal.userId!, body.currentPassword, body.newPassword);
+  } else if (body.currentPassword) {
+    const valid = await verifyUserPassword(principal.userId!, body.currentPassword);
+    if (!valid) {
+      throw new ApiError("unauthorized", "Current password is incorrect.");
+    }
   }
 
-  if (body.newPassword !== undefined) {
-    await changePassword(principal.userId!, body.currentPassword, body.newPassword);
-  }
   if (body.email !== undefined) {
     await updateEmail(principal.userId!, body.email);
   }
+
   return apiOk({ success: true });
 });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenCheck, FolderTree, Library, ShieldCheck } from "lucide-react";
+import { BookOpenCheck, FolderTree, Library, ShieldCheck, UserRound } from "lucide-react";
 
 import { BrandMark } from "@/components/logo";
 import { CultureSwitch } from "@/components/culture-switch";
@@ -40,6 +40,7 @@ export function PlatformHeader({
   const links = [
     { href: "/dashboard", label: t("nav.projects"), icon: FolderTree, show: true },
     { href: "/dashboard/library", label: t("nav.library"), icon: Library, show: true },
+    { href: "/account", label: t("account.title") || "حساب کاربری", icon: UserRound, show: true },
     { href: "/admin", label: t("nav.console"), icon: ShieldCheck, show: Boolean(canAccessAdmin) },
     { href: "/docs", label: t("nav.docs"), icon: BookOpenCheck, show: true },
   ].filter((link) => link.show);
@@ -76,12 +77,17 @@ export function PlatformHeader({
         </div>
         <div className="flex items-center gap-3">
           <CultureSwitch />
-          <span className="hidden font-mono text-12.5px text-muted-foreground sm:inline">
-            {username}
+          <Link
+            href="/account"
+            className="hidden items-center gap-1.5 font-mono text-12.5px text-muted-foreground hover:text-foreground sm:inline-flex transition-colors"
+            title={t("account.title") || "حساب کاربری"}
+          >
+            <UserRound className="h-3.5 w-3.5" />
+            <span>{username}</span>
             {roleLabel && (
               <span className="ms-1.5 text-11px uppercase tracking-wide">{roleLabel}</span>
             )}
-          </span>
+          </Link>
           <SignOutButton />
         </div>
       </div>

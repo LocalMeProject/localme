@@ -1159,6 +1159,34 @@ export default function AdminPage() {
                       {plan.id.toUpperCase()}
                     </Badge>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "عنوان انگلیسی" : "Plan Name (EN)"}</Label>
+                      <Input
+                        type="text"
+                        value={plan.name}
+                        onChange={(e) => {
+                          const updated = [...plansConfig];
+                          updated[idx].name = e.target.value;
+                          setPlansConfig(updated);
+                        }}
+                        className="h-8 text-12px"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "عنوان فارسی" : "Plan Name (FA)"}</Label>
+                      <Input
+                        type="text"
+                        value={plan.nameFa}
+                        onChange={(e) => {
+                          const updated = [...plansConfig];
+                          updated[idx].nameFa = e.target.value;
+                          setPlansConfig(updated);
+                        }}
+                        className="h-8 text-12px"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-1">
                     <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "قیمت ماهانه (تومان)" : "Price (Toman/month)"}</Label>
                     <Input

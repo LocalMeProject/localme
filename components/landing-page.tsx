@@ -1265,6 +1265,32 @@ const { data } = await fetch('/api/db/find', {
               <Badge variant="outline">AES-256-GCM</Badge>
               <Badge variant="outline">HMAC-SHA256</Badge>
             </div>
+
+            {/* e-NAMAD Trust Badge Placeholder */}
+            <div className="mt-6 flex flex-col items-start gap-2.5 rounded-xl border border-border/80 bg-card/60 p-3.5 max-w-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background shadow-xs text-signal shrink-0">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-12px font-semibold text-foreground">
+                    {isFa ? "نماد اعتماد الکترونیکی" : "e-NAMAD Trust Badge"}
+                  </div>
+                  <div className="text-10.5px text-muted-foreground">
+                    {isFa ? "مرکز توسعه تجارت الکترونیکی" : "Ministry of Industry & Trade"}
+                  </div>
+                </div>
+              </div>
+              <p className="text-11px text-muted-foreground leading-relaxed">
+                {isFa
+                  ? "پلتفرم LocalMe دارای درگاه پرداخت تاییدشده بانکی جهت میزبانی وب و زیرساخت ابری است."
+                  : "Authorized electronic commerce trust verification for secure cloud hosting services."}
+              </p>
+              <div className="flex items-center gap-1.5 text-10px font-mono text-muted-foreground pt-1 border-t border-border/60 w-full">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{isFa ? "درگاه پرداخت تاییدشده شاپرک و زرین‌پال" : "Verified Payment Gateway"}</span>
+              </div>
+            </div>
           </div>
 
           {footerGroups.map((group) => (
