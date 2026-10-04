@@ -14,7 +14,7 @@
  * here and drifted: a relative path opened a SQLite URI instead of a file, so
  * `db:migrate` succeeded against a database the server never saw.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -29,7 +29,18 @@ const sqlitePath = sqlitePathFrom(process.env);
 async function migrateSqlite() {
   // Lazy require keeps driver imports out of the Postgres path.
   const { default: Database } = await import("better-sqlite3");
-  const db = new Database(sqlitePath ?? ":memory:");
+  let targetPath = sqlitePath;
+  if (!targetPath && process.env.NODE_ENV !== "test") {
+    targetPath = join(ROOT, "data", "localme.db");
+  }
+  if (targetPath) {
+    try {
+      mkdirSync(dirname(targetPath), { recursive: true });
+    } catch {
+      /* ignore directory creation error */
+    }
+  }
+  const db = new Database(targetPath ?? ":memory:");
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
