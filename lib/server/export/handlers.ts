@@ -18,10 +18,11 @@ import {
 /** GET /api/export/{feature}?projectId=N */
 export const exportFeatureHandler = handler(async (request, context) => {
   const { feature } = await context.params;
+  const featStr = Array.isArray(feature) ? feature[0] ?? "" : (feature ?? "");
   const url = new URL(request.url);
   const project = await ownerProject(request, Number(url.searchParams.get("projectId")));
-  const data = await exportFeature(project.id, featureFromParam(feature ?? ""));
-  return apiOk({ feature, projectId: project.id, data });
+  const data = await exportFeature(project.id, featureFromParam(featStr));
+  return apiOk({ feature: featStr, projectId: project.id, data });
 });
 
 /** GET /api/export/all?projectId=N — ZIP archive. */
@@ -41,9 +42,10 @@ export const exportAllHandler = handler(async (request) => {
 /** POST /api/import/{feature}?projectId=N — JSON body, overwrites the feature. */
 export const importFeatureHandler = handler(async (request, context) => {
   const { feature } = await context.params;
+  const featStr = Array.isArray(feature) ? feature[0] ?? "" : (feature ?? "");
   const url = new URL(request.url);
   const project = await ownerProject(request, Number(url.searchParams.get("projectId")));
-  const resolved = featureFromParam(feature ?? "");
+  const resolved = featureFromParam(featStr);
   const raw = (await request.json().catch(() => {
     throw new ApiError("bad_request", "Body must be valid JSON.");
   })) as unknown;

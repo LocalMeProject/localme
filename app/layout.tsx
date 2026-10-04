@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -7,9 +6,9 @@ import { SITE_NAME, DEFAULT_TITLE, DEFAULT_DESCRIPTION, DEFAULT_IMAGE, siteOrigi
 import { LOCALE_META } from "@/lib/i18n/locales";
 import { resolveRequestLocale } from "@/lib/i18n/server";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-display" });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const inter = { variable: "--font-sans" };
+const interTight = { variable: "--font-display" };
+const jetbrainsMono = { variable: "--font-mono" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
@@ -48,14 +47,14 @@ export const viewport: Viewport = {
 // the wrong edge, which is exactly the jarring flash RTL support exists to
 // prevent. The server already rendered the correct `lang`/`dir` from the
 // cookie; this only covers the case where localStorage is newer than it.
-const themeScript = `(function(){var d=document.documentElement;d.classList.add("js");try{var t=localStorage.getItem("localme.theme");if(t==="light"){d.classList.remove("dark")}else{d.classList.add("dark")}}catch(e){d.classList.add("dark")}try{var l=localStorage.getItem("localme.locale");if(l==="fa-IR"||l==="en-US"){d.lang=l;d.dir=(l==="fa-IR")?"rtl":"ltr"}}catch(e){}})()`;
+const themeScript = `(function(){var d=document.documentElement;d.classList.add("js");try{var t=localStorage.getItem("localme.theme");if(t==="dark"){d.classList.add("dark")}else{d.classList.remove("dark")}}catch(e){d.classList.remove("dark")}try{var l=localStorage.getItem("localme.locale");if(l==="fa-IR"||l==="en-US"){d.lang=l;d.dir=(l==="fa-IR")?"rtl":"ltr"}}catch(e){}})()`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await resolveRequestLocale();
   const meta = LOCALE_META[locale];
 
   return (
-    <html lang={meta.intlTag} dir={meta.dir} className="dark" suppressHydrationWarning>
+    <html lang={meta.intlTag} dir={meta.dir} className="light" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${interTight.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >

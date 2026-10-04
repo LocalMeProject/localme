@@ -34,8 +34,8 @@ export const landing = {
 
   // --------------------------------------------------------------- hero
   "landing.hero.badge": {
-    "en-US": "free forever · no credit card",
-    "fa-IR": "رایگان برای همیشه · بدون کارت بانکی",
+    "en-US": "Instant Setup · Zero DevOps",
+    "fa-IR": "شروع سریع و آسان · کاملاً خودکار",
   },
   "landing.hero.title1": { "en-US": "You make the app.", "fa-IR": "اپلیکیشن را تو میسازی." },
   "landing.hero.title2": { "en-US": "We run the hard half.", "fa-IR": "نیم سختش با ما." },
@@ -423,25 +423,25 @@ export const landing = {
   // ------------------------------------------------------------- pricing
   "landing.pricing.eyebrow": { "en-US": "pricing", "fa-IR": "تعرفه" },
   "landing.pricing.title": {
-    "en-US": "One plan. Free, and honest about limits.",
-    "fa-IR": "یک پلن. رایگان. و صادق دربارهٔ سقف‌ها.",
+    "en-US": "Simple, transparent tiers.",
+    "fa-IR": "پلن‌های شفاف، متناسب با نیاز و رشد پروژه‌ات.",
   },
   "landing.pricing.body": {
     "en-US":
-      "Every account gets the entire platform — there is no feature gate, no seat count and no trial clock. Caps exist to keep the shared deployment fast, and they are visible everywhere they matter.",
+      "Start free with zero setup. Upgrade smoothly to Plus or Pro as your traffic, storage, and project requirements grow.",
     "fa-IR":
-      "هر حساب کل سرویس را دارد. نه چیزی قفل است، نه باید تعداد کاربر حساب کنی، نه زمان آزمایشی داری. سقف‌ها فقط برای سریع ماندن همین سرویس مشترک‌اند و هرجا لازم باشد میبینی‌شان.",
+      "با پلن رایگان و بدون هیچ کانفیگ پیچیده‌ای شروع کن. هر زمان پروژه‌ات رشد کرد، به سادگی به پلن‌های پلاس و حرفه‌ای ارتقا بده.",
   },
-  "landing.pricing.badge": { "en-US": "free tier", "fa-IR": "پلن رایگان" },
+  "landing.pricing.badge": { "en-US": "pricing tiers", "fa-IR": "تعرفه‌ها" },
   "landing.pricing.price": { "en-US": "$0", "fa-IR": "۰ تومان" },
-  "landing.pricing.perMonth": { "en-US": "/ month, forever", "fa-IR": "/ ماه، برای همیشه" },
+  "landing.pricing.perMonth": { "en-US": "/ month", "fa-IR": "/ ماه" },
   "landing.pricing.priceBody": {
     "en-US":
-      "Unlimited projects, the full API surface and every console tool. Scale when you outgrow the caps.",
+      "All core capabilities ready from day one. Scale when you outgrow the caps.",
     "fa-IR":
-      "پروژه نامحدود، کل API و همه ابزارهای کنسول. وقتی از سقف‌ها رد شدی، ارتقا میدهی.",
+      "تمام قابلیت‌های اصلی از روز اول آماده‌اند. وقتی نیازت بیشتر شد ارتقا میدهی.",
   },
-  "landing.pricing.cta": { "en-US": "Create an account", "fa-IR": "حساب بساز" },
+  "landing.pricing.cta": { "en-US": "Get started", "fa-IR": "شروع استفاده" },
   "landing.pricing.limitStorage": { "en-US": "Account storage", "fa-IR": "فضای حساب" },
   "landing.pricing.limitStorageHint": {
     "en-US": "shared across every project",
@@ -637,6 +637,8 @@ export const landing = {
   "landing.footer.faq": { "en-US": "FAQ", "fa-IR": "پرسش‌های پرتکرار" },
   "landing.footer.health": { "en-US": "Health endpoint", "fa-IR": "نقطهٔ سلامت سرویس" },
   "landing.footer.hostedApps": { "en-US": "Hosted apps", "fa-IR": "اپلیکیشن‌های میزبانی‌شده" },
+  "landing.footer.policy": { "en-US": "Terms & Policy", "fa-IR": "قوانین و حریم خصوصی" },
+  "landing.footer.skillMcp": { "en-US": "Agent Skill & MCP", "fa-IR": "اسکیل و سرور MCP" },
   "landing.footer.singleDeployment": {
     "en-US": "Single deployment, every project",
     "fa-IR": "یک دیپلوی، برای همهٔ پروژه‌ها",
@@ -702,9 +704,9 @@ export const landing = {
   },
   "landing.meta.description": {
     "en-US":
-      "LocalMe gives every project a place to keep its information and files, accounts for the people who use it, and a real web address — all ready as soon as you sign up. Free forever, no credit card, no server to rent.",
+      "LocalMe gives every project a database, files, visitor accounts, and a real web address — all automated from the moment you sign up. Zero DevOps, no server to configure.",
     "fa-IR":
-      "لوکال می به هر پروژه‌ای که میسازی یک جا برای نگه‌داشتن اطلاعات میدهد، یک جا برای فایل‌ها، حساب کاربری برای کسانی که از اپلیکیشن استفاده میکنند و یک آدرس واقعی روی اینترنت. همه از همان لحظه ثبت‌نام آماده‌اند. رایگان برای همیشه، بدون کارت بانکی و بدون سرور.",
+      "لوکال می به هر پروژه‌ای دیتابیس، فضای فایل، حساب کاربری و یک آدرس واقعی روی اینترنت میدهد — کاملاً خودکار و آماده از لحظهٔ ثبت‌نام. بدون نیاز به سرور و کانفیگ‌های پیچیده.",
   },
   // Pipe-separated so one string stays one catalog row; `app/page.tsx` splits
   // it into the `<meta keywords>` list.
@@ -756,52 +758,65 @@ export const landing = {
   },
 
   // ------------------------------------------------------------ one story
-  // A worked example in the target reader's own terms. Abstract feature lists
-  // do not land with someone who has never built anything; a specific small
-  // business problem does.
-  "landing.story.eyebrow": { "en-US": "a real example", "fa-IR": "یک نمونهٔ واقعی" },
+  // A worked example in the target reader's own terms.
+  // Agent-first: Idea to production via a single prompt, MCP, and auto AAT.
+  "landing.story.eyebrow": { "en-US": "idea to production", "fa-IR": "از ایده تا اپلیکیشن زنده" },
   "landing.story.title": {
-    "en-US": "Say you run a small cake shop.",
-    "fa-IR": "فرض کنید یک قنادی کوچک دارید.",
+    "en-US": "Say you run a cake shop and need an ordering website.",
+    "fa-IR": "فرض کن یک قنادی داری و برای ثبت سفارش مشتری یک سایت میخواهی.",
   },
   "landing.story.body": {
     "en-US":
-      "You want customers to be able to order cakes for next week, and you want to see every order in one list. That is the entire project — here is all of it.",
+      "You don't need to write backend code, configure SQL databases, or configure servers. You give your AI agent a single prompt pointing to our Skill and MCP server — the agent builds and ships it all.",
     "fa-IR":
-      "میخواهی مشتری‌ها بتوانند برای هفتهٔ بعد کیک سفارش بدهند و خودت همهٔ سفارش‌ها را در یک فهرست ببینی. کل پروژه همین است. این هم تمامش.",
+      "اصلا لازم نیست کد بک‌اند بنویسی یا سرور و دیتابیس راه بیندازی. فقط یک پیام به هوش مصنوعی میدهی و اسکیل و سرور MCP لوکال می را معرفی میکنی؛ ایجنت همه چیز را میسازد و منتشر میکند.",
   },
-  "landing.story.step1.title": { "en-US": "You make an account", "fa-IR": "حساب میسازی" },
+  "landing.story.step1.title": { "en-US": "1. Prompt your AI Agent", "fa-IR": "۱. به هوش مصنوعی میگویی" },
   "landing.story.step1.body": {
     "en-US":
-      "An email address and a password. Nothing to install, no card, no company, no technical setup.",
+      "Tell Claude, Cursor, ChatGPT, or Antigravity what you need and point it to the LocalMe Skill at https://localme.ir/skills/localme/SKILL.md.",
     "fa-IR":
-      "یک ایمیل و یک رمز. نه چیزی نصب میشود، نه کارت بانکی میخواهد، نه اسم شرکت، نه هیچ تنظیم فنی.",
+      "به کلود، کرسر، چت‌جی‌پی‌تی یا هر ایجنتی که داری میگویی سایت قنادی میخواهی و آدرس اسکیل لوکال می (https://localme.ir/skills/localme/SKILL.md) را به آن میدهی.",
   },
-  "landing.story.step2.title": { "en-US": "You create a project", "fa-IR": "یک پروژه میسازی" },
+  "landing.story.step2.title": { "en-US": "2. Confirm Access with One Click", "fa-IR": "۲. با یک کلیک تایید میکنی" },
   "landing.story.step2.body": {
     "en-US":
-      "You type a name — cakeshop — and get a real web address that works immediately.",
+      "The agent requests a temporary Agent Access Token (AAT). You approve it in your browser with one click — no API keys to copy or expose.",
     "fa-IR":
-      "یک اسم مینویسی، مثلا cakeshop، و همان لحظه یک آدرس واقعی تحویل میگیری که همین الان کار میکند.",
+      "ایجنت دسترسی موقت (AAT) درخواست میکند. صفحه تایید در مرورگرت باز میشود و با یک کلیک تاییدش میکنی؛ بدون هیچ کپی کردن کلید یا نگرانی امنیتی.",
   },
-  "landing.story.step3.title": { "en-US": "You put your order form there", "fa-IR": "فرم سفارش را میگذاری رویش" },
+  "landing.story.step3.title": { "en-US": "3. Agent Deploys via MCP", "fa-IR": "۳. ایجنت با MCP منتشر میکند" },
   "landing.story.step3.body": {
     "en-US":
-      "Upload the page with the cake photos and the order form. Every order a customer sends is saved automatically — you never touch a database.",
+      "Your agent creates the project, provisions database tables, and uploads the responsive ordering app straight to LocalMe through the MCP server.",
     "fa-IR":
-      "صفحه‌ای که عکس کیک‌ها و فرم سفارش در آن است را میگذاری. هر سفارشی که مشتری بفرستد خودکار ذخیره میشود. تو حتی یک بار هم به پایگاه‌داده نزدیک نمیشوی.",
+      "ایجنت پروژه را از طریق سرور MCP لوکال می میسازد، جداول دیتابیس سفارش‌ها را ایجاد میکند و فایل‌های سایت را مستقیما بارگذاری میکند.",
   },
-  "landing.story.step4.title": { "en-US": "You see every order", "fa-IR": "همهٔ سفارش‌ها را میبینی" },
+  "landing.story.step4.title": { "en-US": "4. Live Website & Real-Time Orders", "fa-IR": "۴. سایت زنده و دریافت سفارش‌ها" },
   "landing.story.step4.body": {
     "en-US":
-      "A page lists them by day with the customer's name and phone number. Print them, or delete any of them.",
+      "Customers open cakeshop.localme.ir on their phones and place orders. You see every order land live in your dashboard — ready for business.",
     "fa-IR":
-      "یک صفحه آنها را به ترتیب روز با نام و شمارهٔ مشتری نشان میدهد. چاپ میگیری، یا هرکدام را که خواستی پاک میکنی.",
+      "سایتت بلافاصله آنلاین است. مشتری‌ها با گوشی سفارش میدهند و تمام سفارش‌ها را همان لحظه در پیشخوانت میبینی.",
   },
   "landing.story.cta": {
-    "en-US": "This whole example is free to build today",
-    "fa-IR": "ساخت همین نمونه امروز رایگان است",
+    "en-US": "Try it with your AI assistant today",
+    "fa-IR": "همین امروز با دستیار هوش مصنوعیت امتحان کن",
   },
+  "landing.prompt.title": {
+    "en-US": "Idea to Live Website: The One-Prompt Recipe",
+    "fa-IR": "از ایده تا سایت واقعی: دستور یک‌خطی به هوش مصنوعی",
+  },
+  "landing.prompt.subtitle": {
+    "en-US": "Copy and paste this prompt directly into Claude Code, Cursor, ChatGPT, or Antigravity:",
+    "fa-IR": "این متن را کپی کن و به کلود، کرسر، چت‌جی‌پی‌تی یا هر مدل هوش مصنوعی بده:",
+  },
+  "landing.prompt.text": {
+    "en-US": "Create a modern, mobile-friendly cake shop web app with a cake catalog, customer phone and address ordering form, and an orders list. Deploy it to my LocalMe account using the Skill at https://localme.ir/skills/localme/SKILL.md and MCP server at https://localme.ir/api/mcp.",
+    "fa-IR": "یک وب‌اپلیکیشن شیک و مناسب موبایل برای قنادی من بساز با کاتالوگ کیک‌ها، فرم نام و شماره و آدرس مشتری برای ثبت سفارش، و صفحه مدیریت سفارش‌ها. سپس با استفاده از اسکیل لوکال می در https://localme.ir/skills/localme/SKILL.md و سرور MCP در https://localme.ir/api/mcp آن را در حساب لوکال می من منتشر کن.",
+  },
+  "landing.prompt.copy": { "en-US": "Copy Prompt", "fa-IR": "کپی دستور" },
+  "landing.prompt.copied": { "en-US": "Copied to Clipboard!", "fa-IR": "دستور کپی شد!" },
 
   // ------------------------------------------------- what people actually build
   // Replaces the persona list as the main "is this for me" signal. Concrete

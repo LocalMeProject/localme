@@ -9,14 +9,14 @@ function applyTheme(theme: Theme) {
 }
 
 function initialTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") return stored;
   } catch {
     /* ignore */
   }
-  return "dark";
+  return "light";
 }
 
 interface ThemeState {
@@ -26,7 +26,7 @@ interface ThemeState {
 }
 
 export const useTheme = create<ThemeState>((set, get) => ({
-  theme: "dark",
+  theme: "light",
   toggle: () => {
     const next: Theme = get().theme === "dark" ? "light" : "dark";
     try {

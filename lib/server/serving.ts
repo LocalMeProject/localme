@@ -244,7 +244,7 @@ function clientIp(request: Request): string {
 /** Platform reserved prefixes never treated as project serving (docs §3.3.3). */
 export const RESERVED_PREFIXES = [
   "/api", "/auth", "/admin", "/dashboard", "/account", "/library", "/health",
-  "/~public", "/_next", "/docs",
+  "/skills", "/policy", "/~public", "/_next", "/docs", "/favicon.ico", "/fonts",
 ];
 
 export interface ServingTarget {

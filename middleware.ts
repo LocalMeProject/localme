@@ -20,6 +20,7 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export const RESERVED_PREFIXES = [
   "/api", "/auth", "/admin", "/dashboard", "/account", "/library", "/health",
+  "/skills", "/policy",
   "/~public", "/~serving", "/_next", "/docs", "/favicon.ico",
   // The platform's own web fonts (public/fonts/*.woff2). Without this,
   // /fonts/iransans-regular.woff2 parses as user="fonts",
@@ -53,19 +54,27 @@ function parseServingPath(pathname: string): { user: string; project: string; pa
 
 /** True when the Host is the platform's own host (not a custom domain). */
 function isPlatformHost(hostname: string): boolean {
-  if (hostname.startsWith("localhost") || hostname.startsWith("127.") || hostname === "0.0.0.0") {
+  const h = hostname.toLowerCase();
+  if (
+    h === "localhost" ||
+    h.startsWith("localhost:") ||
+    h.startsWith("127.") ||
+    h === "0.0.0.0" ||
+    h === "::1" ||
+    h === "localme.ir" ||
+    h.endsWith(".localme.ir")
+  ) {
     return true;
   }
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  if (configured) {
+  for (const envVar of [process.env.NEXT_PUBLIC_SITE_URL, process.env.SITE_URL]) {
+    if (!envVar) continue;
     try {
-      if (new URL(configured).hostname === hostname) return true;
+      const parsed = new URL(envVar).hostname.toLowerCase();
+      if (parsed === h || h.endsWith(`.${parsed}`)) return true;
     } catch {
       // Ignore malformed site URL.
     }
   }
-  // Freebuff-style preview hosts: anything with a port suffix on unknown domains
-  // cannot be verified as a custom domain at the middleware layer anyway.
   return false;
 }
 
@@ -80,13 +89,13 @@ export const config = {
   // route and 404s. `tests/server/middleware-prefixes.test.ts` asserts they
   // agree.
   matcher: [
-    "/((?!api|auth|admin|dashboard|account|library|health|~public|~serving|_next|docs|favicon.ico|fonts).*)",
+    "/((?!api|auth|admin|dashboard|account|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)",
   ],
 };
 
 /** The compiled matcher, for tests that need to ask "does this path run middleware?". */
 export const MATCHER_PATTERN =
-  /^\/((?!api|auth|admin|dashboard|account|library|health|~public|~serving|_next|docs|favicon.ico|fonts).*)$/;
+  /^\/((?!api|auth|admin|dashboard|account|library|health|skills|policy|~public|~serving|_next|docs|favicon.ico|fonts).*)$/;
 
 /**
  * ACME HTTP-01 validation (Blueprint §5.6 step 5) must reach the platform on

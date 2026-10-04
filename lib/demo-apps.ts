@@ -152,9 +152,8 @@ export function demoText(locale: string, key: DemoStringKey): string {
  * interpret.
  */
 const PLACEHOLDER = new RegExp(
-  `\\{\\{(${Object.keys(DEMO_STRINGS["en-US"]).join("|")
-    .split(".")
-    .map((part) => part.replace(/\./g, "\\."))
+  `\\{\\{(${Object.keys(DEMO_STRINGS["en-US"])
+    .map((key) => key.replace(/\./g, "\\."))
     .join("|")})\\}\\}`,
   "g",
 );

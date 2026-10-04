@@ -52,17 +52,25 @@ export async function parseJson<S extends z.ZodTypeAny>(request: Request, schema
 }
 
 /** Route-handler wrapper: converts thrown ApiErrors into documented responses. */
-export type RouteContext<P extends Record<string, string> = Record<string, string>> = {
+export type RouteContext<P extends Record<string, string | string[] | undefined> = Record<string, string | string[] | undefined>> = {
   params: Promise<P>;
 };
+
+export interface RouteHandler<P extends Record<string, string | string[] | undefined> = Record<string, string | string[] | undefined>> {
+  (request: Request): Promise<NextResponse>;
+  (request: Request, context: RouteContext<P>): Promise<NextResponse>;
+}
 
 /** API request logging (§9.4) — every unhandled fault lands here. */
 const log = createLogger("api");
 
-export function handler<P extends Record<string, string> = Record<string, string>>(
+export function handler<P extends Record<string, string | string[] | undefined> = Record<string, string | string[] | undefined>>(
   fn: (request: Request, context: RouteContext<P>) => Promise<NextResponse>,
-) {
-  return async (request: Request, context?: RouteContext<P>): Promise<NextResponse> => {
+): RouteHandler<P> {
+  const routeFn = async (
+    request: Request,
+    context?: RouteContext<P>,
+  ): Promise<NextResponse> => {
     const path = new URL(request.url).pathname;
     try {
       // §5.11 rate limiting is applied here rather than per route, so a new
@@ -88,4 +96,5 @@ export function handler<P extends Record<string, string> = Record<string, string
       return apiError("internal_error", "Something went wrong.");
     }
   };
+  return routeFn as RouteHandler<P>;
 }

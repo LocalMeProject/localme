@@ -12,6 +12,7 @@ import {
   Layers,
   Route as RouteIcon,
   ShieldCheck,
+  Sparkles,
   Terminal,
 } from "lucide-react";
 import { BrandMark } from "@/components/logo";
@@ -110,6 +111,15 @@ const CONSOLE: Endpoint[] = [
   { method: "PATCH", path: "/api/admin/users", auth: "docs.auth.legend.admin", note: "docs.note.admin.users" },
   { method: "GET", path: "/admin/api/{users,projects,system-configs,global-cron,stats}", auth: "docs.auth.legend.admin", note: "docs.note.admin.aliases" },
   { method: "GET", path: "/.well-known/acme-challenge/{token}", auth: "docs.auth.legend.public", note: "docs.note.admin.acme" },
+];
+
+const MCP_ENDPOINTS: Endpoint[] = [
+  { method: "POST", path: "/api/mcp", auth: "docs.auth.legend.sessionOrKey", note: "docs.note.mcp.rpc" },
+  { method: "POST", path: "/api/agent/request-aat", auth: "docs.auth.legend.public", note: "docs.note.agent.request" },
+  { method: "GET", path: "/api/agent/poll-aat?requestId=…", auth: "docs.auth.legend.public", note: "docs.note.agent.poll" },
+  { method: "POST", path: "/api/agent/check", auth: "docs.auth.legend.public", note: "docs.note.agent.check" },
+  { method: "GET", path: "/auth/consent?requestId=…", auth: "docs.auth.legend.public", note: "docs.note.agent.consent" },
+  { method: "GET / POST", path: "/api/account/pat", auth: "docs.auth.legend.console", note: "docs.note.pat.list" },
 ];
 
 const ERRORS: [string, MessageKey][] = [
@@ -233,6 +243,7 @@ const NAV: { id: string; label: MessageKey }[] = [
   { id: "operations", label: "docs.nav.operations" },
   { id: "console", label: "docs.nav.console" },
   { id: "limits", label: "docs.nav.limits" },
+  { id: "mcp", label: "docs.nav.mcp" },
   { id: "errors", label: "docs.nav.errors" },
 ];
 
@@ -250,7 +261,7 @@ export default function DocsPage() {
           <div className="flex items-center gap-2">
             <CultureSwitch />
             <Button variant="ghost" size="sm" asChild>
-              <a href={`${origin}/health`} target="_blank" rel="noreferrer">
+              <a href="/health" target="_blank" rel="noreferrer">
                 <Terminal className="h-3.5 w-3.5" />
                 {t("docs.header.health")}
               </a>
@@ -596,6 +607,39 @@ POST /api/domains/renew?projectId=1
                 <div className="text-11px font-medium text-foreground">{t("docs.limits.sessionTitle")}</div>
                 <p className="mt-1 text-11px">{t("docs.limits.sessionBody")}</p>
               </div>
+            </div>
+          </Section>
+
+          <Section id="mcp" icon={Sparkles} title={t("docs.mcp.title")}>
+            <p><Rich text={t("docs.mcp.body")} /></p>
+
+            <div className="rounded-lg border border-border p-4 bg-card/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                <div className="font-semibold text-foreground text-sm flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  Agent Skill: <code className="text-signal font-mono text-xs">/skills/localme/SKILL.md</code>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/skills/localme/SKILL.md" target="_blank" rel="noreferrer">
+                    View SKILL.md
+                  </a>
+                </Button>
+              </div>
+              <p className="text-12px text-muted-foreground">
+                Point Claude Code, Cursor, Windsurf or Antigravity to this skill document for complete guidelines and autonomous tooling.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground text-sm">{t("docs.mcp.aatTitle")}</h3>
+              <p><Rich text={t("docs.mcp.aatBody")} /></p>
+            </div>
+
+            <EndpointTable endpoints={MCP_ENDPOINTS} />
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground text-sm">{t("docs.mcp.toolsTitle")}</h3>
+              <p><Rich text={t("docs.mcp.toolsBody")} /></p>
             </div>
           </Section>
 

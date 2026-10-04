@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { DEFAULT_PLANS, type SubscriptionPlan } from "@/lib/subscriptions-shared";
 import {
   ArrowRight,
   BookOpenCheck,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   Code2,
+  Copy,
   Database,
   Eye,
   FileText,
@@ -68,10 +70,30 @@ import { revealDelay, useScrollReveal } from "@/components/reveal";
 
 export function LandingPage() {
   const { theme, toggle } = useTheme();
-  const { t, fmt } = useI18n();
+  const { t, fmt, locale } = useI18n();
+  const isFa = locale === "fa-IR";
   // Single observer pass: every [data-reveal] element fades up as it scrolls in.
   useScrollReveal();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
+
+  useEffect(() => {
+    fetch("/api/subscription/plans")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setPlans(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(t("landing.prompt.text"));
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2000);
+  };
 
   // All of the marketing content is built from the catalog rather than held as
   // module constants: a locale is not known at module scope, and these lists are
@@ -83,9 +105,11 @@ export function LandingPage() {
         { href: "#what", key: "landing.nav.what" },
         { href: "#example", key: "landing.nav.example" },
         { href: "#build", key: "landing.nav.build" },
-        { href: "#features", key: "landing.nav.features" },
         { href: "#how", key: "landing.nav.how" },
+        { href: "#features", key: "landing.nav.features" },
         { href: "#pricing", key: "landing.nav.pricing" },
+        { href: "#faq", key: "landing.footer.faq" },
+        { href: "#compare", key: "landing.compare.eyebrow" },
       ] as { href: string; key: MessageKey }[],
     [],
   );
@@ -137,25 +161,25 @@ export function LandingPage() {
       [
         {
           step: "01",
-          icon: UserRoundPlus,
+          icon: Sparkles,
           title: t("landing.story.step1.title"),
           body: t("landing.story.step1.body"),
         },
         {
           step: "02",
-          icon: Globe2,
+          icon: ShieldCheck,
           title: t("landing.story.step2.title"),
           body: t("landing.story.step2.body"),
         },
         {
           step: "03",
-          icon: FileText,
+          icon: Code2,
           title: t("landing.story.step3.title"),
           body: t("landing.story.step3.body"),
         },
         {
           step: "04",
-          icon: ListChecks,
+          icon: Rocket,
           title: t("landing.story.step4.title"),
           body: t("landing.story.step4.body"),
         },
@@ -440,8 +464,10 @@ export function LandingPage() {
       {
         title: t("landing.footer.groupPlatform"),
         links: [
-          { label: t("landing.footer.health"), href: `${siteOrigin()}/health` },
-          { label: t("landing.footer.hostedApps"), href: siteOrigin() },
+          { label: t("landing.footer.health"), to: "/health" },
+          { label: t("landing.footer.hostedApps"), to: "/" },
+          { label: t("landing.footer.policy"), to: "/policy" },
+          { label: t("landing.footer.skillMcp"), href: "/skills/localme/SKILL.md" },
         ],
       },
     ],
@@ -498,19 +524,19 @@ export function LandingPage() {
             <BrandMark />
           </Link>
 
-          <nav aria-label={t("nav.sections")} className="hidden items-center gap-1 lg:flex">
+          <nav aria-label={t("nav.sections")} className="hidden items-center gap-1 whitespace-nowrap lg:flex">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="link-slide rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="link-slide shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 {t(link.key)}
               </a>
             ))}
             <Link
               href="/docs"
-              className="link-slide rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="link-slide shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {t("landing.nav.docs")}
             </Link>
@@ -748,6 +774,49 @@ export function LandingPage() {
               ))}
             </ol>
 
+            {/* Interactive Single-Prompt Recipe Box */}
+            <div className="mt-8 panel p-6 sm:p-7 border-signal/30 bg-card/60 shadow-lg" data-reveal>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-signal" />
+                    <h3 className="text-base font-semibold text-foreground">{t("landing.prompt.title")}</h3>
+                  </div>
+                  <p className="text-13px text-muted-foreground mt-1">{t("landing.prompt.subtitle")}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyPrompt}
+                  className="tap shrink-0 border-signal/40 text-signal hover:bg-signal/10"
+                >
+                  {copiedPrompt ? (
+                    <>
+                      <Check className="h-4 w-4 me-1.5 text-emerald-500" />
+                      <span>{t("landing.prompt.copied")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 me-1.5" />
+                      <span>{t("landing.prompt.copy")}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="rounded-lg bg-background/90 p-4 font-mono text-xs text-foreground/90 border border-border leading-relaxed break-words select-all">
+                {t("landing.prompt.text")}
+              </div>
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                  <span>Agent Skill: <code className="text-signal font-mono">https://localme.ir/skills/localme/SKILL.md</code></span>
+                </div>
+                <div>
+                  <span>MCP Server: <code className="text-blueprint font-mono">https://localme.ir/api/mcp</code></span>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center" data-reveal>
               <Button variant="signal" size="lg" asChild className="tap">
                 <Link href={signupHref}>
@@ -936,8 +1005,161 @@ const { data } = await fetch('/api/db/find', {
           </div>
         </section>
 
+        {/* ------------------------------------------------------ Pricing */}
+        <section id="pricing" className="scroll-mt-24 border-b border-border bg-card/40">
+          <div className="mx-auto max-w-7xl px-5 section-y">
+            <div className="max-w-2xl" data-reveal>
+              <div className="mono-label mb-3">{t("landing.pricing.eyebrow")}</div>
+              <h2 className="text-balance text-display-md">{t("landing.pricing.title")}</h2>
+              <p className="copy mt-3">{t("landing.pricing.body")}</p>
+            </div>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              {plans.map((plan, idx) => {
+                const isPopular = plan.isPopular;
+                const priceFormatted =
+                  plan.priceToman === 0
+                    ? isFa
+                      ? "۰ تومان"
+                      : "Free"
+                    : isFa
+                      ? `${fmt.number(plan.priceToman)} تومان`
+                      : `${fmt.number(plan.priceToman)} Toman`;
+                const periodLabel = isFa ? plan.periodFa : `/${plan.period}`;
+                const planName = isFa ? plan.nameFa : plan.name;
+                const badgeLabel = isFa ? plan.badgeFa : plan.badge;
+                const desc = isFa ? plan.descriptionFa : plan.description;
+                const features = isFa ? plan.featuresFa : plan.features;
+
+                return (
+                  <div
+                    key={plan.id}
+                    className={cn(
+                      "panel relative flex flex-col justify-between overflow-hidden p-6 sm:p-8 transition-all",
+                      isPopular && "border-signal shadow-lg shadow-signal/5 bg-card/90 ring-1 ring-signal/50",
+                    )}
+                    data-reveal
+                    style={revealDelay(idx, 80)}
+                  >
+                    {isPopular && (
+                      <div className="glow-signal pointer-events-none absolute -right-16 -top-24 h-56 w-56 opacity-25 blur-3xl" aria-hidden />
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-base font-semibold">{planName}</span>
+                        {badgeLabel && (
+                          <Badge variant={isPopular ? "signal" : "outline"} className="text-11px">
+                            {badgeLabel}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex items-baseline gap-1.5">
+                        <span className="nums text-display-md font-bold">{priceFormatted}</span>
+                        <span className="text-xs text-muted-foreground">{periodLabel}</span>
+                      </div>
+                      <p className="mt-2 text-12.5px leading-relaxed text-muted-foreground">
+                        {desc}
+                      </p>
+
+                      <div className="mt-6 space-y-2 border-t border-border pt-4">
+                        <div className="flex justify-between text-11.5px text-muted-foreground">
+                          <span>{t("projects.stat.count")}</span>
+                          <span className="nums font-medium text-foreground">{fmt.number(plan.maxProjects)}</span>
+                        </div>
+                        <div className="flex justify-between text-11.5px text-muted-foreground">
+                          <span>{t("projects.stat.storage")}</span>
+                          <span className="nums font-medium text-foreground">{plan.projectStorageCapMb} MB</span>
+                        </div>
+                        <div className="flex justify-between text-11.5px text-muted-foreground">
+                          <span>{t("projects.stat.visits")}</span>
+                          <span className="nums font-medium text-foreground">{fmt.number(plan.monthlyVisits)}</span>
+                        </div>
+                      </div>
+
+                      <ul className="mt-6 space-y-2.5 border-t border-border pt-5">
+                        {features.map((feat) => (
+                          <li key={feat} className="flex items-start gap-2 text-12.5px text-muted-foreground">
+                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-signal" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="mt-8 pt-4">
+                      <Button
+                        variant={isPopular ? "signal" : "outline"}
+                        size="lg"
+                        asChild
+                        className="tap w-full"
+                      >
+                        <Link href={signupHref}>
+                          {plan.id === "free" ? t("landing.hero.ctaPrimary") : (isFa ? `انتخاب پلن ${plan.nameFa}` : `Choose ${plan.name}`)}
+                          <ArrowRight className="rtl-flip h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ----------------------------------------------------------------- FAQ */}
+        <section id="faq" className="scroll-mt-24 border-b border-border">
+          <div className="mx-auto grid max-w-7xl gap-10 px-5 section-y lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="lg:sticky lg:top-28 lg:self-start" data-reveal>
+              <div className="mono-label mb-3">{t("landing.faq.eyebrow")}</div>
+              <h2 className="text-balance text-display-sm">{t("landing.faq.title")}</h2>
+              <p className="copy mt-3">{t("landing.faq.body")}</p>
+              <Button variant="outline" className="tap mt-5" asChild>
+                <Link href="/docs">
+                  <Terminal className="h-4 w-4" />
+                  {t("landing.faq.readDocs")}
+                </Link>
+              </Button>
+            </div>
+
+            <div className="divide-y divide-border rounded-xl border border-border bg-card" data-reveal style={revealDelay(1, 90)}>
+              {faqs.map((faq, index) => {
+                const open = openFaq === index;
+                return (
+                  <div key={faq.q}>
+                    <h3>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() => setOpenFaq(open ? null : index)}
+                        className="tap flex w-full items-center justify-between gap-4 px-5 py-4 text-start text-sm font-medium transition-colors hover:bg-accent/50"
+                      >
+                        {faq.q}
+                        <span
+                          className={cn(
+                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border transition-transform",
+                            open && "rotate-45 border-signal/50 text-signal",
+                          )}
+                          aria-hidden
+                        >
+                          +
+                        </span>
+                      </button>
+                    </h3>
+                    {open && (
+                      <p className="animate-fade-in px-5 pb-5 text-13px leading-relaxed text-muted-foreground">
+                        {faq.a}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* --------------------------------------------------- Comparison */}
-        <section id="compare" className="scroll-mt-24 border-b border-border">
+        <section id="compare" className="scroll-mt-24 border-b border-border bg-card/20">
           <div className="mx-auto max-w-7xl px-5 section-y">
             <div className="max-w-2xl" data-reveal>
               <div className="mono-label mb-3">{t("landing.compare.eyebrow")}</div>
@@ -993,123 +1215,6 @@ const { data } = await fetch('/api/db/find', {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </section>
-
-        {/* ------------------------------------------------------ Pricing */}
-        <section id="pricing" className="scroll-mt-24 border-b border-border bg-card/40">
-          <div className="mx-auto max-w-7xl px-5 section-y">
-            <div className="max-w-2xl" data-reveal>
-              <div className="mono-label mb-3">{t("landing.pricing.eyebrow")}</div>
-              <h2 className="text-balance text-display-md">{t("landing.pricing.title")}</h2>
-              <p className="copy mt-3">{t("landing.pricing.body")}</p>
-            </div>
-
-            <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-              <div className="panel relative overflow-hidden p-6 sm:p-8" data-reveal>
-                <div className="glow-signal pointer-events-none absolute -right-16 -top-24 h-64 w-64 opacity-20 blur-3xl" aria-hidden />
-                <div className="relative flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <Badge variant="signal">{t("landing.pricing.badge")}</Badge>
-                    <div className="mt-4 flex items-baseline gap-2">
-                      <span className="nums text-display-lg font-semibold">{t("landing.pricing.price")}</span>
-                      <span className="text-sm text-muted-foreground">{t("landing.pricing.perMonth")}</span>
-                    </div>
-                    <p className="mt-2 max-w-md text-13px text-muted-foreground">
-                      {t("landing.pricing.priceBody")}
-                    </p>
-                  </div>
-                  <Button variant="signal" size="lg" asChild className="tap">
-                    <Link href={signupHref}>
-                      {t("landing.pricing.cta")}
-                      <ArrowRight className="rtl-flip h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-border pt-6 sm:grid-cols-4">
-                  {planLimits.map((limit) => (
-                    <div key={limit.label}>
-                      <div className="mono-label">{limit.label}</div>
-                      <div className="nums mt-1.5 text-lg font-semibold tracking-tight">{limit.value}</div>
-                      <div className="mt-0.5 text-11px text-muted-foreground">{limit.hint}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="panel p-6 sm:p-8" data-reveal style={revealDelay(1, 90)}>
-                <h3 className="text-sm font-semibold">{t("landing.pricing.includesTitle")}</h3>
-                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {planIncludes.map((item) => (
-                    <li key={item} className="flex gap-2.5 text-13px text-muted-foreground">
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-signal" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 rounded-lg border border-border bg-background/60 p-4">
-                  <div className="flex items-center gap-2 text-13px font-medium">
-                    <Lock className="h-3.5 w-3.5 text-blueprint" />
-                    {t("landing.pricing.exitTitle")}
-                  </div>
-                  <p className="mt-1.5 text-12.5px leading-relaxed text-muted-foreground">
-                    {t("landing.pricing.exitBody")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ----------------------------------------------------------------- FAQ */}
-        <section id="faq" className="scroll-mt-24 border-b border-border">
-          <div className="mx-auto grid max-w-7xl gap-10 px-5 section-y lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="lg:sticky lg:top-28 lg:self-start" data-reveal>
-              <div className="mono-label mb-3">{t("landing.faq.eyebrow")}</div>
-              <h2 className="text-balance text-display-sm">{t("landing.faq.title")}</h2>
-              <p className="copy mt-3">{t("landing.faq.body")}</p>
-              <Button variant="outline" className="tap mt-5" asChild>
-                <Link href="/docs">
-                  <Terminal className="h-4 w-4" />
-                  {t("landing.faq.readDocs")}
-                </Link>
-              </Button>
-            </div>
-
-            <div className="divide-y divide-border rounded-xl border border-border bg-card" data-reveal style={revealDelay(1, 90)}>
-              {faqs.map((faq, index) => {
-                const open = openFaq === index;
-                return (
-                  <div key={faq.q}>
-                    <h3>
-                      <button
-                        type="button"
-                        aria-expanded={open}
-                        onClick={() => setOpenFaq(open ? null : index)}
-                        className="tap flex w-full items-center justify-between gap-4 px-5 py-4 text-start text-sm font-medium transition-colors hover:bg-accent/50"
-                      >
-                        {faq.q}
-                        <span
-                          className={cn(
-                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border transition-transform",
-                            open && "rotate-45 border-signal/50 text-signal",
-                          )}
-                          aria-hidden
-                        >
-                          +
-                        </span>
-                      </button>
-                    </h3>
-                    {open && (
-                      <p className="animate-fade-in px-5 pb-5 text-13px leading-relaxed text-muted-foreground">
-                        {faq.a}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </div>
         </section>
@@ -1204,12 +1309,10 @@ const { data } = await fetch('/api/db/find', {
               <Mail className="h-3.5 w-3.5" />
               support@localme
             </span>
-            {siteOriginIsPublic() && (
-              <a className="link-quiet flex items-center gap-1.5" href={`${siteOrigin()}/health`} target="_blank" rel="noreferrer">
-                <Gauge className="h-3.5 w-3.5" />
-                {t("landing.footer.status")}
-              </a>
-            )}
+            <a className="link-quiet flex items-center gap-1.5" href="/health" target="_blank" rel="noreferrer">
+              <Gauge className="h-3.5 w-3.5" />
+              {t("landing.footer.status")}
+            </a>
           </div>
         </div>
       </footer>

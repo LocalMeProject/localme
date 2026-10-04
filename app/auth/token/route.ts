@@ -33,6 +33,7 @@ import {
   dispatchWebhookEvent,
   dispatchWebhookEventForUser,
 } from "@/lib/server/webhook-routes";
+import { ensureBootstrapAdmin } from "@/lib/server/bootstrap";
 
 const tokenSchema = z.object({
   action: z.enum(["login", "signup"]).default("login"),
@@ -82,6 +83,7 @@ export const POST = handler(async (request) => {
   }
 
   requireCaptcha(body);
+  await ensureBootstrapAdmin();
   await assertNotLocked(body.username);
   let user;
   try {

@@ -27,6 +27,7 @@ export const docs = {
   "docs.nav.operations": { "en-US": "Certificates & operations", "fa-IR": "گواهی‌ها و عملیات" },
   "docs.nav.console": { "en-US": "Console API", "fa-IR": "API کنسول" },
   "docs.nav.limits": { "en-US": "Limits & quotas", "fa-IR": "محدودیت‌ها و سهمیه‌ها" },
+  "docs.nav.mcp": { "en-US": "AI Agents & MCP", "fa-IR": "عامل‌های هوش مصنوعی و MCP" },
   "docs.nav.errors": { "en-US": "Errors", "fa-IR": "خطاها" },
 
   // -------------------------------------------------------------- header
@@ -615,5 +616,61 @@ export const docs = {
   "docs.note.admin.acme": {
     "en-US": "Serves the HTTP-01 challenge token for a domain being validated.",
     "fa-IR": "توکن چالش HTTP-01 را برای دامنه‌ای که در حال اعتبارسنجی است سرو میکند.",
+  },
+
+  // ---------------------------------------------------------------- mcp & agents
+  "docs.mcp.title": {
+    "en-US": "AI Agents, Skills & MCP Server",
+    "fa-IR": "عامل‌های هوش مصنوعی، اسکیل‌ها و سرور MCP",
+  },
+  "docs.mcp.body": {
+    "en-US":
+      "LocalMe provides first-class support for autonomous AI coding agents (Claude Code, Cursor, Antigravity, Windsurf, etc.). Connect your agent to the native MCP server at ‹https://localme.ir/api/mcp› or provide the official Agent Skill at ‹https://localme.ir/skills/localme/SKILL.md›. Agents can autonomously create projects, upload assets, provision databases, and configure routing with Human-in-the-Loop approval for tokens.",
+    "fa-IR":
+      "لوکال می پشتیبانی کامل و بومی از عامل‌های خودکار هوش مصنوعی (کلود، کرسر، آنتی‌گرویتی، ویندسرف و غیره) ارائه میدهد. عامل خود را به سرور MCP به نشانی ‹https://localme.ir/api/mcp› متصل کنید یا فایل اسکیل رسمی را در ‹https://localme.ir/skills/localme/SKILL.md› به آن بدهید. عامل‌ها میتوانند به صورت خودکار پروژه بسازند، فایل‌ها را بارگذاری کنند، دیتابیس را آماده کنند و مسیرها را تنظیم نمایند، در حالی که تایید صدور توکن همواره با تایید انسانی انجام میشود.",
+  },
+  "docs.mcp.aatTitle": {
+    "en-US": "Agent Access Tokens (AAT) & Human Consent Flow",
+    "fa-IR": "توکن‌های دسترسی عامل (AAT) و فرآیند تایید انسانی",
+  },
+  "docs.mcp.aatBody": {
+    "en-US":
+      "Agents request access via ‹POST /api/agent/request-aat›. The user receives a consent link ‹/auth/consent?requestId=…› to approve in their browser. Once approved, the agent polls ‹/api/agent/poll-aat›, caches the ephemeral token in ‹localme-aat.txt›, and operates via MCP tools. Permanent or auto-rotating Personal Access Tokens (PAT) can also be created manually via ‹/account›.",
+    "fa-IR":
+      "عامل‌ها با ‹POST /api/agent/request-aat› درخواست دسترسی میدهند. لینک تایید ‹/auth/consent?requestId=…› برای کاربر نمایش داده میشود تا در مرورگر تایید کند. پس از تایید، عامل با فراخوانی ‹/api/agent/poll-aat› توکن موقت را دریافت کرده، در ‹localme-aat.txt› ذخیره میکند و با ابزارهای MCP کار میکند. همچنین توکن‌های دسترسی شخصی (PAT) دائمی یا با چرخش خودکار از طریق ‹/account› قابل ایجاد هستند.",
+  },
+  "docs.mcp.toolsTitle": {
+    "en-US": "Available MCP Tools",
+    "fa-IR": "ابزارهای در دسترس در MCP",
+  },
+  "docs.mcp.toolsBody": {
+    "en-US":
+      "The MCP server exposes 12 autonomous tools: ‹localme_list_projects›, ‹localme_get_project›, ‹localme_create_project›, ‹localme_list_files›, ‹localme_read_file›, ‹localme_upload_file›, ‹localme_delete_file›, ‹localme_db_find›, ‹localme_db_insert›, ‹localme_db_update›, ‹localme_db_delete›, and ‹localme_get_usage›.",
+    "fa-IR":
+      "سرور MCP دوازده ابزار خودکار در اختیار عامل میگذارد: ‹localme_list_projects›، ‹localme_get_project›، ‹localme_create_project›، ‹localme_list_files›، ‹localme_read_file›، ‹localme_upload_file›، ‹localme_delete_file›، ‹localme_db_find›، ‹localme_db_insert›، ‹localme_db_update›، ‹localme_db_delete› و ‹localme_get_usage›.",
+  },
+  "docs.note.mcp.rpc": {
+    "en-US": "JSON-RPC 2.0 / SSE endpoint for Model Context Protocol agents.",
+    "fa-IR": "نقطه پایانی JSON-RPC 2.0 / SSE برای عامل‌های پروتکل زمینه مدل (MCP).",
+  },
+  "docs.note.agent.request": {
+    "en-US": "Requests a new ephemeral Agent Access Token (AAT); returns a consent URL.",
+    "fa-IR": "درخواست یک توکن دسترسی عامل موقت (AAT)؛ نشانی اینترنتی تایید را برمیگرداند.",
+  },
+  "docs.note.agent.poll": {
+    "en-US": "Polls approval status of an AAT request until approved or denied by the user.",
+    "fa-IR": "بررسی وضعیت تایید درخواست AAT تا زمان تایید یا رد توسط کاربر.",
+  },
+  "docs.note.agent.check": {
+    "en-US": "Validates an AAT token and returns its active TTL remaining.",
+    "fa-IR": "اعتبارسنجی توکن AAT و بازگرداندن مدت زمان باقی‌مانده اعتبار آن.",
+  },
+  "docs.note.agent.consent": {
+    "en-US": "Interactive web page where the account owner reviews and approves agent scopes.",
+    "fa-IR": "صفحه تحت وب که در آن مالک حساب دسترسی‌های درخواستی عامل را بررسی و تایید میکند.",
+  },
+  "docs.note.pat.list": {
+    "en-US": "List and create Personal Access Tokens with optional auto-rotation.",
+    "fa-IR": "فهرست و ساخت توکن‌های دسترسی شخصی با امکان چرخش خودکار.",
   },
 } satisfies MessageGroup;

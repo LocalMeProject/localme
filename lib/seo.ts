@@ -8,7 +8,7 @@ export const SITE_NAME = "LocalMe";
  */
 export const DEFAULT_TITLE = "LocalMe — Give your app a database, files and user accounts";
 export const DEFAULT_DESCRIPTION =
-  "Every project you make here gets a place to keep its information and files, accounts for the people who use it, and a real web address — ready the moment you sign up. Free forever, no credit card, no server to rent.";
+  "Every project you make here gets a place to keep its information and files, accounts for the people who use it, and a real web address — ready the moment you sign up. Automated backend and hosting, zero configuration, no server to rent.";
 export const DEFAULT_IMAGE = "/og.png";
 
 /**

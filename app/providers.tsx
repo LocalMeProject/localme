@@ -32,6 +32,15 @@ export function Providers({
     }
   }, [setTheme]);
 
+  useEffect(() => {
+    console.log(
+      "%c Made By Sina %c Email: sina1vali@gmail.com (mailto:sina1vali@gmail.com) ",
+      "background: #2563eb; color: #fff; font-weight: bold; padding: 2px 6px; border-radius: 4px 0 0 4px;",
+      "background: #1e293b; color: #38bdf8; padding: 2px 6px; border-radius: 0 4px 4px 0;",
+    );
+    console.log("Made By Sina - Email: sina1vali@gmail.com - mailto:sina1vali@gmail.com");
+  }, []);
+
   return (
     <I18nProvider initialLocale={initialLocale}>
       {children}

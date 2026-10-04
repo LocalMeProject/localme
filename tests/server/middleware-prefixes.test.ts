@@ -66,9 +66,15 @@ describe("serving middleware prefixes", () => {
   });
 
   it("leaves the landing page and other top-level routes alone", () => {
-    for (const route of ["/", "/docs", "/auth", "/dashboard"]) {
+    for (const route of ["/", "/docs", "/auth", "/dashboard", "/skills/localme/SKILL.md", "/policy"]) {
       expect(destination(route), `${route} must not be rewritten`).toBeNull();
     }
+  });
+
+  it("recognizes localme.ir as a platform host", () => {
+    const req = new NextRequest("http://localme.ir/dashboard");
+    const response = middleware(req);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
   });
 
   it("still refuses ACME challenges and honours custom domains", () => {

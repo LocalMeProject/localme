@@ -27,15 +27,15 @@ function mac(payload: string): string {
  */
 export function createCaptchaChallenge(): CaptchaChallenge {
   const expires = Date.now() + CHALLENGE_TTL_MS;
-  const a = randomInt(2, 10);
-  const b = randomInt(2, 10);
+  const a = randomInt(15, 50);
+  const b = randomInt(10, 49);
   const answer = a + b;
   const payload = `${expires}.${answer}`;
   const id = `${payload}.${mac(payload)}`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" role="img" aria-label="Captcha">
-  <rect width="100%" height="100%" fill="#101420"/>
-  <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle"
-    font-family="monospace" font-size="22" fill="#7d9dff" letter-spacing="4">${a} + ${b} = ?</text>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="48" role="img" aria-label="Captcha">
+  <rect width="100%" height="100%" fill="#101420" rx="6"/>
+  <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle"
+    font-family="monospace" font-size="20" font-weight="bold" fill="#7d9dff" letter-spacing="3">${a} + ${b} = ?</text>
 </svg>`;
   return { id, svg };
 }

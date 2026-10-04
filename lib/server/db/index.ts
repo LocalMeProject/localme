@@ -142,11 +142,30 @@ function createSqlite(endpoint: DbEndpoint): SqliteDb {
   // Lazy require keeps better-sqlite3 out of any Postgres-only runtime path.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Database = require("better-sqlite3") as typeof import("better-sqlite3");
+
+  let dbPath = ":memory:";
+  if (!endpoint.sqliteDatabase && endpoint.sqlitePath) {
+    dbPath = endpoint.sqlitePath
+      .replace(/^file:\/\/\//, "/")
+      .replace(/^file:\/+/, "/")
+      .replace(/^file:/, "");
+    if (/^\/[a-zA-Z]:/.test(dbPath)) {
+      dbPath = dbPath.slice(1);
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { dirname } = require("node:path") as typeof import("node:path");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { mkdirSync } = require("node:fs") as typeof import("node:fs");
+      mkdirSync(dirname(dbPath), { recursive: true });
+    } catch {
+      /* ignore directory creation errors */
+    }
+  }
+
   const database = endpoint.sqliteDatabase
     ? (endpoint.sqliteDatabase as import("better-sqlite3").Database)
-    : endpoint.sqlitePath
-      ? new Database(endpoint.sqlitePath.replace(/^file:\/+/, "/"))
-      : new Database(":memory:");
+    : new Database(dbPath);
   database.pragma("journal_mode = WAL");
   database.pragma("foreign_keys = ON");
   installRegexp(database);
@@ -157,36 +176,73 @@ function createSqlite(endpoint: DbEndpoint): SqliteDb {
 }
 
 /**
- * Apply `db/sqlite/*.sql` to a throwaway local database.
+ * Apply `db/sqlite/*.sql` migrations automatically if tables or migrations are missing.
  *
- * Only for the in-memory default: it exists so `bun run dev` works from a clean
- * checkout with no `bun run db:migrate` step, which is what the README promises
- * ("local dev needs no database service"). A file-backed or Postgres database
- * is a real deployment and must be migrated explicitly, where the ledger and
- * the ordering guarantee live — silently re-running migrations there would be
- * exactly the sort of surprise this platform should not have. Tests inject
- * their own handle and own their own schema.
+ * Uses `schema_migrations` to record applied migrations idempotently. Tests that inject
+ * their own handle manage their own schema and are skipped.
  */
 function shouldAutoMigrate(endpoint: DbEndpoint): boolean {
   if (endpoint.sqliteDatabase) return false;
-  if (endpoint.sqlitePath) return false;
-  return process.env.NODE_ENV !== "production";
+  // Test suites that point DB_PATH at a dedicated temp file run their own schema loop in beforeAll.
+  if (process.env.NODE_ENV === "test" && endpoint.sqlitePath) return false;
+  return true;
 }
 
 function migrateSqliteSchema(database: import("better-sqlite3").Database): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { readFileSync, readdirSync } = require("node:fs") as typeof import("node:fs");
+    const { readFileSync, readdirSync, existsSync } = require("node:fs") as typeof import("node:fs");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { join } = require("node:path") as typeof import("node:path");
-    const dir = join(process.cwd(), "db", "sqlite");
-    for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
-      database.exec(readFileSync(join(dir, file), "utf8"));
+    let dir = join(process.cwd(), "db", "sqlite");
+    if (!existsSync(dir)) {
+      dir = join(__dirname, "..", "..", "..", "db", "sqlite");
+    }
+    if (!existsSync(dir)) {
+      return;
+    }
+
+    database.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      dialect TEXT NOT NULL,
+      name TEXT NOT NULL,
+      applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (dialect, name)
+    )`);
+
+    const appliedRows = database
+      .prepare(`SELECT name FROM schema_migrations WHERE dialect = 'sqlite'`)
+      .all() as { name: string }[];
+    const applied = new Set(appliedRows.map((r) => r.name));
+
+    // Reconcile legacy databases where tables were created prior to ledger recording
+    if (applied.size === 0) {
+      const tableCheck = database
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='rate_limits'`)
+        .get();
+      if (tableCheck) {
+        applied.add("001_init.sql");
+        database.prepare(`INSERT OR IGNORE INTO schema_migrations (dialect, name) VALUES ('sqlite', '001_init.sql')`).run();
+        const filesCheck = database
+          .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='files'`)
+          .get();
+        if (filesCheck) {
+          applied.add("002_files_and_rate_limits.sql");
+          database.prepare(`INSERT OR IGNORE INTO schema_migrations (dialect, name) VALUES ('sqlite', '002_files_and_rate_limits.sql')`).run();
+        }
+      }
+    }
+
+    const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+    for (const file of files) {
+      if (applied.has(file)) continue;
+      const sqlText = readFileSync(join(dir, file), "utf8");
+      database.transaction(() => {
+        database.exec(sqlText);
+        database.prepare(`INSERT INTO schema_migrations (dialect, name) VALUES ('sqlite', ?)`).run(file);
+      })();
     }
   } catch (error) {
-    // A missing or unreadable migration directory must not stop the server from
-    // booting; the first request that needs a table will report it clearly.
-    console.warn("[localme] could not auto-apply the SQLite schema for the in-memory dev database:", error);
+    console.warn("[localme] could not auto-apply the SQLite schema:", error);
   }
 }
 

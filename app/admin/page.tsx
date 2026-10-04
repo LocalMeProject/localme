@@ -60,6 +60,7 @@ import { AdminTranslationsPanel } from "@/components/admin-translations-panel";
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/app/console";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { DEFAULT_PLANS, type SubscriptionPlan } from "@/lib/subscriptions-shared";
 
 /* ------------------------------------------------------------------ types */
 
@@ -199,7 +200,7 @@ const EMPTY_PAGING: PaginationState = { page: 1, pageSize: 25, total: 0 };
 
 export default function AdminPage() {
   const router = useRouter();
-  const { t, fmt } = useI18n();
+  const { t, fmt, locale } = useI18n();
   const [stats, setStats] = useState<Stats | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [configs, setConfigs] = useState<Record<string, unknown>>({});
@@ -242,8 +243,22 @@ export default function AdminPage() {
   const [isPurging, setIsPurging] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
 
+  const [plansConfig, setPlansConfig] = useState<SubscriptionPlan[]>(DEFAULT_PLANS);
+  const [isSavingPlans, setIsSavingPlans] = useState(false);
+  const [setupStatus, setSetupStatus] = useState<{
+    wizardCompleted: boolean;
+    totalUsers: number;
+    totalProjects: number;
+    examplesUserExists: boolean;
+    exampleProjectsCount: number;
+    exampleProjects: { name: string; url: string }[];
+  } | null>(null);
+  const [isSeedingSetup, setIsSeedingSetup] = useState(false);
+  const [seedDemoOption, setSeedDemoOption] = useState(true);
+  const [seedExamplesOption, setSeedExamplesOption] = useState(true);
+
   const loadSidePanels = useCallback(async () => {
-    const [statsRes, overviewRes, configRes, cronRes, libraryRes, subRes, sysRes] = await Promise.all([
+    const [statsRes, overviewRes, configRes, cronRes, libraryRes, subRes, sysRes, plansRes, setupRes] = await Promise.all([
       apiGet<Stats>("/api/admin"),
       apiGet<Overview>("/api/admin/overview"),
       apiGet<{ data: Record<string, unknown>; defaults: Record<string, unknown> }>("/api/admin/config"),
@@ -251,6 +266,8 @@ export default function AdminPage() {
       apiGet<{ data: PublicAsset[] }>("/api/admin/public-library"),
       apiGet<{ data: { users: SubscriptionUser[]; transactions: PaymentTransaction[] } }>("/api/admin/subscriptions").catch(() => ({ data: { users: [], transactions: [] } })),
       apiGet<SystemState>("/api/admin/system").catch(() => null),
+      apiGet<{ data: SubscriptionPlan[] }>("/api/admin/subscriptions/plans").catch(() => ({ data: DEFAULT_PLANS })),
+      apiGet<{ data: any }>("/api/admin/setup").catch(() => null),
     ]);
     setStats(statsRes);
     setOverview(overviewRes);
@@ -264,6 +281,12 @@ export default function AdminPage() {
     }
     if (sysRes) {
       setSystemState(sysRes);
+    }
+    if (plansRes?.data) {
+      setPlansConfig(plansRes.data);
+    }
+    if (setupRes?.data) {
+      setSetupStatus(setupRes.data);
     }
   }, []);
 
@@ -511,6 +534,37 @@ export default function AdminPage() {
       await loadSidePanels();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("admin.deleteFailed"));
+    }
+  }
+
+  async function handleSavePlansConfig() {
+    setIsSavingPlans(true);
+    try {
+      await apiPut("/api/admin/subscriptions/plans", { plans: plansConfig });
+      toast.success(t("admin.subscriptions.title"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save plans.");
+    } finally {
+      setIsSavingPlans(false);
+    }
+  }
+
+  async function handleRunSetupWizard() {
+    setIsSeedingSetup(true);
+    try {
+      const res = await apiPost<{ success: boolean; result: any; status: any }>("/api/admin/setup", {
+        seedDemoData: seedDemoOption,
+        seedExampleProjects: seedExamplesOption,
+      });
+      if (res.status) setSetupStatus(res.status);
+      toast.success("Setup wizard completed.");
+      await loadSidePanels();
+      await loadUsers();
+      await loadProjects();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Setup wizard failed.");
+    } finally {
+      setIsSeedingSetup(false);
     }
   }
 
@@ -1078,6 +1132,91 @@ export default function AdminPage() {
 
         {/* -------------------------------------------------- subscriptions */}
         <TabsContent value="subscriptions" className="space-y-6">
+          {/* Subscription Plans Tier Editor */}
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">{locale === "fa-IR" ? "تنظیمات طرح‌های اشتراک پلتفرم" : "Platform Subscription Tiers Configuration"}</div>
+                <div className="mt-0.5 text-12.5px text-muted-foreground">
+                  {locale === "fa-IR" ? "تنظیم قیمت، سقف پروژه‌ها و فضای ذخیره‌سازی برای پلن‌های رایگان، پلاس و حرفه‌ای" : "Configure pricing, project limits, and storage caps for Free, Plus, and Pro plans"}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="signal"
+                disabled={!isViewerAdmin || isSavingPlans}
+                onClick={() => void handleSavePlansConfig()}
+              >
+                {isSavingPlans ? (locale === "fa-IR" ? "در حال ذخیره..." : "Saving...") : (locale === "fa-IR" ? "ذخیره تغییرات تعرفه‌ها" : "Save Tier Settings")}
+              </Button>
+            </div>
+            <div className="p-5 grid gap-6 md:grid-cols-3">
+              {plansConfig.map((plan, idx) => (
+                <div key={plan.id} className="rounded-xl border border-border p-4 bg-card/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">{plan.name} ({plan.nameFa})</span>
+                    <Badge variant={plan.isPopular ? "signal" : "outline"} className="text-10px">
+                      {plan.id.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "قیمت ماهانه (تومان)" : "Price (Toman/month)"}</Label>
+                    <Input
+                      type="number"
+                      value={plan.priceToman}
+                      disabled={plan.id === "free"}
+                      onChange={(e) => {
+                        const updated = [...plansConfig];
+                        updated[idx].priceToman = Math.max(0, Number(e.target.value));
+                        setPlansConfig(updated);
+                      }}
+                      className="h-8 text-12px"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "حداکثر پروژه‌ها" : "Max Projects"}</Label>
+                    <Input
+                      type="number"
+                      value={plan.maxProjects}
+                      onChange={(e) => {
+                        const updated = [...plansConfig];
+                        updated[idx].maxProjects = Math.max(1, Number(e.target.value));
+                        setPlansConfig(updated);
+                      }}
+                      className="h-8 text-12px"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "سقف حافظه هر پروژه (مگابایت)" : "Project Storage Cap (MB)"}</Label>
+                    <Input
+                      type="number"
+                      value={plan.projectStorageCapMb}
+                      onChange={(e) => {
+                        const updated = [...plansConfig];
+                        updated[idx].projectStorageCapMb = Math.max(1, Number(e.target.value));
+                        setPlansConfig(updated);
+                      }}
+                      className="h-8 text-12px"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-11px text-muted-foreground">{locale === "fa-IR" ? "بازدید ماهانه مجاز" : "Monthly Visits"}</Label>
+                    <Input
+                      type="number"
+                      value={plan.monthlyVisits}
+                      onChange={(e) => {
+                        const updated = [...plansConfig];
+                        updated[idx].monthlyVisits = Math.max(10, Number(e.target.value));
+                        setPlansConfig(updated);
+                      }}
+                      className="h-8 text-12px"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="panel overflow-hidden">
             <div className="border-b border-border px-5 py-3.5">
               <div className="text-sm font-semibold">{t("admin.subscriptions.title")}</div>
@@ -1201,6 +1340,76 @@ export default function AdminPage() {
 
         {/* ------------------------------------------------------- platform */}
         <TabsContent value="platform" className="space-y-4">
+          {/* Setup Wizard */}
+          <div className="panel overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">{locale === "fa-IR" ? "راه‌اندازی اولیه و اپ‌های نمونه" : "Deployment Setup Wizard"}</div>
+                <div className="mt-0.5 text-12.5px text-muted-foreground">
+                  {locale === "fa-IR" ? "آماده‌سازی خودکار پلتفرم و ساخت نمونه‌های نمایشی بدون دستکاری اطلاعات موجود" : "Non-destructive production initialization & showcase projects population"}
+                </div>
+              </div>
+              {setupStatus && (
+                <Badge variant={setupStatus.wizardCompleted ? "default" : "outline"}>
+                  {setupStatus.wizardCompleted ? (locale === "fa-IR" ? "تکمیل شده" : "Initialized") : (locale === "fa-IR" ? "آماده راه‌اندازی" : "Pending")}
+                </Badge>
+              )}
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex flex-wrap items-center gap-4 text-12.5px text-muted-foreground">
+                <span>{locale === "fa-IR" ? "حساب نمونه‌ها:" : "Examples Account:"} <strong className="text-foreground">these_are_examples</strong> ({setupStatus?.examplesUserExists ? (locale === "fa-IR" ? "فعال" : "Created") : (locale === "fa-IR" ? "هنوز ساخته نشده" : "Not created")})</span>
+                <span>{locale === "fa-IR" ? "نمونه‌های ساخته‌شده:" : "Sample Projects:"} <strong className="text-foreground">{setupStatus?.exampleProjectsCount ?? 0}</strong></span>
+              </div>
+
+              {setupStatus?.exampleProjects && setupStatus.exampleProjects.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {setupStatus.exampleProjects.map((p) => (
+                    <a
+                      key={p.name}
+                      href={p.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-accent/60 hover:bg-accent text-signal transition-colors border border-border"
+                    >
+                      🚀 {p.name}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-12.5px cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={seedDemoOption}
+                      onChange={(e) => setSeedDemoOption(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    <span>{locale === "fa-IR" ? "ثبت تنظیمات پایه و تعرفه‌ها" : "Seed Demo & Plan Configs"}</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-12.5px cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={seedExamplesOption}
+                      onChange={(e) => setSeedExamplesOption(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    <span>{locale === "fa-IR" ? "ساخت اپ‌های نمونه روی حساب these_are_examples" : "Populate Sample Projects under these_are_examples"}</span>
+                  </label>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!isViewerAdmin || isSeedingSetup || (!seedDemoOption && !seedExamplesOption)}
+                  onClick={() => void handleRunSetupWizard()}
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isSeedingSetup && "animate-spin")} />
+                  {isSeedingSetup ? (locale === "fa-IR" ? "در حال آماده‌سازی..." : "Seeding...") : (locale === "fa-IR" ? "شروع راه‌اندازی اولیه" : "Run Setup Wizard")}
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="panel overflow-hidden">
             <div className="border-b border-border px-5 py-3.5 flex items-center justify-between">
               <div>

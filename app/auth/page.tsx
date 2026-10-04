@@ -68,7 +68,7 @@ function AuthForm() {
           : {}),
       });
       toast.success(mode === "signup" ? t("auth.toast.welcome") : t("auth.toast.welcomeBack"));
-      router.push(result.redirectUrl || "/dashboard");
+      window.location.href = result.redirectUrl || "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.toast.failed"));
       setCaptcha(null); // fresh challenge for the next attempt
