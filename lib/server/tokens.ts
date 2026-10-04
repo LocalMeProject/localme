@@ -9,7 +9,7 @@ import { generateToken, hashToken } from "@/lib/server/crypto";
 import { encryptSecret, decryptSecret } from "@/lib/server/secrets-crypto";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
-import { getUserByUsername, getUserById, isUniqueViolation } from "@/lib/server/repos";
+import { getUserByUsername } from "@/lib/server/repos";
 import { configNumber } from "@/lib/server/system-config";
 import { createLogger } from "@/lib/server/logger";
 
@@ -487,7 +487,7 @@ export async function listPats(userId: number): Promise<Omit<ApiTokenRecord, "to
   );
   return rows.map((r) => {
     const t = mapApiToken(r);
-    const { tokenEncrypted, ...rest } = t;
+    const { tokenEncrypted: _tokenEncrypted, ...rest } = t;
     return rest;
   });
 }

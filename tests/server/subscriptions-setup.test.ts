@@ -39,7 +39,6 @@ import {
   type SubscriptionPlan,
 } from "@/lib/server/subscriptions";
 import {
-  getSetupStatus,
   runSetupWizard,
   EXAMPLES_USERNAME,
 } from "@/lib/server/setup-wizard";

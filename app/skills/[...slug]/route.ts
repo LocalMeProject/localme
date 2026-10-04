@@ -33,7 +33,7 @@ export async function GET(
         "access-control-allow-origin": "*",
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to read skill document", code: "internal_error" },
       { status: 500 },

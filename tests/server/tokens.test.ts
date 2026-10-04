@@ -58,14 +58,13 @@ import { GET as consentGetRoute, POST as consentPostRoute } from "@/app/api/auth
 import { GET as patGetRoute, POST as patPostRoute, DELETE as patDeleteRoute } from "@/app/api/account/pat/route";
 import { POST as patRevealRoute } from "@/app/api/account/pat/reveal/route";
 import { POST as patRotateRoute } from "@/app/api/account/pat/rotate/route";
-import { GET as agentTokensGetRoute, DELETE as agentTokensDeleteRoute } from "@/app/api/account/agent-tokens/route";
+import { GET as agentTokensGetRoute } from "@/app/api/account/agent-tokens/route";
 import { PATCH as agentAccessPatchRoute } from "@/app/api/account/agent-access/route";
 import { GET as tokenAuditGetRoute } from "@/app/api/account/token-audit/route";
 
 let db: ReturnType<typeof getDb>;
 let userAlice: { id: number; username: string };
 let userBob: { id: number; username: string };
-let aliceProject: { id: number; name: string };
 
 beforeAll(async () => {
   db = getDb();
@@ -76,7 +75,7 @@ beforeAll(async () => {
 
   userAlice = await createUser("alice_dev", "Password123!");
   userBob = await createUser("bob_dev", "Password123!");
-  aliceProject = await createProject(userAlice.id, "aliceapp");
+  await createProject(userAlice.id, "aliceapp");
 
   // Allow agent requests for alice by default
   await setAgentAccessPreference(userAlice.id, true);
@@ -594,6 +593,8 @@ describe("HTTP Route Handlers for Unified Token & Agent System", () => {
 
     const secretsMod = await import("@/lib/server/secrets-crypto");
     const encryptSpy = vi.spyOn(secretsMod, "encryptSecret").mockRejectedValueOnce(new Error("Mocked cipher failure"));
+    await runPatAutoRotations();
+    encryptSpy.mockRestore();
 
     // 13. Deny consent with wrong user & double-approve
     const testReqConsent = await requestAat({
@@ -627,7 +628,7 @@ describe("HTTP Route Handlers for Unified Token & Agent System", () => {
     // 15. Reveal PAT with null token_encrypted throws bad_request
     const noEncToken = "pat_no_encrypted_123";
     const noEncHash = hashToken(noEncToken);
-    const resId = await db.run(
+    await db.run(
       `INSERT INTO api_tokens (user_id, token_type, name, token_hash, prefix)
        VALUES (?, 'pat', 'No Enc PAT', ?, 'pat_noenc')`,
       [userAlice.id, noEncHash],

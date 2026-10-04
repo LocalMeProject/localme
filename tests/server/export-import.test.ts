@@ -29,20 +29,17 @@ vi.mock("next/headers", () => ({
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/lib/server/db/index";
-import { placeholder } from "@/lib/server/db/sql";
 import {
   createProject,
   createUser,
   ensureLibraryProject,
   getFileBlob,
-  listFiles,
   putFile,
 } from "@/lib/server/repos";
 import { createSession } from "@/lib/server/sessions";
 import { buildZip, readZip } from "@/lib/server/zip";
 import {
   EXPORT_FEATURES,
-  buildProjectExport,
   exportAllHandler,
   exportFeature,
   exportFeatureHandler,

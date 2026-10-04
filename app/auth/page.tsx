@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/logo";
 import { CultureSwitch } from "@/components/culture-switch";
@@ -25,7 +25,6 @@ export default function AuthPage() {
 }
 
 function AuthForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const { t } = useI18n();
   // ?mode=signup seeds the toggle; explicit user choice wins over the param.

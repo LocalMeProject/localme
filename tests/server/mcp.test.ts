@@ -1,9 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { MCP_TOOLS, DOC_TOPICS, executeMcpTool } from "@/lib/server/mcp";
+import { describe, it, expect } from "vitest";
+import { MCP_TOOLS, DOC_TOPICS } from "@/lib/server/mcp";
 import { POST, GET } from "@/app/api/mcp/route";
 import { NextRequest } from "next/server";
-import { getDb } from "@/lib/server/db/index";
-import { createUser, createApiKey } from "@/lib/server/repos";
 
 describe("Model Context Protocol (MCP) Server", () => {
   it("provides official tools and documentation catalogue", () => {

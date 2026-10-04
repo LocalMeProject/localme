@@ -490,7 +490,7 @@ export async function getUsernameById(userId: number): Promise<string | null> {
 }
 
 /** Visits this month for a project (quota check). */
-async function visitsThisMonth(projectId: number): Promise<number> {
+export async function visitsThisMonth(projectId: number): Promise<number> {
   const db = getDb();
   const p = db.driver;
   const monthStart = `${new Date().toISOString().slice(0, 7)}-01T00:00:00.000Z`;

@@ -28,8 +28,6 @@ const CODE_COMMENTS: CommentPair[] = [
   ["//", "\n"],
 ];
 
-const HTML_COMMENTS: CommentPair[] = [["<!--", "-->"]];
-
 interface MinifyOptions {
   comments: CommentPair[];
   /** Keep newlines (JS/ASI). When false, whitespace runs collapse to a space. */

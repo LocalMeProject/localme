@@ -89,8 +89,7 @@ const nextConfig: NextConfig = {
     ];
   },
   experimental: {
-    // Cap page-data collection workers to 1 to prevent multiple forked workers
-    // from exhausting virtual memory (VirtualAlloc failed / heap OOM) on single-node builds.
+    workerThreads: false,
     cpus: 1,
     memoryBasedWorkersCount: false,
   },

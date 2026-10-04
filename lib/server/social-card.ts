@@ -64,7 +64,6 @@ export function generateSocialCardSvg(user: string, project: string): string {
 
 export function injectSocialMeta(html: string, user: string, project: string): string {
   if (/<meta\s+property=["']og:/i.test(html)) return html;
-  const safeUser = escapeXml(user);
   const safeProject = escapeXml(project);
   const imageUrl = `/${encodeURIComponent(user)}/${encodeURIComponent(project)}/~og-image`;
 

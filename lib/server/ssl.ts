@@ -23,7 +23,7 @@
  * the certificate, so an operator turns it on deliberately. Everything else
  * (renewal selection, the challenge store, certificate reads) works regardless.
  */
-import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
+import { generateKeyPairSync, X509Certificate } from "node:crypto";
 import { getDb } from "@/lib/server/db/index";
 import { placeholder } from "@/lib/server/db/sql";
 import { ApiError } from "@/lib/server/http";

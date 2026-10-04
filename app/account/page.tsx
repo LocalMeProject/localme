@@ -16,8 +16,6 @@ import {
   FolderGit2,
   Shield,
   Lock,
-  Phone,
-  Mail,
   Sparkles,
   ExternalLink,
   Crown,

@@ -5,7 +5,7 @@
  * to avoid disk I/O on repeated reads while instantly picking up updates.
  */
 import { readFileSync, statSync, existsSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { resolve } from "node:path";
 
 interface CacheEntry {
   content: string;

@@ -16,12 +16,10 @@ import {
   Copy,
   Database,
   Eye,
-  FileText,
   Gauge,
   Globe2,
   HardDrive,
   Layers,
-  ListChecks,
   Lock,
   Mail,
   MessageSquareText,
@@ -47,7 +45,7 @@ import { DemoStage } from "@/components/demo-stage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { siteOrigin, siteOriginIsPublic } from "@/lib/seo";
+import { siteOriginIsPublic } from "@/lib/seo";
 import { useTheme } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/catalog";
@@ -400,31 +398,6 @@ export function LandingPage() {
           cells: [t("landing.compare.row8.diy" as MessageKey), t("landing.compare.row8.baas" as MessageKey), t("landing.compare.row8.localme" as MessageKey)] as Cell[],
         },
       ],
-    [t],
-  );
-
-  const planLimits = useMemo(
-    () => [
-      { label: t("landing.pricing.limitStorage"), value: t("landing.pricing.limitStorage.value" as MessageKey), hint: t("landing.pricing.limitStorageHint") },
-      { label: t("landing.pricing.limitLibrary"), value: t("landing.pricing.limitLibrary.value" as MessageKey), hint: t("landing.pricing.limitLibraryHint") },
-      { label: t("landing.pricing.limitViews"), value: t("landing.pricing.limitViews.value" as MessageKey), hint: t("landing.pricing.limitViewsHint") },
-      { label: t("landing.pricing.limitUpload"), value: t("landing.pricing.limitUpload.value" as MessageKey), hint: t("landing.pricing.limitUploadHint") },
-    ],
-    [t],
-  );
-
-  const planIncludes = useMemo(
-    () =>
-      [
-        "landing.pricing.includes1",
-        "landing.pricing.includes2",
-        "landing.pricing.includes3",
-        "landing.pricing.includes4",
-        "landing.pricing.includes5",
-        "landing.pricing.includes6",
-        "landing.pricing.includes7",
-        "landing.pricing.includes8",
-      ].map((key) => t(key as MessageKey)),
     [t],
   );
 

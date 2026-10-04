@@ -8,9 +8,7 @@ import {
   ChevronRight,
   FileUp,
   Globe2,
-  HardDrive,
   Plus,
-  RefreshCw,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -38,8 +36,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { CultureDateTimePicker } from "@/components/culture-date-time-picker";

@@ -32,7 +32,7 @@ vi.mock("next/headers", () => ({
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/lib/server/db/index";
-import { createProject, createUser, putFile } from "@/lib/server/repos";
+import { createProject, createUser } from "@/lib/server/repos";
 import { createSession } from "@/lib/server/sessions";
 import {
   adminStats,
