@@ -27,10 +27,12 @@ Two dialect trees, one logical schema. Source of truth: `docs/LocalMe — Bluepr
 
 ## SQLite selection rules
 
-- `DB_PATH` unset → in-memory `:memory:` database.
+- `DB_PATH` unset in test environment (`NODE_ENV=test`) → in-memory `:memory:` database.
+- `DB_PATH` unset in production/development → defaults to persistent file `data/localme.db` (automatically creates parent directory).
 - `DB_PATH=file:/path/to/localme.db` → file-backed, persistent across restarts.
+- `DB_PATH=file:/app/storage_data/localme.db` → container persistent volume path, sharing a single mount with uploaded assets.
 
-In-memory keeps local dev and CI dependency-free; set `DB_PATH` when you want a real file.
+In-memory keeps test suites isolated and dependency-free; file paths ensure data survives process restarts.
 
 ## Applying
 
@@ -38,3 +40,4 @@ In-memory keeps local dev and CI dependency-free; set `DB_PATH` when you want a 
 bun run db:migrate                     # auto-detects the driver (sqlite by default)
 DB_DRIVER=postgres bun run db:migrate  # Postgres via DATABASE_URL
 ```
+In container environments, `npm run runflare:start` runs `scripts/migrate.mjs` automatically before binding the port.

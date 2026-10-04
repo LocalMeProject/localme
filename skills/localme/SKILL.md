@@ -15,8 +15,9 @@ LocalMe is a high-performance web platform designed with two guiding KPIs:
 1. **User Frontend**: Self-explanatory, clean, accessible, and intuitive so non-technical users can monitor their sites with zero friction.
 2. **Autonomous Agent Backend**: Deeply controllable via MCP and API so users rarely need to do manual operations; agents can deploy projects, manage files, configure reverse proxy routes, store structured data, and run background tasks autonomously and safely.
 
-### Quotas & Tiers
-- **Free Tier (Default)**:
+### Quotas & Subscriptions (Configurable by SuperAdmin)
+LocalMe features dynamic subscriptions (Free, Plus, and Pro tiers) whose names, prices, and limits are centrally managed by the platform SuperAdmin in Platform Settings (`system_configs` under `subscription.tiers`):
+- **Free Tier**:
   - Up to **3 projects**.
   - **3 MB** storage cap per project.
   - **3 MB** shared user library storage cap.
@@ -24,7 +25,10 @@ LocalMe is a high-performance web platform designed with two guiding KPIs:
   - Up to **50 projects**.
   - **50 MB** storage cap per project.
   - **50 MB** shared user library storage cap.
-  - Upgraded via ZarinPal v4 payment or SuperAdmin override.
+  - Upgraded via ZarinPal online payment or SuperAdmin override.
+- **Pro Tier**:
+  - Custom / high-capacity project and storage quotas for teams and power users.
+  - Configured and activated dynamically via SuperAdmin settings.
 - **Token Pools**:
   - **Personal Access Tokens (PAT)**: Up to **10** active per user (permanent or auto-rotating, with a 1-hour grace period).
   - **Agent Access Tokens (AAT)**: Up to **50** active per user (ephemeral, 4-hour or 1-day TTL, strictly requires human consent).
@@ -93,13 +97,20 @@ If `localme-aat.txt` does not exist or the token is expired/invalid:
 
 ---
 
-## 3. Connecting to LocalMe via MCP
+## 3. Connecting to LocalMe via MCP (Model Context Protocol)
 
-LocalMe provides both an HTTP JSON-RPC endpoint and a stdio bridge.
+LocalMe implements the official **Model Context Protocol (Spec 2024-11-05)** with complete support for Tools, Prompts, Resources, and Resource Templates. It provides both an HTTP JSON-RPC 2.0 endpoint and a stdio bridge.
 
 ### HTTP Endpoint
-- **URL**: `http://localhost:3000/api/mcp` (or your remote URL on Runflare: `https://your-app.runflare.run/api/mcp`)
-- **Protocol**: JSON-RPC 2.0 (Methods: `initialize`, `tools/list`, `tools/call`, `resources/list`, `resources/read`)
+- **URL**: `http://localhost:3000/api/mcp` (or remote URL: `https://localme.ir/api/mcp`)
+- **Protocol**: JSON-RPC 2.0
+- **Supported Methods**:
+  - `initialize` (negotiates protocol version `2024-11-05` and server capabilities)
+  - `tools/list` & `tools/call`
+  - `prompts/list` & `prompts/get` (`deploy-static-site`, `manage-document-db`, `configure-reverse-proxy`)
+  - `resources/list` & `resources/read` (`localme://system/overview`, `localme://system/routes`, `localme://system/stats`)
+  - `resources/templates/list` (`localme://docs/{topic}`)
+  - `ping` & `logging/setLevel`
 - **Header**: `Authorization: Bearer <aat_... or pat_...>`
 
 ### Stdio MCP Server Bridge
@@ -213,42 +224,38 @@ Agents should never assume a deployment succeeded merely because the file write 
 
 When deploying LocalMe to a container runtime or PaaS (Runflare, Docker, Railway, Coolify, VPS):
 
-### Sequence of Commands to Publish the Project
-For a complete and reliable deployment on a container, the following sequence of commands should be executed:
-1. **Dependency Installation**:
-   ```bash
-   npm ci
-   ```
-   *(or `npm install` if no lockfile is present, ensuring all production packages are installed).*
-2. **Type Check (Optional Quality Gate)**:
-   ```bash
-   npm run typecheck
-   ```
-   *(runs `node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit` to ensure type integrity).*
-3. **Database Schema Migrations**:
-   ```bash
-   npm run db:migrate
-   ```
-   *(executes `node scripts/migrate.mjs`, running any pending SQLite or PostgreSQL migrations safely and idempotently).*
-4. **Optimized Production Build**:
-   ```bash
-   npm run build
-   ```
-   *(runs `node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build`, compiling all platform routes and components).*
-5. **Start Production Server**:
-   ```bash
-   npm run start
-   ```
-   *(runs `next start --hostname 0.0.0.0 --port ${PORT:-3000}`).*
+### Smart Container Startup (`scripts/runflare-start.mjs`)
+To eliminate container startup probe timeouts (`SIGTERM`) caused by redundant dependency installation or Next.js compilation, LocalMe provides a smart container entrypoint:
+```bash
+npm run runflare:start
+# or
+node scripts/runflare-start.mjs
+```
+- **Zero-Delay Startup**: Checks if `node_modules` and `.next` are already present from the build phase; skips redundant steps immediately.
+- **Automatic Migrations**: Executes `node scripts/migrate.mjs` safely and idempotently, auto-creating database directories recursively if needed.
+- **Fast Binding**: Starts Next.js and binds port `3000` in **under 2 seconds**, satisfying container orchestrator health checks.
+- **Graceful Termination**: Handles `SIGTERM` and `SIGINT` signals gracefully.
 
-### Persistent Storage & Networking
-1. **Persistent Storage Volume**:
-   - Runflare and Docker containers are ephemeral by default.
-   - Mount a persistent volume to `/app/storage_data` to ensure uploaded static assets and SQLite databases persist across restarts.
-   - Set environment variable: `STORAGE_DATA_DIR=/app/storage_data`.
-2. **Port & Host Binding**:
-   - Next.js binds to `0.0.0.0` and listens on `${PORT:-3000}`.
-   - Runflare automatically injects `$PORT`.
-3. **Health Check**:
-   - Healthcheck URL: `/api/health` returns `{ "status": "ok" }`.
+### Runflare Container Settings
+Configure your Runflare container with these exact values:
+- **Command**: `npm run runflare:start`
+- **PostStart**: `sh -c "sleep 2 && curl -fs http://127.0.0.1:3000/health || true"`
+- **PreStop**: `sleep 5`
+
+### Single Persistent Volume Strategy (e.g., 2GB Volume)
+When given a single persistent volume (e.g. 2GB) in Runflare:
+1. Mount the volume to `/app/storage_data`.
+2. Configure the following environment variables:
+   ```env
+   STORAGE_DATA_DIR="/app/storage_data"
+   DB_PATH="file:/app/storage_data/localme.db"
+   ```
+This stores both the SQLite database and all project uploaded files inside the same persistent volume, completely surviving container redeployments and restarts without data loss.
+
+### Sequence of Manual Build/Publish Commands (Reference)
+1. **Dependency Installation**: `npm ci` (or `npm install`)
+2. **Type Check (Optional Quality Gate)**: `npm run typecheck`
+3. **Database Schema Migrations**: `npm run db:migrate`
+4. **Optimized Production Build**: `npm run build`
+5. **Start Production Server**: `npm run start` (or `npm run runflare:start`)
 

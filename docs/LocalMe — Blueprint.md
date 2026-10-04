@@ -1,8 +1,22 @@
 Minimum Viable Product (MVP) Platform — Enterprise Blueprint
 
-Version: 1.0.0
-Date: 2026-07-20
-Status: Final — Source of Truth
+Version: 1.2.0
+Date: 2026-10-04
+Status: Living Source of Truth (see Architecture Notes below)
+
+> ### ⚠️ Architectural Evolution & ADR References
+> While this foundational Blueprint was initially drafted specifying a dual .NET 10 + React split,
+> the running implementation has evolved to a unified Next.js App Router architecture and
+> expanded agentic and container capabilities:
+> - **Unified Next.js Architecture**: [ADR 001](./adr/001-nextjs-only-architecture.md)
+> - **SQLite-First & Switchable Postgres**: [ADR 003](./adr/003-sqlite-first-switchable-postgres.md)
+> - **Operational Hardening**: [ADR 004](./adr/004-operational-hardening.md)
+> - **Shared Library CDN Namespace**: [ADR 007](./adr/007-library-as-a-reserved-cdn-namespace.md)
+> - **Dual Culture (RTL/LTR) & Shamsi Calendar**: [ADR 008](./adr/008-multi-culture-rtl-and-shamsi-calendar.md)
+> - **Model Context Protocol (MCP 2024-11-05) & AAT Tokens**: [ADR 009](./adr/009-mcp-standards-and-agentic-skills.md)
+> - **Container Resilience (`runflare:start`), Single-Volume Storage & Dynamic Tiers**: [ADR 010](./adr/010-container-resilience-and-dynamic-configuration.md)
+>
+> All operational contracts and implementation instructions are maintained in [README.md](../README.md).
 
 ---
 

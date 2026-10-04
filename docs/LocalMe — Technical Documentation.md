@@ -1,8 +1,21 @@
 # LocalMe — Technical Documentation
 
-**Version**: 1.0.0  
-**Date**: 2026-07-23  
-**Status**: Final — Implementation Reference
+**Version**: 1.2.0  
+**Date**: 2026-10-04  
+**Status**: Implementation Reference — see architecture note below
+
+> ### ⚠️ Implementation & Architecture Note
+>
+> While this document originally specified a .NET 10 backend + React split, the production platform
+> was consolidated into a single **Next.js 16 App Router application** with an in-process Node.js runtime ([ADR 001](./adr/001-nextjs-only-architecture.md)).
+> Key evolutionary architecture updates:
+> - **Data Layer**: Drizzle ORM over SQLite by default (`DB_DRIVER=sqlite`), switchable to Postgres ([ADR 003](./adr/003-sqlite-first-switchable-postgres.md)).
+> - **Shared Asset CDN**: Reserved `/library/` namespace per user ([ADR 007](./adr/007-library-as-a-reserved-cdn-namespace.md)).
+> - **Dual Culture & Calendar**: Native RTL, Shamsi calendar (`lib/jalali.ts`), and Persian digits ([ADR 008](./adr/008-multi-culture-rtl-and-shamsi-calendar.md)).
+> - **Model Context Protocol (MCP)**: Native JSON-RPC 2.0 at `/api/mcp` (spec `2024-11-05`), stdio bridge, and ephemeral AAT tokens ([ADR 009](./adr/009-mcp-standards-and-agentic-skills.md)).
+> - **Container Resilience & Storage**: Smart container startup (`scripts/runflare-start.mjs`), single-volume 2GB storage consolidation, and dynamic multi-tier subscriptions ([ADR 010](./adr/010-container-resilience-and-dynamic-configuration.md)).
+>
+> For developer instructions and configuration, see [README.md](../README.md).
 
 ---
 
@@ -14,14 +27,15 @@ This document provides the technical implementation details for the LocalMe plat
 
 ## 2. System Overview
 
-LocalMe is an enterprise-grade Backend-as-a-Service (BaaS) platform built on **.NET 10** (backend) and **Next.js 16.2** (frontend). It runs on a single server (Ubuntu 24.04) with PostgreSQL 18.4 as the database. All services are modular, decoupled, and follow dependency injection principles.
+LocalMe is an enterprise-grade Backend-as-a-Service (BaaS) platform. All services are modular, decoupled, and follow dependency injection principles.
 
 **Key Technical Characteristics:**
-- **Single-threaded event loop for the frontend** (Next.js server components).
-- **Multi-threaded native async I/O** for the backend (.NET 10).
-- **Database-backed persistence** for sessions, rate limits, and all stateful data.
-- **Local disk storage** for files (no external S3).
-- **Automatic SSL provisioning** via Let's Encrypt (Certes).
+- **Single Next.js App Router process** serving both console UI and platform APIs.
+- **Drizzle ORM over SQLite by default**, with full switchable Postgres support.
+- **Database-backed persistence** for sessions, rate limits, configurations, and document stores.
+- **Disk storage** for user files with per-tier quota enforcement.
+- **Model Context Protocol (MCP 2024-11-05)** integration for autonomous AI agents.
+- **Automatic SSL provisioning** via ACME HTTP-01.
 
 ---
 

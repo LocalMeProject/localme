@@ -24,7 +24,11 @@ library as a reserved per-user CDN namespace, visitor sessions as first-class AP
 principals, and the forwarded-host hotlink comparison in
 [ADR 007](./docs/adr/007-library-as-a-reserved-cdn-namespace.md); the
 two-culture layer — RTL, the Shamsi calendar, Persian digits and runtime-editable
-wording — in [ADR 008](./docs/adr/008-multi-culture-rtl-and-shamsi-calendar.md).
+wording — in [ADR 008](./docs/adr/008-multi-culture-rtl-and-shamsi-calendar.md); the
+standards-compliant Model Context Protocol (MCP), Agent Access Tokens (AAT) and plain-text
+agent skills in [ADR 009](./docs/adr/009-mcp-standards-and-agentic-skills.md); and the container
+runtime resilience (`runflare:start`), single-volume persistent storage and dynamic multi-tier
+subscriptions in [ADR 010](./docs/adr/010-container-resilience-and-dynamic-configuration.md).
 
 ---
 
@@ -36,10 +40,11 @@ wording — in [ADR 008](./docs/adr/008-multi-culture-rtl-and-shamsi-calendar.md
 | UI         | Tailwind CSS, Radix primitives (shadcn/ui conventions), zustand, sonner    |
 | Backend    | Next.js Route Handlers (Node.js runtime) under `app/api/`                  |
 | Database   | Drizzle ORM over **SQLite by default** (`DB_DRIVER=sqlite`) — Postgres fully implemented and switchable via `DB_DRIVER=postgres` (ADR 003) |
-| Files      | Blobs in the database with quota enforcement (see ADR 002)                  |
+| Storage    | Disk-based project asset storage under `STORAGE_DATA_DIR` (`storage_data/`) with per-tier quota enforcement |
 | Passwords  | scrypt (Node crypto), secrets encrypted with AES-256-GCM                   |
 | Cultures   | `fa-IR` (default, RTL, Shamsi, Persian digits) and `en-US` — see ADR 008 |
-| Tooling    | Bun, ESLint 9 (flat config), Vitest, GitHub Actions                        |
+| AI / MCP   | Model Context Protocol (Spec 2024-11-05), JSON-RPC 2.0 (`/api/mcp`), stdio bridge (`bin/mcp-server.mjs`), Agent Skill (`/skills/localme/SKILL.md`) |
+| Tooling    | Bun & Node.js 22+, ESLint 9 (flat config), Vitest (341 tests), GitHub Actions |
 
 No server-side user code is ever executed. A project is static assets plus calls to the documented
 platform API.
@@ -281,6 +286,19 @@ and is left alone.
 - Structured NDJSON logging with credential redaction (`logging.*`), a webhook outbox, and
   `bun run backup` for `pg_dump`/`VACUUM INTO` snapshots with verification, restore and retention.
 
+## Autonomous AI Agents & Model Context Protocol (MCP)
+
+LocalMe natively supports autonomous AI coding assistants (Antigravity, Cursor, Claude Desktop, ChatGPT, etc.) via the official **Model Context Protocol (spec 2024-11-05)**:
+
+- **JSON-RPC 2.0 Endpoint**: `/api/mcp` implements protocol initialization, capability negotiation, ping, and logging level selection.
+- **Tools**: 16 native tools for account info, projects, static files, route rewrites, proxy mounts, JSON document databases, and encrypted secrets.
+- **Prompts**: Built-in workflows for `deploy-static-site`, `manage-document-db`, and `configure-reverse-proxy`.
+- **Resources & Templates**: Real-time state (`localme://system/overview`, `localme://system/routes`, `localme://system/stats`) and parameterized documentation (`localme://docs/{topic}`).
+- **Desktop Stdio Bridge**: `bin/mcp-server.mjs` provides a stdio bridge for local agent environments.
+- **Agent Access Tokens (AAT)**: Ephemeral tokens (`aat_...`) requested via `POST /api/agent/request-aat` with mandatory human consent UI at `/auth/consent`. Cached locally in `localme-aat.txt`.
+- **Plain-Text Agent Skill**: Served at [`/skills/localme/SKILL.md`](./skills/localme/SKILL.md) with `content-type: text/plain; charset=utf-8`.
+- **Instant Live E2E Testing**: Every uploaded project is immediately live on `https://localme.ir/{username}/{project}/`. AI agents can run automated E2E tests against live URLs with a 5–10s cache grace period.
+
 ## HTTP API
 
 The full endpoint reference ships on the docs site at `/docs` (source: `app/docs/page.tsx`).
@@ -295,7 +313,7 @@ CI (`.github/workflows/ci.yml`) runs on every PR and on `main`:
 ```bash
 bun run typecheck       # tsc --noEmit
 bun run lint            # eslint (flat config, next/core-web-vitals + typescript)
-bun run test            # vitest on in-memory SQLite
+bun run test            # vitest on in-memory SQLite (341 tests across 28 suites)
 bun run test:postgres   # vitest on a real Postgres (CI service container)
 bun run build           # next build
 ```
@@ -310,38 +328,51 @@ DB_DRIVER=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/localme bu
 DB_DRIVER=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/localme bun run test:postgres
 ```
 
-## Production deployment
+## Production & Container Deployment
 
-The production host builds `bun run build` and serves the Next.js server. Recommended for
-production is the Postgres dialect:
+LocalMe supports bare-metal servers, Docker containers, and container platforms like **Runflare**:
 
-- `DB_DRIVER=postgres`, `DATABASE_URL` (Neon free tier works), `SESSION_SECRET`
-- `NEXT_PUBLIC_SITE_URL` — the public origin (canonical URLs, hosted-project links, sitemap)
-- `ADMIN_INITIAL_PASSWORD` — the first administrator's password (see **First boot**)
+### Smart Container Startup (`runflare:start`)
+Container platforms like Runflare expect port 3000 to be open within a startup grace period. To prevent startup probe timeouts (`SIGTERM`) caused by redundant `npm install` and `next build` commands in the runtime container:
+- Runflare / Docker command: `npm run runflare:start` (or `node scripts/runflare-start.mjs`).
+- If `node_modules` and `.next` already exist from the build phase, it immediately runs database migrations (`scripts/migrate.mjs`) and starts Next.js in **under 2 seconds**.
+- Recommended Runflare settings:
+  - **Command**: `npm run runflare:start`
+  - **PostStart**: `sh -c "sleep 2 && curl -fs http://127.0.0.1:3000/health || true"`
+  - **PreStop**: `sleep 5`
 
-SQLite (`DB_DRIVER=sqlite` + `DB_PATH=file:…`) remains valid for single-node self-hosting.
+### Single-Volume Storage Consolidation (2GB Volume)
+When deploying with a single persistent volume mounted at `/app/storage_data`:
+```env
+STORAGE_DATA_DIR="/app/storage_data"
+DB_PATH="file:/app/storage_data/localme.db"
+```
+Both the SQLite database and all project file uploads coexist on the same 2GB persistent volume, surviving container rebuilds and restarts without data loss.
 
-### One-liner
+### Production Environment Variables
+- `DB_DRIVER` — `sqlite` (default) or `postgres`
+- `DB_PATH` — `file:/app/storage_data/localme.db` (or persistent path; unset defaults to `data/localme.db`)
+- `DATABASE_URL` — Postgres connection string (required when `DB_DRIVER=postgres`)
+- `STORAGE_DATA_DIR` — filesystem path for uploaded assets (default `storage_data`)
+- `SESSION_SECRET` — session signing secret (auto-generated and persisted if omitted)
+- `NEXT_PUBLIC_SITE_URL` — public origin (e.g. `https://localme.ir`)
+
+### One-liner (Local or Bare-Metal)
 
 ```bash
 bun install && bun run typecheck && bun run lint && bun run test && bun run build && bun run start
 ```
 
-Or as separate steps: `bun install` · `bun run test` · `bun run lint` ·
-`bun run typecheck` · `bun run build` · `bun run start` (serves the built app on
-`$PORT`, default 3000). Add `bun run db:migrate` before the first `start` when
-you use a file-backed SQLite database or Postgres; in-memory SQLite migrates
-itself.
-
 | Script | What it does |
 | :----- | :----------- |
 | `bun run dev` | dev server on `0.0.0.0:$PORT` |
-| `bun run test` | 210 tests on in-memory SQLite |
+| `bun run test` | 341 tests on in-memory SQLite (28 suites) |
 | `bun run test:postgres` | the dialect contract on Postgres (needs `DATABASE_URL`) |
 | `bun run lint` | ESLint (flat config) |
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run build` | production build |
 | `bun run start` | serve the production build |
+| `npm run runflare:start` | smart container startup with auto-migrations and instant port binding |
 | `bun run db:migrate` | apply `db/*/**.sql` to a file-backed SQLite DB or Postgres |
 | `bun run seed` | demo accounts/projects (`-- --reset` to rebuild them) |
 | `bun run backup` | snapshot / verify / restore |

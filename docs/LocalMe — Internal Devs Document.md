@@ -1,25 +1,32 @@
 # LocalMe — Internal Devs Document
 
-**Version**: 1.1.0  
-**Date**: 2026-10-01  
+**Version**: 1.2.0  
+**Date**: 2026-10-04  
 **Status**: Living guide — see the architecture note below
 
 > ### ⚠️ Read this first
 >
-> This document was written on 2026-07-23 against a **.NET 10 backend plus a
+> This document was originally drafted against a **.NET 10 backend plus a
 > separate React frontend**. [ADR 001](./adr/001-nextjs-only-architecture.md)
 > rejected that split: LocalMe ships as **one Next.js App Router application**
 > with no separate backend, and **SQLite is the default dialect** with Postgres as
 > an opt-in production path ([ADR 003](./adr/003-sqlite-first-switchable-postgres.md)).
 >
-> The sections below have been corrected where they describe the environment, the
-> commands or the data layer. Longer passages that still describe C#/YARP/a
-> `backend/` directory are retained as the original design rationale — read them
-> as history, not as instructions. Where the two disagree, **the Blueprint, the
-> Technical Documentation and the code are authoritative.**
+> Subsequent operational and agentic evolutions are documented in:
+> - [ADR 004](./adr/004-operational-hardening.md) (operational hardening)
+> - [ADR 006](./adr/006-optional-session-secret-and-first-boot-admin.md) (first-boot admin)
+> - [ADR 007](./adr/007-library-as-a-reserved-cdn-namespace.md) (shared library CDN)
+> - [ADR 008](./adr/008-multi-culture-rtl-and-shamsi-calendar.md) (dual culture & Shamsi calendar)
+> - [ADR 009](./adr/009-mcp-standards-and-agentic-skills.md) (MCP spec 2024-11-05 & AAT tokens)
+> - [ADR 010](./adr/010-container-resilience-and-dynamic-configuration.md) (container runner, single-volume storage, dynamic tiers)
 >
-> For how to actually build and run this, see the [README](../README.md) and
-> [`env.example`](../env.example).
+> The sections below have been corrected where they describe the environment, the
+> commands or the data layer. Longer passages that describe legacy C#/YARP/a
+> `backend/` directory are retained as historical context. Where the two disagree,
+> **the Blueprint, the ADRs, the Technical Documentation and the code are authoritative.**
+>
+> For building, testing (Vitest, 341 tests) and running this, see the [README](../README.md)
+> and [`env.example`](../env.example).
 
 ---
 
@@ -1009,6 +1016,33 @@ sudo systemctl reload nginx
 
 echo "Deployment complete!"
 ```
+
+### 9.3 Container & Runflare Production Deployment (Modern Standard)
+
+For modern container deployments (Runflare, Docker, Railway, Kubernetes), LocalMe uses a smart container startup script to eliminate `SIGTERM` timeouts from startup health probes:
+
+```bash
+# Production container entrypoint
+npm run runflare:start
+# or
+node scripts/runflare-start.mjs
+```
+
+**Key Execution Behaviors:**
+1. **Intelligent Skip**: If `node_modules` and `.next` already exist from the container build step, it bypasses redundant `npm install` and `next build` commands.
+2. **Database Migrations**: Runs `node scripts/migrate.mjs`, ensuring parent directories are recursively created and all migrations are applied.
+3. **Instant Port Binding**: Spawns Next.js on `0.0.0.0:${PORT:-3000}` in under 2 seconds, satisfying container health checks.
+4. **Signal Handling**: Traps `SIGTERM` and `SIGINT` for graceful shutdown.
+
+**Runflare Settings**:
+- **Command**: `npm run runflare:start`
+- **PostStart**: `sh -c "sleep 2 && curl -fs http://127.0.0.1:3000/health || true"`
+- **PreStop**: `sleep 5`
+
+**Storage Consolidation (2GB Mount)**:
+- Mount volume: `/app/storage_data`
+- `STORAGE_DATA_DIR="/app/storage_data"`
+- `DB_PATH="file:/app/storage_data/localme.db"`
 
 ---
 

@@ -16,13 +16,13 @@ LocalMe is a platform that lets you build and host complete web applications usi
 - Teams who want to avoid backend development.
 
 **What you get:**
-- 2MB of project storage per account, plus 3MB for the shared Library.
-- 100 free visits per project per month.
-- A built-in database (JSON-based, no migrations).
-- Authentication for your visitors.
-- Custom domains (SSL included).
-- Scheduled tasks (cron jobs).
-- Webhooks for external integrations.
+- Dynamic subscription tiers (Free, Plus, and Pro) with quotas configured by SuperAdmin.
+- Generous project storage plus dedicated shared Library storage.
+- A built-in database (JSON-based document store, no migrations required).
+- Full Model Context Protocol (MCP) support for autonomous AI coding agents.
+- Authentication for your visitors (roles, permissions, rate limits).
+- Custom domains with automated SSL provisioning.
+- Scheduled tasks (cron jobs) and webhooks for external integrations.
 
 ---
 
@@ -718,7 +718,9 @@ Go to **Dashboard** → **Usage**:
 | **Webhook** | An HTTP request sent to an external service when an event occurs. |
 | **Proxy** | A route that forwards requests to an external API. |
 | **Secret** | An encrypted environment variable (API key, token, etc.). |
-| **API Key** | A key for automated access (used by AI agents). |
+| **API Key** | A key for automated access (Personal Access Token). |
+| **AAT** | Agent Access Token — ephemeral token requested by AI agents with human consent. |
+| **MCP** | Model Context Protocol — standardized protocol for AI agent integration. |
 
 ---
 
@@ -726,23 +728,26 @@ Go to **Dashboard** → **Usage**:
 
 ### 9.1 Common URLs
 ```
-Dashboard:        https://localme.com/dashboard
-Library:          https://localme.com/dashboard/library
-Admin console:    https://localme.com/admin        (operators and admins)
-API docs:         https://localme.com/docs
-Your Project:     https://localme.com/[username]/[projectname]/
-Visitor login:    https://localme.com/[username]/[projectname]/auth/login
-Logout:           https://localme.com/auth/logout
-Health probe:     https://localme.com/health
+Dashboard:        https://localme.ir/dashboard
+Profile:          https://localme.ir/profile
+Library:          https://localme.ir/dashboard/library
+Admin console:    https://localme.ir/admin        (operators and admins)
+API docs:         https://localme.ir/docs
+Agent Skill:      https://localme.ir/skills/localme/SKILL.md
+Your Project:     https://localme.ir/[username]/[projectname]/
+Visitor login:    https://localme.ir/[username]/[projectname]/auth/login
+Logout:           https://localme.ir/auth/logout
+Health probe:     https://localme.ir/health
 ```
 
 ### 9.2 API Endpoints
 ```
+MCP Server:       /api/mcp (JSON-RPC 2.0)
+Agent Tokens:     /api/agent/request-aat, /api/agent/poll-aat, /api/agent/check
 Database:         /api/db/find, /api/db/insert, /api/db/update, /api/db/delete
 Storage:          /api/storage/list, /api/storage/upload, /api/storage/download,
                   /api/storage/delete, /api/storage/move, /api/storage/status
 Library:          /api/library, /api/library/upload, /api/library/delete
-                  (also /api/lib/* when scoped to one project)
 Roles:            /api/roles, /api/roles/[roleId]
 Secrets:          /api/secrets, /api/secrets/get
 Transfer:         /api/transfer

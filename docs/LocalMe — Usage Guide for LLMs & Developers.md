@@ -835,13 +835,47 @@ Visitors can sign up/log in, then add, complete, and delete todos. All data is s
 
 ---
 
-## 15. API Reference (Quick Summary)
+## 15. Autonomous Agent Integration & Model Context Protocol (MCP)
+
+Beyond making manual REST calls, AI coding agents (Antigravity, Cursor, Claude Desktop, ChatGPT, etc.) can autonomously build, deploy, test, and manage applications on LocalMe using the native **Model Context Protocol (spec 2024-11-05)**:
+
+### 15.1 MCP Server Endpoints
+- **HTTP JSON-RPC 2.0**: `https://localme.ir/api/mcp` (or `http://localhost:3000/api/mcp`)
+  - Supports `initialize`, `tools/list`, `tools/call`, `prompts/list`, `prompts/get`, `resources/list`, `resources/read`, and `resources/templates/list`.
+- **Stdio Bridge**: `node bin/mcp-server.mjs` for desktop AI agents.
+
+### 15.2 Agent Access Tokens (AAT) with Human Consent
+Agents must not require users to expose permanent passwords or long-lived keys:
+1. Agent sends `POST /api/agent/request-aat` with requested duration (e.g. `4h`).
+2. Server returns a consent link: `/auth/consent?requestId=req_...`.
+3. Agent displays the consent link to the human user.
+4. Human reviews and approves access in their browser.
+5. Agent polls `/api/agent/poll-aat` and caches the token locally in `localme-aat.txt`.
+
+### 15.3 Agent Skill & Instant Live E2E Testing
+- **Agent Skill**: Available at [`https://localme.ir/skills/localme/SKILL.md`](/skills/localme/SKILL.md) served as `text/plain; charset=utf-8`.
+- **Instant Live Serving**: Any file uploaded via MCP or API is instantly accessible at `https://localme.ir/{username}/{project}/`.
+- **E2E Testing Grace Period**: When conducting automated verification, agents wait **5 to 10 seconds** after file writes to allow in-memory and edge caches to synchronize before issuing assertions against live URLs.
+
+### 15.4 Dynamic Tiers (Free, Plus, Pro)
+Subscriptions are dynamically defined by the platform SuperAdmin:
+- **Free**: 3 projects, 3MB storage, 3MB shared library.
+- **Plus**: 50 projects, 50MB storage, 50MB shared library.
+- **Pro**: High-capacity custom quotas for teams.
+
+---
+
+## 16. API Reference (Quick Summary)
 
 | Endpoint | Method | Description | Auth |
 | :--- | :--- | :--- | :--- |
 | `/auth/token` | POST | Login/signup | No |
 | `/auth/logout` | GET | Logout | No |
 | `/auth/captcha` | GET | CAPTCHA image | No |
+| `/api/mcp` | POST | Model Context Protocol JSON-RPC 2.0 | Bearer AAT/PAT |
+| `/api/agent/request-aat` | POST | Request ephemeral agent token | No |
+| `/api/agent/poll-aat` | GET | Poll agent token consent status | No |
+| `/api/agent/check` | POST | Check token validity | No |
 | `/api/db/find` | POST | Query documents | Yes (session or API key) |
 | `/api/db/insert` | POST | Insert document | Yes |
 | `/api/db/update` | POST | Update documents | Yes |

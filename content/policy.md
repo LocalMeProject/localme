@@ -16,7 +16,7 @@ LocalMe is built on two foundational principles:
 
 ## 2. Account Tiers & Resource Quotas
 
-Every user on LocalMe is subject to system-enforced resource quotas designed to ensure fair sharing and system stability:
+Every user on LocalMe is subject to system-enforced resource quotas designed to ensure fair sharing and system stability. Subscription tiers, pricing, and quotas are centrally managed and updated by platform SuperAdmins in the management console:
 
 ### 2.1 Free Tier (Default)
 - **Projects**: Maximum of 3 active projects per account.
@@ -28,7 +28,12 @@ Every user on LocalMe is subject to system-enforced resource quotas designed to 
 - **Projects**: Up to 50 active projects.
 - **Storage**: Up to 50 MB per project.
 - **Shared Library**: Up to 50 MB shared asset quota.
-- Available via subscription or operator grant.
+- Available via online subscription or operator grant.
+
+### 2.3 Pro Tier
+- **Projects**: High-capacity / unlimited project quotas for teams and advanced developers.
+- **Storage**: High-capacity dedicated storage limits for extensive applications.
+- Configured and tailored dynamically in Platform Settings.
 
 ---
 
