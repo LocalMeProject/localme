@@ -30,10 +30,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Console surfaces and the tenant-hosting namespace. Hosted projects live
-      // at /{user}/{project}/, so the prefix has to be crawled broadly or no
-      // published app can appear in search at all.
-      disallow: ["/admin", "/account", "/projects/", "/auth/", "/library", "/api/"],
     },
     sitemap: absoluteUrl("/sitemap.xml"),
     host: absoluteUrl("/"),

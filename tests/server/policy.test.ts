@@ -54,7 +54,7 @@ describe("skills route handler", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/markdown");
+    expect(res.headers.get("content-type")).toContain("text/plain");
     const text = await res.text();
     expect(text).toContain("LocalMe Agent Skill");
   });

@@ -8,7 +8,7 @@
  * as a free CDN.
  */
 const SEARCH_BOTS =
-  /(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|sogou|exabot|ia_archiver|facebookexternalhit|twitterbot|linkedinbot|applebot|petalbot)/i;
+  /(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|sogou|exabot|ia_archiver|facebookexternalhit|twitterbot|linkedinbot|applebot|petalbot|anthropic|chatgpt|gptbot|claudebot|perplexity|bytespider|deepseek|cursor|antigravity|agent|crawler|bot|spider)/i;
 
 /** Hosts that are always allowed as referers (the platform itself). */
 export function platformHostnames(): string[] {

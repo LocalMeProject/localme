@@ -28,7 +28,7 @@ export async function GET(
     return new NextResponse(content, {
       status: 200,
       headers: {
-        "content-type": "text/markdown; charset=utf-8",
+        "content-type": "text/plain; charset=utf-8",
         "cache-control": "public, max-age=3600, s-maxage=3600",
         "access-control-allow-origin": "*",
       },
