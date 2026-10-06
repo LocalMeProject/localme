@@ -1,0 +1,918 @@
+{
+  "repo:localme/blueprint/overview": {
+    "id": "repo:localme/blueprint/overview",
+    "path": "docs/002-blueprint/002-001-overview.md",
+    "title": "Overview",
+    "level": "repo",
+    "kind": "blueprint",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "overview",
+      "intent",
+      "baas"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/blueprint/users": {
+    "id": "repo:localme/blueprint/users",
+    "path": "docs/002-blueprint/002-002-users.md",
+    "title": "Users",
+    "level": "repo",
+    "kind": "blueprint",
+    "domains": [
+      "auth"
+    ],
+    "flows": [],
+    "keywords": [
+      "users",
+      "roles",
+      "actors"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/blueprint/non-goals": {
+    "id": "repo:localme/blueprint/non-goals",
+    "path": "docs/002-blueprint/002-003-non-goals.md",
+    "title": "Non-Goals",
+    "level": "repo",
+    "kind": "blueprint",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "out of scope",
+      "non-goals"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/blueprint/invariants": {
+    "id": "repo:localme/blueprint/invariants",
+    "path": "docs/002-blueprint/002-004-invariants.md",
+    "title": "Invariants",
+    "level": "repo",
+    "kind": "blueprint",
+    "domains": [
+      "platform",
+      "culture"
+    ],
+    "flows": [],
+    "keywords": [
+      "invariants",
+      "constraints"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/blueprint": {
+    "id": "repo:localme/blueprint",
+    "path": "docs/002-blueprint/INDEX.md",
+    "title": "LocalMe Blueprint",
+    "level": "repo",
+    "kind": "blueprint",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/container-resilience-and-dynamic-configuration": {
+    "id": "repo:localme/decisions/container-resilience-and-dynamic-configuration",
+    "path": "docs/003-decisions/003-container-resilience-and-dynamic-configuration.md",
+    "title": "Container Resilience And Dynamic Configuration",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/editor-hashing-and-watermark": {
+    "id": "repo:localme/decisions/editor-hashing-and-watermark",
+    "path": "docs/003-decisions/003-editor-hashing-and-watermark.md",
+    "title": "Editor Hashing And Watermark",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/library-as-a-reserved-cdn-namespace": {
+    "id": "repo:localme/decisions/library-as-a-reserved-cdn-namespace",
+    "path": "docs/003-decisions/003-library-as-a-reserved-cdn-namespace.md",
+    "title": "Library As A Reserved Cdn Namespace",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/mcp-standards-and-agentic-skills": {
+    "id": "repo:localme/decisions/mcp-standards-and-agentic-skills",
+    "path": "docs/003-decisions/003-mcp-standards-and-agentic-skills.md",
+    "title": "Mcp Standards And Agentic Skills",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/multi-culture-rtl-and-shamsi-calendar": {
+    "id": "repo:localme/decisions/multi-culture-rtl-and-shamsi-calendar",
+    "path": "docs/003-decisions/003-multi-culture-rtl-and-shamsi-calendar.md",
+    "title": "Multi Culture Rtl And Shamsi Calendar",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/nextjs-only-architecture": {
+    "id": "repo:localme/decisions/nextjs-only-architecture",
+    "path": "docs/003-decisions/003-nextjs-only-architecture.md",
+    "title": "Nextjs Only Architecture",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/operational-hardening": {
+    "id": "repo:localme/decisions/operational-hardening",
+    "path": "docs/003-decisions/003-operational-hardening.md",
+    "title": "Operational Hardening",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/optional-session-secret-and-first-boot-admin": {
+    "id": "repo:localme/decisions/optional-session-secret-and-first-boot-admin",
+    "path": "docs/003-decisions/003-optional-session-secret-and-first-boot-admin.md",
+    "title": "Optional Session Secret And First Boot Admin",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/postgres-neon-db-backed-storage": {
+    "id": "repo:localme/decisions/postgres-neon-db-backed-storage",
+    "path": "docs/003-decisions/003-postgres-neon-db-backed-storage.md",
+    "title": "Postgres Neon Db Backed Storage",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions/sqlite-first-switchable-postgres": {
+    "id": "repo:localme/decisions/sqlite-first-switchable-postgres",
+    "path": "docs/003-decisions/003-sqlite-first-switchable-postgres.md",
+    "title": "Sqlite First Switchable Postgres",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/decisions": {
+    "id": "repo:localme/decisions",
+    "path": "docs/003-decisions/INDEX.md",
+    "title": "Decisions",
+    "level": "repo",
+    "kind": "decision",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/auth-api": {
+    "id": "repo:localme/contracts/auth-api",
+    "path": "docs/004-contracts/004-001-auth-api.md",
+    "title": "Auth API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "auth"
+    ],
+    "flows": [],
+    "keywords": [
+      "auth",
+      "login",
+      "captcha",
+      "session"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/db-api": {
+    "id": "repo:localme/contracts/db-api",
+    "path": "docs/004-contracts/004-002-db-api.md",
+    "title": "Database API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "data"
+    ],
+    "flows": [],
+    "keywords": [
+      "db",
+      "json",
+      "database"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/storage-api": {
+    "id": "repo:localme/contracts/storage-api",
+    "path": "docs/004-contracts/004-003-storage-api.md",
+    "title": "Storage API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "data",
+      "projects"
+    ],
+    "flows": [],
+    "keywords": [
+      "storage",
+      "files",
+      "upload",
+      "library"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/mcp-api": {
+    "id": "repo:localme/contracts/mcp-api",
+    "path": "docs/004-contracts/004-004-mcp-api.md",
+    "title": "MCP API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "mcp",
+      "agent",
+      "ai",
+      "tools"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/import-export": {
+    "id": "repo:localme/contracts/import-export",
+    "path": "docs/004-contracts/004-005-import-export-api.md",
+    "title": "Import/Export API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "projects",
+      "data"
+    ],
+    "flows": [],
+    "keywords": [
+      "export",
+      "import",
+      "backup",
+      "zip"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/permissions": {
+    "id": "repo:localme/contracts/permissions",
+    "path": "docs/004-contracts/004-006-permissions.md",
+    "title": "Permissions Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "auth"
+    ],
+    "flows": [],
+    "keywords": [
+      "permissions",
+      "grants",
+      "api keys",
+      "roles"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/subscription-api": {
+    "id": "repo:localme/contracts/subscription-api",
+    "path": "docs/004-contracts/004-007-subscription-api.md",
+    "title": "Subscription API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "subscription",
+      "billing",
+      "tiers",
+      "plans"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts/project-config-api": {
+    "id": "repo:localme/contracts/project-config-api",
+    "path": "docs/004-contracts/004-008-project-config-api.md",
+    "title": "Project Configuration API Contract",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "projects"
+    ],
+    "flows": [],
+    "keywords": [
+      "config",
+      "routes",
+      "proxy",
+      "secrets",
+      "webhooks"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/contracts": {
+    "id": "repo:localme/contracts",
+    "path": "docs/004-contracts/INDEX.md",
+    "title": "Contracts",
+    "level": "repo",
+    "kind": "index",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/culture": {
+    "id": "repo:localme/cross-cutting/culture",
+    "path": "docs/005-cross-cutting/005-001-culture.md",
+    "title": "Culture Layer",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "culture"
+    ],
+    "flows": [],
+    "keywords": [
+      "fa-ir",
+      "en-us",
+      "jalali",
+      "shamsi",
+      "rtl"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/security": {
+    "id": "repo:localme/cross-cutting/security",
+    "path": "docs/005-cross-cutting/005-002-security.md",
+    "title": "Security and Authentication",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "auth",
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "security",
+      "permissions",
+      "api keys",
+      "hashing"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/kpis": {
+    "id": "repo:localme/cross-cutting/kpis",
+    "path": "docs/005-cross-cutting/005-003-kpis.md",
+    "title": "KPIs and Analytics",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "analytics",
+      "kpi",
+      "usage",
+      "bandwidth"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/logging": {
+    "id": "repo:localme/cross-cutting/logging",
+    "path": "docs/005-cross-cutting/005-004-logging.md",
+    "title": "Logging",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "logging",
+      "ndjson",
+      "serilog"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/testing": {
+    "id": "repo:localme/cross-cutting/testing",
+    "path": "docs/005-cross-cutting/005-005-testing.md",
+    "title": "Testing and CI",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "platform",
+      "data"
+    ],
+    "flows": [],
+    "keywords": [
+      "testing",
+      "vitest",
+      "ci",
+      "contract"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting/frontend-routing": {
+    "id": "repo:localme/cross-cutting/frontend-routing",
+    "path": "docs/005-cross-cutting/005-006-frontend-routing.md",
+    "title": "Frontend Routing and Serving",
+    "level": "repo",
+    "kind": "cross-cutting",
+    "domains": [
+      "platform",
+      "projects"
+    ],
+    "flows": [],
+    "keywords": [
+      "routing",
+      "serving",
+      "frontend",
+      "proxy"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/cross-cutting": {
+    "id": "repo:localme/cross-cutting",
+    "path": "docs/005-cross-cutting/INDEX.md",
+    "title": "Cross-Cutting",
+    "level": "repo",
+    "kind": "index",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/operational/backups": {
+    "id": "repo:localme/operational/backups",
+    "path": "docs/006-operational/006-001-backups.md",
+    "title": "Backups",
+    "level": "repo",
+    "kind": "runbook",
+    "domains": [
+      "data"
+    ],
+    "flows": [],
+    "keywords": [
+      "backup",
+      "restore",
+      "snapshot"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/operational/cron": {
+    "id": "repo:localme/operational/cron",
+    "path": "docs/006-operational/006-002-cron.md",
+    "title": "Cron Jobs",
+    "level": "repo",
+    "kind": "runbook",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "cron",
+      "scheduled tasks",
+      "tasks"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/operational/deployment": {
+    "id": "repo:localme/operational/deployment",
+    "path": "docs/006-operational/006-003-deployment.md",
+    "title": "Deployment",
+    "level": "repo",
+    "kind": "runbook",
+    "domains": [
+      "platform"
+    ],
+    "flows": [],
+    "keywords": [
+      "deploy",
+      "runflare",
+      "container",
+      "docker"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/operational": {
+    "id": "repo:localme/operational",
+    "path": "docs/006-operational/INDEX.md",
+    "title": "Operational",
+    "level": "repo",
+    "kind": "index",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/project-upload": {
+    "id": "repo:localme/flows/project-upload",
+    "path": "docs/007-flows/001-project-upload.md",
+    "title": "Project Upload Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "projects",
+      "data"
+    ],
+    "flows": [
+      "project:upload"
+    ],
+    "keywords": [
+      "upload",
+      "assets",
+      "deploy",
+      "minification"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "project:upload"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/admin-first-boot": {
+    "id": "repo:localme/flows/admin-first-boot",
+    "path": "docs/007-flows/002-admin-first-boot.md",
+    "title": "Admin First Boot Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "auth",
+      "platform"
+    ],
+    "flows": [
+      "auth:admin-first-boot"
+    ],
+    "keywords": [
+      "first-boot",
+      "admin creation",
+      "zero config"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "auth:admin-first-boot"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/ssl-provision": {
+    "id": "repo:localme/flows/ssl-provision",
+    "path": "docs/007-flows/003-ssl-provision.md",
+    "title": "SSL Provisioning Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "platform",
+      "projects"
+    ],
+    "flows": [
+      "domain:ssl-provision"
+    ],
+    "keywords": [
+      "ssl",
+      "acme",
+      "let's encrypt",
+      "certificates"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "domain:ssl-provision"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/webhook-delivery": {
+    "id": "repo:localme/flows/webhook-delivery",
+    "path": "docs/007-flows/004-webhook-delivery.md",
+    "title": "Webhook Delivery Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "platform",
+      "data"
+    ],
+    "flows": [
+      "webhook:delivery"
+    ],
+    "keywords": [
+      "webhooks",
+      "outbox",
+      "retries"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "webhook:delivery"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/visitor-login": {
+    "id": "repo:localme/flows/visitor-login",
+    "path": "docs/007-flows/005-visitor-login.md",
+    "title": "Visitor Login Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "auth"
+    ],
+    "flows": [
+      "auth:visitor-login"
+    ],
+    "keywords": [
+      "visitor",
+      "session",
+      "captcha"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "auth:visitor-login"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows/project-export": {
+    "id": "repo:localme/flows/project-export",
+    "path": "docs/007-flows/006-project-export.md",
+    "title": "Project Export Flow",
+    "level": "repo",
+    "kind": "contract",
+    "domains": [
+      "projects",
+      "data"
+    ],
+    "flows": [
+      "project:export"
+    ],
+    "keywords": [
+      "export",
+      "backup",
+      "zip"
+    ],
+    "references": [],
+    "affects": [],
+    "implements": [
+      "project:export"
+    ],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/flows": {
+    "id": "repo:localme/flows",
+    "path": "docs/007-flows/INDEX.md",
+    "title": "Flow Index",
+    "level": "repo",
+    "kind": "index",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  },
+  "repo:localme/docs/index": {
+    "id": "repo:localme/docs/index",
+    "path": "docs/INDEX.md",
+    "title": "LocalMe Global Documentation Map",
+    "level": "repo",
+    "kind": "index",
+    "domains": [],
+    "flows": [],
+    "keywords": [],
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "code_paths": [],
+    "test_paths": []
+  }
+}

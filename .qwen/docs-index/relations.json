@@ -1,0 +1,410 @@
+{
+  "repo:localme/blueprint/overview": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/blueprint/users": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/blueprint/non-goals": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/blueprint/invariants": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/blueprint": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/container-resilience-and-dynamic-configuration": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/editor-hashing-and-watermark": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/library-as-a-reserved-cdn-namespace": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/mcp-standards-and-agentic-skills": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/multi-culture-rtl-and-shamsi-calendar": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/nextjs-only-architecture": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/operational-hardening": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/optional-session-secret-and-first-boot-admin": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/postgres-neon-db-backed-storage": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions/sqlite-first-switchable-postgres": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/decisions": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/auth-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/db-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/storage-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/mcp-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/import-export": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/permissions": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/subscription-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts/project-config-api": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/contracts": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/culture": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/security": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/kpis": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/logging": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/testing": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting/frontend-routing": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/cross-cutting": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/operational/backups": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/operational/cron": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/operational/deployment": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/operational": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/project-upload": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "project:upload"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/admin-first-boot": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "auth:admin-first-boot"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/ssl-provision": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "domain:ssl-provision"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/webhook-delivery": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "webhook:delivery"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/visitor-login": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "auth:visitor-login"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows/project-export": {
+    "references": [],
+    "affects": [],
+    "implements": [
+      "project:export"
+    ],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/flows": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  },
+  "repo:localme/docs/index": {
+    "references": [],
+    "affects": [],
+    "implements": [],
+    "depends_on": [],
+    "referenced_by": [],
+    "affected_by": [],
+    "implemented_by": []
+  }
+}
