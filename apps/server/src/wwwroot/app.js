@@ -1,614 +1,638 @@
-// LocalMe Apple-Design Client Controller & BaaS Integration Engine
+// LocalMe Multi-Tenant BaaS Console Controller (Cloudflare Light-Mode RTL)
+let allProjects = [];
+let currentProjectId = null;
+let currentProject = null;
+let currentTable = null;
+let currentFunc = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
-  initOverview();
-  initDagStudio();
-  initDatabaseStudio();
-  initAuthStudio();
-  initIpgStudio();
-  initStorageStudio();
-  initComputeLab();
-  initComplianceStudio();
+  initNavigation();
+  initProjects();
+  initModals();
+  initShamsiDatepicker();
+  initSuperadmin();
+  refreshWallet();
 });
 
-// 1. Tab Navigation System
-function initTabs() {
-  const tabs = document.querySelectorAll('.nav-tab');
-  const contents = document.querySelectorAll('.tab-content');
+// 1. Navigation & Views
+function initNavigation() {
+  const navItems = document.querySelectorAll('.cf-nav-item');
+  const panels = document.querySelectorAll('.view-panel');
+  const bcViewName = document.getElementById('bc-view-name');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const targetId = tab.dataset.tab;
-      
-      tabs.forEach(t => t.classList.remove('active'));
-      contents.forEach(c => c.classList.remove('active'));
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const targetView = item.dataset.view;
 
-      tab.classList.add('active');
-      const targetContent = document.getElementById(targetId);
-      if (targetContent) {
-        targetContent.classList.add('active');
+      navItems.forEach(n => n.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+
+      item.classList.add('active');
+      const targetPanel = document.getElementById(targetView);
+      if (targetPanel) targetPanel.classList.add('active');
+
+      if (bcViewName) {
+        bcViewName.textContent = item.innerText.trim();
       }
+
+      // View-specific data refreshes
+      if (targetView === 'view-usage') loadUsageData();
+      if (targetView === 'view-db') loadTableData();
+      if (targetView === 'view-auth') loadProjectUsers();
+      if (targetView === 'view-storage') loadProjectBuckets();
+      if (targetView === 'view-functions') loadProjectFunctions();
+      if (targetView === 'view-superadmin') loadSuperadminData();
     });
   });
-}
 
-// 2. Toast Notifications
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  
-  let icon = 'ℹ️';
-  let borderColor = 'rgba(255, 255, 255, 0.16)';
-  if (type === 'success') {
-    icon = '✅';
-    borderColor = 'rgba(48, 209, 88, 0.4)';
-  } else if (type === 'error') {
-    icon = '⚠️';
-    borderColor = 'rgba(255, 69, 58, 0.4)';
-  } else if (type === 'gold') {
-    icon = '🪙';
-    borderColor = 'rgba(245, 158, 11, 0.4)';
+  const superadminBtn = document.getElementById('btn-toggle-superadmin');
+  if (superadminBtn) {
+    superadminBtn.addEventListener('click', () => {
+      const adminNav = document.querySelector('[data-view="view-superadmin"]');
+      if (adminNav) adminNav.click();
+    });
   }
-
-  toast.style.borderColor = borderColor;
-  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(10px)';
-    toast.style.transition = 'all 200ms ease';
-    setTimeout(() => toast.remove(), 200);
-  }, 4000);
 }
 
-// Utility: Format IRR to Persian Toman
-function formatToman(amountIrr) {
-  const toman = Math.floor(amountIrr / 10);
-  return `${toman.toLocaleString('fa-IR')} تومان`;
-}
-
-function formatIrr(amountIrr) {
-  return `${amountIrr.toLocaleString('en-US')} IRR`;
-}
-
-// 3. System Overview
-async function initOverview() {
+// 2. Multi-Tenant Project Management
+async function initProjects() {
+  const select = document.getElementById('global-project-select');
   try {
-    const res = await fetch('/_baas/v1/config');
+    const res = await fetch('/_baas/v1/projects');
     if (res.ok) {
-      const data = await res.json();
-      const regionEl = document.getElementById('ov-region');
-      if (regionEl) regionEl.textContent = data.region || 'ir-central-tehran';
-      const stackEl = document.getElementById('ov-stack');
-      if (stackEl) stackEl.textContent = data.stack || '.NET 10 + PostgreSQL 18.1';
+      allProjects = await res.json();
+      if (select) {
+        select.innerHTML = allProjects.map(p => `
+          <option value="${p.id}">${p.name} (${p.id})</option>
+        `).join('');
+
+        if (allProjects.length > 0) {
+          selectProject(allProjects[0].id);
+        }
+
+        select.addEventListener('change', () => selectProject(select.value));
+      }
     }
   } catch (err) {
-    console.warn('Overview fetch error:', err);
-  }
-
-  // Ping health check periodically
-  const pingEl = document.getElementById('header-ping-time');
-  if (pingEl) {
-    const start = performance.now();
-    fetch('/healthz')
-      .then(r => r.json())
-      .then(() => {
-        const ms = Math.round(performance.now() - start);
-        pingEl.textContent = `${ms} ms`;
-      })
-      .catch(() => {
-        pingEl.textContent = 'Active';
-      });
+    console.warn('Projects fetch failed:', err);
   }
 }
 
-// 4. DAG Matrix Studio
-function initDagStudio() {
-  const primitives = [
-    { code: 'AUTH_01', name: 'Domestic Mobile OTP', state: 'Active', tier: 'P0' },
-    { code: 'REST_02', name: 'Dynamic PostgREST SQL', state: 'Active', tier: 'P0' },
-    { code: 'PAY_03', name: 'Shaparak/Zarinpal IPG', state: 'Active', tier: 'P0' },
-    { code: 'STOR_04', name: 'Universal Blob Storage', state: 'Active', tier: 'P1' },
-    { code: 'EDGE_05', name: 'Jint Edge JavaScript Host', state: 'Active', tier: 'P1' },
-    { code: 'SMS_06', name: 'Domestic SMS Aggregator', state: 'Active', tier: 'P2' },
-    { code: 'PUSH_07', name: 'Direct Socket Fallback Push', state: 'Active', tier: 'P2' }
-  ];
+async function selectProject(projectId) {
+  currentProjectId = projectId;
+  currentProject = allProjects.find(p => p.id === projectId);
+  if (!currentProject) return;
 
-  const grid = document.getElementById('dag-primitives-grid');
-  if (grid) {
-    grid.innerHTML = primitives.map(p => `
-      <div class="glass-panel" style="padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--apple-blue);">${p.code}</span>
-            <span class="badge badge-green">${p.tier}</span>
-          </div>
-          <div style="font-size: 14px; font-weight: 600; margin-top: 4px;">${p.name}</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="pulse-indicator"></span>
-          <span style="font-size: 12px; color: var(--apple-green); font-weight: 600;">${p.state}</span>
-        </div>
-      </div>
+  const bcProjName = document.getElementById('bc-project-name');
+  if (bcProjName) bcProjName.textContent = currentProject.name;
+
+  const statusBadge = document.getElementById('project-status-badge');
+  if (statusBadge) {
+    statusBadge.textContent = currentProject.status === 'Active' ? 'فعال (Active)' : 'معلق (Paused)';
+    statusBadge.className = currentProject.status === 'Active' ? 'cf-badge cf-badge-active' : 'cf-badge cf-badge-paused';
+  }
+
+  // Populate overview inputs
+  const ovProjId = document.getElementById('ov-proj-id');
+  if (ovProjId) ovProjId.textContent = currentProject.id;
+
+  const apiUrl = document.getElementById('api-url-input');
+  if (apiUrl) apiUrl.value = `${window.location.origin}/_baas/v1/${currentProject.id}`;
+
+  const anonKey = document.getElementById('anon-key-input');
+  if (anonKey) anonKey.value = currentProject.anonKey;
+
+  const serviceKey = document.getElementById('service-key-input');
+  if (serviceKey) serviceKey.value = currentProject.serviceRoleKey;
+
+  // Set Service Toggles
+  const toggles = currentProject.services || {};
+  setCheckbox('svc-toggle-db', toggles.database ?? true);
+  setCheckbox('svc-toggle-auth', toggles.auth ?? true);
+  setCheckbox('svc-toggle-storage', toggles.storage ?? true);
+  setCheckbox('svc-toggle-functions', toggles.functions ?? true);
+  setCheckbox('svc-toggle-sms', toggles.sms ?? true);
+
+  // Load project-scoped sub-resources
+  loadUsageData();
+  loadProjectTables();
+  loadProjectUsers();
+  loadProjectBuckets();
+  loadProjectFunctions();
+}
+
+function setCheckbox(id, checked) {
+  const el = document.getElementById(id);
+  if (el) el.checked = checked;
+}
+
+// 3. Database Studio (Project Scoped)
+async function loadProjectTables() {
+  if (!currentProjectId) return;
+  const select = document.getElementById('db-table-selector');
+  try {
+    const res = await fetch(`/_baas/v1/projects/${currentProjectId}/tables`);
+    if (res.ok) {
+      const tableNames = await res.json();
+      if (select) {
+        if (tableNames.length === 0) {
+          select.innerHTML = '<option value="">هیچ جدولی تعریف نشده است</option>';
+        } else {
+          select.innerHTML = tableNames.map(t => `<option value="${t}">${t}</option>`).join('');
+          currentTable = tableNames[0];
+          loadTableData();
+        }
+        select.onchange = () => {
+          currentTable = select.value;
+          loadTableData();
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Tables load error:', err);
+  }
+}
+
+async function loadTableData() {
+  if (!currentProjectId || !currentTable) return;
+  const thead = document.getElementById('cf-db-thead');
+  const tbody = document.getElementById('cf-db-tbody');
+  if (!thead || !tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--cf-text-muted); padding: 20px;">در حال بارگذاری داده‌ها...</td></tr>';
+
+  try {
+    const res = await fetch(`/_baas/v1/${currentProjectId}/rest/${currentTable}`);
+    if (!res.ok) throw new Error('Fetch failed');
+    const rows = await res.json();
+
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--cf-text-muted); padding: 20px;">جدول خالی است.</td></tr>';
+      return;
+    }
+
+    const keys = Object.keys(rows[0]);
+    thead.innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        ${keys.map(k => {
+          let val = r[k];
+          if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+          return `<td style="font-family: var(--font-mono); font-size: 12px;">${val ?? ''}</td>`;
+        }).join('')}
+      </tr>
     `).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--cf-red); padding: 20px;">خطا در دریافت اطلاعات جدول.</td></tr>';
   }
 }
 
-// 5. PostgREST Database Studio
-async function initDatabaseStudio() {
-  const tableSelect = document.getElementById('db-table-select');
-  const refreshBtn = document.getElementById('db-refresh-btn');
-  const insertForm = document.getElementById('db-insert-form');
+// 4. End-Users Studio
+async function loadProjectUsers() {
+  if (!currentProjectId) return;
+  const tbody = document.getElementById('auth-users-tbody');
+  if (!tbody) return;
 
-  async function loadTableData() {
-    const table = tableSelect ? tableSelect.value : 'products';
-    const tbody = document.getElementById('db-table-body');
-    const thead = document.getElementById('db-table-head');
-    if (!tbody || !thead) return;
-
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">بارگذاری داده‌ها...</td></tr>`;
-
-    try {
-      const res = await fetch(`/_baas/v1/rest/${table}`);
-      if (!res.ok) throw new Error('Fetch failed');
-      const rows = await res.json();
-
-      if (!rows || rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">جدول خالی است.</td></tr>`;
+  try {
+    const res = await fetch(`/_baas/v1/projects/${currentProjectId}/users`);
+    if (res.ok) {
+      const users = await res.json();
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--cf-text-muted); padding: 20px;">هیچ کاربری ثبت نشده است.</td></tr>';
         return;
       }
-
-      // Build headers
-      const keys = Object.keys(rows[0]);
-      thead.innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
-
-      // Build rows
-      tbody.innerHTML = rows.map(r => `
+      tbody.innerHTML = users.map(u => `
         <tr>
-          ${keys.map(k => {
-            let val = r[k];
-            if (k.includes('price') || k.includes('total')) {
-              return `<td class="num-tabular" style="font-weight: 600; color: var(--sovereign-gold);">${formatToman(val)} <span style="font-size: 10px; color: var(--text-tertiary);">(${val} IRR)</span></td>`;
-            }
-            if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
-            return `<td>${val ?? ''}</td>`;
-          }).join('')}
+          <td style="font-family: var(--font-mono); font-size: 12px; color: var(--cf-blue);">${u.id}</td>
+          <td style="font-family: var(--font-mono); font-weight: 600;">${u.phone}</td>
+          <td>${u.fullName || '-'}</td>
+          <td><span class="cf-badge cf-badge-active">تایید شده</span></td>
+          <td style="font-size: 12px;">${Shamsi.formatDate(u.createdAtUtc)}</td>
+          <td style="font-size: 12px;">${Shamsi.formatDate(u.lastSignInUtc)}</td>
         </tr>
       `).join('');
-    } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--apple-red); padding: 24px;">خطا در دریافت اطلاعات جدول.</td></tr>`;
-      showToast('خطا در برقراری ارتباط با دیتابیس', 'error');
     }
+  } catch (err) {
+    console.warn('Users load error:', err);
   }
+}
 
-  if (tableSelect) tableSelect.addEventListener('change', loadTableData);
-  if (refreshBtn) refreshBtn.addEventListener('click', loadTableData);
+// 5. Storage Buckets Studio
+async function loadProjectBuckets() {
+  if (!currentProjectId) return;
+  const tbody = document.getElementById('storage-buckets-tbody');
+  if (!tbody) return;
 
-  if (insertForm) {
-    insertForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const table = tableSelect ? tableSelect.value : 'products';
-      const title = document.getElementById('db-in-title')?.value;
-      const priceToman = parseInt(document.getElementById('db-in-price')?.value || '0', 10);
-      const stock = parseInt(document.getElementById('db-in-stock')?.value || '1', 10);
-      const category = document.getElementById('db-in-category')?.value || 'General';
-
-      if (!title) {
-        showToast('لطفا عنوان کالا را وارد کنید', 'error');
+  try {
+    const res = await fetch(`/_baas/v1/projects/${currentProjectId}/buckets`);
+    if (res.ok) {
+      const buckets = await res.json();
+      if (buckets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--cf-text-muted); padding: 20px;">باکتی برای این پروژه وجود ندارد.</td></tr>';
         return;
       }
+      tbody.innerHTML = buckets.map(b => `
+        <tr>
+          <td style="font-weight: 700; color: var(--cf-text-main);">🪣 ${b.name}</td>
+          <td><span class="cf-badge ${b.isPublic ? 'cf-badge-active' : 'cf-badge-orange'}">${b.isPublic ? 'عمومی (Public)' : 'محرمانه (Private)'}</span></td>
+          <td>${Shamsi.toPersianDigits(b.objectCount)} فایل</td>
+          <td style="font-family: var(--font-mono); font-size: 12px;">${(b.totalSizeBytes / (1024 * 1024)).toFixed(1)} MB</td>
+          <td style="font-size: 12px;">${Shamsi.formatDate(b.createdAtUtc)}</td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.warn('Buckets load error:', err);
+  }
+}
 
+// 6. Edge Functions Studio
+async function loadProjectFunctions() {
+  if (!currentProjectId) return;
+  const tbody = document.getElementById('functions-tbody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch(`/_baas/v1/projects/${currentProjectId}/functions`);
+    if (res.ok) {
+      const funcs = await res.json();
+      if (funcs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--cf-text-muted); padding: 20px;">هیچ تابعی مستقر نشده است.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = funcs.map(f => `
+        <tr>
+          <td style="font-weight: 700;">λ ${f.name}</td>
+          <td style="font-family: var(--font-mono); font-size: 12px; color: var(--cf-blue);">${f.slug}</td>
+          <td style="font-family: var(--font-mono); font-size: 11px;">${f.triggerPath}</td>
+          <td style="font-size: 12px;">${Shamsi.formatDate(f.createdAtUtc)}</td>
+          <td>
+            <button class="btn-cf-secondary" style="padding: 3px 8px; font-size: 11px;" onclick="selectFunctionForTest('${f.slug}', '${f.name}')">تست زنده</button>
+          </td>
+        </tr>
+      `).join('');
+
+      if (funcs.length > 0 && !currentFunc) {
+        selectFunctionForTest(funcs[0].slug, funcs[0].name);
+      }
+    }
+  } catch (err) {
+    console.warn('Functions load error:', err);
+  }
+}
+
+function selectFunctionForTest(slug, name) {
+  currentFunc = slug;
+  const titleEl = document.getElementById('test-func-title');
+  if (titleEl) titleEl.textContent = `${name} (${slug})`;
+}
+
+// 7. Usage & Metering Analytics (with Shamsi Datepicker)
+async function loadUsageData() {
+  if (!currentProjectId) return;
+  try {
+    const res = await fetch(`/_baas/v1/projects/${currentProjectId}/metrics`);
+    if (res.ok) {
+      const summary = await res.json();
+
+      // Overview cards
+      setNum('ov-queries-count', summary.totalDbQueries);
+      setNum('ov-sms-count', summary.totalSmsSent);
+      setText('ov-cost-toman', summary.formattedTotalCostToman);
+
+      // Usage view boxes
+      setNum('usage-db-q', summary.totalDbQueries);
+      setNum('usage-sms-cnt', summary.totalSmsSent);
+      setText('usage-storage-mb', `${(summary.totalStorageBytes / (1024 * 1024)).toFixed(1)} مگابایت`);
+      setNum('usage-compute-ms', summary.totalComputeMs);
+
+      // Usage events table
+      const tbody = document.getElementById('usage-events-tbody');
+      if (tbody && summary.recentEvents) {
+        if (summary.recentEvents.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--cf-text-muted); padding: 16px;">هیچ رخداد مصرفی ثبت نشده است.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = summary.recentEvents.map(e => `
+          <tr>
+            <td><span class="cf-badge cf-badge-orange">${e.metricType}</span></td>
+            <td style="font-family: var(--font-mono); font-weight: 600;">${Shamsi.toPersianDigits(e.quantity)}</td>
+            <td style="font-family: var(--font-mono);">${Shamsi.toPersianDigits(e.costIrr)}</td>
+            <td style="font-weight: 700; color: #c2410c;">${Shamsi.formatToman(e.costIrr)}</td>
+            <td style="font-size: 12px; color: var(--cf-text-muted);">${Shamsi.formatDate(e.timestampUtc)}</td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.warn('Metrics fetch error:', err);
+  }
+}
+
+function setNum(id, num) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = Shamsi.toPersianDigits(num ?? 0);
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+// 8. Shamsi Datepicker Popover Init
+function initShamsiDatepicker() {
+  const trigger = document.getElementById('btn-toggle-datepicker');
+  const popover = document.getElementById('shamsi-datepicker-popover');
+  const label = document.getElementById('dp-selected-label');
+
+  if (trigger && popover) {
+    new Shamsi.Datepicker('shamsi-datepicker-popover', {
+      onSelect: (date) => {
+        popover.style.display = 'none';
+        if (label) {
+          label.textContent = `فیلتر: ${Shamsi.toPersianDigits(date.year)}/${Shamsi.toPersianDigits(date.month)}/${Shamsi.toPersianDigits(date.day)}`;
+        }
+        loadUsageData();
+      }
+    });
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      popover.style.display = popover.style.display === 'block' ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', () => {
+      popover.style.display = 'none';
+    });
+  }
+}
+
+// 9. Superadmin Configuration Panel
+async function loadSuperadminData() {
+  try {
+    const res = await fetch('/_baas/v1/superadmin/system');
+    if (res.ok) {
+      const stats = await res.json();
+      setNum('admin-total-proj', stats.totalProjects);
+      setNum('admin-total-queries', stats.totalQueriesProcessed);
+      setText('admin-total-rev', stats.formattedRevenueToman);
+
+      const p = stats.pricing;
+      if (p) {
+        setVal('p-db-q', p.dbQueryPer1kIrr);
+        setVal('p-sms', p.smsPerMessageIrr);
+        setVal('p-storage', p.storageGbMonthIrr);
+        setVal('p-compute', p.computePer100msIrr);
+        setVal('p-min-topup', p.minWalletTopupIrr);
+        setVal('p-free-credit', p.initialFreeCreditIrr);
+        setCheckbox('p-maint-mode', p.maintenanceMode);
+      }
+    }
+  } catch (err) {
+    console.warn('Superadmin fetch error:', err);
+  }
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function initSuperadmin() {
+  const form = document.getElementById('admin-pricing-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
       const payload = {
-        title,
-        price_irr: priceToman * 10,
-        stock,
-        category
+        DbQueryPer1kIrr: parseInt(document.getElementById('p-db-q').value, 10),
+        SmsPerMessageIrr: parseInt(document.getElementById('p-sms').value, 10),
+        StorageGbMonthIrr: parseInt(document.getElementById('p-storage').value, 10),
+        ComputePer100msIrr: parseInt(document.getElementById('p-compute').value, 10),
+        MinWalletTopupIrr: parseInt(document.getElementById('p-min-topup').value, 10),
+        InitialFreeCreditIrr: parseInt(document.getElementById('p-free-credit').value, 10),
+        MaintenanceMode: document.getElementById('p-maint-mode').checked
       };
 
       try {
-        const res = await fetch(`/_baas/v1/rest/${table}`, {
-          method: 'POST',
+        const res = await fetch('/_baas/v1/superadmin/pricing', {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-
         if (res.ok) {
-          showToast('رکورد جدید با موفقیت درج شد', 'success');
-          document.getElementById('db-in-title').value = '';
-          document.getElementById('db-in-price').value = '';
-          loadTableData();
+          alert('تعرفه‌ها و متغیرهای سوپرادمین با موفقیت به‌روزرسانی شدند و به صورت بلادرنگ در سیستم اعمال گردیدند.');
+          loadSuperadminData();
+          loadUsageData();
         } else {
-          showToast('خطا در درج رکورد', 'error');
+          alert('خطا در به‌روزرسانی تعرفه‌ها.');
         }
-      } catch (err) {
-        showToast('خطای شبکه', 'error');
-      }
-    });
-  }
-
-  loadTableData();
-}
-
-// 6. Domestic OTP & Auth Studio
-function initAuthStudio() {
-  const requestBtn = document.getElementById('otp-request-btn');
-  const verifyBtn = document.getElementById('otp-verify-btn');
-  const phoneInput = document.getElementById('otp-phone-input');
-  const codeInput = document.getElementById('otp-code-input');
-  const statusBox = document.getElementById('otp-status-box');
-  const tokenBox = document.getElementById('otp-token-box');
-  const simulatedSmsBox = document.getElementById('otp-simulated-sms');
-
-  let countdownInterval = null;
-
-  if (requestBtn) {
-    requestBtn.addEventListener('click', async () => {
-      const phone = phoneInput ? phoneInput.value.trim() : '';
-      if (!phone || phone.length < 10) {
-        showToast('شماره موبایل نامعتبر است', 'error');
-        return;
-      }
-
-      requestBtn.disabled = true;
-      requestBtn.textContent = 'در حال ارسال...';
-
-      try {
-        const res = await fetch('/_baas/v1/auth/otp/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Phone: phone, Channel: 'sms' })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          showToast('کد تایید پیامک شد', 'success');
-          if (simulatedSmsBox && data.codeForTesting) {
-            simulatedSmsBox.style.display = 'block';
-            simulatedSmsBox.innerHTML = `
-              <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">پیامک شبیه‌سازی‌شده (Local Dev Direct Dispatch):</div>
-              <div style="font-weight: 700; color: #fff;">کد تایید ورود شما به سامانه LocalMe: <span style="font-family: var(--font-mono); color: var(--sovereign-gold); font-size: 18px;">${data.codeForTesting}</span></div>
-            `;
-            if (codeInput) codeInput.value = data.codeForTesting;
-          }
-
-          // 120s timer
-          let remaining = 120;
-          if (countdownInterval) clearInterval(countdownInterval);
-          countdownInterval = setInterval(() => {
-            remaining--;
-            if (statusBox) statusBox.textContent = `مهلت اعتبار کد: ${remaining} ثانیه`;
-            if (remaining <= 0) {
-              clearInterval(countdownInterval);
-              requestBtn.disabled = false;
-              requestBtn.textContent = 'ارسال مجدد کد تایید';
-              if (statusBox) statusBox.textContent = 'کد منقضی شده است.';
-            }
-          }, 1000);
-        } else {
-          showToast(data.message || 'خطا در درخواست کد', 'error');
-          requestBtn.disabled = false;
-          requestBtn.textContent = 'دریافت کد تایید';
-        }
-      } catch (err) {
-        showToast('خطای شبکه در ارسال پیامک', 'error');
-        requestBtn.disabled = false;
-        requestBtn.textContent = 'دریافت کد تایید';
-      }
-    });
-  }
-
-  if (verifyBtn) {
-    verifyBtn.addEventListener('click', async () => {
-      const phone = phoneInput ? phoneInput.value.trim() : '';
-      const code = codeInput ? codeInput.value.trim() : '';
-
-      if (!phone || !code) {
-        showToast('شماره و کد تایید الزامی است', 'error');
-        return;
-      }
-
-      verifyBtn.disabled = true;
-      try {
-        const res = await fetch('/_baas/v1/auth/otp/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Phone: phone, Code: code })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          showToast('احراز هویت با موفقیت انجام شد', 'success');
-          if (tokenBox) {
-            tokenBox.style.display = 'block';
-            tokenBox.innerHTML = `
-              <div style="font-size: 12px; font-weight: 700; color: var(--apple-green); margin-bottom: 6px;">نشست کاربر احراز شده (Ed25519 Token):</div>
-              <pre style="font-family: var(--font-mono); font-size: 11px; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; overflow-x: auto; color: var(--apple-teal);">${JSON.stringify(data.tokens, null, 2)}</pre>
-            `;
-          }
-        } else {
-          showToast(data.message || 'کد وارد شده نامعتبر است', 'error');
-        }
-      } catch (err) {
-        showToast('خطای شبکه در تایید کد', 'error');
-      } finally {
-        verifyBtn.disabled = false;
+      } catch {
+        alert('خطای شبکه.');
       }
     });
   }
 }
 
-// 7. Shaparak IPG & Double-Entry Ledger Simulator
-function initIpgStudio() {
-  const payBtn = document.getElementById('ipg-pay-btn');
-  const gatewaySelect = document.getElementById('ipg-gateway-select');
-  const amountInput = document.getElementById('ipg-amount-toman');
-  const phoneInput = document.getElementById('ipg-phone-input');
-  const balanceEl = document.getElementById('wallet-current-balance');
-  const ledgerTbody = document.getElementById('ipg-ledger-tbody');
-
-  async function refreshWallet() {
-    const phone = phoneInput ? phoneInput.value.trim() : '+989121112233';
-    try {
-      const res = await fetch(`/_baas/v1/pay/wallet/${encodeURIComponent(phone)}`);
-      if (res.ok) {
-        const wallet = await res.json();
-        if (balanceEl) balanceEl.textContent = wallet.formattedToman;
-        
-        // Update header wallet too
-        const headerWallet = document.getElementById('header-wallet-amount');
-        if (headerWallet) headerWallet.textContent = wallet.formattedToman;
-
-        if (ledgerTbody && wallet.recentTransactions) {
-          ledgerTbody.innerHTML = wallet.recentTransactions.flatMap(tx => 
-            tx.entries.map(e => `
-              <tr>
-                <td style="font-family: var(--font-mono); font-size: 11px;">${tx.transactionId.substring(0, 10)}...</td>
-                <td><span class="badge ${e.accountType === 'Asset' ? 'badge-blue' : 'badge-gold'}">${e.accountNumber} - ${e.accountName}</span></td>
-                <td class="num-tabular" style="color: var(--apple-green); font-weight: 600;">${e.debitIrr > 0 ? formatToman(e.debitIrr) : '-'}</td>
-                <td class="num-tabular" style="color: var(--apple-orange); font-weight: 600;">${e.creditIrr > 0 ? formatToman(e.creditIrr) : '-'}</td>
-                <td style="font-size: 12px; color: var(--text-secondary);">${e.description}</td>
-              </tr>
-            `)
-          ).join('');
-        }
-      }
-    } catch (err) {
-      console.warn('Wallet refresh failed:', err);
-    }
+// 10. Modals & Actions
+function initModals() {
+  const btnCreateProj = document.getElementById('btn-open-create-proj');
+  if (btnCreateProj) {
+    btnCreateProj.addEventListener('click', () => openModal('modal-create-project'));
   }
 
-  if (payBtn) {
-    payBtn.addEventListener('click', async () => {
-      const gateway = gatewaySelect ? gatewaySelect.value : 'SEP';
-      const amountToman = parseInt(amountInput?.value || '1000000', 10);
-      const phone = phoneInput ? phoneInput.value.trim() : '+989121112233';
-      const idempotencyKey = `pay_req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-      payBtn.disabled = true;
-      payBtn.textContent = 'در حال اتصال به شاپرک...';
+  const formCreateProj = document.getElementById('form-create-project');
+  if (formCreateProj) {
+    formCreateProj.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('cp-name')?.value;
+      const slug = document.getElementById('cp-slug')?.value;
+      const phone = document.getElementById('cp-phone')?.value;
 
       try {
-        // Step 1: Initiate Payment
+        const res = await fetch('/_baas/v1/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Name: name, Slug: slug, OwnerPhone: phone })
+        });
+        if (res.ok) {
+          closeModal('modal-create-project');
+          await initProjects();
+        }
+      } catch (err) {
+        alert('خطا در ایجاد پروژه');
+      }
+    });
+  }
+
+  // Wallet topup
+  const btnTopup = document.getElementById('btn-open-topup');
+  if (btnTopup) btnTopup.addEventListener('click', () => openModal('modal-topup'));
+
+  const formTopup = document.getElementById('form-topup');
+  if (formTopup) {
+    formTopup.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const gateway = document.getElementById('topup-gateway')?.value;
+      const amountToman = parseInt(document.getElementById('topup-amount-toman')?.value || '1000000', 10);
+      closeModal('modal-topup');
+
+      try {
+        // Step 1: Initiate
         const initRes = await fetch('/_baas/v1/pay/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             Gateway: gateway,
             AmountIrr: amountToman * 10,
-            CallbackUrl: '/dashboard',
-            Description: 'شارژ آنلاین حساب از طریق درگاه امن شاپرک',
-            CustomerPhone: phone,
-            IdempotencyKey: idempotencyKey
+            CallbackUrl: '/',
+            Description: 'شارژ کیف پول مستاجر از طریق درگاه شاپرک',
+            CustomerPhone: '+989121112233',
+            IdempotencyKey: `topup_${Date.now()}`
           })
         });
         const initData = await initRes.json();
-
-        if (!initData.success) {
-          showToast(initData.message || 'خطا در دریافت توکن شاپرک', 'error');
-          payBtn.disabled = false;
-          payBtn.textContent = 'پرداخت امن با شاپرک';
-          return;
-        }
-
-        showToast(`توکن شاپرک دریافت شد (${initData.authorityToken.substring(0, 14)}...)`, 'gold');
-
-        // Step 2: Simulate Instant Successful Bank Verification
-        setTimeout(async () => {
-          try {
-            const verifyRes = await fetch('/_baas/v1/pay/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                Gateway: gateway,
-                AuthorityToken: initData.authorityToken,
-                Status: 'OK'
-              })
-            });
-            const verifyData = await verifyRes.json();
-
-            if (verifyData.success) {
-              showToast(`تراکنش تایید شد! کد پیگیری: ${verifyData.referenceId}`, 'success');
-              refreshWallet();
-            } else {
-              showToast(verifyData.message || 'خطا در تایید تراکنش بانکی', 'error');
-            }
-          } catch {
-            showToast('خطا در تایید بانکی', 'error');
-          } finally {
-            payBtn.disabled = false;
-            payBtn.textContent = 'پرداخت امن با شاپرک';
-          }
-        }, 800);
-
-      } catch (err) {
-        showToast('خطای شبکه در تراکنش بانکی', 'error');
-        payBtn.disabled = false;
-        payBtn.textContent = 'پرداخت امن با شاپرک';
-      }
-    });
-  }
-
-  refreshWallet();
-}
-
-// 8. Universal Storage Explorer
-function initStorageStudio() {
-  const uploadBtn = document.getElementById('storage-upload-btn');
-  const fileInput = document.getElementById('storage-file-input');
-  const tbody = document.getElementById('storage-table-body');
-
-  async function loadObjects() {
-    if (!tbody) return;
-    try {
-      const res = await fetch('/_baas/v1/storage/list');
-      if (res.ok) {
-        const items = await res.json();
-        if (items.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">باکت خالی است.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = items.map(item => `
-          <tr>
-            <td style="font-weight: 600; color: #fff;">${item.name}</td>
-            <td style="font-family: var(--font-mono); font-size: 11px;">${(item.size / 1024).toFixed(1)} KB</td>
-            <td style="font-size: 12px; color: var(--text-secondary);">${item.contentType}</td>
-            <td style="font-size: 11px; color: var(--text-tertiary);">${new Date(item.lastModified).toLocaleDateString('fa-IR')}</td>
-            <td>
-              <a href="/_baas/v1/storage/download/${encodeURIComponent(item.name)}" target="_blank" class="btn-apple btn-apple-secondary" style="padding: 4px 10px; font-size: 11px;">دانلود</a>
-            </td>
-          </tr>
-        `).join('');
-      }
-    } catch {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">فایلی یافت نشد.</td></tr>`;
-    }
-  }
-
-  if (uploadBtn && fileInput) {
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files?.[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      showToast(`در حال آپلود ${file.name}...`, 'info');
-      try {
-        const res = await fetch('/_baas/v1/storage/upload', {
-          method: 'POST',
-          body: formData
-        });
-        if (res.ok) {
-          showToast('فایل با موفقیت در باکت ذخیره شد', 'success');
-          loadObjects();
-        } else {
-          showToast('خطا در ذخیره‌سازی فایل', 'error');
+        if (initData.success) {
+          // Simulate instant bank verification
+          await fetch('/_baas/v1/pay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              Gateway: gateway,
+              AuthorityToken: initData.authorityToken,
+              Status: 'OK'
+            })
+          });
+          refreshWallet();
+          alert(`کیف پول شما با موفقیت مبلغ ${Shamsi.toPersianDigits(amountToman.toLocaleString('en-US'))} تومان شارژ گردید.`);
         }
       } catch {
-        showToast('خطای شبکه هنگام آپلود فایل', 'error');
+        alert('خطا در پرداخت بانکی.');
       }
     });
   }
 
-  loadObjects();
-}
+  // DB Insert Row Form
+  const formInsertRow = document.getElementById('db-insert-row-form');
+  if (formInsertRow) {
+    formInsertRow.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentProjectId || !currentTable) return;
+      const name = document.getElementById('db-field-name')?.value;
+      const cat = document.getElementById('db-field-cat')?.value;
+      const price = parseInt(document.getElementById('db-field-price')?.value || '0', 10);
 
-// 9. Edge Compute Lab (Jint 4.x Sandboxed Execution)
-function initComputeLab() {
-  const runBtn = document.getElementById('compute-run-btn');
-  const codeEditor = document.getElementById('compute-code-editor');
-  const inputEditor = document.getElementById('compute-input-editor');
-  const outputViewer = document.getElementById('compute-output-viewer');
-  const logViewer = document.getElementById('compute-log-viewer');
-  const metricsViewer = document.getElementById('compute-metrics-viewer');
-
-  if (runBtn) {
-    runBtn.addEventListener('click', async () => {
-      const script = codeEditor?.value || '';
-      const inputJson = inputEditor?.value || '{}';
-
-      runBtn.disabled = true;
-      runBtn.textContent = 'در حال اجرای تابع...';
-
+      const payload = { title: name, category: cat, price_irr: price };
       try {
-        const res = await fetch('/_baas/v1/functions/execute', {
+        const res = await fetch(`/_baas/v1/${currentProjectId}/rest/${currentTable}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            Script: script,
-            InputJson: inputJson,
-            TimeoutSeconds: 5
-          })
+          body: JSON.stringify(payload)
         });
+        if (res.ok) {
+          document.getElementById('db-field-name').value = '';
+          loadTableData();
+          loadUsageData();
+        }
+      } catch {
+        alert('خطا در ثبت سطر');
+      }
+    });
+  }
 
+  // Edge function test run
+  const btnRunFunc = document.getElementById('btn-run-func-test');
+  if (btnRunFunc) {
+    btnRunFunc.addEventListener('click', async () => {
+      if (!currentProjectId || !currentFunc) return;
+      const inputJson = document.getElementById('func-input-json')?.value || '{}';
+      const outputPre = document.getElementById('func-output-result');
+
+      btnRunFunc.disabled = true;
+      btnRunFunc.textContent = 'در حال اجرا...';
+
+      try {
+        const res = await fetch(`/_baas/v1/${currentProjectId}/functions/${currentFunc}/invoke`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Script: '', InputJson: inputJson })
+        });
         const data = await res.json();
-        if (data.success) {
-          showToast(`تابع در ${data.executionTimeMs} میلی‌ثانیه با موفقیت اجرا شد`, 'success');
-          if (outputViewer) {
-            outputViewer.textContent = typeof data.output === 'object'
-              ? JSON.stringify(data.output, null, 2)
-              : String(data.output);
-          }
-        } else {
-          showToast('خطا در اجرای تابع', 'error');
-          if (outputViewer) {
-            outputViewer.textContent = `خطا: ${data.error}`;
-          }
+        if (outputPre) {
+          outputPre.textContent = JSON.stringify(data, null, 2);
         }
-
-        if (logViewer) {
-          logViewer.textContent = data.logs && data.logs.length > 0
-            ? data.logs.join('\n')
-            : '// هیچ لاگی از console ثبت نشد.';
-        }
-
-        if (metricsViewer) {
-          metricsViewer.innerHTML = `
-            <div style="display: flex; gap: 16px; font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary);">
-              <div>زمان اجرا: <span style="color: var(--apple-green); font-weight: 700;">${data.executionTimeMs} ms</span></div>
-              <div>سقف حافظه: <span style="color: var(--apple-blue); font-weight: 700;">16 MB Hard Governor</span></div>
-              <div>موتور: <span style="color: var(--sovereign-gold); font-weight: 700;">Jint 4.x Isolated</span></div>
-            </div>
-          `;
-        }
-      } catch (err) {
-        showToast('خطای شبکه در فراخوانی تابع', 'error');
+        loadUsageData();
+      } catch {
+        if (outputPre) outputPre.textContent = 'خطا در فراخوانی تابع';
       } finally {
-        runBtn.disabled = false;
-        runBtn.textContent = 'اجرای تابع (Run Edge Function)';
+        btnRunFunc.disabled = false;
+        btnRunFunc.textContent = 'فراخوانی و محاسبه هزینه مصرف';
+      }
+    });
+  }
+
+  // Service toggles save
+  const btnSaveSvc = document.getElementById('btn-save-services');
+  if (btnSaveSvc) {
+    btnSaveSvc.addEventListener('click', async () => {
+      if (!currentProjectId) return;
+      const toggles = {
+        Database: document.getElementById('svc-toggle-db').checked,
+        Auth: document.getElementById('svc-toggle-auth').checked,
+        Storage: document.getElementById('svc-toggle-storage').checked,
+        Functions: document.getElementById('svc-toggle-functions').checked,
+        Sms: document.getElementById('svc-toggle-sms').checked
+      };
+
+      try {
+        const res = await fetch(`/_baas/v1/projects/${currentProjectId}/services`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(toggles)
+        });
+        if (res.ok) alert('پیکربندی سرویس‌های پروژه ذخیره شد.');
+      } catch {
+        alert('خطای ذخیره‌سازی.');
       }
     });
   }
 }
 
-// 10. Regulatory & Compliance Studio
-function initComplianceStudio() {
-  const enamadBtn = document.getElementById('comp-enamad-btn');
-  const samandehiBtn = document.getElementById('comp-samandehi-btn');
-  const assetLinksBtn = document.getElementById('comp-assetlinks-btn');
-  const appleAssocBtn = document.getElementById('comp-appleassoc-btn');
-  const previewViewer = document.getElementById('comp-preview-viewer');
-
-  async function showComplianceContent(url, mimeType) {
-    if (!previewViewer) return;
-    previewViewer.textContent = 'در حال دریافت فایل نظارتی...';
-    try {
-      const res = await fetch(url);
-      const text = await res.text();
-      previewViewer.textContent = text;
-      showToast(`فایل ${url} با موفقیت دریافت شد`, 'info');
-    } catch {
-      previewViewer.textContent = 'خطا در دریافت سند.';
+async function refreshWallet() {
+  try {
+    const res = await fetch('/_baas/v1/wallet/%2B989121112233');
+    if (res.ok) {
+      const data = await res.json();
+      const el = document.getElementById('header-wallet-toman');
+      if (el) el.textContent = data.formattedToman;
     }
+  } catch (err) {
+    console.warn('Wallet refresh failed:', err);
   }
+}
 
-  if (enamadBtn) enamadBtn.addEventListener('click', () => showComplianceContent('/enamad.txt', 'text/plain'));
-  if (samandehiBtn) samandehiBtn.addEventListener('click', () => showComplianceContent('/samandehi.txt', 'text/plain'));
-  if (assetLinksBtn) assetLinksBtn.addEventListener('click', () => showComplianceContent('/.well-known/assetlinks.json', 'application/json'));
-  if (appleAssocBtn) appleAssocBtn.addEventListener('click', () => showComplianceContent('/.well-known/apple-app-site-association', 'application/json'));
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+function copyText(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) {
+    navigator.clipboard.writeText(el.value).then(() => {
+      alert('مقدار در کلیپ‌بورد کپی شد.');
+    });
+  }
+}
+
+function togglePassword(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) {
+    el.type = el.type === 'password' ? 'text' : 'password';
+  }
 }

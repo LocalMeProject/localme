@@ -30,17 +30,18 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
 
 ## 3. Code Surface (Targeted Symbols & Files)
 ### Added Files
-- `apps/server/src/wwwroot/index.html`: Premium Apple-designed Single Page Application dashboard.
-- `apps/server/src/wwwroot/app.js`: Interactive client controller with Apple fluid motion, tab navigation, and live API binding.
-- `apps/server/src/wwwroot/styles.css`: Apple-inspired design tokens, SF font stack, glassmorphic backdrop blur, and dark mode palette.
-- `libs/data-plane/src/Auth/OtpAuthService.cs`: Iranian mobile OTP generator, HMAC verification, and JWT session manager.
-- `libs/data-plane/src/DynamicSql/DynamicSqlHandler.cs`: Zero-allocation dynamic SQL REST endpoint processor.
-- `libs/data-plane/src/Finance/PaymentIpgService.cs`: Shaparak & Zarinpal payment token acquisition, verification, and ledger credit.
-- `libs/data-plane/src/Compute/JintScriptHost.cs`: Jint 4.x sandboxed script execution engine with 16MB memory governor.
-- `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`: Comprehensive integration tests for OTP, IPG, PostgREST, and Jint.
+- `libs/data-plane/src/Billing/PricingCatalog.cs`: Superadmin-configurable unit cost catalog (IRR) for all BaaS services.
+- `libs/data-plane/src/Billing/UsageMeteringService.cs`: Real-time usage event collector, cost calculator, and wallet balance reconciler.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.cs`: Multi-tenant project manager, JWT anon/service_role keys generator, and schema isolation.
+- `libs/data-plane/src/Admin/SuperadminService.cs`: Superadmin panel backend for dynamic pricing updates and global system configuration.
+- `apps/server/src/wwwroot/shamsi.js`: Jalali / Shamsi date converter, Persian numeral formatter, and interactive Shamsi Datepicker component.
+- `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Full integration tests for project provisioning, usage metering, and superadmin pricing adjustments.
 
 ### Modified Files
-- `apps/server/src/Program.cs`: Mount static files, SPA fallback routing, and full `/_baas/v1/*` endpoint suite.
+- `apps/server/src/wwwroot/index.html`: Cloudflare-style Light-Mode RTL developer console and Superadmin panel.
+- `apps/server/src/wwwroot/styles.css`: Cloudflare-inspired light mode styling (clean white/slate cards, orange brand accents, crisp borders, full RTL).
+- `apps/server/src/wwwroot/app.js`: Cloudflare panel controller with project switcher, table designer, auth users, storage, functions, live billing, and superadmin console.
+- `apps/server/src/Program.cs`: Mount `/_baas/v1/{projectId}/*` client APIs and `/_baas/v1/superadmin/*` management APIs.
 - `apps/server/src/LocalMe.Server.csproj`: Configure `wwwroot` static file publishing.
 - `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Additional DAG matrix invariant tests.
 - `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: Expanded storage and auth integration tests.
