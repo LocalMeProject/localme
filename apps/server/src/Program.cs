@@ -133,6 +133,29 @@ public class Program
         });
 
         // 4. Per-Service Configuration & Per-Service API Keys
+        app.MapGet("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ProjectManagerService pm) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound();
+            return project.Services.TryGetValue(service.ToLowerInvariant(), out var cfg)
+                ? Results.Json(cfg)
+                : Results.NotFound();
+        });
+
+        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        {
+            var srv = string.IsNullOrWhiteSpace(req.Service) ? service : req.Service;
+            var config = pm.ConfigureService(projectId, req with { Service = srv });
+            return config != null ? Results.Json(config) : Results.NotFound();
+        });
+
+        app.MapPut("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        {
+            var srv = string.IsNullOrWhiteSpace(req.Service) ? service : req.Service;
+            var config = pm.ConfigureService(projectId, req with { Service = srv });
+            return config != null ? Results.Json(config) : Results.NotFound();
+        });
+
         app.MapPost("/_baas/v1/projects/{projectId}/services/configure", (string projectId, ConfigureServiceRequest req, ProjectManagerService pm) =>
         {
             var config = pm.ConfigureService(projectId, req);
