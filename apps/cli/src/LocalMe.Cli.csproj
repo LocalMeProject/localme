@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>LocalMe.Cli</RootNamespace>
+    <AssemblyName>localme</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\libs\core-domain\src\LocalMe.Core.csproj" />
+    <ProjectReference Include="..\..\..\libs\data-plane\src\LocalMe.DataPlane.csproj" />
+  </ItemGroup>
+</Project>

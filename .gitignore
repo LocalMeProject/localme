@@ -1,0 +1,43 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node & package manager artifacts
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Nx cache & artifacts
+.nx/cache
+.nx/workspace-data
+dist/
+build/
+coverage/
+*.lcov
+test-results/
+
+# Environments & secrets
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+*.pem
+*.cert
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <Company>LocalMe Project</Company>
+    <Product>LocalMe Unified BaaS &amp; Edge PaaS</Product>
+    <Copyright>Copyright © 2026 LocalMe Project</Copyright>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>

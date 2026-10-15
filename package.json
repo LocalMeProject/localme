@@ -1,0 +1,28 @@
+{
+  "name": "localme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified Backend-as-a-Service (BaaS) and Edge Platform-as-a-Service (PaaS) - Pure .NET 10 Stack",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LocalMeProject/localme.git"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "nx": "nx",
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "audit": "nx run-many -t audit",
+    "gates": "python3 scripts/verify-nx-targets.py && python3 scripts/verify-agent-manifests.py && python3 scripts/check-nc-items.py",
+    "gates:targets": "python3 scripts/verify-nx-targets.py",
+    "gates:agents": "python3 scripts/verify-agent-manifests.py",
+    "gates:nc": "python3 scripts/check-nc-items.py",
+    "gates:change-surface": "python3 scripts/validate-change-surface.py CHANGE_SURFACE.md"
+  },
+  "devDependencies": {
+    "nx": "^20.4.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  }
+}

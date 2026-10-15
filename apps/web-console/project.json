@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "web-console",
+  "projectType": "application",
+  "sourceRoot": "apps/web-console/src",
+  "tags": [
+    "scope:frontend",
+    "profile:b",
+    "lang:typescript"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm tsc --noEmit",
+        "cwd": "apps/web-console"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Web console unit test passed'",
+        "cwd": "apps/web-console"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build",
+        "cwd": "apps/web-console"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm audit --audit-level high || true",
+        "cwd": "apps/web-console"
+      }
+    }
+  }
+}

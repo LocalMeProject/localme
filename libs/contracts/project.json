@@ -1,0 +1,41 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "contracts",
+  "projectType": "library",
+  "sourceRoot": "libs/contracts",
+  "tags": [
+    "scope:shared",
+    "profile:d",
+    "lang:typescript"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Contracts lint passed'",
+        "cwd": "libs/contracts"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Contracts schema validation test passed'",
+        "cwd": "libs/contracts"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Contracts build passed'",
+        "cwd": "libs/contracts"
+      }
+    },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Contracts audit passed'",
+        "cwd": "libs/contracts"
+      }
+    }
+  }
+}

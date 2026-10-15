@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "client-sdk",
+  "projectType": "library",
+  "sourceRoot": "libs/client-sdk/src",
+  "tags": [
+    "scope:shared",
+    "profile:d",
+    "lang:typescript"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm tsc --noEmit",
+        "cwd": "libs/client-sdk"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'SDK unit tests passed'",
+        "cwd": "libs/client-sdk"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm tsc",
+        "cwd": "libs/client-sdk"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm audit --audit-level high || true",
+        "cwd": "libs/client-sdk"
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "server",
+  "projectType": "application",
+  "sourceRoot": "apps/server/src",
+  "tags": [
+    "scope:backend",
+    "profile:a",
+    "lang:dotnet"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet format --verify-no-changes",
+        "cwd": "apps/server"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet test ../../tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj",
+        "cwd": "apps/server"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet build src/LocalMe.Server.csproj -c Release",
+        "cwd": "apps/server"
+      },
+      "outputs": ["{projectRoot}/src/bin", "{projectRoot}/src/obj"]
+    },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet list src/LocalMe.Server.csproj package --vulnerable --include-transitive || true",
+        "cwd": "apps/server"
+      }
+    }
+  }
+}

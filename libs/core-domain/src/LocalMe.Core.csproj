@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>LocalMe.Core</RootNamespace>
+    <AssemblyName>LocalMe.Core</AssemblyName>
+  </PropertyGroup>
+</Project>

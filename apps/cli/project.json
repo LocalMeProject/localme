@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "cli",
+  "projectType": "application",
+  "sourceRoot": "apps/cli/src",
+  "tags": [
+    "scope:backend",
+    "profile:a",
+    "lang:dotnet"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet format --verify-no-changes",
+        "cwd": "apps/cli"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet test ../../tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj",
+        "cwd": "apps/cli"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet build src/LocalMe.Cli.csproj -c Release",
+        "cwd": "apps/cli"
+      },
+      "outputs": ["{projectRoot}/src/bin", "{projectRoot}/src/obj"]
+    },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet list src/LocalMe.Cli.csproj package --vulnerable --include-transitive || true",
+        "cwd": "apps/cli"
+      }
+    }
+  }
+}

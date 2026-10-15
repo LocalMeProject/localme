@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+"""
+verify-agent-manifests.py
+Validates the syntax, schema, architectural profile compliance, and tier override validity
+of all AGENT.md files across an enterprise monorepo.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+from typing import Dict, List, Optional, Tuple
+
+
+ALLOWED_PROFILES = {"A", "B", "C", "D"}
+ALLOWED_SCOPES = {"backend", "frontend", "mobile", "shared"}
+
+# Tier 1 Inviolables that CANNOT be overridden under any circumstances
+TIER_1_BANNED_OVERRIDES = {
+    "pure-domain",
+    "domain-isolation",
+    "no-sqlite-in-integration",
+    "testcontainers-only",
+    "utc-storage",
+    "utc-convention",
+    "single-monorepo",
+    "nx-orchestration",
+    "14-day-nc",
+    "nc-block",
+    "2-pass-audit",
+    "pr-audit",
+    "change-surface",
+    "mandatory-change-surface",
+    "max-dir-depth",
+    "directory-depth",
+    "expand-contract",
+    "expand-contract-migration",
+}
+
+REQUIRED_SECTIONS = [
+    r"1\.\s*Scope\s*(&|and)?\s*Business\s*Intent",
+    r"2\.\s*Architectural\s*Profile",
+    r"3\.\s*Local\s*Nx\s*Target",
+    r"4\.\s*Test\s*(&|and)?\s*Verification",
+]
+
+EXCLUDED_DIRS = {
+    "node_modules",
+    ".git",
+    ".nx",
+    "dist",
+    "build",
+    "coverage",
+    ".cache",
+    ".venv",
+    "vendor",
+    "templates",
+    "__pycache__",
+}
+
+
+def parse_agent_yaml(content: str) -> Tuple[Dict, str]:
+    stripped_content = content.lstrip("\ufeff \t\r\n")
+    if not stripped_content.startswith("---"):
+        return {}, content
+
+    parts = stripped_content.split("---", 2)
+    if len(parts) < 3:
+        return {}, content
+
+    yaml_text = parts[1].strip()
+    body = parts[2].strip()
+
+    data = {"tier_overrides": []}
+    current_list = None
+    current_dict_item = None
+
+    for line in yaml_text.splitlines():
+        line = line.rstrip()
+        if not line or line.startswith("#"):
+            continue
+
+        # Check for list start or items (indented or unindented)
+        list_dict_match = re.match(r"^\s*-\s*([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        if list_dict_match and current_list == "tier_overrides":
+            k = list_dict_match.group(1).strip()
+            raw_v = list_dict_match.group(2).strip()
+            if "#" in raw_v:
+                m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_v)
+                raw_v = m.group(1) if m else raw_v.split("#", 1)[0].strip()
+            v = raw_v.strip("\"'")
+            current_dict_item = {k: v}
+            data["tier_overrides"].append(current_dict_item)
+            continue
+
+        sub_kv_match = re.match(r"^\s+([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        if sub_kv_match and current_dict_item is not None:
+            k = sub_kv_match.group(1).strip()
+            raw_v = sub_kv_match.group(2).strip()
+            if "#" in raw_v:
+                m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_v)
+                raw_v = m.group(1) if m else raw_v.split("#", 1)[0].strip()
+            v = raw_v.strip("\"'")
+            current_dict_item[k] = v
+            continue
+
+        # Top-level key
+        kv_match = re.match(r"^([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        if kv_match:
+            current_dict_item = None
+            k = kv_match.group(1).strip()
+            raw_v = kv_match.group(2).strip()
+            if "#" in raw_v:
+                m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_v)
+                raw_v = m.group(1) if m else raw_v.split("#", 1)[0].strip()
+            v = raw_v.strip("\"'")
+            if v == "" or v == "[]":
+                if k == "tier_overrides":
+                    data[k] = []
+                    current_list = k
+                else:
+                    data[k] = []
+                    current_list = None
+            else:
+                data[k] = v
+                current_list = None
+
+    return data, body
+
+
+def find_agent_files(root_dir: str) -> List[str]:
+    matches = []
+    for current_root, dirs, files in os.walk(root_dir):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith(".")]
+        if "AGENT.md" in files:
+            matches.append(os.path.join(current_root, "AGENT.md"))
+    return sorted(matches)
+
+
+def verify_agent_manifest(
+    file_path: str, root_dir: str, check_adrs: bool = True
+) -> Tuple[bool, List[str]]:
+    errors: List[str] = []
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        return False, [f"Could not read file: {e}"]
+
+    frontmatter, body = parse_agent_yaml(content)
+    # A manifest is a subproject manifest if it declares project_name, coexists with project.json,
+    # or resides within subproject trees (apps, services, libs, packages).
+    norm_path = file_path.replace("\\", "/")
+    has_project_name = bool(frontmatter.get("project_name")) if frontmatter else False
+    has_sibling_project_json = os.path.exists(os.path.join(os.path.dirname(file_path), "project.json"))
+    in_subproject_dir = any(d in norm_path.split("/") for d in ["apps", "services", "libs", "packages"])
+    is_subproject = has_project_name or has_sibling_project_json or in_subproject_dir
+    is_root = not is_subproject and (os.path.abspath(file_path) == os.path.abspath(os.path.join(root_dir, "AGENT.md")))
+
+    # For subproject AGENT.md, frontmatter is strictly required with project properties
+    if not is_root:
+        if not frontmatter:
+            errors.append("Missing required YAML frontmatter.")
+        else:
+            for req in ["project_name", "profile", "stack", "scope"]:
+                if req not in frontmatter or not frontmatter[req]:
+                    errors.append(f"Missing required frontmatter property: '{req}'")
+
+            prof = str(frontmatter.get("profile", "")).upper()
+            if prof and prof not in ALLOWED_PROFILES:
+                errors.append(f"Invalid profile '{prof}'. Must be one of: {', '.join(sorted(ALLOWED_PROFILES))}")
+
+            sc = str(frontmatter.get("scope", "")).lower()
+            if sc and sc not in ALLOWED_SCOPES:
+                errors.append(f"Invalid scope '{sc}'. Must be one of: {', '.join(sorted(ALLOWED_SCOPES))}")
+
+    # Check tier overrides (for both root and subproject manifests if present)
+    overrides = frontmatter.get("tier_overrides", []) if frontmatter else []
+    if isinstance(overrides, list):
+        for ov in overrides:
+            if not isinstance(ov, dict):
+                continue
+            rule = ov.get("rule", "")
+            norm_rule = rule.lower().strip().replace("_", "-").replace(" ", "-")
+            if norm_rule in TIER_1_BANNED_OVERRIDES:
+                errors.append(f"Illegal Tier 1 override attempted for rule '{rule}'. Tier 1 rules are inviolable.")
+
+            adr = ov.get("adr_reference")
+            if not adr:
+                errors.append(f"Tier override '{rule}' is missing required 'adr_reference'.")
+            elif check_adrs:
+                # Strip leading slashes so os.path.join does not discard root_dir
+                clean_adr = adr.lstrip("/\\")
+                path_from_root = os.path.join(root_dir, clean_adr)
+                path_from_manifest = os.path.join(os.path.dirname(file_path), clean_adr)
+                if not (os.path.exists(path_from_root) or os.path.exists(path_from_manifest)):
+                    errors.append(f"Referenced ADR file does not exist: '{adr}'")
+
+    # Section validation for non-root AGENT.md files
+    if not is_root:
+        for sec_pattern in REQUIRED_SECTIONS:
+            if not re.search(r"^##\s*" + sec_pattern, body, re.IGNORECASE | re.MULTILINE):
+                errors.append(f"Missing required section matching pattern: '## {sec_pattern}'")
+
+    return len(errors) == 0, errors
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Verify AGENT.md manifests across the monorepo.")
+    parser.add_argument("--root", default=".", help="Root directory to scan (default: current directory)")
+    parser.add_argument("--no-check-adrs", dest="check_adrs", action="store_false", help="Skip checking ADR file existence")
+    parser.add_argument("--json", action="store_true", help="Output results in JSON format")
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.root):
+        print(f"[ERROR] Specified root directory '{args.root}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    agent_files = find_agent_files(args.root)
+    results = {}
+    total_errors = 0
+
+    for af in agent_files:
+        valid, errors = verify_agent_manifest(af, root_dir=args.root, check_adrs=args.check_adrs)
+        rel_path = os.path.relpath(af, args.root)
+        results[rel_path] = {"valid": valid, "errors": errors}
+        total_errors += len(errors)
+
+    all_valid = total_errors == 0
+
+    if args.json:
+        out = {
+            "root": args.root,
+            "total_manifests": len(agent_files),
+            "compliant": all_valid,
+            "total_errors": total_errors,
+            "manifests": results,
+        }
+        print(json.dumps(out, indent=2))
+    else:
+        print("=== AGENT.md Manifest Verification ===")
+        print(f"Scanned {len(agent_files)} AGENT.md file(s) under '{args.root}'.\n")
+
+        if len(agent_files) == 0:
+            print("[INFO] No AGENT.md files found.")
+            sys.exit(0)
+
+        for path, info in results.items():
+            if info["valid"]:
+                print(f"[PASS] {path}")
+            else:
+                print(f"[FAIL] {path}:")
+                for err in info["errors"]:
+                    print(f"       - {err}")
+
+        print(f"\nResult: {'ALL PASSED' if all_valid else f'FAILED with {total_errors} error(s)'}")
+
+    sys.exit(0 if all_valid else 1)
+
+
+if __name__ == "__main__":
+    main()

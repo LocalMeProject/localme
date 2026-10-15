@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>LocalMe.DataPlane</RootNamespace>
+    <AssemblyName>LocalMe.DataPlane</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core-domain\src\LocalMe.Core.csproj" />
+  </ItemGroup>
+</Project>

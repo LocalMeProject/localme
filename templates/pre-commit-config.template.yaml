@@ -1,0 +1,61 @@
+# Enterprise Monorepo Pre-Commit Configuration
+# Governs local mechanical compliance before commit and push.
+# Usage:
+#   1. Copy to repository root: cp templates/pre-commit-config.template.yaml .pre-commit-config.yaml
+#   2. Install hooks: pre-commit install --hook-type pre-commit --hook-type pre-push
+#   3. Manual run: pre-commit run --all-files
+
+repos:
+  # Universal baseline hygiene checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^templates/
+      - id: check-json
+        exclude: ^templates/
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+
+  # Enterprise Product Mechanical Governance Gates
+  - repo: local
+    hooks:
+      - id: verify-agent-manifests
+        name: Verify AGENT.md Manifests & Tier Overrides
+        entry: python3 scripts/verify-agent-manifests.py
+        language: system
+        pass_filenames: false
+        files: (^|/)AGENT\.md$
+        stages: [pre-commit]
+
+      - id: verify-nx-targets
+        name: Verify Standard Monorepo Target Contracts
+        entry: python3 scripts/verify-nx-targets.py
+        language: system
+        pass_filenames: false
+        files: (^|/)project\.json$
+        stages: [pre-commit]
+
+      - id: check-nc-items
+        name: Check Open NC Items for 14-Day Expiration
+        entry: python3 scripts/check-nc-items.py --max-age 14
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: validate-change-surface
+        name: Validate Change Surface Completeness
+        entry: python3 scripts/validate-change-surface.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: enterprise-audit-runner
+        name: 10-Dimension Enterprise Audit Suite
+        entry: python3 scripts/audit-runner.py --scope .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

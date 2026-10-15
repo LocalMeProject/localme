@@ -1,0 +1,77 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LocalMe Unified BaaS & Edge PaaS API",
+    "version": "1.0.0-FINAL",
+    "description": "API wire specification for LocalMe pure .NET 10 stack"
+  },
+  "servers": [
+    {
+      "url": "https://{projectSlug}.localme.ir",
+      "variables": {
+        "projectSlug": {
+          "default": "app",
+          "description": "Unique project subdomain"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/enamad.txt": {
+      "get": {
+        "summary": "e-Namad plain-text verification token",
+        "responses": {
+          "200": { "description": "Token string", "content": { "text/plain": {} } }
+        }
+      }
+    },
+    "/_baas/v1/auth/otp/request": {
+      "post": {
+        "summary": "Request Iranian mobile OTP",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": { "type": "string", "example": "+989123456789" },
+                  "channel": { "type": "string", "enum": ["sms", "call", "bale"] }
+                },
+                "required": ["phone"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP sent successfully" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    },
+    "/_baas/v1/pay/ipg/request": {
+      "post": {
+        "summary": "Request Shaparak payment token via Static Egress NAT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount_irr": { "type": "integer", "format": "int64", "minimum": 10000 },
+                  "provider": { "type": "string", "enum": ["ZARINPAL", "SEP", "BEHPARDAKHT"] },
+                  "callback_deep_link": { "type": "string", "example": "myapp://checkout/result" }
+                },
+                "required": ["amount_irr", "provider", "callback_deep_link"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Payment token and redirect URL acquired" }
+        }
+      }
+    }
+  }
+}
