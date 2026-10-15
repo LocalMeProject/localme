@@ -1,6 +1,7 @@
 namespace LocalMe.Server;
 
 using LocalMe.DataPlane.Compliance;
+using LocalMe.Server.Dashboard;
 
 public class Program
 {
@@ -16,7 +17,12 @@ public class Program
         // 1. Health & Liveness Probe
         app.MapGet("/healthz", () => Results.Ok(new { status = "HEALTHY", role = nodeRole, timestamp = DateTimeOffset.UtcNow }));
 
-        // 2. Regulatory Compliance Responders (Section 4.2 priority 1 & 2)
+        // 2. Interactive Developer Console / Dashboard (Local Experience)
+        app.MapGet("/dashboard", () => Results.Content(DashboardRenderer.RenderHtml(nodeRole), "text/html; charset=utf-8"));
+        app.MapGet("/console", () => Results.Redirect("/dashboard"));
+        app.MapGet("/admin", () => Results.Redirect("/dashboard"));
+
+        // 3. Regulatory Compliance Responders (Section 4.2 priority 1 & 2)
         app.MapGet("/enamad.txt", (IConfiguration config) =>
         {
             var token = config["Compliance:EnamadToken"] ?? "localme-enamad-verification-token";
@@ -42,7 +48,7 @@ public class Program
             return Results.Text(ComplianceResponder.RenderAppleAppSiteAssociation(appId), "application/json");
         });
 
-        // 3. Fallback Compliant Persian Storefront (Section 4.3)
+        // 4. Fallback Compliant Persian Storefront (Section 4.3)
         app.MapGet("/", (IConfiguration config) =>
         {
             var title = config["Compliance:BusinessTitleFa"] ?? "پلتفرم توسعه ابری LocalMe";
@@ -52,14 +58,20 @@ public class Program
             return Results.Content(ComplianceResponder.RenderFallbackStorefrontHtml(title, phone, address, token), "text/html; charset=utf-8");
         });
 
-        // 4. BaaS Core Status Endpoint
+        // 5. BaaS Core Status Endpoint
         app.MapGet("/_baas/v1/config", () => Results.Ok(new
         {
             stack = "Pure .NET 10 + PostgreSQL 18.1 + Redis 7/8",
             version = "1.0.0-FINAL",
             region = "ir-central-tehran",
-            domestic_egress_nat_active = true
+            domestic_egress_nat_active = true,
+            dashboard_url = "/dashboard"
         }));
+
+        Console.WriteLine("[LocalMe] Server routes mounted:");
+        Console.WriteLine("  -> Developer Dashboard: http://localhost:5000/dashboard");
+        Console.WriteLine("  -> e-Namad Storefront:  http://localhost:5000/");
+        Console.WriteLine("  -> Health Check:        http://localhost:5000/healthz");
 
         app.Run();
     }

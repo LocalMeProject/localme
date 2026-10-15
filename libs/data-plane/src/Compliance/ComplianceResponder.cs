@@ -71,6 +71,11 @@ public sealed class ComplianceResponder
                     <div><strong>تلفن پشتیبانی:</strong> {{supportPhone}}</div>
                     <div><strong>نشانی قانونی:</strong> {{legalAddressFa}}</div>
                 </div>
+                <div style="margin-top: 1.5rem;">
+                    <a href="/dashboard" style="display: inline-block; padding: 0.6rem 1.2rem; border-radius: 0.6rem; background-color: #f59e0b; color: #09090b; font-weight: 600; text-decoration: none; font-size: 0.85rem; font-family: system-ui;">
+                        ورود به داشبورد توسعه‌دهنده LocalMe (Developer Console) &rarr;
+                    </a>
+                </div>
             </div>
         </body>
         </html>
