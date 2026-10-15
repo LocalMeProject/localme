@@ -14,6 +14,9 @@ using LocalMe.DataPlane.Storage.Adapters;
 
 public class Program
 {
+    // Thread-safe active user session tracker for local developer & admin console experience
+    private static string _activeUserId = "usr_developer_03";
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -43,7 +46,7 @@ public class Program
         app.UseDefaultFiles();
         app.UseStaticFiles();
 
-        // 1. Health & Config
+        // 1. Health & Config Probe
         app.MapGet("/healthz", () => Results.Ok(new
         {
             status = "HEALTHY",
@@ -58,16 +61,56 @@ public class Program
             version = "1.0.0-PROD",
             region = "ir-central-tehran",
             multi_tenancy = "Schema-Per-Project",
-            egress_nat = "2.180.12.94"
+            egress_nat = "2.180.12.94",
+            brand_color = "#10b981"
         }));
 
-        // 2. Project Management APIs
-        app.MapGet("/_baas/v1/projects", (ProjectManagerService pm) => Results.Json(pm.GetAllProjects()));
-
-        app.MapPost("/_baas/v1/projects", (CreateProjectRequest req, ProjectManagerService pm, UsageMeteringService metering) =>
+        // 2. User & Session APIs
+        app.MapGet("/_baas/v1/users/me", (ProjectManagerService pm) =>
         {
-            var project = pm.CreateProject(req);
-            // Record initial free credit event if configured
+            var users = pm.GetAllUsers();
+            var user = pm.GetUser(_activeUserId) ?? (users.Count > 0 ? users[0] : null);
+            return Results.Json(user);
+        });
+
+        app.MapPost("/_baas/v1/users/switch/{userId}", (string userId, ProjectManagerService pm) =>
+        {
+            var user = pm.GetUser(userId);
+            if (user == null) return Results.NotFound();
+            _activeUserId = user.Id;
+            return Results.Json(user);
+        });
+
+        app.MapGet("/_baas/v1/users", (ProjectManagerService pm) => Results.Json(pm.GetAllUsers()));
+
+        app.MapPut("/_baas/v1/users/{userId}/role", (string userId, JsonObject body, ProjectManagerService pm) =>
+        {
+            var roleStr = body["role"]?.ToString() ?? "Developer";
+            if (Enum.TryParse<UserRole>(roleStr, true, out var role))
+            {
+                var ok = pm.UpdateUserRole(userId, role);
+                return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+            }
+            return Results.BadRequest(new { error = "Invalid role" });
+        });
+
+        // 3. Project CRUD APIs (Developer starts with 0 projects)
+        app.MapGet("/_baas/v1/projects", (ProjectManagerService pm) =>
+        {
+            var user = pm.GetUser(_activeUserId);
+            if (user != null && (user.Role == UserRole.Admin || user.Role == UserRole.Operator))
+            {
+                return Results.Json(pm.GetAllProjects());
+            }
+            return Results.Json(pm.GetProjectsByUser(_activeUserId));
+        });
+
+        app.MapPost("/_baas/v1/projects", (CreateProjectRequest req, ProjectManagerService pm) =>
+        {
+            var users = pm.GetAllUsers();
+            var user = pm.GetUser(_activeUserId) ?? (users.Count > 0 ? users[0] : null);
+            if (user == null) return Results.BadRequest("User not found");
+            var project = pm.CreateProject(req with { OwnerId = user.Id, OwnerPhone = user.Phone });
             return Results.Json(project);
         });
 
@@ -77,10 +120,29 @@ public class Program
             return project != null ? Results.Json(project) : Results.NotFound();
         });
 
-        app.MapPut("/_baas/v1/projects/{projectId}/services", (string projectId, ProjectServiceToggles toggles, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/projects/{projectId}", (string projectId, UpdateProjectRequest req, ProjectManagerService pm) =>
         {
-            var ok = pm.UpdateProjectServices(projectId, toggles);
+            var updated = pm.UpdateProject(projectId, req);
+            return updated != null ? Results.Json(updated) : Results.NotFound();
+        });
+
+        app.MapDelete("/_baas/v1/projects/{projectId}", (string projectId, ProjectManagerService pm) =>
+        {
+            var ok = pm.DeleteProject(projectId);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+        });
+
+        // 4. Per-Service Configuration & Per-Service API Keys
+        app.MapPost("/_baas/v1/projects/{projectId}/services/configure", (string projectId, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        {
+            var config = pm.ConfigureService(projectId, req);
+            return config != null ? Results.Json(config) : Results.NotFound();
+        });
+
+        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/regenerate-key", (string projectId, string service, ProjectManagerService pm) =>
+        {
+            var key = pm.RegenerateServiceKey(projectId, service);
+            return key != null ? Results.Json(key) : Results.NotFound();
         });
 
         app.MapGet("/_baas/v1/projects/{projectId}/metrics", (string projectId, UsageMeteringService metering) =>
@@ -89,15 +151,11 @@ public class Program
             return Results.Json(summary);
         });
 
-        // 3. Multi-Tenant Project Database (PostgREST)
+        // 5. Multi-Tenant Project Relational Data (PostgREST)
         app.MapGet("/_baas/v1/{projectId}/rest/{table}", (string projectId, string table, ProjectManagerService pm, UsageMeteringService metering) =>
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (project.Status.Equals("PausedLowBalance", StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Problem(statusCode: 402, title: "Payment Required: Project wallet depleted. Please top-up to resume database queries.");
-            }
 
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
             var results = pm.QueryTable(projectId, table);
@@ -108,10 +166,6 @@ public class Program
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (project.Status.Equals("PausedLowBalance", StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Problem(statusCode: 402, title: "Payment Required: Project wallet depleted.");
-            }
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -126,36 +180,21 @@ public class Program
             return Results.Json(pm.GetProjectTableNames(projectId));
         });
 
-        // 4. Multi-Tenant Project End-Users & Auth
+        // 6. Multi-Tenant Project End-Users
         app.MapGet("/_baas/v1/projects/{projectId}/users", (string projectId, ProjectManagerService pm) =>
         {
             return Results.Json(pm.GetProjectUsers(projectId));
         });
 
-        app.MapPost("/_baas/v1/{projectId}/auth/otp/request", (string projectId, OtpRequest req, ProjectManagerService pm, OtpAuthService auth, UsageMeteringService metering) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/users", (string projectId, JsonObject body, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-
-            var (success, message, code) = auth.RequestOtp(req);
-            if (success)
-            {
-                metering.RecordUsage(projectId, project.OwnerPhone, "sms_otp", 1);
-            }
-            return Results.Json(new { success, message, codeForTesting = code });
+            var phone = body["phone"]?.ToString() ?? "+989123456789";
+            var name = body["full_name"]?.ToString();
+            var user = pm.AddProjectUser(projectId, phone, name);
+            return Results.Json(user);
         });
 
-        app.MapPost("/_baas/v1/{projectId}/auth/otp/verify", (string projectId, OtpVerifyRequest req, ProjectManagerService pm, OtpAuthService auth) =>
-        {
-            var (success, message, tokens) = auth.VerifyOtp(req);
-            if (success)
-            {
-                pm.AddProjectUser(projectId, req.Phone);
-            }
-            return Results.Json(new { success, message, tokens });
-        });
-
-        // 5. Multi-Tenant Project Storage Buckets
+        // 7. Multi-Tenant Project Storage Buckets
         app.MapGet("/_baas/v1/projects/{projectId}/buckets", (string projectId, ProjectManagerService pm) =>
         {
             return Results.Json(pm.GetProjectBuckets(projectId));
@@ -169,7 +208,7 @@ public class Program
             return Results.Json(bucket);
         });
 
-        // 6. Multi-Tenant Project Edge Functions
+        // 8. Multi-Tenant Project Edge Functions
         app.MapGet("/_baas/v1/projects/{projectId}/functions", (string projectId, ProjectManagerService pm) =>
         {
             return Results.Json(pm.GetProjectFunctions(projectId));
@@ -196,21 +235,33 @@ public class Program
             return Results.Json(result);
         });
 
-        // 7. Developer Wallet & IPG APIs
+        // 9. Wallet & IPG APIs
         app.MapGet("/_baas/v1/wallet/{phone}", (string phone, PaymentIpgService ipg) => Results.Json(ipg.GetWalletBalance(phone)));
         app.MapPost("/_baas/v1/pay/initiate", (IpgInitiateRequest req, PaymentIpgService ipg) => Results.Json(ipg.InitiatePayment(req)));
         app.MapPost("/_baas/v1/pay/verify", (IpgVerifyRequest req, PaymentIpgService ipg) => Results.Json(ipg.VerifyPayment(req)));
 
-        // 8. Superadmin Platform Management APIs
-        app.MapGet("/_baas/v1/superadmin/system", (SuperadminService admin) => Results.Json(admin.GetSystemStats()));
-        app.MapGet("/_baas/v1/superadmin/pricing", (PricingCatalog catalog) => Results.Json(catalog.GetSnapshot()));
-        app.MapPut("/_baas/v1/superadmin/pricing", (UpdatePricingRequest req, SuperadminService admin) =>
+        // 10. Superadmin & Operator Governance APIs
+        app.MapGet("/_baas/v1/admin/stats", (SuperadminService admin) => Results.Json(admin.GetSystemStats()));
+        app.MapGet("/_baas/v1/admin/pricing", (PricingCatalog catalog) => Results.Json(catalog.GetSnapshot()));
+        app.MapPut("/_baas/v1/admin/pricing", (UpdatePricingRequest req, SuperadminService admin, ProjectManagerService pm) =>
         {
+            var user = pm.GetUser(_activeUserId);
+            if (user != null && user.Role != UserRole.Admin)
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can modify platform pricing.");
+            }
             var updated = admin.UpdatePricing(req);
             return Results.Json(updated);
         });
 
-        // 9. Compliance Endpoints
+        app.MapPut("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, JsonObject body, SuperadminService admin) =>
+        {
+            var status = body["status"]?.ToString() ?? "Resolved";
+            var ok = admin.UpdateTicketStatus(ticketId, status);
+            return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+        });
+
+        // 11. Compliance Responders (Section 4.2)
         app.MapGet("/enamad.txt", (IConfiguration config) =>
             Results.Text(ComplianceResponder.RenderEnamadTxt(config["Compliance:EnamadToken"] ?? "localme-enamad-verification-token"), "text/plain"));
         app.MapGet("/samandehi.txt", (IConfiguration config) =>
@@ -219,15 +270,34 @@ public class Program
             Results.Text(ComplianceResponder.RenderAssetLinksJson("ir.localme.client", ["14:6D:E9:01:07:52:07:71:04:F2:45:F6:B4:22:35:50:E1:6C:67:72"]), "application/json"));
         app.MapGet("/.well-known/apple-app-site-association", (IConfiguration config) =>
             Results.Text(ComplianceResponder.RenderAppleAppSiteAssociation("TEAMID.ir.localme.client"), "application/json"));
-        app.MapGet("/storefront", (IConfiguration config) =>
-            Results.Content(ComplianceResponder.RenderFallbackStorefrontHtml("پلتفرم چندمستاجره ابری LocalMe", "021-88888888", "تهران، میدان ونک، برج فناوری", config["Compliance:EnamadToken"]), "text/html; charset=utf-8"));
 
-        // 10. SPA Fallbacks
-        app.MapGet("/dashboard", () => Results.Redirect("/"));
-        app.MapGet("/admin", () => Results.Redirect("/"));
+        // 12. Modular Front-End Routing (Landing, Auth, Panel, Admin)
+        // Root / Landing
+        app.MapGet("/", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+        app.MapGet("/about", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+
+        // Auth Portal (/auth/*)
+        app.MapGet("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
+        app.MapGet("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
+
+        // Developer Console (/panel/*)
+        app.MapGet("/panel", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/panel/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/dashboard", () => Results.Redirect("/panel"));
+
+        // Superadmin & Operator Portal (/admin/*)
+        app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
+        app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
+
+        // Fallback to landing
         app.MapFallbackToFile("index.html");
 
-        Console.WriteLine("[LocalMe] Server ready. Cloudflare-style BaaS Console active at: http://localhost:5000/");
+        Console.WriteLine("[LocalMe] Server ready with modular routing:");
+        Console.WriteLine("  -> Landing Page:      http://localhost:5000/");
+        Console.WriteLine("  -> Auth Portal:       http://localhost:5000/auth");
+        Console.WriteLine("  -> Developer Panel:   http://localhost:5000/panel");
+        Console.WriteLine("  -> SuperAdmin Portal: http://localhost:5000/admin");
+
         app.Run();
     }
 }

@@ -3,597 +3,142 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LocalMe | پلتفرم ابری چندمستاجره (BaaS Console)</title>
+  <title>LocalMe | پلتفرم چندمستاجره توسعه ابری</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
-<body>
+<body style="background: #ffffff;">
 
-  <!-- Cloudflare Style Top Bar -->
-  <header class="cf-topbar">
-    <div class="cf-topbar-brand">
-      <div class="cf-logo">LM</div>
-      
-      <!-- Project Switcher Dropdown -->
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <select id="global-project-select" class="cf-project-selector">
-          <!-- Populated dynamically -->
-        </select>
-        <button id="btn-open-create-proj" class="btn-cf-secondary" style="padding: 5px 10px; font-size: 12px;">
-          + پروژه جدید
-        </button>
+  <!-- Minimal Header -->
+  <header class="landing-nav">
+    <div style="display: flex; align-items: center; gap: 28px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال‌می</span>
       </div>
+      <nav style="display: flex; gap: 20px; font-size: 13.5px; font-weight: 500;">
+        <a href="#features" style="color: var(--text-muted); text-decoration: none;">سرویس‌ها</a>
+        <a href="#pricing" style="color: var(--text-muted); text-decoration: none;">تعرفه‌ها</a>
+        <a href="#about" style="color: var(--text-muted); text-decoration: none;">درباره پلتفرم</a>
+      </nav>
     </div>
 
-    <!-- Right Utilities -->
-    <div class="cf-topbar-utils">
-      <!-- Wallet Balance Badge -->
-      <div class="cf-wallet-badge">
-        <span>موجودی کیف پول:</span>
-        <span id="header-wallet-toman">۴۵,۰۰۰,۰۰۰ تومان</span>
-        <button id="btn-open-topup" class="btn-cf-primary" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;">
-          + شارژ با شاپرک
-        </button>
-      </div>
-
-      <!-- Superadmin Panel Shortcut Button -->
-      <button id="btn-toggle-superadmin" class="btn-cf-secondary" style="font-size: 12px; padding: 6px 12px; font-weight: 600;">
-        🛡 پنل سوپرادمین
-      </button>
-
-      <!-- Storefront Link -->
-      <a href="/storefront" target="_blank" class="btn-cf-secondary" style="font-size: 12px; padding: 6px 12px; text-decoration: none;">
-        فروشگاه ای‌نماد ↗
-      </a>
+    <div style="display: flex; gap: 10px;">
+      <a href="/auth" class="btn-secondary">ورود به حساب</a>
+      <a href="/auth" class="btn-primary">شروع ساخت پروژه</a>
     </div>
   </header>
 
-  <!-- Breadcrumbs Bar -->
-  <div class="cf-subbar">
-    <div class="cf-breadcrumbs">
-      <span>پلتفرم توسعه ابری LocalMe</span>
-      <span>/</span>
-      <span id="bc-project-name" class="active">اسنپ‌فود (SnappFood Mobile)</span>
-      <span>/</span>
-      <span id="bc-view-name">نمای کلی و کلیدهای دسترسی</span>
+  <!-- Clean Minimalist Hero -->
+  <section class="landing-hero">
+    <div class="badge badge-active" style="margin-bottom: 16px; font-size: 12px; padding: 4px 12px;">
+      پلتفرم چندمستاجره Backend-as-a-Service
+    </div>
+    <h1>زیرساخت ابری کامل برای توسعه‌دهندگان نرم‌افزار</h1>
+    <p>
+      لوکال‌می بستر جامع ارائه پایگاه داده رابطه‌ای، احراز هویت پیامکی، ذخیره‌سازی ابری و توابع سرورلس است. تمامی منابع به ازای هر پروژه کاملاً ایزوله شده و هزینه‌ها به صورت اعتباری و متناسب با مصرف واقعی محاسبه می‌گردد.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 12px;">
+      <a href="/auth" class="btn-primary" style="padding: 12px 28px; font-size: 14px;">ورود به پنل توسعه‌دهندگان</a>
+      <a href="/panel" class="btn-secondary" style="padding: 12px 28px; font-size: 14px;">مشاهده پیش‌نمایش کنسول</a>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="landing-feature-grid">
+    <div class="feature-box">
+      <h3>پایگاه داده رابطه‌ای و دسترسی REST</h3>
+      <p>
+        اسکیمای مجزا به ازای هر پروژه بر بستر PostgreSQL با پروتکل مستقیم PostgREST جهت اجرای سریع کوئری‌ها بدون نیاز به نوشتن کدهای پیچیده در بک‌اند.
+      </p>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span class="cf-badge cf-badge-active" id="project-status-badge">فعال (Active)</span>
-      <span style="font-size: 11px; color: var(--cf-text-light); font-family: var(--font-mono);">Region: ir-central-tehran</span>
+    <div class="feature-box">
+      <h3>احراز هویت پیامکی بومی</h3>
+      <p>
+        مدیریت کامل ثبت‌نام و ورود کاربران اپلیکیشن موبایل با کدهای تصادفی شش‌رقمی و اتصال پایدار به سرشماره‌های اپراتورهای مخابراتی داخل کشور.
+      </p>
     </div>
-  </div>
 
-  <!-- Main Layout -->
-  <div class="cf-layout">
+    <div class="feature-box">
+      <h3>ذخیره‌سازی ابری باکت‌محور</h3>
+      <p>
+        ذخیره‌سازی انواع فایل‌ها، تصاویر و اسناد اپلیکیشن با امکان تعریف باکت‌های عمومی یا محرمانه و تولید آدرس‌های دسترسی امن زمان‌دار.
+      </p>
+    </div>
 
-    <!-- Right Sidebar Navigation -->
-    <aside class="cf-sidebar">
-      <div class="cf-nav-group-title">سرویس‌های پروژه مستاجر</div>
-      <button class="cf-nav-item active" data-view="view-overview">
-        <span>⚡️</span> نمای کلی و کلیدهای API
-      </button>
-      <button class="cf-nav-item" data-view="view-db">
-        <span>🗄</span> دیتابیس و جداول (PostgREST)
-      </button>
-      <button class="cf-nav-item" data-view="view-auth">
-        <span>👥</span> کاربران و احراز هویت (Auth)
-      </button>
-      <button class="cf-nav-item" data-view="view-storage">
-        <span>📦</span> باکت‌های ذخیره‌سازی ابری
-      </button>
-      <button class="cf-nav-item" data-view="view-functions">
-        <span>λ</span> توابع سرورلس لبه (Edge Functions)
-      </button>
-      <button class="cf-nav-item" data-view="view-usage">
-        <span>📊</span> میزان مصرف و هزینه‌ها (Billing)
-      </button>
-      <button class="cf-nav-item" data-view="view-services">
-        <span>⚙️</span> فعال‌سازی ماژول‌های پروژه
-      </button>
+    <div class="feature-box">
+      <h3>توابع سرورلس لبه</h3>
+      <p>
+        اجرای کدهای جاوااسکریپت در محیط ایزوله و شنی مبتنی بر موتور پردازشی سریع با سقف حافظه مشخص و محاسبه دقیق زمان اجرا بر حسب میلی‌ثانیه.
+      </p>
+    </div>
 
-      <div class="cf-nav-group-title" style="margin-top: 18px;">مدیریت کلان پلتفرم</div>
-      <button class="cf-nav-item" data-view="view-superadmin">
-        <span>🛡</span> تنظیمات تعرفه‌ها (Superadmin)
-      </button>
-    </aside>
+    <div class="feature-box">
+      <h3>کلیدهای دسترسی تفکیک‌شده</h3>
+      <p>
+        صدور کلیدهای مجزا به ازای هر کاربر، هر پروژه و هر سرویس به منظور کنترل دقیق مجوزهای خواندن، نوشتن و مدیریت سطح دسترسی.
+      </p>
+    </div>
 
-    <!-- Main Content Area -->
-    <main class="cf-content-area">
+    <div class="feature-box">
+      <h3>تراکنش‌های ریالی و اتصال شاپرک</h3>
+      <p>
+        ثبت تمامی عملیات در قالب دفترکل دوبل ریالی با دقت ۶۴ بیتی و امکان شارژ آنی کیف پول اعتباری از طریق درگاه‌های امن پرداخت الکترونیک.
+      </p>
+    </div>
+  </section>
 
-      <!-- VIEW 1: Project Overview & API Keys -->
-      <section id="view-overview" class="view-panel active">
-        <div class="cf-metrics-grid">
-          <div class="cf-metric-box">
-            <div class="cf-metric-label">شناسه یکتای پروژه (Project Ref)</div>
-            <div class="cf-metric-num" id="ov-proj-id" style="font-size: 18px; font-family: var(--font-mono); color: var(--cf-blue);">-</div>
-            <div class="cf-metric-sub">ایزولاسیون اختصاصی PostgreSQL</div>
-          </div>
-          <div class="cf-metric-box">
-            <div class="cf-metric-label">مجموع کوئری‌های دیتابیس</div>
-            <div class="cf-metric-num" id="ov-queries-count">۰</div>
-            <div class="cf-metric-sub">ثبت بلادرنگ در متریک‌ها</div>
-          </div>
-          <div class="cf-metric-box">
-            <div class="cf-metric-label">پیامک‌های OTP ارسال‌شده</div>
-            <div class="cf-metric-num" id="ov-sms-count">۰</div>
-            <div class="cf-metric-sub">سرشماره اختصاصی داخلی</div>
-          </div>
-          <div class="cf-metric-box">
-            <div class="cf-metric-label">هزینه محاسبه‌شده مصرف</div>
-            <div class="cf-metric-num" id="ov-cost-toman" style="color: #c2410c;">۰ تومان</div>
-            <div class="cf-metric-sub">کسر تدریجی از تراز کیف پول</div>
-          </div>
+  <!-- Pricing Overview -->
+  <section id="pricing" style="background: var(--bg-main); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 60px 20px;">
+    <div style="max-width: 900px; margin: 0 auto; text-align: center;">
+      <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">تعرفه شفاف بر اساس مصرف واقعی</h2>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 30px;">
+        بدون هزینه اشتراک ماهانه اجباری؛ هزینه‌ها تنها به میزان فراخوانی‌های واقعی از کیف پول اعتباری کسر می‌شود.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: right;">
+        <div class="card" style="margin-bottom: 0;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">کوئری‌های پایگاه داده</div>
+          <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۱۰ تومان</div>
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">به ازای هر ۱,۰۰۰ درخواست</div>
         </div>
 
-        <!-- Project API Credentials Card -->
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">کلیدهای اتصال و آدرس‌های دسترسی پروژه (API Credentials)</div>
-              <div class="cf-card-desc">از این کلیدها برای احراز هویت درخواست‌های ارسالی از سمت اپلیکیشن‌های موبایل یا سرور استفاده کنید.</div>
-            </div>
-          </div>
-
-          <div style="display: grid; gap: 16px;">
-            <div>
-              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">آدرس پایه سرویس (Project URL)</label>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="api-url-input" class="cf-input cf-input-mono" readonly />
-                <button class="btn-cf-secondary" onclick="copyText('api-url-input')">کپی</button>
-              </div>
-            </div>
-
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label style="font-size: 12px; font-weight: 600;">کلید عمومی کلاینت (anon / public key)</label>
-                <span style="font-size: 11px; color: var(--cf-green);">امن برای استفاده در کلاینت موبایل و وب</span>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="anon-key-input" class="cf-input cf-input-mono" readonly />
-                <button class="btn-cf-secondary" onclick="copyText('anon-key-input')">کپی</button>
-              </div>
-            </div>
-
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label style="font-size: 12px; font-weight: 600;">کلید محرمانه مدیر سرور (service_role secret key)</label>
-                <span style="font-size: 11px; color: var(--cf-red);">محرمانه - فقط در سرورهای پشتیبان استفاده شود</span>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <input type="password" id="service-key-input" class="cf-input cf-input-mono" readonly />
-                <button class="btn-cf-secondary" onclick="togglePassword('service-key-input')">نمایش</button>
-                <button class="btn-cf-secondary" onclick="copyText('service-key-input')">کپی</button>
-              </div>
-            </div>
-          </div>
+        <div class="card" style="margin-bottom: 0;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">پیامک احراز هویت</div>
+          <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۸۰ تومان</div>
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">به ازای هر پیامک ارسالی</div>
         </div>
-      </section>
 
-      <!-- VIEW 2: Database / Tables Studio -->
-      <section id="view-db" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">جداول دیتابیس اختصاصی مستاجر (PostgREST Table Browser)</div>
-              <div class="cf-card-desc">جدول مورد نظر در اسکیمای اختصاصی این پروژه را انتخاب و داده‌ها را به صورت زنده مدیریت نمایید.</div>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <select id="db-table-selector" class="cf-input" style="width: auto;">
-                <!-- Tables options -->
-              </select>
-              <button id="btn-refresh-table" class="btn-cf-secondary">تازه‌سازی</button>
-            </div>
-          </div>
-
-          <!-- Add Row Form -->
-          <form id="db-insert-row-form" style="background: #f8fafc; border: 1px solid var(--cf-border); padding: 14px; border-radius: 6px; margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;">
-            <div>
-              <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">نام / فیلد اصلی</label>
-              <input type="text" id="db-field-name" class="cf-input" placeholder="مثال: غذای روز / محصول جدید" required />
-            </div>
-            <div>
-              <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">دسته‌بندی</label>
-              <input type="text" id="db-field-cat" class="cf-input" value="عمومی" />
-            </div>
-            <div>
-              <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">مبلغ (ریال)</label>
-              <input type="number" id="db-field-price" class="cf-input cf-input-mono" value="1200000" />
-            </div>
-            <div>
-              <button type="submit" class="btn-cf-primary">افزودن سطر جدید</button>
-            </div>
-          </form>
-
-          <!-- Table View -->
-          <div class="cf-table-wrapper">
-            <table class="cf-table">
-              <thead id="cf-db-thead"></thead>
-              <tbody id="cf-db-tbody"></tbody>
-            </table>
-          </div>
+        <div class="card" style="margin-bottom: 0;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">ذخیره‌سازی ابری</div>
+          <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۵۰ تومان</div>
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">هر گیگابایت در ماه</div>
         </div>
-      </section>
 
-      <!-- VIEW 3: Auth & End-Users -->
-      <section id="view-auth" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">کاربران ثبت‌نام‌شده در اپلیکیشن این پروژه (Project End-Users)</div>
-              <div class="cf-card-desc">فهرست کاربرانی که از طریق اپلیکیشن موبایل این مستاجر با شماره موبایل ثبت‌نام کرده‌اند.</div>
-            </div>
-            <button id="btn-open-add-user" class="btn-cf-primary">+ ثبت دستی کاربر</button>
-          </div>
-
-          <div class="cf-table-wrapper">
-            <table class="cf-table">
-              <thead>
-                <tr>
-                  <th>شناسه کاربر (UID)</th>
-                  <th>شماره موبایل</th>
-                  <th>نام و نام خانوادگی</th>
-                  <th>وضعیت تایید پیامکی</th>
-                  <th>تاریخ عضویت (شمسی)</th>
-                  <th>آخرین ورود (شمسی)</th>
-                </tr>
-              </thead>
-              <tbody id="auth-users-tbody"></tbody>
-            </table>
-          </div>
+        <div class="card" style="margin-bottom: 0;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">پردازش توابع لبه</div>
+          <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۱ تومان</div>
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">هر ۱۰۰ میلی‌ثانیه زمان اجرا</div>
         </div>
-      </section>
-
-      <!-- VIEW 4: Storage Buckets -->
-      <section id="view-storage" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">باکت‌های ذخیره‌سازی ابری (Project Storage Buckets)</div>
-              <div class="cf-card-desc">باکت‌های اختصاصی جهت ذخیره فایل‌های چندرسانه‌ای، مدارک و تصاویر اپلیکیشن.</div>
-            </div>
-            <button id="btn-create-bucket" class="btn-cf-primary">+ ایجاد باکت جدید</button>
-          </div>
-
-          <div class="cf-table-wrapper">
-            <table class="cf-table">
-              <thead>
-                <tr>
-                  <th>نام باکت</th>
-                  <th>سطح دسترسی</th>
-                  <th>تعداد فایل‌ها</th>
-                  <th>حجم کل</th>
-                  <th>تاریخ ایجاد (شمسی)</th>
-                </tr>
-              </thead>
-              <tbody id="storage-buckets-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 5: Edge Functions -->
-      <section id="view-functions" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">توابع سرورلس لبه (Project Serverless Edge Functions)</div>
-              <div class="cf-card-desc">کدهای جاوااسکریپت ایزوله مبتنی بر موتور فوق‌سریع Jint با سقف حافظه ۱۶ مگابایت.</div>
-            </div>
-            <button id="btn-deploy-function" class="btn-cf-primary">+ استقرار تابع جدید</button>
-          </div>
-
-          <div class="cf-table-wrapper" style="margin-bottom: 20px;">
-            <table class="cf-table">
-              <thead>
-                <tr>
-                  <th>نام تابع</th>
-                  <th>شناسه (Slug)</th>
-                  <th>مسیر فراخوانی (Trigger Path)</th>
-                  <th>تاریخ استقرار (شمسی)</th>
-                  <th>عملیات</th>
-                </tr>
-              </thead>
-              <tbody id="functions-tbody"></tbody>
-            </table>
-          </div>
-
-          <!-- Function Test Runner Card -->
-          <div style="background: #f8fafc; border: 1px solid var(--cf-border); padding: 18px; border-radius: 8px;">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">تست و اجرای زنده تابع: <span id="test-func-title" style="color: var(--cf-orange);">-</span></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <div>
-                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">پارامترهای ورودی (Context JSON)</label>
-                <textarea id="func-input-json" class="cf-input cf-input-mono" rows="4">{"distance_km": 5}</textarea>
-                <button id="btn-run-func-test" class="btn-cf-primary" style="margin-top: 10px; width: 100%;">فراخوانی و محاسبه هزینه مصرف</button>
-              </div>
-              <div>
-                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">خروجی بازگشتی (Execution Result)</label>
-                <pre id="func-output-result" style="background: #ffffff; border: 1px solid var(--cf-border); border-radius: 4px; padding: 10px; font-family: var(--font-mono); font-size: 11.5px; min-height: 115px; direction: ltr; text-align: left;">// برای مشاهده نتیجه دکمه بالا را کلیک کنید...</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 6: Usage & Metering with Shamsi Datepicker -->
-      <section id="view-usage" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">میزان مصرف و صورتحساب پروژه (Usage Metering &amp; Billing)</div>
-              <div class="cf-card-desc">پایش دقیق مصرف و هزینه‌های ثبت‌شده بر اساس کاتالوگ تعرفه‌های مصوب سوپرادمین.</div>
-            </div>
-
-            <!-- Shamsi Datepicker Filter Trigger -->
-            <div style="position: relative;">
-              <button id="btn-toggle-datepicker" class="btn-cf-secondary" style="display: flex; align-items: center; gap: 8px;">
-                <span>📅</span>
-                <span id="dp-selected-label">فیلتر تاریخ: کل بازه زمانی</span>
-                <span style="font-size: 10px;">▼</span>
-              </button>
-              <div id="shamsi-datepicker-popover" style="display: none; position: absolute; left: 0; top: 40px; z-index: 50;">
-                <!-- Popover renders here -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Usage Metrics Grid -->
-          <div class="cf-metrics-grid">
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">کوئری‌های پردازش‌شده دیتابیس</div>
-              <div class="cf-metric-num" id="usage-db-q">۰</div>
-              <div class="cf-metric-sub" id="usage-db-cost">۰ تومان</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">پیامک‌های OTP ارسال‌شده</div>
-              <div class="cf-metric-num" id="usage-sms-cnt">۰</div>
-              <div class="cf-metric-sub" id="usage-sms-cost">۰ تومان</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">حجم ذخیره‌سازی فایل‌ها</div>
-              <div class="cf-metric-num" id="usage-storage-mb">۰ مگابایت</div>
-              <div class="cf-metric-sub" id="usage-storage-cost">۰ تومان</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">زمان محاسبات توابع لبه</div>
-              <div class="cf-metric-num" id="usage-compute-ms">۰ ms</div>
-              <div class="cf-metric-sub" id="usage-compute-cost">۰ تومان</div>
-            </div>
-          </div>
-
-          <!-- Real-time Event Log Table -->
-          <div style="margin-top: 14px;">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">ریز رخدادهای مصرفی ثبت‌شده (Usage Log)</div>
-            <div class="cf-table-wrapper">
-              <table class="cf-table">
-                <thead>
-                  <tr>
-                    <th>نوع منبع مصرفی</th>
-                    <th>مقدار مصرف</th>
-                    <th>هزینه کسر شده (ریال)</th>
-                    <th>هزینه (تومان)</th>
-                    <th>زمان ثبت (شمسی)</th>
-                  </tr>
-                </thead>
-                <tbody id="usage-events-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 7: Service Toggles -->
-      <section id="view-services" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">پیکربندی ماژول‌ها و سرویس‌های پروژه (Service Enablement)</div>
-              <div class="cf-card-desc">سرویس‌های مورد نیاز برای این پروژه را فعال یا غیرفعال کنید.</div>
-            </div>
-            <button id="btn-save-services" class="btn-cf-primary">ذخیره تغییرات</button>
-          </div>
-
-          <div style="display: grid; gap: 14px;">
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border: 1px solid var(--cf-border); border-radius: 6px; cursor: pointer;">
-              <div>
-                <div style="font-weight: 700; font-size: 13px;">🗄 دیتابیس ارتباطی اختصاصی (PostgreSQL Schema)</div>
-                <div style="font-size: 12px; color: var(--cf-text-muted);">فعال‌سازی دسترسی REST و جداول داده اختصاصی</div>
-              </div>
-              <input type="checkbox" id="svc-toggle-db" checked style="width: 18px; height: 18px; accent-color: var(--cf-orange);" />
-            </label>
-
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border: 1px solid var(--cf-border); border-radius: 6px; cursor: pointer;">
-              <div>
-                <div style="font-weight: 700; font-size: 13px;">👥 احراز هویت پیامکی بومی (Domestic SMS OTP)</div>
-                <div style="font-size: 12px; color: var(--cf-text-muted);">تولید کدهای ۶ رقمی و صدور نشست امن برای کاربران اپلیکیشن</div>
-              </div>
-              <input type="checkbox" id="svc-toggle-auth" checked style="width: 18px; height: 18px; accent-color: var(--cf-orange);" />
-            </label>
-
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border: 1px solid var(--cf-border); border-radius: 6px; cursor: pointer;">
-              <div>
-                <div style="font-weight: 700; font-size: 13px;">📦 ذخیره‌سازی ابری چندرسانه‌ای (Universal Blob Storage)</div>
-                <div style="font-size: 12px; color: var(--cf-text-muted);">باکت‌های ذخیره فایل و آدرس‌های امن موقت</div>
-              </div>
-              <input type="checkbox" id="svc-toggle-storage" checked style="width: 18px; height: 18px; accent-color: var(--cf-orange);" />
-            </label>
-
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border: 1px solid var(--cf-border); border-radius: 6px; cursor: pointer;">
-              <div>
-                <div style="font-weight: 700; font-size: 13px;">λ پردازش سرورلس لبه (Sandboxed Jint 4.x Functions)</div>
-                <div style="font-size: 12px; color: var(--cf-text-muted);">اجرای توابع جاوااسکریپت با محدودیت ۱۶ مگابایت رم</div>
-              </div>
-              <input type="checkbox" id="svc-toggle-functions" checked style="width: 18px; height: 18px; accent-color: var(--cf-orange);" />
-            </label>
-
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border: 1px solid var(--cf-border); border-radius: 6px; cursor: pointer;">
-              <div>
-                <div style="font-weight: 700; font-size: 13px;">📱 درگاه پیامکی و اعلان مستقیم (SMS Aggregator)</div>
-                <div style="font-size: 12px; color: var(--cf-text-muted);">ارسال پیامک‌های خدماتی و اطلاع‌رسانی از سرشماره‌های اپراتورهای داخلی</div>
-              </div>
-              <input type="checkbox" id="svc-toggle-sms" checked style="width: 18px; height: 18px; accent-color: var(--cf-orange);" />
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 8: Superadmin Panel (Configurable Pricing Variables) -->
-      <section id="view-superadmin" class="view-panel">
-        <div class="cf-card">
-          <div class="cf-card-header">
-            <div>
-              <div class="cf-card-title">پنل مدیریت کلان و تعرفه‌گذاری سوپرادمین (Superadmin Control Plane)</div>
-              <div class="cf-card-desc">تمامی متغیرهای نرخ‌گذاری و عملیاتی پلتفرم به صورت پویا در این بخش قابل تنظیم و ذخیره هستند.</div>
-            </div>
-            <span class="cf-badge cf-badge-orange">Superadmin Access</span>
-          </div>
-
-          <!-- Platform System Metrics -->
-          <div class="cf-metrics-grid" style="margin-bottom: 24px;">
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">کل پروژه‌های تعریف‌شده مستاجران</div>
-              <div class="cf-metric-num" id="admin-total-proj">۰</div>
-              <div class="cf-metric-sub">پروژه‌های فعال در پلتفرم</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">کل کوئری‌های پردازش‌شده پلتفرم</div>
-              <div class="cf-metric-num" id="admin-total-queries">۰</div>
-              <div class="cf-metric-sub">در تمام مستاجران</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">درآمد تجمعی کل پلتفرم</div>
-              <div class="cf-metric-num" id="admin-total-rev" style="color: var(--cf-green);">۰ تومان</div>
-              <div class="cf-metric-sub">ثبت در دفترکل دوبل ریالی</div>
-            </div>
-            <div class="cf-metric-box">
-              <div class="cf-metric-label">شناسه NAT ایگرس اختصاصی</div>
-              <div class="cf-metric-num" style="font-size: 16px; font-family: var(--font-mono); color: var(--cf-blue);">2.180.12.94</div>
-              <div class="cf-metric-sub">اتصال مستقیم شاپرک</div>
-            </div>
-          </div>
-
-          <!-- Configurable Pricing Form -->
-          <div style="background: #f8fafc; border: 1px solid var(--cf-border); padding: 20px; border-radius: 8px;">
-            <div style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--cf-text-main);">
-              کاتالوگ تعرفه‌های مصرفی و متغیرهای عملیاتی (Superadmin Pricing Catalog)
-            </div>
-
-            <form id="admin-pricing-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">تعرفه هر ۱,۰۰۰ کوئری دیتابیس (ریال)</label>
-                <input type="number" id="p-db-q" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">معادل هر کوئری بر حسب ریال</span>
-              </div>
-
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">تعرفه هر پیامک OTP ارسال‌شده (ریال)</label>
-                <input type="number" id="p-sms" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">تعرفه پیامک اپراتورهای داخلی</span>
-              </div>
-
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">تعرفه هر گیگابایت ذخیره‌سازی در ماه (ریال)</label>
-                <input type="number" id="p-storage" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">محاسبه بر حسب گیگابایت-ساعت</span>
-              </div>
-
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">تعرفه هر ۱۰۰ میلی‌ثانیه پردازش تابع (ریال)</label>
-                <input type="number" id="p-compute" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">موتور سرورلس Jint 4.x</span>
-              </div>
-
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">حداقل مبلغ شارژ کیف پول (ریال)</label>
-                <input type="number" id="p-min-topup" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">حداقل رقم تراکنش شاپرک</span>
-              </div>
-
-              <div>
-                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">اعتبار هدیه افتتاح حساب توسعه‌دهنده (ریال)</label>
-                <input type="number" id="p-free-credit" class="cf-input cf-input-mono" required />
-                <span class="cf-metric-sub">اعتبار اولیه خوش‌آمدگویی</span>
-              </div>
-
-              <div style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--cf-border);">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer;">
-                  <input type="checkbox" id="p-maint-mode" style="width: 16px; height: 16px; accent-color: var(--cf-orange);" />
-                  <span>حالت تعمیرات و نگهداری سراسری (Maintenance Mode)</span>
-                </label>
-                <button type="submit" class="btn-cf-primary" style="padding: 10px 24px;">ذخیره و اعمال بلادرنگ تعرفه‌ها</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- MODAL 1: Create New Project -->
-  <div id="modal-create-project" class="cf-modal-backdrop">
-    <div class="cf-modal">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <h3 style="font-size: 16px; font-weight: 700;">ایجاد پروژه چندمستاجره جدید</h3>
-        <button type="button" class="btn-cf-secondary" onclick="closeModal('modal-create-project')">✕</button>
       </div>
-
-      <form id="form-create-project">
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label>
-          <input type="text" id="cp-name" class="cf-input" placeholder="مثال: تاکسی اینترنتی تپسی" required />
-        </div>
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
-          <input type="text" id="cp-slug" class="cf-input cf-input-mono" placeholder="tapsi-mobile" />
-        </div>
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شماره مالک پروژه (توسعه‌دهنده)</label>
-          <input type="text" id="cp-phone" class="cf-input cf-input-mono" value="+989121112233" required />
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn-cf-secondary" onclick="closeModal('modal-create-project')">انصراف</button>
-          <button type="submit" class="btn-cf-primary">تایید و ایجاد پروژه</button>
-        </div>
-      </form>
     </div>
-  </div>
+  </section>
 
-  <!-- MODAL 2: Wallet Top-Up (Shaparak IPG) -->
-  <div id="modal-topup" class="cf-modal-backdrop">
-    <div class="cf-modal">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <h3 style="font-size: 16px; font-weight: 700;">افزایش موجودی کیف پول با درگاه شاپرک</h3>
-        <button type="button" class="btn-cf-secondary" onclick="closeModal('modal-topup')">✕</button>
-      </div>
+  <!-- About Section -->
+  <section id="about" style="max-width: 900px; margin: 60px auto; padding: 0 20px; text-align: center;">
+    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">درباره پلتفرم ابری لوکال‌می</h2>
+    <p style="font-size: 14px; color: var(--text-muted); line-height: 1.8;">
+      لوکال‌می با هدف رفع وابستگی تیم‌های توسعه نرم‌افزار به ارائه‌دهندگان خارجی و تضمین دسترسی پایدار کاربران داخلی پایه‌گذاری شده است. سرورهای این پلتفرم در مراکز داده مستقر در تهران میزبانی شده و تحت نظارت کامل استانداردهای پرداخت الکترونیک کشور فعالیت می‌کنند.
+    </p>
+  </section>
 
-      <form id="form-topup">
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">انتخاب درگاه پرداخت</label>
-          <select id="topup-gateway" class="cf-input">
-            <option value="SEP">سامان‌کیش (SEP شاپرک)</option>
-            <option value="ZarinPal">زرین‌پال</option>
-            <option value="Mellat">به‌پرداخت ملت</option>
-          </select>
-        </div>
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مبلغ افزایش اعتبار (تومان)</label>
-          <input type="number" id="topup-amount-toman" class="cf-input cf-input-mono" value="1000000" min="10000" required />
-        </div>
+  <!-- Minimal Footer -->
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 24px; text-align: center; font-size: 12px; color: var(--text-muted);">
+    تمامی حقوق محفوظ است • پلتفرم خدمات ابری لوکال‌می (LocalMe BaaS)
+  </footer>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn-cf-secondary" onclick="closeModal('modal-topup')">انصراف</button>
-          <button type="submit" class="btn-cf-primary">اتصال به درگاه و پرداخت</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="/shamsi.js"></script>
-  <script src="/app.js"></script>
 </body>
 </html>

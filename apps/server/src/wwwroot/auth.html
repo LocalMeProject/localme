@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ورود به سامانه | LocalMe</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main);">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال‌می</span>
+      </a>
+    </div>
+    <a href="/" class="btn-secondary" style="font-size: 12px;">بازگشت به صفحه اصلی</a>
+  </header>
+
+  <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
+    <div class="card" style="width: 100%; max-width: 440px; margin-bottom: 0;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">ورود به حساب کاربری</h2>
+        <p style="font-size: 13px; color: var(--text-muted);">شماره موبایل خود را جهت دریافت کد تایید وارد نمایید</p>
+      </div>
+
+      <!-- Quick Role Switcher for Testing -->
+      <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 20px;">
+        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">انتخاب سریع حساب کاربری جهت ورود:</div>
+        <div style="display: grid; gap: 6px;">
+          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_developer_03', '/panel')">
+            <span>توسعه‌دهنده (سینا والی پور)</span>
+            <span class="badge badge-active">پنل کلاینت</span>
+          </button>
+          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_admin_01', '/admin')">
+            <span>مدیر ارشد (SuperAdmin)</span>
+            <span class="badge badge-paused">دسترسی کامل</span>
+          </button>
+          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_operator_02', '/admin')">
+            <span>اپراتور پشتیبانی (Operator)</span>
+            <span class="badge badge-info">سطح میانی</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="position: relative; text-align: center; margin: 18px 0;">
+        <span style="background: #ffffff; padding: 0 10px; font-size: 11.5px; color: var(--text-light); position: relative; z-index: 1;">یا ورود با پیامک</span>
+        <div style="position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid var(--border-color);"></div>
+      </div>
+
+      <!-- Mobile OTP Form -->
+      <form id="otp-form">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شماره موبایل</label>
+          <input type="text" id="phone-input" class="input-field input-mono" value="+989121112233" required />
+        </div>
+
+        <div id="otp-code-group" style="display: none; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label style="font-size: 12px; font-weight: 600;">کد تایید ۶ رقمی</label>
+            <span id="countdown-label" style="font-size: 11px; color: var(--brand-dark);">۱۲۰ ثانیه</span>
+          </div>
+          <input type="text" id="code-input" class="input-field input-mono" placeholder="123456" maxlength="6" />
+          <div id="test-code-hint" style="font-size: 11.5px; color: var(--brand-dark); margin-top: 6px; font-family: var(--font-mono);"></div>
+        </div>
+
+        <button type="submit" id="btn-submit-auth" class="btn-primary" style="width: 100%; padding: 10px;">
+          دریافت کد تایید پیامکی
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    async function fastLogin(userId, redirectPath) {
+      try {
+        const res = await fetch(`/_baas/v1/users/switch/${userId}`, { method: 'POST' });
+        if (res.ok) {
+          window.location.href = redirectPath;
+        }
+      } catch {
+        alert('خطا در ورود به حساب.');
+      }
+    }
+
+    const form = document.getElementById('otp-form');
+    const phoneInput = document.getElementById('phone-input');
+    const codeGroup = document.getElementById('otp-code-group');
+    const codeInput = document.getElementById('code-input');
+    const submitBtn = document.getElementById('btn-submit-auth');
+    const testHint = document.getElementById('test-code-hint');
+    let otpSent = false;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const phone = phoneInput.value.trim();
+
+      if (!otpSent) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'در حال ارسال کد...';
+        try {
+          const res = await fetch('/_baas/v1/auth/otp/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Phone: phone, Channel: 'sms' })
+          });
+          const data = await res.json();
+          if (data.success) {
+            otpSent = true;
+            codeGroup.style.display = 'block';
+            submitBtn.textContent = 'تایید و ورود به پنل';
+            if (data.codeForTesting) {
+              codeInput.value = data.codeForTesting;
+              testHint.textContent = `کد پیامک‌شده تستی: ${data.codeForTesting}`;
+            }
+          } else {
+            alert(data.message || 'خطا در ارسال پیامک');
+          }
+        } catch {
+          alert('خطای ارتباط با سرور.');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      } else {
+        const code = codeInput.value.trim();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'در حال بررسی...';
+        try {
+          const res = await fetch('/_baas/v1/auth/otp/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Phone: phone, Code: code })
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.href = '/panel';
+          } else {
+            alert(data.message || 'کد نامعتبر است');
+          }
+        } catch {
+          alert('خطای تایید.');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

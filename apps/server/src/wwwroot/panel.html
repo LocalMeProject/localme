@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>کنسول توسعه‌دهندگان | LocalMe</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/panel" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال‌می</span>
+      </a>
+
+      <!-- Project Switcher -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <select id="project-switcher" class="input-field" style="width: auto; min-width: 180px; font-weight: 600;">
+          <option value="">در حال بررسی پروژه‌ها...</option>
+        </select>
+        <button id="btn-create-proj-modal" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">
+          پروژه جدید
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Utilities -->
+    <div class="topbar-utils">
+      <!-- Compact Wallet Pill -->
+      <div class="wallet-pill">
+        <span>موجودی:</span>
+        <span id="topbar-wallet-val">۵۰ میلیون تومان</span>
+        <button id="btn-open-topup" class="btn-primary" style="padding: 2px 8px; font-size: 11px;">
+          شارژ
+        </button>
+      </div>
+
+      <!-- Current User & Role -->
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+        <span id="user-display-name" style="font-weight: 700;">سینا والی پور</span>
+        <span id="user-role-badge" class="badge badge-active">توسعه‌دهنده</span>
+      </div>
+
+      <!-- Admin Panel Link (Visible if Admin/Operator) -->
+      <a id="admin-panel-link" href="/admin" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px; display: none;">
+        پنل مدیریت
+      </a>
+
+      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+        خروج
+      </a>
+    </div>
+  </header>
+
+  <!-- Sub-Header / Breadcrumbs -->
+  <div class="subbar">
+    <div class="breadcrumbs">
+      <span>پنل توسعه</span>
+      <span>/</span>
+      <span id="bc-project-name" class="active">پروژه‌ای انتخاب نشده</span>
+      <span>/</span>
+      <span id="bc-view-name">سرویس‌ها و کلیدهای دسترسی</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span id="proj-status-badge" class="badge badge-active">فعال</span>
+      <span style="font-size: 11px; color: var(--text-light); font-family: var(--font-mono);">منطقه: ir-central-tehran</span>
+    </div>
+  </div>
+
+  <!-- Layout: Sidebar + Main Content -->
+  <div class="layout-container">
+
+    <!-- Right Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-title">بخش‌های پروژه</div>
+      <button class="sidebar-link active" data-view="view-services">
+        <span>سرویس‌ها و کلیدهای دسترسی</span>
+      </button>
+      <button class="sidebar-link" data-view="view-db">
+        <span>پایگاه داده و جداول</span>
+      </button>
+      <button class="sidebar-link" data-view="view-auth">
+        <span>کاربران اپلیکیشن</span>
+      </button>
+      <button class="sidebar-link" data-view="view-storage">
+        <span>ذخیره‌سازی ابری</span>
+      </button>
+      <button class="sidebar-link" data-view="view-functions">
+        <span>توابع سرورلس لبه</span>
+      </button>
+      <button class="sidebar-link" data-view="view-usage">
+        <span>میزان مصرف و صورتحساب</span>
+      </button>
+      <button class="sidebar-link" data-view="view-settings">
+        <span>تنظیمات و مدیریت پروژه</span>
+      </button>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-main">
+
+      <!-- 1. EMPTY STATE: Shown when developer has 0 projects -->
+      <div id="empty-state-view" class="empty-state" style="display: none;">
+        <h3>شما هنوز پروژه‌ای ایجاد نکرده‌اید</h3>
+        <p>برای شروع و استفاده از خدمات پایگاه داده، احراز هویت، ذخیره‌سازی و توابع، اولین پروژه خود را بسازید.</p>
+        <button id="btn-create-first-proj" class="btn-primary" style="padding: 10px 24px;">
+          ایجاد اولین پروژه
+        </button>
+      </div>
+
+      <!-- 2. PROJECT ACTIVE CONTAINER -->
+      <div id="active-project-container">
+
+        <!-- VIEW 1: Services & Per-Service Keys -->
+        <section id="view-services" class="tab-view active">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">سرویس‌های اختصاصی پروژه و کلیدهای دسترسی</div>
+                <div class="card-desc">هر سرویس دارای پیکربندی مستقل و کلید API مجزا برای این پروژه می‌باشد.</div>
+              </div>
+            </div>
+
+            <!-- List of Services -->
+            <div id="services-cards-list" style="display: grid; gap: 16px;">
+              <!-- Populated dynamically: Database, Auth, Storage, Functions, Sms -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: Database / Tables Studio -->
+        <section id="view-db" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">جداول پایگاه داده اختصاصی پروژه</div>
+                <div class="card-desc">دسترسی مستقیم REST به اسکیمای این مستاجر.</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <select id="db-table-select" class="input-field" style="width: auto;">
+                  <option value="">در حال دریافت جداول...</option>
+                </select>
+                <button id="btn-refresh-db" class="btn-secondary">تازه‌سازی</button>
+              </div>
+            </div>
+
+            <!-- Add Row Form -->
+            <form id="form-insert-db-row" style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;">
+              <div>
+                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">عنوان سطر</label>
+                <input type="text" id="db-input-title" class="input-field" placeholder="عنوان داده" required />
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">دسته‌بندی</label>
+                <input type="text" id="db-input-category" class="input-field" value="عمومی" />
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">مقدار عددی (ریال)</label>
+                <input type="number" id="db-input-price" class="input-field input-mono" value="1000000" />
+              </div>
+              <div>
+                <button type="submit" class="btn-primary">افزودن سطر</button>
+              </div>
+            </form>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead id="db-table-head"></thead>
+                <tbody id="db-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: Auth & App Users -->
+        <section id="view-auth" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">کاربران اپلیکیشن این پروژه</div>
+                <div class="card-desc">فهرست کاربرانی که در اپلیکیشن موبایل این پروژه عضو شده‌اند.</div>
+              </div>
+              <button id="btn-modal-add-user" class="btn-primary">+ ثبت دستی کاربر</button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>شناسه</th>
+                    <th>شماره موبایل</th>
+                    <th>نام و نام خانوادگی</th>
+                    <th>وضعیت تایید</th>
+                    <th>تاریخ ثبت‌نام (شمسی)</th>
+                    <th>آخرین ورود (شمسی)</th>
+                  </tr>
+                </thead>
+                <tbody id="auth-users-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: Storage Buckets -->
+        <section id="view-storage" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">باکت‌های ذخیره‌سازی ابری</div>
+                <div class="card-desc">فضای ذخیره فایل‌های چندرسانه‌ای و اسناد اپلیکیشن.</div>
+              </div>
+              <button id="btn-modal-create-bucket" class="btn-primary">+ ایجاد باکت جدید</button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>نام باکت</th>
+                    <th>دسترسی</th>
+                    <th>تعداد فایل‌ها</th>
+                    <th>حجم کل</th>
+                    <th>تاریخ ساخت (شمسی)</th>
+                  </tr>
+                </thead>
+                <tbody id="storage-buckets-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: Edge Functions -->
+        <section id="view-functions" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">توابع سرورلس لبه</div>
+                <div class="card-desc">اجرای کدهای جاوااسکریپت با سقف حافظه ۱۶ مگابایت.</div>
+              </div>
+              <button id="btn-modal-deploy-func" class="btn-primary">+ استقرار تابع جدید</button>
+            </div>
+
+            <div class="table-container" style="margin-bottom: 20px;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>نام تابع</th>
+                    <th>شناسه</th>
+                    <th>مسیر فراخوانی</th>
+                    <th>تاریخ استقرار (شمسی)</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody id="functions-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- Function Test Box -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); padding: 18px; border-radius: var(--radius-sm);">
+              <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">تست فراخوانی زنده تابع: <span id="active-test-func-slug" style="color: var(--brand-dark);">-</span></div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">ورودی JSON</label>
+                  <textarea id="func-test-input" class="input-field input-mono" rows="4">{"distance_km": 5}</textarea>
+                  <button id="btn-exec-func-test" class="btn-primary" style="margin-top: 10px; width: 100%;">اجرا و کسر مصرف</button>
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">خروجی اجرا</label>
+                  <pre id="func-test-output" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; font-family: var(--font-mono); font-size: 11.5px; min-height: 115px; direction: ltr; text-align: left;">// برای مشاهده نتیجه دکمه را کلیک کنید...</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: Usage & Metering (with Shamsi Datepicker) -->
+        <section id="view-usage" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">میزان مصرف و صورتحساب پروژه</div>
+                <div class="card-desc">هزینه‌ها بر اساس تعرفه مصوب به صورت بلادرنگ کسر می‌گردد.</div>
+              </div>
+
+              <!-- Shamsi Datepicker Filter Trigger -->
+              <div style="position: relative;">
+                <button id="btn-shamsi-dp-trigger" class="btn-secondary" style="font-size: 12px;">
+                  <span id="dp-filter-text">فیلتر تاریخ: کل دوره</span>
+                </button>
+                <div id="shamsi-dp-popover-box" style="display: none; position: absolute; left: 0; top: 38px; z-index: 50;">
+                  <!-- Popover rendered here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Metrics Cells -->
+            <div class="metrics-row">
+              <div class="metric-cell">
+                <div class="metric-cell-label">کوئری‌های دیتابیس</div>
+                <div class="metric-cell-val" id="usage-val-db">۰</div>
+                <div class="metric-cell-sub">کل درخواست‌های موفق</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-cell-label">پیامک‌های OTP</div>
+                <div class="metric-cell-val" id="usage-val-sms">۰</div>
+                <div class="metric-cell-sub">ارسال از سرشماره خدماتی</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-cell-label">زمان پردازش توابع</div>
+                <div class="metric-cell-val" id="usage-val-compute">۰ ms</div>
+                <div class="metric-cell-sub">مدت زمان محاسبات</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-cell-label">مجموع هزینه مصرفی</div>
+                <div class="metric-cell-val" id="usage-val-cost" style="color: var(--brand-dark);">۰ تومان</div>
+                <div class="metric-cell-sub">کسر از کیف پول اعتباری</div>
+              </div>
+            </div>
+
+            <!-- Recent Events Log -->
+            <div style="margin-top: 14px;">
+              <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">ریز رخدادهای مصرفی ثبت‌شده</div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>منبع مصرف</th>
+                      <th>میزان مصرف</th>
+                      <th>هزینه (ریال)</th>
+                      <th>هزینه (تومان)</th>
+                      <th>زمان ثبت (شمسی)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usage-events-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: Project Settings & Full CRUD -->
+        <section id="view-settings" class="tab-view">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">تنظیمات و مدیریت پروژه</div>
+                <div class="card-desc">ویرایش مشخصات پروژه یا حذف کامل آن.</div>
+              </div>
+            </div>
+
+            <form id="form-update-project" style="max-width: 600px; margin-bottom: 30px;">
+              <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label>
+                <input type="text" id="set-proj-name" class="input-field" required />
+              </div>
+              <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
+                <input type="text" id="set-proj-slug" class="input-field input-mono" required />
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توضیحات</label>
+                <textarea id="set-proj-desc" class="input-field" rows="3"></textarea>
+              </div>
+              <button type="submit" class="btn-primary">ذخیره تغییرات پروژه</button>
+            </form>
+
+            <div style="padding-top: 20px; border-top: 1px solid var(--border-color);">
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--color-danger); margin-bottom: 6px;">حذف کامل پروژه</h4>
+              <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">
+                با حذف این پروژه، تمامی اسکیمای دیتابیس، جداول، باکت‌ها و کلیدهای دسترسی آن برای همیشه حذف خواهند شد.
+              </p>
+              <button type="button" id="btn-delete-project" class="btn-danger">
+                حذف دائمی این پروژه
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL 1: Create Project -->
+  <div id="modal-create-proj" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 800;">ایجاد پروژه جدید</h3>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-create-proj')">✕</button>
+      </div>
+
+      <form id="form-create-new-project">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label>
+          <input type="text" id="new-proj-name" class="input-field" placeholder="مثال: اپلیکیشن فروشگاهی دیجی‌شاپ" required />
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
+          <input type="text" id="new-proj-slug" class="input-field input-mono" placeholder="digishop-app" />
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توضیحات اختیاری</label>
+          <textarea id="new-proj-desc" class="input-field" rows="2" placeholder="توضیح کوتاه درباره ماهیت پروژه"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-create-proj')">انصراف</button>
+          <button type="submit" class="btn-primary">ایجاد پروژه</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Configure Service -->
+  <div id="modal-configure-service" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 id="cfg-modal-title" style="font-size: 16px; font-weight: 800;">پیکربندی سرویس</h3>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-configure-service')">✕</button>
+      </div>
+
+      <form id="form-configure-service">
+        <input type="hidden" id="cfg-service-name" />
+
+        <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="cfg-is-enabled" style="width: 18px; height: 18px; accent-color: var(--brand-primary);" />
+            <div>
+              <div style="font-weight: 700; font-size: 13px;">فعال‌سازی سرویس برای این پروژه</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);">در صورت فعال بودن، کلید API قابل استفاده خواهد بود.</div>
+            </div>
+          </label>
+        </div>
+
+        <div id="cfg-dynamic-fields" style="margin-bottom: 16px; display: grid; gap: 10px;">
+          <!-- Specific settings fields based on service -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-configure-service')">انصراف</button>
+          <button type="submit" class="btn-primary">ذخیره پیکربندی</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Wallet Top-Up -->
+  <div id="modal-topup" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 800;">افزایش موجودی با درگاه بانکی شاپرک</h3>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-topup')">✕</button>
+      </div>
+
+      <form id="form-topup">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">درگاه پرداخت</label>
+          <select id="topup-gateway" class="input-field">
+            <option value="SEP">سامان‌کیش (شاپرک)</option>
+            <option value="ZarinPal">زرین‌پال</option>
+            <option value="Mellat">به‌پرداخت ملت</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مبلغ افزایش اعتبار (تومان)</label>
+          <input type="number" id="topup-amount-toman" class="input-field input-mono" value="1000000" min="10000" required />
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-topup')">انصراف</button>
+          <button type="submit" class="btn-primary">اتصال به درگاه و شارژ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/shamsi.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

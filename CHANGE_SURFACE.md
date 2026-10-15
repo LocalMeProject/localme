@@ -32,16 +32,20 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
 ### Added Files
 - `libs/data-plane/src/Billing/PricingCatalog.cs`: Superadmin-configurable unit cost catalog (IRR) for all BaaS services.
 - `libs/data-plane/src/Billing/UsageMeteringService.cs`: Real-time usage event collector, cost calculator, and wallet balance reconciler.
-- `libs/data-plane/src/MultiTenancy/ProjectManagerService.cs`: Multi-tenant project manager, JWT anon/service_role keys generator, and schema isolation.
-- `libs/data-plane/src/Admin/SuperadminService.cs`: Superadmin panel backend for dynamic pricing updates and global system configuration.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.cs`: Multi-tenant project manager, per-service API key manager, and schema isolation.
+- `libs/data-plane/src/Admin/SuperadminService.cs`: Superadmin and Operator panel backend for dynamic pricing updates, ticket management, and system stats.
 - `apps/server/src/wwwroot/shamsi.js`: Jalali / Shamsi date converter, Persian numeral formatter, and interactive Shamsi Datepicker component.
+- `apps/server/src/wwwroot/auth.html`: Dedicated authentication portal with fast role switcher (Admin, Operator, Developer).
+- `apps/server/src/wwwroot/panel.html`: Developer console with 0-project empty state, CRUD, per-service keys, and PostgREST explorer.
+- `apps/server/src/wwwroot/admin.html`: SuperAdmin & Operator portal for user management, system metrics, and support tickets.
+- `apps/server/src/wwwroot/admin.js`: SuperAdmin & Operator client controller with RBAC permissions.
 - `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Full integration tests for project provisioning, usage metering, and superadmin pricing adjustments.
 
 ### Modified Files
-- `apps/server/src/wwwroot/index.html`: Cloudflare-style Light-Mode RTL developer console and Superadmin panel.
-- `apps/server/src/wwwroot/styles.css`: Cloudflare-inspired light mode styling (clean white/slate cards, orange brand accents, crisp borders, full RTL).
-- `apps/server/src/wwwroot/app.js`: Cloudflare panel controller with project switcher, table designer, auth users, storage, functions, live billing, and superadmin console.
-- `apps/server/src/Program.cs`: Mount `/_baas/v1/{projectId}/*` client APIs and `/_baas/v1/superadmin/*` management APIs.
+- `apps/server/src/wwwroot/index.html`: Clean, minimal, professional Landing page with features, pricing, and about sections.
+- `apps/server/src/wwwroot/styles.css`: Emerald Green (#10b981) light-mode styling, zero emojis/icons, pure Vazirmatn typography, full RTL.
+- `apps/server/src/wwwroot/app.js`: Developer console controller with 0-project flow, CRUD, per-service API keys, and Shamsi datepicker.
+- `apps/server/src/Program.cs`: Modular routing (`/`, `/auth/*`, `/panel/*`, `/admin/*`), per-service keys, and RBAC governance APIs.
 - `apps/server/src/LocalMe.Server.csproj`: Configure `wwwroot` static file publishing.
 - `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Additional DAG matrix invariant tests.
 - `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: Expanded storage and auth integration tests.

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>پنل مدیریت و راهبری | LocalMe</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/admin" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge" style="background: var(--brand-dark);">ADMIN</span>
+        <span class="brand-title">راهبری کلان سامانه لوکال‌می</span>
+      </a>
+    </div>
+
+    <!-- Right Utilities -->
+    <div class="topbar-utils">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+        <span id="admin-user-name" style="font-weight: 700;">مدیر ارشد سامانه</span>
+        <span id="admin-user-role-badge" class="badge badge-paused">مدیر ارشد</span>
+      </div>
+
+      <a href="/panel" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+        پنل توسعه‌دهندگان
+      </a>
+
+      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+        خروج
+      </a>
+    </div>
+  </header>
+
+  <!-- Subbar -->
+  <div class="subbar">
+    <div class="breadcrumbs">
+      <span>پنل مدیریت</span>
+      <span>/</span>
+      <span id="admin-bc-view-name" class="active">مدیریت کاربران و دسترسی‌ها</span>
+    </div>
+
+    <div style="font-size: 11.5px; color: var(--text-light); font-family: var(--font-mono);">
+      Egress NAT: 2.180.12.94 • سرور مرکزی تهران
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-title">بخش‌های مدیریتی</div>
+      <button class="sidebar-link active" data-view="admin-view-users">
+        <span>مدیریت کاربران و نقش‌ها</span>
+      </button>
+      <button class="sidebar-link" data-view="admin-view-projects">
+        <span>تمام پروژه‌های پلتفرم</span>
+      </button>
+      <button class="sidebar-link" data-view="admin-view-pricing">
+        <span>کاتالوگ تعرفه‌گذاری و متغیرها</span>
+      </button>
+      <button class="sidebar-link" data-view="admin-view-tickets">
+        <span>تیکت‌های پشتیبانی اپراتور</span>
+      </button>
+      <button class="sidebar-link" data-view="admin-view-stats">
+        <span>گزارش‌ها و آمار کلان</span>
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-main">
+
+      <!-- 1. USER MANAGEMENT -->
+      <section id="admin-view-users" class="tab-view active">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">فهرست کاربران و کنترل دسترسی نقش‌ها</div>
+              <div class="card-desc">مشاهده حساب‌ها و تغییر سطح دسترسی بین مدیر ارشد، اپراتور و توسعه‌دهنده.</div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>شناسه کاربر</th>
+                  <th>نام و نام خانوادگی</th>
+                  <th>شماره موبایل</th>
+                  <th>پست الکترونیکی</th>
+                  <th>نقش فعلی</th>
+                  <th>تغییر نقش</th>
+                  <th>تاریخ عضویت (شمسی)</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. ALL PROJECTS -->
+      <section id="admin-view-projects" class="tab-view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">کل پروژه‌های تعریف‌شده در پلتفرم</div>
+              <div class="card-desc">نظارت بر پروژه‌های تمامی مستاجران و وضعیت کارکرد آن‌ها.</div>
+            </div>
+            <button id="btn-admin-refresh-projs" class="btn-secondary">تازه‌سازی</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>شناسه پروژه</th>
+                  <th>نام پروژه</th>
+                  <th>شناسه انگلیسی</th>
+                  <th>شماره مالک</th>
+                  <th>وضعیت</th>
+                  <th>تاریخ ایجاد (شمسی)</th>
+                </tr>
+              </thead>
+              <tbody id="admin-projects-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. PRICING & VARIABLES (SuperAdmin only can edit) -->
+      <section id="admin-view-pricing" class="tab-view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">کاتالوگ تعرفه‌گذاری و متغیرهای عملیاتی</div>
+              <div class="card-desc">تنظیم نرخ واحد منابع به ازای هر واحد مصرفی بر حسب ریال.</div>
+            </div>
+            <span id="pricing-access-badge" class="badge badge-paused">فقط مدیر ارشد</span>
+          </div>
+
+          <form id="form-admin-pricing" style="max-width: 650px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱,۰۰۰ کوئری دیتابیس (ریال)</label>
+              <input type="number" id="adm-p-db" class="input-field input-mono" required />
+            </div>
+
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر پیامک OTP (ریال)</label>
+              <input type="number" id="adm-p-sms" class="input-field input-mono" required />
+            </div>
+
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر گیگابایت ذخیره‌سازی در ماه (ریال)</label>
+              <input type="number" id="adm-p-storage" class="input-field input-mono" required />
+            </div>
+
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱۰۰ میلی‌ثانیه پردازش تابع (ریال)</label>
+              <input type="number" id="adm-p-compute" class="input-field input-mono" required />
+            </div>
+
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل مبلغ شارژ کیف پول (ریال)</label>
+              <input type="number" id="adm-p-min-topup" class="input-field input-mono" required />
+            </div>
+
+            <div>
+              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">اعتبار هدیه اولیه توسعه‌دهنده (ریال)</label>
+              <input type="number" id="adm-p-free-credit" class="input-field input-mono" required />
+            </div>
+
+            <div style="grid-column: span 2; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" id="adm-p-maint" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" />
+                <span>حالت تعمیرات سراسری سیستم (Maintenance Mode)</span>
+              </label>
+
+              <button type="submit" id="btn-save-admin-pricing" class="btn-primary">ذخیره و اعمال بلادرنگ تعرفه‌ها</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 4. SUPPORT TICKETS -->
+      <section id="admin-view-tickets" class="tab-view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">تیکت‌ها و درخواست‌های پشتیبانی اپراتور</div>
+              <div class="card-desc">پایش و رسیدگی به پیام‌ها و تقاضای توسعه‌دهندگان پلتفرم.</div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>شناسه تیکت</th>
+                  <th>شماره مشتری</th>
+                  <th>موضوع</th>
+                  <th>شرح پیام</th>
+                  <th>وضعیت</th>
+                  <th>اقدام اپراتور</th>
+                </tr>
+              </thead>
+              <tbody id="admin-tickets-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. SYSTEM STATS & REPORTS -->
+      <section id="admin-view-stats" class="tab-view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">آمار کلان و تراز مالی پلتفرم</div>
+              <div class="card-desc">گزارش تجمعی عملکرد سرویس‌ها در سطح کشور.</div>
+            </div>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric-cell">
+              <div class="metric-cell-label">تعداد کل کاربران ثبت‌نامی</div>
+              <div class="metric-cell-val" id="stat-total-users">۰</div>
+              <div class="metric-cell-sub">مدیران، اپراتورها و توسعه‌دهندگان</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">پروژه‌های فعال در پلتفرم</div>
+              <div class="metric-cell-val" id="stat-active-projs">۰</div>
+              <div class="metric-cell-sub">اسکیماهای فعال PostgreSQL</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">مجموع کوئری‌های پردازش‌شده</div>
+              <div class="metric-cell-val" id="stat-total-queries">۰</div>
+              <div class="metric-cell-sub">ترافیک تجمیعی شبکه</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">کل درآمد ناخالص پلتفرم</div>
+              <div class="metric-cell-val" id="stat-total-rev" style="color: var(--brand-dark);">۰ تومان</div>
+              <div class="metric-cell-sub">دفترکل دوبل ریالی</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/shamsi.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>

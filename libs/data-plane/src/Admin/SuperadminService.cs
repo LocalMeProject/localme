@@ -4,7 +4,17 @@ using LocalMe.Core.Finance;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.MultiTenancy;
 
+public sealed record SupportTicket(
+    string Id,
+    string CustomerPhone,
+    string Subject,
+    string Message,
+    string Status, // "Open", "Investigating", "Resolved"
+    DateTimeOffset CreatedAtUtc
+);
+
 public sealed record SuperadminSystemStats(
+    int TotalUsers,
     int TotalProjects,
     int ActiveProjects,
     long TotalQueriesProcessed,
@@ -13,13 +23,14 @@ public sealed record SuperadminSystemStats(
     string FormattedRevenueToman,
     PricingCatalogSnapshot Pricing,
     DateTimeOffset SystemUptimeUtc,
-    string SovereignEgressNat
+    string SovereignEgressNat,
+    IReadOnlyList<SupportTicket> RecentTickets
 );
 
 /// <summary>
-/// Superadmin administrative control plane for platform-wide governance.
-/// Enforces dynamic runtime reconfiguration of pricing catalogs, maintenance status,
-/// and global tenancy oversight without server restarts.
+/// Superadmin & Operator administrative control plane.
+/// SuperAdmins have full god-like access to pricing, users, and system variables.
+/// Operators have sub-admin access to support tickets, user lists, and platform reports.
 /// </summary>
 public sealed class SuperadminService
 {
@@ -27,6 +38,7 @@ public sealed class SuperadminService
     private readonly ProjectManagerService _projectManager;
     private readonly UsageMeteringService _metering;
     private readonly DateTimeOffset _bootTimeUtc = DateTimeOffset.UtcNow;
+    private readonly List<SupportTicket> _tickets = [];
 
     public SuperadminService(
         PricingCatalog pricing,
@@ -36,10 +48,29 @@ public sealed class SuperadminService
         _pricing = pricing;
         _projectManager = projectManager;
         _metering = metering;
+
+        // Seed initial support tickets for operator maintenance workflow
+        _tickets.Add(new SupportTicket(
+            Id: "tkt_01",
+            CustomerPhone: "+989121112233",
+            Subject: "درخواست اتصال درگاه اختصاصی سامان‌کیش",
+            Message: "برای اپلیکیشن اسنپ‌فود نیاز به فعال‌سازی ترمینال مجزای شاپرک داریم.",
+            Status: "Open",
+            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-4)
+        ));
+        _tickets.Add(new SupportTicket(
+            Id: "tkt_02",
+            CustomerPhone: "+989354443322",
+            Subject: "افزایش سقف حافظه تابع سرورلس به ۶۴ مگابایت",
+            Message: "جهت پردازش تصاویر بندانگشتی نیاز به سقف رم بالاتر داریم.",
+            Status: "Investigating",
+            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-12)
+        ));
     }
 
     public SuperadminSystemStats GetSystemStats()
     {
+        var users = _projectManager.GetAllUsers();
         var projects = _projectManager.GetAllProjects();
         int active = projects.Count(p => p.Status.Equals("Active", StringComparison.OrdinalIgnoreCase));
 
@@ -57,6 +88,7 @@ public sealed class SuperadminService
 
         var rial = new RialAmount(totalRevenue);
         return new SuperadminSystemStats(
+            TotalUsers: users.Count,
             TotalProjects: projects.Count,
             ActiveProjects: active,
             TotalQueriesProcessed: totalQueries,
@@ -65,7 +97,8 @@ public sealed class SuperadminService
             FormattedRevenueToman: rial.ToTomanString(),
             Pricing: _pricing.GetSnapshot(),
             SystemUptimeUtc: _bootTimeUtc,
-            SovereignEgressNat: "2.180.12.94 (Static Domestic NAT Active)"
+            SovereignEgressNat: "2.180.12.94 (Static Domestic NAT Active)",
+            RecentTickets: _tickets.AsReadOnly()
         );
     }
 
@@ -73,5 +106,19 @@ public sealed class SuperadminService
     {
         _pricing.UpdatePricing(request, adminUser);
         return _pricing.GetSnapshot();
+    }
+
+    public bool UpdateTicketStatus(string ticketId, string status)
+    {
+        lock (_tickets)
+        {
+            var idx = _tickets.FindIndex(t => t.Id == ticketId);
+            if (idx >= 0)
+            {
+                _tickets[idx] = _tickets[idx] with { Status = status };
+                return true;
+            }
+            return false;
+        }
     }
 }
