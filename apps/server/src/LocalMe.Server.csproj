@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\..\libs\data-plane\src\LocalMe.DataPlane.csproj" />
     <ProjectReference Include="..\..\..\libs\infrastructure\src\LocalMe.Infrastructure.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

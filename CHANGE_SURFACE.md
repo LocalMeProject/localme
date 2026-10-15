@@ -1,13 +1,11 @@
 ---
-title: "Change Surface: Initial Enterprise Monorepo Scaffolding"
+title: "Change Surface: Unified Full-Stack ASP.NET Core 10 Server and Apple Frontend"
 author: "Antigravity Engineering System"
 created_date: "2026-10-15"
 target_branch: "main"
-risk_level: "LOW"
+risk_level: "MEDIUM"
 affected_projects:
   - "apps/server"
-  - "apps/cli"
-  - "apps/web-console"
   - "libs/core-domain"
   - "libs/data-plane"
   - "libs/infrastructure"
@@ -15,91 +13,53 @@ affected_projects:
   - "libs/client-sdk"
 ---
 
-# Change Surface: Initial Enterprise Monorepo Scaffolding
+# Change Surface: Unified Full-Stack ASP.NET Core 10 Server and Apple Frontend
 
 ## 1. Intent & Business Rationale
-Bootstrap the sovereign enterprise monorepo for LocalMe, a Unified Backend-as-a-Service (BaaS) and Edge Platform-as-a-Service (PaaS) tailored for Iran-native operations and global interoperability. Establish strict Nx DAG task orchestration, Profile A/B/D bounded contexts, the pure .NET 10 solution topology, mechanical governance gates, and seed the core DAG Dependency Matrix Engine and Rial (IRR) double-entry ledger.
+Implement the complete full-stack LocalMe platform inside the single ASP.NET Core 10 host (`LocalMe.Server`). Unify the backend data plane (Dynamic SQL REST, Identity & OTP, Shaparak IPG payment ledger, blob storage, Jint compute) with an ultra-premium, Apple-designed developer portal hosted directly from ASP.NET Core `wwwroot`. Execute a 5-pass enterprise audit to ensure production readiness.
 
 ## 2. Affected Monorepo Projects & Profiles
 | Project Path | Architectural Profile | Responsibility in this Change |
 |---|---|---|
-| `apps/server` | Profile A (Backend Core) | ASP.NET Core 10 multi-role node host (edge, control, data, worker) |
-| `apps/cli` | Profile A (Backend Core) | LocalMe developer CLI (`localme deploy`, `localme init`, `localme status`) |
-| `apps/web-console` | Profile B (Web Application) | Apple-designed developer portal (React, TypeScript, Vite, Tailwind) |
-| `libs/core-domain` | Profile A (Pure Domain) | DDD core entities, value objects, DAG Dependency Matrix Engine, IRR wallet |
-| `libs/data-plane` | Profile A (Ports & Adapters) | In-process middleware (Dynamic SQL, SignalR, MQTTnet, Storage, Jint, IPG/IAP) |
-| `libs/infrastructure` | Profile A (Infrastructure) | PostgreSQL 18.1 Npgsql pool, Redis 7/8 streams & Lua scripts, ARSoft DNS |
-| `libs/contracts` | Profile D (Contracts) | Shared OpenAPI 3.1 specifications and schema definitions |
-| `libs/client-sdk` | Profile D (Shared SDK) | TypeScript SDK for web and mobile client applications |
+| `apps/server` | Profile A (Backend Core) | ASP.NET Core 10 single-project host serving both BaaS APIs and embedded Apple frontend |
+| `libs/core-domain` | Profile A (Pure Domain) | DAG matrix expansion, Auth/OTP entities, Double-entry IRR wallet domain rules |
+| `libs/data-plane` | Profile A (Ports & Adapters) | Full BaaS handlers: Dynamic SQL, OTP dispatch, IPG bridge, Jint script host |
+| `libs/infrastructure` | Profile A (Infrastructure) | PostgreSQL migrations, Lua scripts, and in-memory fallback stores |
+| `libs/contracts` | Profile D (Contracts) | OpenAPI 3.1 contracts updated for all BaaS routes |
+| `libs/client-sdk` | Profile D (Shared SDK) | Client methods for auth, data, payments, and storage |
 
 ## 3. Code Surface (Targeted Symbols & Files)
-Declare the exact files and symbols that will be created or modified for this initial repository scaffolding.
-
 ### Added Files
-- `LocalMe.sln`: Master .NET 10 solution file binding all subprojects.
-- `Directory.Build.props`: Universal MSBuild configuration enforcing .NET 10 (`net10.0`), C# 14, and strict nullable reference types.
-- `package.json`: Root package manifest defining Nx orchestrator, TypeScript, and developer tooling.
-- `pnpm-workspace.yaml`: Workspace definition declaring `apps/*` and `libs/*`.
-- `nx.json`: Task pipeline configuration with deterministic caching for `lint`, `test`, `build`, and `audit`.
-- `AGENT.md`: Root Enterprise Governance Manifest cascading Tier 1 inviolables and Tier 2 defaults.
-- `.pre-commit-config.yaml`: Pre-commit hook configuration for local mechanical gate verification.
-- `.github/workflows/ci.yml`: Enterprise CI workflow running mechanical gates and Nx affected targets.
-- `apps/server/project.json`: Nx target delegations for ASP.NET Core 10 server.
-- `apps/server/AGENT.md`: Subproject governance manifest for Server role host.
-- `apps/server/src/LocalMe.Server.csproj`: .NET 10 project file for Server application.
-- `apps/server/src/Program.cs`: Multi-role bootstrap entry point.
-- `apps/cli/project.json`: Nx target delegations for LocalMe CLI.
-- `apps/cli/AGENT.md`: Subproject governance manifest for CLI.
-- `apps/cli/src/LocalMe.Cli.csproj`: .NET 10 project file for CLI tool.
-- `apps/cli/src/Program.cs`: LocalMe CLI entry point and command router.
-- `apps/web-console/project.json`: Nx target delegations for developer console.
-- `apps/web-console/AGENT.md`: Subproject governance manifest for Web Console.
-- `apps/web-console/package.json`: Frontend application dependencies.
-- `apps/web-console/src/App.tsx`: Console root view with Apple Design aesthetics.
-- `libs/core-domain/project.json`: Nx target delegations for pure domain core.
-- `libs/core-domain/AGENT.md`: Subproject governance manifest for pure domain.
-- `libs/core-domain/src/LocalMe.Core.csproj`: .NET 10 project file for pure domain.
-- `libs/core-domain/src/Dag/DependencyMatrixEngine.cs`: Full DAG capability-to-primitive resolution engine.
-- `libs/core-domain/src/Finance/RialAmount.cs`: Iranian Rial (IRR) double-entry currency value object.
-- `libs/data-plane/project.json`: Nx target delegations for data plane adapters.
-- `libs/data-plane/AGENT.md`: Subproject governance manifest for data plane.
-- `libs/data-plane/src/LocalMe.DataPlane.csproj`: .NET 10 project file for data plane.
-- `libs/data-plane/src/Storage/IBlobStorageAdapter.cs`: Pluggable storage adapter interface.
-- `libs/infrastructure/project.json`: Nx target delegations for infrastructure adapters.
-- `libs/infrastructure/AGENT.md`: Subproject governance manifest for infrastructure.
-- `libs/infrastructure/src/LocalMe.Infrastructure.csproj`: .NET 10 project file for infrastructure.
-- `libs/contracts/project.json`: Nx target delegations for contracts.
-- `libs/contracts/AGENT.md`: Subproject governance manifest for shared contracts.
-- `libs/contracts/schemas/openapi.json`: Core BaaS & PaaS OpenAPI 3.1 specification.
-- `libs/client-sdk/project.json`: Nx target delegations for TypeScript SDK.
-- `libs/client-sdk/AGENT.md`: Subproject governance manifest for TypeScript SDK.
-- `libs/client-sdk/src/index.ts`: Client SDK entry point and LocalMeClient implementation.
-- `tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj`: .NET 10 unit test project.
-- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Exhaustive tests for DAG matrix resolution and reference counting.
-- `tests/LocalMe.Core.Tests/RialAmountTests.cs`: Arithmetic and conversion tests for Iranian Rial amounts.
-- `docs/adr/0001-pure-dotnet10-architecture.md`: ADR on runtime engine consolidation.
-- `docs/adr/0002-nx-monorepo-orchestration.md`: ADR on polyglot task orchestration.
-- `docs/adr/0003-jint-managed-js-engine.md`: ADR on Jint 4.x sandboxing.
-- `docs/adr/0004-blob-storage-adapter-layer.md`: ADR on multi-provider blob storage.
+- `apps/server/src/wwwroot/index.html`: Premium Apple-designed Single Page Application dashboard.
+- `apps/server/src/wwwroot/app.js`: Interactive client controller with Apple fluid motion, tab navigation, and live API binding.
+- `apps/server/src/wwwroot/styles.css`: Apple-inspired design tokens, SF font stack, glassmorphic backdrop blur, and dark mode palette.
+- `libs/data-plane/src/Auth/OtpAuthService.cs`: Iranian mobile OTP generator, HMAC verification, and JWT session manager.
+- `libs/data-plane/src/DynamicSql/DynamicSqlHandler.cs`: Zero-allocation dynamic SQL REST endpoint processor.
+- `libs/data-plane/src/Finance/PaymentIpgService.cs`: Shaparak & Zarinpal payment token acquisition, verification, and ledger credit.
+- `libs/data-plane/src/Compute/JintScriptHost.cs`: Jint 4.x sandboxed script execution engine with 16MB memory governor.
+- `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`: Comprehensive integration tests for OTP, IPG, PostgREST, and Jint.
 
 ### Modified Files
-None (initial scaffolding).
+- `apps/server/src/Program.cs`: Mount static files, SPA fallback routing, and full `/_baas/v1/*` endpoint suite.
+- `apps/server/src/LocalMe.Server.csproj`: Configure `wwwroot` static file publishing.
+- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Additional DAG matrix invariant tests.
+- `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: Expanded storage and auth integration tests.
 
 ## 4. Test Surface
-Every code change must have a corresponding test surface. Happy-path-only tests are prohibited.
-
 ### Unit & Domain Tests
-- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Transitive closure computation, ref-counting increments and decrements, and cycle prevention.
-- `tests/LocalMe.Core.Tests/RialAmountTests.cs`: Exact BIGINT IRR arithmetic, Toman formatting, overflow protection, and non-negative constraints.
+- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Exhaustive capability toggles and transitive closure checks.
+- `tests/LocalMe.Core.Tests/RialAmountTests.cs`: IRR ledger arithmetic, non-negative bounds, and Toman conversions.
 
 ### Integration Tests (Real Ephemeral Containers)
-- `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: LocalDisk and MinIO storage adapter roundtrip tests.
+- `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: LocalDisk and memory blob adapters.
+- `tests/LocalMe.Integration.Tests/OtpAuthTests.cs`: OTP generation, expiry, and rate limiting tests.
 
 ### Failure & Resilience Tests
-- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Attempting to resolve cyclic dependencies or missing primitives throws explicit domain exceptions.
+- Jint script execution timeout (5s) and memory ceiling (16MB) validation.
+- Invalid HMAC OTP verification rejection and attempt lockout.
 
 ### Concurrency Tests
-- `tests/LocalMe.Core.Tests/RialAmountTests.cs`: Concurrent balance mutations enforce atomic idempotency assertions.
+- Concurrent double-entry ledger balance updates with idempotency key enforcement.
 
 ## 5. Invariants & Non-Negotiables Preserved
 - [x] Tier 1: Pure domain logic remains 100% free of framework or ORM imports.
@@ -115,8 +75,8 @@ Every code change must have a corresponding test surface. Happy-path-only tests 
 ## 6. Risk Matrix & Rollback Strategy
 | Risk Description | Probability | Impact | Mitigation Strategy |
 |---|---|---|---|
-| Monorepo task delegation mismatches between native toolchains and Nx | Low | Medium | Strict validation via `verify-nx-targets.py` ensuring contract alignment |
-| Cross-boundary project reference leakage | Low | High | Enforced profile rules and AGENT.md boundary validation |
+| SPA routing colliding with API routes | Low | High | Strict prefix isolation: APIs under `/_baas/v1/*`, SPA fallback only for unmatched non-API routes |
+| Memory leak in Jint script sandbox | Low | High | Strict memory governor constraint (`LimitMemory(16_000_000)`) and CancellationToken timeout |
 
 ### Rollback Strategy
-Because this is the initial repository scaffolding commit on an empty repository branch, rollback strategy is git reset to empty root state or reverting the initialization commit.
+Git revert commit to restore previous scaffolded commit `5fd9c1a`.

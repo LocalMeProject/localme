@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fa" dir="ltr" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LocalMe Sovereign Developer Console</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Glass Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-mark">LM</div>
+      <div class="brand-meta">
+        <h1>
+          LocalMe Sovereign Studio
+          <span class="badge badge-gold">v1.0.0 Pure .NET 10</span>
+        </h1>
+        <p>Engine: PostgreSQL 18.1 • Redis 7/8 • Single-Process Deployment</p>
+      </div>
+    </div>
+
+    <!-- Right Header Utilities -->
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <!-- Domestic NAT Status -->
+      <div class="glass-panel" style="padding: 6px 12px; display: flex; align-items: center; gap: 8px; border-radius: 9999px;">
+        <span class="pulse-indicator"></span>
+        <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary);">Egress NAT: <strong style="color: #fff;">2.180.12.94</strong></span>
+        <span id="header-ping-time" class="badge badge-green" style="font-size: 10px;">12 ms</span>
+      </div>
+
+      <!-- Quick Wallet Indicator -->
+      <div class="glass-panel" style="padding: 6px 14px; border-radius: 9999px; display: flex; align-items: center; gap: 8px; border-color: rgba(245, 158, 11, 0.3);">
+        <span style="font-size: 11px; color: var(--text-secondary); font-family: 'Vazirmatn', sans-serif;">کیف پول:</span>
+        <span id="header-wallet-amount" class="num-tabular" style="font-weight: 700; color: var(--sovereign-gold); font-size: 13px; font-family: 'Vazirmatn', sans-serif;">۴۵,۰۰۰,۰۰۰ تومان</span>
+      </div>
+
+      <!-- Persian Storefront Link -->
+      <a href="/storefront" target="_blank" class="btn-apple btn-apple-secondary" style="font-size: 12px; padding: 6px 12px; font-family: 'Vazirmatn', sans-serif;">
+        نمای فروشگاه ای‌نماد ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrapper">
+
+    <!-- Segmented Navigation (macOS Style) -->
+    <nav class="segmented-nav" style="margin-bottom: 24px;">
+      <button class="nav-tab active" data-tab="tab-overview">
+        <span>⚡️</span> نمای کلی (Overview)
+      </button>
+      <button class="nav-tab" data-tab="tab-dag">
+        <span>🕸</span> ماتریس قابلیت‌ها (DAG Studio)
+      </button>
+      <button class="nav-tab" data-tab="tab-db">
+        <span>🗄</span> دیتابیس (PostgREST Studio)
+      </button>
+      <button class="nav-tab" data-tab="tab-auth">
+        <span>🔐</span> احراز هویت پیامکی (Domestic OTP)
+      </button>
+      <button class="nav-tab" data-tab="tab-ipg">
+        <span>💳</span> درگاه شاپرک و دفترکل (IPG & Ledger)
+      </button>
+      <button class="nav-tab" data-tab="tab-storage">
+        <span>📦</span> ذخیره‌سازی ابری (Blob Storage)
+      </button>
+      <button class="nav-tab" data-tab="tab-compute">
+        <span>λ</span> پردازش لبه (Edge Functions)
+      </button>
+      <button class="nav-tab" data-tab="tab-compliance">
+        <span>⚖️</span> انطباق و ای‌نماد (Compliance)
+      </button>
+    </nav>
+
+    <!-- TAB 1: System Overview -->
+    <section id="tab-overview" class="tab-content active">
+      <div class="grid-metrics">
+        <div class="glass-panel metric-card">
+          <div class="metric-title">وضعیت پردازشگر هسته</div>
+          <div class="metric-value" style="color: var(--apple-green);">فعال و پایدار</div>
+          <div class="metric-sub" id="ov-stack">.NET 10.0 • Pure High-Performance C# 14</div>
+        </div>
+        <div class="glass-panel metric-card">
+          <div class="metric-title">منطقه ابری مستقل</div>
+          <div class="metric-value" id="ov-region">ir-central-tehran</div>
+          <div class="metric-sub">مرکز داده اختصاصی مستقر در تهران</div>
+        </div>
+        <div class="glass-panel metric-card">
+          <div class="metric-title">ایزولاسیون شبکه بانکی</div>
+          <div class="metric-value" style="color: var(--apple-blue);">مستقیم شاپرک</div>
+          <div class="metric-sub">Static Domestic Egress NAT فعال</div>
+        </div>
+        <div class="glass-panel metric-card">
+          <div class="metric-title">استاندارد معماری</div>
+          <div class="metric-value" style="color: var(--sovereign-gold);">تک‌پروژه ASP.NET</div>
+          <div class="metric-sub">Unified Backend &amp; Apple Frontend</div>
+        </div>
+      </div>
+
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>پلتفرم بومی توسعه ابری LocalMe</h2>
+            <p>سکو و ارائه‌دهنده یکپارچه خدمات Backend-as-a-Service (BaaS) منطبق با زیرساخت ملی و ضوابط شاپرک</p>
+          </div>
+          <span class="badge badge-gold">Sovereign Tier 1</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 18px;">
+          <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border-subtle);">
+            <div style="font-weight: 700; margin-bottom: 6px; color: #fff;">🔒 امنیت و احراز هویت پیامکی</div>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+              تولید کدهای ۶ رقمی تصادفی امن CSPRNG با انقضای ۱۲۰ ثانیه، هشینگ HMAC-SHA256 سمت سرور، توکن‌های استاندارد Ed25519 و پایش پنجره نرخ درخواست.
+            </p>
+          </div>
+          <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border-subtle);">
+            <div style="font-weight: 700; margin-bottom: 6px; color: #fff;">⚖️ دفترکل دوبل ریالی (Double-Entry Ledger)</div>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+              ثبت ریالی با دقت صحیح ۶۴ بیتی (BIGINT بدون اعشار) با تراز ریاضی قطعی: بدهکاری حساب دارایی درگاه (۱۰-۰۱) مساوی بستانکاری بدهی کیف پول کاربر (۲۰-۰۱).
+            </p>
+          </div>
+          <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border-subtle);">
+            <div style="font-weight: 700; margin-bottom: 6px; color: #fff;">⚡️ توابع سرورلس لبه (Jint 4.x Engine)</div>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+              اجرای ایزوله کدهای جاوااسکریپت با سقف حافظه ۱۶ مگابایت، محدودیت زمانی ۵ ثانیه و ایزولاسیون کامل از سیستم‌عامل میزبان.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DAG Matrix Studio -->
+    <section id="tab-dag" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>ماتریس نیازمندی‌ها و توپولوژی قابلیت‌ها (DAG Matrix Studio)</h2>
+            <p>تحلیل گراف بدون دور جهت‌دار (DAG) برای حل ترتیبی و بدون بن‌بست پیش‌نیازهای پروژه</p>
+          </div>
+          <button class="btn-apple btn-apple-primary" onclick="initDagStudio()">به‌روزرسانی گراف</button>
+        </div>
+
+        <div id="dag-primitives-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PostgREST Database Studio -->
+    <section id="tab-db" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>استودیو دیتابیس پویا (PostgREST-Compatible Studio)</h2>
+            <p>دسترسی مستقیم و ایزوله به جداول داده از طریق پروتکل استاندارد REST</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <select id="db-table-select" class="input-apple" style="width: auto;">
+              <option value="products">جدول محصولات (products)</option>
+              <option value="orders">جدول سفارشات (orders)</option>
+            </select>
+            <button id="db-refresh-btn" class="btn-apple btn-apple-secondary">تازه‌سازی داده‌ها</button>
+          </div>
+        </div>
+
+        <!-- Insert Form -->
+        <form id="db-insert-form" style="background: rgba(0,0,0,0.35); padding: 16px; border-radius: 12px; border: 1px solid var(--border-subtle); margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">عنوان کالا</label>
+            <input type="text" id="db-in-title" class="input-apple" placeholder="مثال: ساعت هوشمند اپل واچ سری ۱۰" required />
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">قیمت (تومان)</label>
+            <input type="number" id="db-in-price" class="input-apple num-tabular" placeholder="45000000" required />
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">موجودی انبار</label>
+            <input type="number" id="db-in-stock" class="input-apple num-tabular" value="10" />
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">دسته‌بندی</label>
+            <input type="text" id="db-in-category" class="input-apple" value="Electronics" />
+          </div>
+          <div>
+            <button type="submit" class="btn-apple btn-apple-gold" style="width: 100%;">ثبت رکورد</button>
+          </div>
+        </form>
+
+        <!-- Table View -->
+        <div class="table-wrapper">
+          <table class="table-apple">
+            <thead id="db-table-head"></thead>
+            <tbody id="db-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Domestic OTP & Auth Studio -->
+    <section id="tab-auth" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>استودیو احراز هویت پیامکی بومی (Domestic SMS OTP Studio)</h2>
+            <p>موتور امنیتی ورود بر پایه سرشماره‌های اپراتورهای داخلی با تولید کدهای غیرقابل حدس CSPRNG</p>
+          </div>
+          <span class="badge badge-blue">HMAC-SHA256 Protected</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Request / Verify Panel -->
+          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 14px; border: 1px solid var(--border-subtle);">
+            <div style="margin-bottom: 16px;">
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">شماره موبایل کاربر (قالب ایران)</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="otp-phone-input" class="input-apple input-apple-mono" value="+989121112233" />
+                <button id="otp-request-btn" class="btn-apple btn-apple-primary" style="white-space: nowrap;">دریافت کد تایید</button>
+              </div>
+              <div id="otp-status-box" style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">
+                مهلت ارسال مجدد: ۱۲۰ ثانیه
+              </div>
+            </div>
+
+            <!-- Simulated SMS Receiver Box -->
+            <div id="otp-simulated-sms" style="display: none; background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35); padding: 14px; border-radius: 10px; margin-bottom: 16px;">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">کد ۶ رقمی دریافتی</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="otp-code-input" class="input-apple input-apple-mono" placeholder="123456" maxlength="6" />
+                <button id="otp-verify-btn" class="btn-apple btn-apple-gold" style="white-space: nowrap;">تایید و ورود</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Token Output Panel -->
+          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 14px; border: 1px solid var(--border-subtle);">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">وضعیت نشست و کلید امنیتی (Ed25519 Session)</div>
+            <div id="otp-token-box" style="display: none;"></div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+              در حالت Production، پیامک از طریق سرشماره‌های خدماتی مگفا/کاوه نگار بدون تاخیر ارسال می‌شود. در محیط توسعه محلی، کدهای CSPRNG مستقیماً در این پنل به صورت همزمان نمایش داده می‌شوند تا روند تست و آزمون بدون اختلال انجام شود.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: Shaparak IPG & Double-Entry Ledger -->
+    <section id="tab-ipg" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>شبیه‌ساز درگاه شاپرک و دفترکل دوبل ریالی (IPG & Double-Entry Ledger)</h2>
+            <p>انتقال امن، کلید یکتایی (Idempotency Key)، تایید بانکی و تراز قطعی دارایی‌ها و تعهدات</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">موجودی کیف پول:</span>
+            <span id="wallet-current-balance" class="num-tabular" style="font-size: 16px; font-weight: 800; color: var(--sovereign-gold); font-family: 'Vazirmatn', sans-serif;">۴۵,۰۰۰,۰۰۰ تومان</span>
+          </div>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.35); padding: 18px; border-radius: 14px; border: 1px solid var(--border-subtle); margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 14px; align-items: end;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">درگاه پرداخت (IPG Gateway)</label>
+            <select id="ipg-gateway-select" class="input-apple">
+              <option value="SEP">سامان‌کیش (SEP Shaparak)</option>
+              <option value="ZarinPal">زرین‌پال (ZarinPal IPG)</option>
+              <option value="Mellat">به‌پرداخت ملت (Mellat)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">شماره مشتری</label>
+            <input type="text" id="ipg-phone-input" class="input-apple input-apple-mono" value="+989121112233" />
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">مبلغ شارژ (تومان)</label>
+            <input type="number" id="ipg-amount-toman" class="input-apple num-tabular" value="1000000" />
+          </div>
+          <div>
+            <button id="ipg-pay-btn" class="btn-apple btn-apple-gold" style="width: 100%;">پرداخت امن با شاپرک</button>
+          </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div style="margin-top: 14px;">
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">ترازنامه دفترکل دوبل ریالی (Double-Entry General Ledger)</h3>
+          <div class="table-wrapper">
+            <table class="table-apple">
+              <thead>
+                <tr>
+                  <th>شناسه تراکنش</th>
+                  <th>سرفصل حساب</th>
+                  <th>بدهکار (Debit IRR)</th>
+                  <th>بستانکار (Credit IRR)</th>
+                  <th>شرح عملیات حسابداری</th>
+                </tr>
+              </thead>
+              <tbody id="ipg-ledger-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: Universal Blob Storage Explorer -->
+    <section id="tab-storage" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>اکسپلورر ذخیره‌سازی ابری (Universal Blob Storage)</h2>
+            <p>پشتیبانی کامل از استاندارد S3-Compatible، MinIO، ران‌فلر (Runflare) و دیسک محلی</p>
+          </div>
+          <div>
+            <input type="file" id="storage-file-input" style="display: none;" />
+            <button id="storage-upload-btn" class="btn-apple btn-apple-primary">بارگذاری فایل جدید</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="table-apple">
+            <thead>
+              <tr>
+                <th>نام آبجکت / فایل</th>
+                <th>اندازه</th>
+                <th>نوع محتوا (MIME)</th>
+                <th>تاریخ ثبت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="storage-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: Edge Compute Lab (Jint 4.x) -->
+    <section id="tab-compute" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>محیط اجرای توابع سرورلس لبه (Edge Functions Lab)</h2>
+            <p>موتور فوق‌سریع Jint 4.x با محدودیت ۱۶ مگابایت رم و پایش قطعی زمان اجرا</p>
+          </div>
+          <div id="compute-metrics-viewer"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">کد تابع جاوااسکریپت (ES6+ Sandbox)</label>
+            <textarea id="compute-code-editor" class="input-apple input-apple-mono" rows="11" style="resize: vertical;">// LocalMe Serverless Edge Function
+const priceIrr = context.price_irr || 450000000;
+const formatted = LocalMe.formatToman(priceIrr);
+
+console.log("Processing transaction for:", context.customer || "VIP Client");
+console.log("Calculated localized value:", formatted);
+
+// Return JSON response
+({
+  status: "PROCESSED",
+  region: LocalMe.region,
+  price_irr: priceIrr,
+  display_toman: formatted,
+  timestamp: new Date().toISOString()
+});</textarea>
+
+            <label style="font-size: 12px; font-weight: 600; display: block; margin: 10px 0 6px 0;">داده ورودی (Context JSON)</label>
+            <textarea id="compute-input-editor" class="input-apple input-apple-mono" rows="3" style="resize: vertical;">{
+  "customer": "سینا والی پور",
+  "price_irr": 850000000
+}</textarea>
+
+            <button id="compute-run-btn" class="btn-apple btn-apple-gold" style="margin-top: 12px; width: 100%;">
+              اجرای تابع (Run Edge Function)
+            </button>
+          </div>
+
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">خروجی بازگشتی تابع (Result)</label>
+            <pre id="compute-output-viewer" style="background: rgba(0,0,0,0.55); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--apple-green); min-height: 150px; overflow-x: auto;">// خروجی در اینجا نمایش داده می‌شود...</pre>
+
+            <label style="font-size: 12px; font-weight: 600; display: block; margin: 12px 0 6px 0;">لاگ‌های کنسول (Console Logs)</label>
+            <pre id="compute-log-viewer" style="background: rgba(0,0,0,0.55); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--apple-teal); min-height: 100px; overflow-x: auto;">// لاگ‌های ثبت‌شده...</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 8: Compliance & Regulatory -->
+    <section id="tab-compliance" class="tab-content">
+      <div class="glass-panel studio-card">
+        <div class="section-head">
+          <div>
+            <h2>مرکز انطباق قانونی و نماد الکترونیکی (Regulatory & Compliance Hub)</h2>
+            <p>تاییدیه خودکار اینماد، ساماندهی، دیپ‌لینک‌های Android و iOS، و فروشگاه رسمی</p>
+          </div>
+          <span class="badge badge-green">Fully Compliant</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+          <button id="comp-enamad-btn" class="btn-apple btn-apple-secondary">بررسی enamad.txt</button>
+          <button id="comp-samandehi-btn" class="btn-apple btn-apple-secondary">بررسی samandehi.txt</button>
+          <button id="comp-assetlinks-btn" class="btn-apple btn-apple-secondary">Android assetlinks.json</button>
+          <button id="comp-appleassoc-btn" class="btn-apple btn-apple-secondary">iOS apple-app-site-association</button>
+          <a href="/storefront" target="_blank" class="btn-apple btn-apple-primary">مشاهده فروشگاه ای‌نماد فارسی ↗</a>
+        </div>
+
+        <pre id="comp-preview-viewer" style="background: rgba(0,0,0,0.55); border: 1px solid var(--border-subtle); padding: 16px; border-radius: 12px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); min-height: 200px; overflow-x: auto;">برای مشاهده محتوای فایل‌های احراز صلاحیت، یکی از گزینه‌های بالا را انتخاب کنید.</pre>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
