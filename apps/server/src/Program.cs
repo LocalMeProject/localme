@@ -254,10 +254,60 @@ public class Program
             return Results.Json(updated);
         });
 
+        app.MapGet("/_baas/v1/admin/tickets", (SuperadminService admin) => Results.Json(admin.GetAllTickets()));
+        app.MapGet("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, SuperadminService admin) =>
+        {
+            var ticket = admin.GetTicket(ticketId);
+            return ticket != null ? Results.Json(ticket) : Results.NotFound();
+        });
+
+        app.MapPost("/_baas/v1/admin/tickets/{ticketId}/reply", (string ticketId, JsonObject body, SuperadminService admin, ProjectManagerService pm) =>
+        {
+            var user = pm.GetUser(_activeUserId);
+            var senderName = user?.FullName ?? "اپراتور سامانه";
+            var senderRole = user?.Role.ToString() ?? "Operator";
+            var message = body["message"]?.ToString() ?? "";
+            var status = body["status"]?.ToString();
+            if (string.IsNullOrWhiteSpace(message)) return Results.BadRequest(new { error = "Message is required" });
+            var ok = admin.AddTicketReply(ticketId, senderName, senderRole, message, status);
+            return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+        });
+
         app.MapPut("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, JsonObject body, SuperadminService admin) =>
         {
             var status = body["status"]?.ToString() ?? "Resolved";
             var ok = admin.UpdateTicketStatus(ticketId, status);
+            return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+        });
+
+        app.MapPost("/_baas/v1/users/{userId}/credit", (string userId, JsonObject body, ProjectManagerService pm) =>
+        {
+            var currentUser = pm.GetUser(_activeUserId);
+            if (currentUser != null && currentUser.Role != UserRole.Admin)
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can adjust user credits.");
+            }
+            var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
+            var ok = pm.AdjustUserWallet(userId, deltaIrr);
+            return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
+        });
+
+        app.MapPut("/_baas/v1/users/{userId}/status", (string userId, JsonObject body, ProjectManagerService pm) =>
+        {
+            var isActive = body["isActive"]?.GetValue<bool>() ?? true;
+            var ok = pm.UpdateUserStatus(userId, isActive);
+            return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
+        });
+
+        app.MapGet("/_baas/v1/users/{userId}/projects", (string userId, ProjectManagerService pm) =>
+        {
+            return Results.Json(pm.GetProjectsByUser(userId));
+        });
+
+        app.MapPut("/_baas/v1/admin/projects/{projectId}/status", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        {
+            var status = body["status"]?.ToString() ?? "Active";
+            var ok = pm.UpdateProjectStatus(projectId, status);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
@@ -271,10 +321,14 @@ public class Program
         app.MapGet("/.well-known/apple-app-site-association", (IConfiguration config) =>
             Results.Text(ComplianceResponder.RenderAppleAppSiteAssociation("TEAMID.ir.localme.client"), "application/json"));
 
-        // 12. Modular Front-End Routing (Landing, Auth, Panel, Admin)
+        // 12. Modular Front-End Routing (Landing, Auth, Panel, Admin, Docs)
         // Root / Landing
         app.MapGet("/", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
         app.MapGet("/about", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+
+        // Developer Documentation (/docs/*)
+        app.MapGet("/docs", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
+        app.MapGet("/docs/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
 
         // Auth Portal (/auth/*)
         app.MapGet("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
@@ -294,6 +348,7 @@ public class Program
 
         Console.WriteLine("[LocalMe] Server ready with modular routing:");
         Console.WriteLine("  -> Landing Page:      http://localhost:5000/");
+        Console.WriteLine("  -> Documentation:     http://localhost:5000/docs");
         Console.WriteLine("  -> Auth Portal:       http://localhost:5000/auth");
         Console.WriteLine("  -> Developer Panel:   http://localhost:5000/panel");
         Console.WriteLine("  -> SuperAdmin Portal: http://localhost:5000/admin");

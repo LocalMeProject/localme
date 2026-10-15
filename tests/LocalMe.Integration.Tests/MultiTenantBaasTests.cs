@@ -188,4 +188,56 @@ public class MultiTenantBaasTests
         var updated = pm.GetUser(devUser.Id);
         Assert.Equal(UserRole.Operator, updated!.Role);
     }
+
+    [Fact]
+    public void Superadmin_ManagesTicketsAndReplies_ThreadIsMaintained()
+    {
+        var pricing = new PricingCatalog();
+        var ipg = new PaymentIpgService();
+        var metering = new UsageMeteringService(pricing, ipg);
+        var pm = new ProjectManagerService();
+        var admin = new SuperadminService(pricing, pm, metering);
+
+        var tickets = admin.GetAllTickets();
+        Assert.NotEmpty(tickets);
+
+        var ticket = admin.GetTicket("tkt_01");
+        Assert.NotNull(ticket);
+        Assert.Equal("Open", ticket.Status);
+        Assert.Single(ticket.Replies);
+
+        // Operator adds a reply and updates status
+        var replied = admin.AddTicketReply("tkt_01", "اپراتور پشتیبانی", "Operator", "درخواست تایید شد و اعمال گردید.", "Resolved");
+        Assert.True(replied);
+
+        var updatedTicket = admin.GetTicket("tkt_01");
+        Assert.NotNull(updatedTicket);
+        Assert.Equal("Resolved", updatedTicket.Status);
+        Assert.Equal(2, updatedTicket.Replies.Count);
+        Assert.Equal("درخواست تایید شد و اعمال گردید.", updatedTicket.Replies[1].Message);
+    }
+
+    [Fact]
+    public void Admin_AdjustsUserWallet_And_TogglesProjectStatus()
+    {
+        var pm = new ProjectManagerService();
+        var user = pm.GetUser("usr_developer_03");
+        Assert.NotNull(user);
+        var initialBal = user.WalletBalanceIrr;
+
+        // 1. Add credit to wallet (+10M IRR)
+        var okCredit = pm.AdjustUserWallet("usr_developer_03", 10_000_000);
+        Assert.True(okCredit);
+        var updatedUser = pm.GetUser("usr_developer_03");
+        Assert.Equal(initialBal + 10_000_000, updatedUser!.WalletBalanceIrr);
+
+        // 2. Create and Suspend project
+        var proj = pm.CreateProject(new CreateProjectRequest("تست وضعیت", "test-status", "توضیح"));
+        Assert.Equal("Active", proj.Status);
+
+        var okSuspend = pm.UpdateProjectStatus(proj.Id, "Suspended");
+        Assert.True(okSuspend);
+        var suspendedProj = pm.GetProject(proj.Id);
+        Assert.Equal("Suspended", suspendedProj!.Status);
+    }
 }

@@ -39,6 +39,8 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
 - `apps/server/src/wwwroot/panel.html`: Developer console with 0-project empty state, CRUD, per-service keys, and PostgREST explorer.
 - `apps/server/src/wwwroot/admin.html`: SuperAdmin & Operator portal for user management, system metrics, and support tickets.
 - `apps/server/src/wwwroot/admin.js`: SuperAdmin & Operator client controller with RBAC permissions.
+- `apps/server/src/wwwroot/services.js`: Modular services controller for in-page configuration and runtime studio operations.
+- `apps/server/src/wwwroot/docs.html`: Comprehensive, exhaustive developer documentation portal covering architecture, APIs, and multi-language SDK examples.
 - `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Full integration tests for project provisioning, usage metering, and superadmin pricing adjustments.
 
 ### Modified Files

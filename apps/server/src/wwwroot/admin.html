@@ -27,6 +27,10 @@
         <span id="admin-user-role-badge" class="badge badge-paused">مدیر ارشد</span>
       </div>
 
+      <a href="/docs" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+        مستندات
+      </a>
+
       <a href="/panel" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
         پنل توسعه‌دهندگان
       </a>
@@ -252,6 +256,197 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- 1. TICKET DETAIL & REPLY MODAL -->
+  <div id="modal-ticket" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-ticket-title">جزئیات تیکت پشتیبانی</h3>
+          <span id="modal-ticket-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+        </div>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-ticket')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">شماره مشتری:</div>
+            <div id="modal-ticket-phone" style="font-family: var(--font-mono); font-weight: 700;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">تاریخ ثبت:</div>
+            <div id="modal-ticket-date" style="font-size: 12px;"></div>
+          </div>
+          <div>
+            <span id="modal-ticket-status-badge" class="badge"></span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">مکالمات و پیام‌ها:</div>
+          <div id="modal-ticket-thread" style="max-height: 240px; overflow-y: auto; padding-left: 4px;"></div>
+        </div>
+
+        <!-- Reply Form -->
+        <form id="form-ticket-reply" style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <input type="hidden" id="modal-ticket-reply-id" />
+          <div style="margin-bottom: 10px;">
+            <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 4px;">متن پاسخ اپراتور / مدیر:</label>
+            <textarea id="modal-ticket-reply-msg" class="input-field" rows="3" placeholder="پاسخ خود را برای کاربر بنویسید..." required></textarea>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 11.5px; font-weight: 600;">تغییر وضعیت تیکت:</span>
+              <select id="modal-ticket-reply-status" class="input-field" style="width: auto; padding: 4px 8px; font-size: 11.5px;">
+                <option value="Open">باز</option>
+                <option value="Investigating">در حال بررسی</option>
+                <option value="Resolved" selected>پاسخ داده شده / حل شده</option>
+                <option value="Closed">بسته شده</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary">ارسال پاسخ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. USER DETAIL & MANAGEMENT MODAL -->
+  <div id="modal-user" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-user-name">پروفایل و مدیریت حساب کاربر</h3>
+          <span id="modal-user-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+        </div>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-user')">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Overview Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-main); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">شماره همراه:</div>
+            <div id="modal-user-phone" style="font-family: var(--font-mono); font-weight: 700;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">پست الکترونیکی:</div>
+            <div id="modal-user-email" style="font-family: var(--font-mono); font-size: 12px;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">تاریخ عضویت:</div>
+            <div id="modal-user-date" style="font-size: 12px;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">وضعیت حساب:</div>
+            <div id="modal-user-status"></div>
+          </div>
+        </div>
+
+        <!-- Wallet Adjustment -->
+        <div class="card" style="margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 12.5px; font-weight: 700;">تراز مالی و کیف پول</span>
+            <span id="modal-user-wallet" style="font-size: 13.5px; font-weight: 800; color: var(--brand-dark);"></span>
+          </div>
+          <form id="form-user-credit" style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="modal-user-credit-toman" class="input-field input-mono" placeholder="مبلغ شارژ به تومان (مثال: ۵۰۰۰۰۰)" required style="flex: 1;" />
+            <button type="submit" class="btn-secondary" style="white-space: nowrap;">افزایش اعتبار کیف پول</button>
+          </form>
+        </div>
+
+        <!-- Role & Status Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11.5px; font-weight: 600;">نقش دسترسی:</span>
+            <select id="modal-user-role-select" class="input-field" style="width: auto; padding: 4px 8px; font-size: 11.5px;">
+              <option value="Admin">مدیر ارشد (Admin)</option>
+              <option value="Operator">اپراتور (Operator)</option>
+              <option value="Developer">توسعه‌دهنده (Developer)</option>
+            </select>
+            <button type="button" id="btn-save-user-role" class="btn-primary" style="padding: 4px 10px; font-size: 11px;">ذخیره نقش</button>
+          </div>
+
+          <button type="button" id="btn-toggle-user-status" class="btn-danger" style="font-size: 11.5px; padding: 4px 12px;">
+            مسدودسازی کاربر
+          </button>
+        </div>
+
+        <!-- User Projects -->
+        <div>
+          <div style="font-size: 12px; font-weight: 700; margin-bottom: 6px;">پروژه‌های این کاربر:</div>
+          <div class="table-container" style="max-height: 160px; overflow-y: auto;">
+            <table class="data-table" style="font-size: 11.5px;">
+              <thead>
+                <tr>
+                  <th>شناسه</th>
+                  <th>نام پروژه</th>
+                  <th>منطقه</th>
+                  <th>وضعیت</th>
+                </tr>
+              </thead>
+              <tbody id="modal-user-projects-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. PROJECT DETAIL & MANAGEMENT MODAL -->
+  <div id="modal-project" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-proj-name">مدیریت پروژه و سرویس‌ها</h3>
+          <span id="modal-proj-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+        </div>
+        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-project')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-main); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">شناسه انگلیسی (اسلاگ):</div>
+            <div id="modal-proj-slug" style="font-family: var(--font-mono); font-weight: 700;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">شماره همراه مالک:</div>
+            <div id="modal-proj-owner" style="font-family: var(--font-mono);"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">منطقه دیتاسنتر:</div>
+            <div id="modal-proj-region" style="font-family: var(--font-mono); font-size: 12px;"></div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-light);">وضعیت جاری:</div>
+            <div id="modal-proj-status-badge"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" id="btn-toggle-proj-status" class="btn-secondary" style="font-size: 11.5px;">
+            تغییر وضعیت پروژه (معلق / فعال)
+          </button>
+        </div>
+
+        <!-- Services & Keys in Project -->
+        <div>
+          <div style="font-size: 12px; font-weight: 700; margin-bottom: 6px;">وضعیت سرویس‌ها و کلیدهای تفکیک‌شده:</div>
+          <div class="table-container">
+            <table class="data-table" style="font-size: 11.5px;">
+              <thead>
+                <tr>
+                  <th>سرویس</th>
+                  <th>وضعیت</th>
+                  <th>کلید اختصاصی سرویس</th>
+                </tr>
+              </thead>
+              <tbody id="modal-proj-services-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="/shamsi.js"></script>

@@ -4,13 +4,22 @@ using LocalMe.Core.Finance;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.MultiTenancy;
 
+public sealed record TicketReply(
+    string Id,
+    string SenderName,
+    string SenderRole, // "Admin", "Operator", "User"
+    string Message,
+    DateTimeOffset CreatedAtUtc
+);
+
 public sealed record SupportTicket(
     string Id,
     string CustomerPhone,
     string Subject,
     string Message,
-    string Status, // "Open", "Investigating", "Resolved"
-    DateTimeOffset CreatedAtUtc
+    string Status, // "Open", "Investigating", "Resolved", "Closed"
+    DateTimeOffset CreatedAtUtc,
+    IReadOnlyList<TicketReply> Replies
 );
 
 public sealed record SuperadminSystemStats(
@@ -56,7 +65,11 @@ public sealed class SuperadminService
             Subject: "درخواست اتصال درگاه اختصاصی سامان‌کیش",
             Message: "برای اپلیکیشن اسنپ‌فود نیاز به فعال‌سازی ترمینال مجزای شاپرک داریم.",
             Status: "Open",
-            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-4)
+            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-4),
+            Replies:
+            [
+                new TicketReply("rep_01", "اپراتور پشتیبانی", "Operator", "درخواست شما دریافت شد و جهت استعلام ترمینال به شاپرک ارسال گردید.", DateTimeOffset.UtcNow.AddHours(-2))
+            ]
         ));
         _tickets.Add(new SupportTicket(
             Id: "tkt_02",
@@ -64,7 +77,8 @@ public sealed class SuperadminService
             Subject: "افزایش سقف حافظه تابع سرورلس به ۶۴ مگابایت",
             Message: "جهت پردازش تصاویر بندانگشتی نیاز به سقف رم بالاتر داریم.",
             Status: "Investigating",
-            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-12)
+            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-12),
+            Replies: []
         ));
     }
 
@@ -100,6 +114,47 @@ public sealed class SuperadminService
             SovereignEgressNat: "2.180.12.94 (Static Domestic NAT Active)",
             RecentTickets: _tickets.AsReadOnly()
         );
+    }
+
+    public IReadOnlyList<SupportTicket> GetAllTickets()
+    {
+        lock (_tickets)
+        {
+            return _tickets.AsReadOnly();
+        }
+    }
+
+    public SupportTicket? GetTicket(string ticketId)
+    {
+        lock (_tickets)
+        {
+            return _tickets.Find(t => t.Id == ticketId);
+        }
+    }
+
+    public bool AddTicketReply(string ticketId, string senderName, string senderRole, string message, string? newStatus = null)
+    {
+        lock (_tickets)
+        {
+            var idx = _tickets.FindIndex(t => t.Id == ticketId);
+            if (idx < 0) return false;
+
+            var ticket = _tickets[idx];
+            var replies = new List<TicketReply>(ticket.Replies)
+            {
+                new(
+                    Id: $"rep_{Guid.NewGuid():N}"[..10],
+                    SenderName: senderName,
+                    SenderRole: senderRole,
+                    Message: message.Trim(),
+                    CreatedAtUtc: DateTimeOffset.UtcNow
+                )
+            };
+
+            var status = string.IsNullOrWhiteSpace(newStatus) ? ticket.Status : newStatus.Trim();
+            _tickets[idx] = ticket with { Replies = replies.AsReadOnly(), Status = status };
+            return true;
+        }
     }
 
     public PricingCatalogSnapshot UpdatePricing(UpdatePricingRequest request, string adminUser = "superadmin")

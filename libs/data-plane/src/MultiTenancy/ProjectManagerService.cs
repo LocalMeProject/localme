@@ -181,6 +181,17 @@ public sealed class ProjectManagerService
         return false;
     }
 
+    public bool AdjustUserWallet(string userId, long deltaIrr)
+    {
+        if (_users.TryGetValue(userId, out var u))
+        {
+            var newBal = Math.Max(0, u.WalletBalanceIrr + deltaIrr);
+            _users[userId] = u with { WalletBalanceIrr = newBal };
+            return true;
+        }
+        return false;
+    }
+
     public PlatformUser RegisterDeveloper(string phone, string fullName, string? email = null)
     {
         var existing = GetUserByPhone(phone);
@@ -281,6 +292,20 @@ public sealed class ProjectManagerService
             _projectFunctions.TryRemove(projectId, out _);
         }
         return removed;
+    }
+
+    public bool UpdateProjectStatus(string projectId, string status)
+    {
+        if (_projects.TryGetValue(projectId, out var project))
+        {
+            _projects[projectId] = project with
+            {
+                Status = status.Trim(),
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            return true;
+        }
+        return false;
     }
 
     // 3. Service Configuration & Per-Service Keys

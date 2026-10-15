@@ -47,6 +47,11 @@
         <span id="user-role-badge" class="badge badge-active">توسعه‌دهنده</span>
       </div>
 
+      <!-- Docs Link -->
+      <a href="/docs" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+        مستندات
+      </a>
+
       <!-- Admin Panel Link (Visible if Admin/Operator) -->
       <a id="admin-panel-link" href="/admin" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px; display: none;">
         پنل مدیریت
@@ -65,7 +70,7 @@
       <span>/</span>
       <span id="bc-project-name" class="active">پروژه‌ای انتخاب نشده</span>
       <span>/</span>
-      <span id="bc-view-name">سرویس‌ها و کلیدهای دسترسی</span>
+      <span id="bc-view-name">نمای کلی پروژه</span>
     </div>
 
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -77,29 +82,36 @@
   <!-- Layout: Sidebar + Main Content -->
   <div class="layout-container">
 
-    <!-- Right Sidebar -->
+    <!-- Right Sidebar (One menu item per service) -->
     <aside class="sidebar">
-      <div class="sidebar-title">بخش‌های پروژه</div>
-      <button class="sidebar-link active" data-view="view-services">
-        <span>سرویس‌ها و کلیدهای دسترسی</span>
+      <div class="sidebar-title">پروژه جاری</div>
+      <button class="sidebar-link active" data-view="view-overview">
+        <span>نمای کلی پروژه</span>
       </button>
+
+      <div class="sidebar-title" style="margin-top: 14px;">سرویس‌های ابری</div>
       <button class="sidebar-link" data-view="view-db">
-        <span>پایگاه داده و جداول</span>
+        <span>پایگاه داده (Database)</span>
       </button>
       <button class="sidebar-link" data-view="view-auth">
-        <span>کاربران اپلیکیشن</span>
+        <span>احراز هویت پیامکی (Auth)</span>
       </button>
       <button class="sidebar-link" data-view="view-storage">
-        <span>ذخیره‌سازی ابری</span>
+        <span>ذخیره‌سازی ابری (Storage)</span>
       </button>
       <button class="sidebar-link" data-view="view-functions">
-        <span>توابع سرورلس لبه</span>
+        <span>توابع سرورلس لبه (Functions)</span>
       </button>
+      <button class="sidebar-link" data-view="view-sms">
+        <span>پیام‌رسان (SMS)</span>
+      </button>
+
+      <div class="sidebar-title" style="margin-top: 14px;">مدیریت و مالی</div>
       <button class="sidebar-link" data-view="view-usage">
         <span>میزان مصرف و صورتحساب</span>
       </button>
       <button class="sidebar-link" data-view="view-settings">
-        <span>تنظیمات و مدیریت پروژه</span>
+        <span>تنظیمات پروژه</span>
       </button>
     </aside>
 
@@ -118,169 +130,568 @@
       <!-- 2. PROJECT ACTIVE CONTAINER -->
       <div id="active-project-container">
 
-        <!-- VIEW 1: Services & Per-Service Keys -->
-        <section id="view-services" class="tab-view active">
+        <!-- VIEW 1: Overview & Services Status -->
+        <section id="view-overview" class="tab-view active">
+          <!-- Project Info Banner -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h2 id="ov-proj-name" style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">-</h2>
+                <div id="ov-proj-desc" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">-</div>
+                <div style="display: flex; gap: 16px; font-size: 11.5px; font-family: var(--font-mono); color: var(--text-light);">
+                  <span>اسلاگ: <strong id="ov-proj-slug" style="color: var(--text-main);">-</strong></span>
+                  <span>منطقه: <strong id="ov-proj-region" style="color: var(--text-main);">-</strong></span>
+                  <span>تاریخ ایجاد: <strong id="ov-proj-date" style="color: var(--text-main);">-</strong></span>
+                </div>
+              </div>
+              <span id="ov-proj-status" class="badge badge-active">فعال</span>
+            </div>
+          </div>
+
+          <!-- Quick Metrics -->
+          <div class="metrics-row" style="margin-bottom: 24px;">
+            <div class="metric-cell">
+              <div class="metric-cell-label">کوئری‌های موفق دیتابیس</div>
+              <div class="metric-cell-val" id="ov-val-queries">۰</div>
+              <div class="metric-cell-sub">کل درخواست‌های ماه جاری</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">پیامک‌های ارسالی OTP</div>
+              <div class="metric-cell-val" id="ov-val-sms">۰</div>
+              <div class="metric-cell-sub">تایید هویت کاربران</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">سرویس‌های فعال پروژه</div>
+              <div class="metric-cell-val" id="ov-val-active-services">۰ / ۵</div>
+              <div class="metric-cell-sub">آماده فراخوانی API</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-cell-label">هزینه کل مصرفی</div>
+              <div class="metric-cell-val" id="ov-val-cost" style="color: var(--brand-dark);">۰ تومان</div>
+              <div class="metric-cell-sub">کسر متناسب از کیف پول</div>
+            </div>
+          </div>
+
+          <!-- Services Grid with Direct Links to Each Service Page -->
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">سرویس‌های اختصاصی پروژه و کلیدهای دسترسی</div>
-                <div class="card-desc">هر سرویس دارای پیکربندی مستقل و کلید API مجزا برای این پروژه می‌باشد.</div>
+                <div class="card-title">وضعیت سرویس‌های ابری این پروژه</div>
+                <div class="card-desc">برای پیکربندی یا استفاده از هر سرویس، روی دکمه ورود به صفحه سرویس کلیک کنید.</div>
               </div>
             </div>
 
-            <!-- List of Services -->
-            <div id="services-cards-list" style="display: grid; gap: 16px;">
-              <!-- Populated dynamically: Database, Auth, Storage, Functions, Sms -->
+            <div id="overview-services-list" style="display: grid; gap: 12px;">
+              <!-- Populated dynamically -->
             </div>
           </div>
         </section>
 
-        <!-- VIEW 2: Database / Tables Studio -->
+        <!-- VIEW 2: Database Service Page -->
         <section id="view-db" class="tab-view">
-          <div class="card">
-            <div class="card-header">
+          <!-- Service Header & Dedicated API Key Card -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <div class="card-title">جداول پایگاه داده اختصاصی پروژه</div>
-                <div class="card-desc">دسترسی مستقیم REST به اسکیمای این مستاجر.</div>
+                <h3 style="font-size: 16px; font-weight: 800;">پایگاه داده رابطه‌ای (PostgreSQL REST)</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                  اسکیمای مجزا و دسترسی مستقیم RESTful مبتنی بر PostgREST با سقف اتصالات مشخص.
+                </p>
+              </div>
+              <span id="db-status-badge" class="badge">بررسی وضعیت...</span>
+            </div>
+
+            <!-- Dedicated API Key -->
+            <div style="background: var(--bg-main); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">کلید اختصاصی سرویس پایگاه داده:</span>
+                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="regenerateServiceKey('database')">صدور مجدد کلید</button>
               </div>
               <div style="display: flex; gap: 8px;">
-                <select id="db-table-select" class="input-field" style="width: auto;">
-                  <option value="">در حال دریافت جداول...</option>
-                </select>
-                <button id="btn-refresh-db" class="btn-secondary">تازه‌سازی</button>
+                <input type="text" id="db-api-key-val" class="input-field input-mono" readonly />
+                <button type="button" class="btn-secondary" style="font-size: 11.5px;" onclick="copyFieldValue('db-api-key-val')">کپی کلید</button>
               </div>
             </div>
+          </div>
 
-            <!-- Add Row Form -->
-            <form id="form-insert-db-row" style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;">
-              <div>
-                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">عنوان سطر</label>
-                <input type="text" id="db-input-title" class="input-field" placeholder="عنوان داده" required />
+          <!-- Disabled Onboarding Form (Shown when service is disabled) -->
+          <div id="db-disabled-box" class="service-disabled-box" style="display: none;">
+            <h4>سرویس پایگاه داده برای این پروژه فعال نشده است</h4>
+            <p>
+              جهت تخصیص اسکیمای اختصاصی PostgreSQL و ایجاد دسترسی REST، پارامترهای زیر را تنظیم نموده و سرویس را فعال کنید.
+            </p>
+            <form id="form-enable-db" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام اسکیمای اختصاصی دیتابیس</label>
+                <input type="text" id="db-cfg-schema" class="input-field input-mono" required />
               </div>
-              <div>
-                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">دسته‌بندی</label>
-                <input type="text" id="db-input-category" class="input-field" value="عمومی" />
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر تعداد اتصالات همزمان (Max Connections)</label>
+                <input type="number" id="db-cfg-conn" class="input-field input-mono" value="20" required />
               </div>
-              <div>
-                <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">مقدار عددی (ریال)</label>
-                <input type="number" id="db-input-price" class="input-field input-mono" value="1000000" />
-              </div>
-              <div>
-                <button type="submit" class="btn-primary">افزودن سطر</button>
-              </div>
+              <button type="submit" class="btn-primary" style="width: 100%;">فعال‌سازی سرویس پایگاه داده</button>
             </form>
+          </div>
 
-            <div class="table-container">
-              <table class="data-table">
-                <thead id="db-table-head"></thead>
-                <tbody id="db-table-body"></tbody>
-              </table>
+          <!-- Active Features Container (Shown when service is enabled) -->
+          <div id="db-active-box" style="display: none;">
+            <!-- Tables Studio Card -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">جداول و رکوردهای داده</div>
+                  <div class="card-desc">مشاهده، فیلتر و درج مستقیم رکوردهای جدول با استاندارد PostgREST.</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <select id="db-table-select" class="input-field" style="width: auto;">
+                    <option value="">در حال دریافت جداول...</option>
+                  </select>
+                  <button id="btn-refresh-db" class="btn-secondary">تازه‌سازی</button>
+                </div>
+              </div>
+
+              <!-- Add Row Form -->
+              <form id="form-insert-db-row" style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;">
+                <div>
+                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">عنوان سطر</label>
+                  <input type="text" id="db-input-title" class="input-field" placeholder="عنوان داده" required />
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">دسته‌بندی</label>
+                  <input type="text" id="db-input-category" class="input-field" value="عمومی" />
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px;">مقدار عددی (ریال)</label>
+                  <input type="number" id="db-input-price" class="input-field input-mono" value="1000000" />
+                </div>
+                <div>
+                  <button type="submit" class="btn-primary">افزودن سطر</button>
+                </div>
+              </form>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead id="db-table-head"></thead>
+                  <tbody id="db-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- In-page Service Settings & Disable -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <div class="card-title">تنظیمات سرویس پایگاه داده</div>
+                <button type="button" class="btn-danger" style="font-size: 11.5px;" onclick="disableService('database')">غیرفعال‌سازی سرویس</button>
+              </div>
+              <form id="form-update-db-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">نام اسکیما</label>
+                  <input type="text" id="db-active-schema" class="input-field input-mono" required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداکثر اتصالات همزمان</label>
+                  <input type="number" id="db-active-conn" class="input-field input-mono" required />
+                </div>
+                <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
+              </form>
             </div>
           </div>
         </section>
 
-        <!-- VIEW 3: Auth & App Users -->
+        <!-- VIEW 3: Auth Service Page -->
         <section id="view-auth" class="tab-view">
-          <div class="card">
-            <div class="card-header">
+          <!-- Service Header & Dedicated API Key Card -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <div class="card-title">کاربران اپلیکیشن این پروژه</div>
-                <div class="card-desc">فهرست کاربرانی که در اپلیکیشن موبایل این پروژه عضو شده‌اند.</div>
+                <h3 style="font-size: 16px; font-weight: 800;">احراز هویت پیامکی کاربران (SMS OTP)</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                  ارسال کدهای اعتبارسنجی یکبارمصرف و مدیریت توکن‌های ورود کاربران اپلیکیشن.
+                </p>
               </div>
-              <button id="btn-modal-add-user" class="btn-primary">+ ثبت دستی کاربر</button>
+              <span id="auth-status-badge" class="badge">بررسی وضعیت...</span>
             </div>
 
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>شناسه</th>
-                    <th>شماره موبایل</th>
-                    <th>نام و نام خانوادگی</th>
-                    <th>وضعیت تایید</th>
-                    <th>تاریخ ثبت‌نام (شمسی)</th>
-                    <th>آخرین ورود (شمسی)</th>
-                  </tr>
-                </thead>
-                <tbody id="auth-users-tbody"></tbody>
-              </table>
+            <!-- Dedicated API Key -->
+            <div style="background: var(--bg-main); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">کلید اختصاصی سرویس احراز هویت:</span>
+                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="regenerateServiceKey('auth')">صدور مجدد کلید</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="auth-api-key-val" class="input-field input-mono" readonly />
+                <button type="button" class="btn-secondary" style="font-size: 11.5px;" onclick="copyFieldValue('auth-api-key-val')">کپی کلید</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disabled Onboarding Form -->
+          <div id="auth-disabled-box" class="service-disabled-box" style="display: none;">
+            <h4>سرویس احراز هویت برای این پروژه فعال نشده است</h4>
+            <p>
+              جهت فعال‌سازی ارسال کدهای تایید ۶ رقمی به سرشماره‌های اپراتوری و ایجاد کاربران پروژه، مشخصات را تایید کنید.
+            </p>
+            <form id="form-enable-auth" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">طول کد پیامکی یکبار مصرف (تعداد ارقام)</label>
+                <input type="number" id="auth-cfg-len" class="input-field input-mono" value="6" required />
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مدت اعتبار کد یکبار مصرف (ثانیه)</label>
+                <input type="number" id="auth-cfg-ttl" class="input-field input-mono" value="120" required />
+              </div>
+              <button type="submit" class="btn-primary" style="width: 100%;">فعال‌سازی سرویس احراز هویت</button>
+            </form>
+          </div>
+
+          <!-- Active Features Container -->
+          <div id="auth-active-box" style="display: none;">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">فهرست کاربران احراز هویت‌شده اپلیکیشن</div>
+                  <div class="card-desc">کاربرانی که از طریق شماره موبایل و کد پیامکی عضو شده‌اند.</div>
+                </div>
+                <button id="btn-modal-add-user" class="btn-primary">+ ثبت دستی کاربر</button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>شناسه</th>
+                      <th>شماره موبایل</th>
+                      <th>نام و نام خانوادگی</th>
+                      <th>وضعیت تایید</th>
+                      <th>تاریخ ثبت‌نام (شمسی)</th>
+                      <th>آخرین ورود (شمسی)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="auth-users-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- In-page Service Settings & Disable -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <div class="card-title">تنظیمات سرویس احراز هویت</div>
+                <button type="button" class="btn-danger" style="font-size: 11.5px;" onclick="disableService('auth')">غیرفعال‌سازی سرویس</button>
+              </div>
+              <form id="form-update-auth-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">طول کد OTP</label>
+                  <input type="number" id="auth-active-len" class="input-field input-mono" required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">مدت اعتبار (ثانیه)</label>
+                  <input type="number" id="auth-active-ttl" class="input-field input-mono" required />
+                </div>
+                <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
+              </form>
             </div>
           </div>
         </section>
 
-        <!-- VIEW 4: Storage Buckets -->
+        <!-- VIEW 4: Storage Service Page -->
         <section id="view-storage" class="tab-view">
-          <div class="card">
-            <div class="card-header">
+          <!-- Service Header & Dedicated API Key Card -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <div class="card-title">باکت‌های ذخیره‌سازی ابری</div>
-                <div class="card-desc">فضای ذخیره فایل‌های چندرسانه‌ای و اسناد اپلیکیشن.</div>
+                <h3 style="font-size: 16px; font-weight: 800;">ذخیره‌سازی ابری فایل و رسانه (Blob Storage)</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                  ایجاد باکت‌های ابری، آپلود انواع فایل‌ها و تولید آدرس‌های دسترسی زمان‌دار.
+                </p>
               </div>
-              <button id="btn-modal-create-bucket" class="btn-primary">+ ایجاد باکت جدید</button>
+              <span id="storage-status-badge" class="badge">بررسی وضعیت...</span>
             </div>
 
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>نام باکت</th>
-                    <th>دسترسی</th>
-                    <th>تعداد فایل‌ها</th>
-                    <th>حجم کل</th>
-                    <th>تاریخ ساخت (شمسی)</th>
-                  </tr>
-                </thead>
-                <tbody id="storage-buckets-tbody"></tbody>
-              </table>
+            <!-- Dedicated API Key -->
+            <div style="background: var(--bg-main); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">کلید اختصاصی سرویس ذخیره‌سازی:</span>
+                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="regenerateServiceKey('storage')">صدور مجدد کلید</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="storage-api-key-val" class="input-field input-mono" readonly />
+                <button type="button" class="btn-secondary" style="font-size: 11.5px;" onclick="copyFieldValue('storage-api-key-val')">کپی کلید</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disabled Onboarding Form -->
+          <div id="storage-disabled-box" class="service-disabled-box" style="display: none;">
+            <h4>سرویس ذخیره‌سازی ابری برای این پروژه فعال نشده است</h4>
+            <p>
+              برای ایجاد باکت‌های ذخیره‌سازی، تعیین سقف حجم فایل‌ها و ذخیره اسناد، سرویس را فعال نمایید.
+            </p>
+            <form id="form-enable-storage" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام باکت پیش‌فرض</label>
+                <input type="text" id="storage-cfg-bucket" class="input-field input-mono" value="assets" required />
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر حجم فایل (مگابایت)</label>
+                <input type="number" id="storage-cfg-size" class="input-field input-mono" value="50" required />
+              </div>
+              <button type="submit" class="btn-primary" style="width: 100%;">فعال‌سازی سرویس ذخیره‌سازی</button>
+            </form>
+          </div>
+
+          <!-- Active Features Container -->
+          <div id="storage-active-box" style="display: none;">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">باکت‌های ذخیره‌سازی ابری پروژه</div>
+                  <div class="card-desc">فضای ذخیره فایل‌ها، تصاویر و اسناد با امکان صدور لینک امن.</div>
+                </div>
+                <button id="btn-modal-create-bucket" class="btn-primary">+ ایجاد باکت جدید</button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>نام باکت</th>
+                      <th>دسترسی</th>
+                      <th>تعداد فایل‌ها</th>
+                      <th>حجم کل</th>
+                      <th>تاریخ ساخت (شمسی)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="storage-buckets-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- In-page Service Settings & Disable -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <div class="card-title">تنظیمات سرویس ذخیره‌سازی</div>
+                <button type="button" class="btn-danger" style="font-size: 11.5px;" onclick="disableService('storage')">غیرفعال‌سازی سرویس</button>
+              </div>
+              <form id="form-update-storage-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">باکت پیش‌فرض</label>
+                  <input type="text" id="storage-active-bucket" class="input-field input-mono" required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف حجم هر فایل (MB)</label>
+                  <input type="number" id="storage-active-size" class="input-field input-mono" required />
+                </div>
+                <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
+              </form>
             </div>
           </div>
         </section>
 
-        <!-- VIEW 5: Edge Functions -->
+        <!-- VIEW 5: Functions Service Page -->
         <section id="view-functions" class="tab-view">
-          <div class="card">
-            <div class="card-header">
+          <!-- Service Header & Dedicated API Key Card -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <div class="card-title">توابع سرورلس لبه</div>
-                <div class="card-desc">اجرای کدهای جاوااسکریپت با سقف حافظه ۱۶ مگابایت.</div>
+                <h3 style="font-size: 16px; font-weight: 800;">توابع سرورلس لبه (Edge Functions)</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                  اجرای کدهای جاوااسکریپت در محیط ایزوله مبتنی بر موتور سریع Jint با محاسبه میلی‌ثانیه‌ای.
+                </p>
               </div>
-              <button id="btn-modal-deploy-func" class="btn-primary">+ استقرار تابع جدید</button>
+              <span id="func-status-badge" class="badge">بررسی وضعیت...</span>
             </div>
 
-            <div class="table-container" style="margin-bottom: 20px;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>نام تابع</th>
-                    <th>شناسه</th>
-                    <th>مسیر فراخوانی</th>
-                    <th>تاریخ استقرار (شمسی)</th>
-                    <th>عملیات</th>
-                  </tr>
-                </thead>
-                <tbody id="functions-tbody"></tbody>
-              </table>
+            <!-- Dedicated API Key -->
+            <div style="background: var(--bg-main); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">کلید اختصاصی سرویس توابع:</span>
+                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="regenerateServiceKey('functions')">صدور مجدد کلید</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="func-api-key-val" class="input-field input-mono" readonly />
+                <button type="button" class="btn-secondary" style="font-size: 11.5px;" onclick="copyFieldValue('func-api-key-val')">کپی کلید</button>
+              </div>
             </div>
+          </div>
 
-            <!-- Function Test Box -->
-            <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); padding: 18px; border-radius: var(--radius-sm);">
-              <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">تست فراخوانی زنده تابع: <span id="active-test-func-slug" style="color: var(--brand-dark);">-</span></div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <!-- Disabled Onboarding Form -->
+          <div id="func-disabled-box" class="service-disabled-box" style="display: none;">
+            <h4>سرویس توابع سرورلس برای این پروژه فعال نشده است</h4>
+            <p>
+              برای نوشتن و اجرای توابع در محیط سرورلس سبک و ایزوله، مشخصات پردازشی را تعیین کنید.
+            </p>
+            <form id="form-enable-func" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">سقف حافظه رم بر حسب مگابایت (Memory Limit)</label>
+                <input type="number" id="func-cfg-mem" class="input-field input-mono" value="16" required />
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر سقف زمان اجرای هر درخواست (ثانیه)</label>
+                <input type="number" id="func-cfg-timeout" class="input-field input-mono" value="5" required />
+              </div>
+              <button type="submit" class="btn-primary" style="width: 100%;">فعال‌سازی سرویس توابع</button>
+            </form>
+          </div>
+
+          <!-- Active Features Container -->
+          <div id="func-active-box" style="display: none;">
+            <div class="card">
+              <div class="card-header">
                 <div>
-                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">ورودی JSON</label>
-                  <textarea id="func-test-input" class="input-field input-mono" rows="4">{"distance_km": 5}</textarea>
-                  <button id="btn-exec-func-test" class="btn-primary" style="margin-top: 10px; width: 100%;">اجرا و کسر مصرف</button>
+                  <div class="card-title">توابع مستقرشده پروژه</div>
+                  <div class="card-desc">فراخوانی توابع با متد POST و ارسال بدنه JSON.</div>
                 </div>
-                <div>
-                  <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">خروجی اجرا</label>
-                  <pre id="func-test-output" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; font-family: var(--font-mono); font-size: 11.5px; min-height: 115px; direction: ltr; text-align: left;">// برای مشاهده نتیجه دکمه را کلیک کنید...</pre>
+                <button id="btn-modal-deploy-func" class="btn-primary">+ استقرار تابع جدید</button>
+              </div>
+
+              <div class="table-container" style="margin-bottom: 20px;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>نام تابع</th>
+                      <th>شناسه</th>
+                      <th>مسیر فراخوانی</th>
+                      <th>تاریخ استقرار (شمسی)</th>
+                      <th>عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="functions-tbody"></tbody>
+                </table>
+              </div>
+
+              <!-- Function Test Box -->
+              <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); padding: 18px; border-radius: var(--radius-sm);">
+                <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">تست فراخوانی زنده تابع: <span id="active-test-func-slug" style="color: var(--brand-dark);">-</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">ورودی JSON</label>
+                    <textarea id="func-test-input" class="input-field input-mono" rows="4">{"distance_km": 5}</textarea>
+                    <button id="btn-exec-func-test" class="btn-primary" style="margin-top: 10px; width: 100%;">اجرا و کسر مصرف</button>
+                  </div>
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">خروجی اجرا</label>
+                    <pre id="func-test-output" style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; font-family: var(--font-mono); font-size: 11.5px; min-height: 115px; direction: ltr; text-align: left;">// برای مشاهده نتیجه دکمه را کلیک کنید...</pre>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- In-page Service Settings & Disable -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <div class="card-title">تنظیمات سرویس توابع سرورلس</div>
+                <button type="button" class="btn-danger" style="font-size: 11.5px;" onclick="disableService('functions')">غیرفعال‌سازی سرویس</button>
+              </div>
+              <form id="form-update-func-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف رم (MB)</label>
+                  <input type="number" id="func-active-mem" class="input-field input-mono" required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف زمان (ثانیه)</label>
+                  <input type="number" id="func-active-timeout" class="input-field input-mono" required />
+                </div>
+                <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
+              </form>
             </div>
           </div>
         </section>
 
-        <!-- VIEW 6: Usage & Metering (with Shamsi Datepicker) -->
+        <!-- VIEW 6: SMS Service Page -->
+        <section id="view-sms" class="tab-view">
+          <!-- Service Header & Dedicated API Key Card -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <h3 style="font-size: 16px; font-weight: 800;">سامانه پیام‌رسان خدماتی (SMS Service)</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                  ارسال اعلان‌ها، پیام‌های تراکنشی و ارتباط با اپراتورهای همراه کشور.
+                </p>
+              </div>
+              <span id="sms-status-badge" class="badge">بررسی وضعیت...</span>
+            </div>
+
+            <!-- Dedicated API Key -->
+            <div style="background: var(--bg-main); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">کلید اختصاصی سرویس پیام‌رسان:</span>
+                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="regenerateServiceKey('sms')">صدور مجدد کلید</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="sms-api-key-val" class="input-field input-mono" readonly />
+                <button type="button" class="btn-secondary" style="font-size: 11.5px;" onclick="copyFieldValue('sms-api-key-val')">کپی کلید</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disabled Onboarding Form -->
+          <div id="sms-disabled-box" class="service-disabled-box" style="display: none;">
+            <h4>سرویس پیام‌رسان برای این پروژه فعال نشده است</h4>
+            <p>
+              برای ارسال پیامک‌های خدماتی و تراکنشی به کاربران، ارائه‌دهنده و سرشماره مورد نظر را تنظیم کنید.
+            </p>
+            <form id="form-enable-sms" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">ارائه‌دهنده پیامک</label>
+                <select id="sms-cfg-provider" class="input-field">
+                  <option value="magfa">مگفا (Magfa)</option>
+                  <option value="kavenegar">کاوه‌نگار (Kavenegar)</option>
+                  <option value="asanak">آسانک (Asanak)</option>
+                </select>
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">سرشماره اختصاصی ارسال پیامک</label>
+                <input type="text" id="sms-cfg-number" class="input-field input-mono" value="3000777" required />
+              </div>
+              <button type="submit" class="btn-primary" style="width: 100%;">فعال‌سازی سرویس پیام‌رسان</button>
+            </form>
+          </div>
+
+          <!-- Active Features Container -->
+          <div id="sms-active-box" style="display: none;">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">ارسال پیامک تستی</div>
+                  <div class="card-desc">آزمایش ارسال پیامک به شماره تلفن همراه با سرشماره متصل شده.</div>
+                </div>
+              </div>
+
+              <form id="form-send-sms-test" style="max-width: 600px; display: grid; gap: 12px;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">شماره گیرنده</label>
+                  <input type="text" id="sms-test-phone" class="input-field input-mono" placeholder="+98912..." required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">متن پیام</label>
+                  <textarea id="sms-test-text" class="input-field" rows="3" placeholder="متن پیامک ارسالی..." required></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: auto; justify-self: start;">ارسال پیامک و ثبت مصرف</button>
+              </form>
+            </div>
+
+            <!-- In-page Service Settings & Disable -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <div class="card-title">تنظیمات سرویس پیام‌رسان</div>
+                <button type="button" class="btn-danger" style="font-size: 11.5px;" onclick="disableService('sms')">غیرفعال‌سازی سرویس</button>
+              </div>
+              <form id="form-update-sms-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">ارائه‌دهنده</label>
+                  <input type="text" id="sms-active-provider" class="input-field input-mono" required />
+                </div>
+                <div>
+                  <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">سرشماره</label>
+                  <input type="text" id="sms-active-number" class="input-field input-mono" required />
+                </div>
+                <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: Usage & Metering (with Shamsi Datepicker) -->
         <section id="view-usage" class="tab-view">
           <div class="card">
             <div class="card-header">
@@ -345,7 +756,7 @@
           </div>
         </section>
 
-        <!-- VIEW 7: Project Settings & Full CRUD -->
+        <!-- VIEW 8: Project Settings & Full CRUD -->
         <section id="view-settings" class="tab-view">
           <div class="card">
             <div class="card-header">
@@ -388,99 +799,71 @@
   </div>
 
   <!-- MODAL 1: Create Project -->
-  <div id="modal-create-proj" class="modal-overlay">
-    <div class="modal-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+  <div id="modal-create-proj" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
         <h3 style="font-size: 16px; font-weight: 800;">ایجاد پروژه جدید</h3>
         <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-create-proj')">✕</button>
       </div>
 
-      <form id="form-create-new-project">
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label>
-          <input type="text" id="new-proj-name" class="input-field" placeholder="مثال: اپلیکیشن فروشگاهی دیجی‌شاپ" required />
-        </div>
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
-          <input type="text" id="new-proj-slug" class="input-field input-mono" placeholder="digishop-app" />
-        </div>
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توضیحات اختیاری</label>
-          <textarea id="new-proj-desc" class="input-field" rows="2" placeholder="توضیح کوتاه درباره ماهیت پروژه"></textarea>
-        </div>
+      <div class="modal-body">
+        <form id="form-create-new-project">
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label>
+            <input type="text" id="new-proj-name" class="input-field" placeholder="مثال: اپلیکیشن فروشگاهی دیجی‌شاپ" required />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
+            <input type="text" id="new-proj-slug" class="input-field input-mono" placeholder="digishop-app" />
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توضیحات اختیاری</label>
+            <textarea id="new-proj-desc" class="input-field" rows="2" placeholder="توضیح کوتاه درباره ماهیت پروژه"></textarea>
+          </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn-secondary" onclick="closeModal('modal-create-proj')">انصراف</button>
-          <button type="submit" class="btn-primary">ایجاد پروژه</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 2: Configure Service -->
-  <div id="modal-configure-service" class="modal-overlay">
-    <div class="modal-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 id="cfg-modal-title" style="font-size: 16px; font-weight: 800;">پیکربندی سرویس</h3>
-        <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-configure-service')">✕</button>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('modal-create-proj')">انصراف</button>
+            <button type="submit" class="btn-primary">ایجاد پروژه</button>
+          </div>
+        </form>
       </div>
-
-      <form id="form-configure-service">
-        <input type="hidden" id="cfg-service-name" />
-
-        <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-            <input type="checkbox" id="cfg-is-enabled" style="width: 18px; height: 18px; accent-color: var(--brand-primary);" />
-            <div>
-              <div style="font-weight: 700; font-size: 13px;">فعال‌سازی سرویس برای این پروژه</div>
-              <div style="font-size: 11.5px; color: var(--text-muted);">در صورت فعال بودن، کلید API قابل استفاده خواهد بود.</div>
-            </div>
-          </label>
-        </div>
-
-        <div id="cfg-dynamic-fields" style="margin-bottom: 16px; display: grid; gap: 10px;">
-          <!-- Specific settings fields based on service -->
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn-secondary" onclick="closeModal('modal-configure-service')">انصراف</button>
-          <button type="submit" class="btn-primary">ذخیره پیکربندی</button>
-        </div>
-      </form>
     </div>
   </div>
 
-  <!-- MODAL 3: Wallet Top-Up -->
-  <div id="modal-topup" class="modal-overlay">
-    <div class="modal-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+  <!-- MODAL 2: Wallet Top-Up -->
+  <div id="modal-topup" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
         <h3 style="font-size: 16px; font-weight: 800;">افزایش موجودی با درگاه بانکی شاپرک</h3>
         <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-topup')">✕</button>
       </div>
 
-      <form id="form-topup">
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">درگاه پرداخت</label>
-          <select id="topup-gateway" class="input-field">
-            <option value="SEP">سامان‌کیش (شاپرک)</option>
-            <option value="ZarinPal">زرین‌پال</option>
-            <option value="Mellat">به‌پرداخت ملت</option>
-          </select>
-        </div>
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مبلغ افزایش اعتبار (تومان)</label>
-          <input type="number" id="topup-amount-toman" class="input-field input-mono" value="1000000" min="10000" required />
-        </div>
+      <div class="modal-body">
+        <form id="form-topup">
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">درگاه پرداخت</label>
+            <select id="topup-gateway" class="input-field">
+              <option value="SEP">سامان‌کیش (شاپرک)</option>
+              <option value="ZarinPal">زرین‌پال</option>
+              <option value="Mellat">به‌پرداخت ملت</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مبلغ افزایش اعتبار (تومان)</label>
+            <input type="number" id="topup-amount-toman" class="input-field input-mono" value="1000000" min="10000" required />
+          </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn-secondary" onclick="closeModal('modal-topup')">انصراف</button>
-          <button type="submit" class="btn-primary">اتصال به درگاه و شارژ</button>
-        </div>
-      </form>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('modal-topup')">انصراف</button>
+            <button type="submit" class="btn-primary">اتصال به درگاه و شارژ</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <script src="/shamsi.js"></script>
+  <script src="/services.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
