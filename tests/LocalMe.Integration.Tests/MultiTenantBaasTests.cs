@@ -2,6 +2,7 @@ namespace LocalMe.Integration.Tests;
 
 using System.Text.Json.Nodes;
 using LocalMe.DataPlane.Admin;
+using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
@@ -240,4 +241,90 @@ public class MultiTenantBaasTests
         var suspendedProj = pm.GetProject(proj.Id);
         Assert.Equal("Suspended", suspendedProj!.Status);
     }
+
+    [Fact]
+    public void AuthService_SupportsSmsOtpWithDevProviderAndOAuthAndCredentials()
+    {
+        var pm = new ProjectManagerService();
+        var otp = new OtpAuthService();
+
+        var proj = pm.CreateProject(new CreateProjectRequest("پروژه هویت", "auth-project"));
+
+        // 1. Verify developer's custom SMS provider configuration
+        var authCfg = proj.Services["auth"];
+        Assert.Equal("kavenegar", authCfg.Settings["sms_provider"]);
+        Assert.NotEmpty(authCfg.Settings["sms_api_key"]);
+
+        // Request OTP with developer credentials
+        var otpRes = otp.RequestOtp(new OtpRequest(
+            Phone: "+989351112233",
+            Provider: authCfg.Settings["sms_provider"],
+            ProviderApiKey: authCfg.Settings["sms_api_key"],
+            SenderNumber: authCfg.Settings["sms_sender_number"]
+        ));
+        Assert.True(otpRes.Success);
+        Assert.NotNull(otpRes.CodeForTesting);
+
+        // Verify OTP
+        var verifyRes = otp.VerifyOtp(new OtpVerifyRequest("+989351112233", otpRes.CodeForTesting!));
+        Assert.True(verifyRes.Success);
+        Assert.NotNull(verifyRes.Tokens);
+
+        // 2. Register OAuth User without OTP
+        var oauthUser = pm.AddProjectUser(proj.Id, email: "developer@gmail.com", fullName: "Google Dev", provider: "oauth_google");
+        Assert.NotNull(oauthUser);
+        Assert.Equal("oauth_google", oauthUser.Provider);
+        Assert.Equal("developer@gmail.com", oauthUser.Email);
+
+        // 3. Register Email/Password User without OTP
+        var pwdUser = pm.AddProjectUser(proj.Id, email: "user@localme.ir", fullName: "احمد رضوی", provider: "password");
+        Assert.NotNull(pwdUser);
+        Assert.Equal("password", pwdUser.Provider);
+
+        var allUsers = pm.GetProjectUsers(proj.Id);
+        Assert.True(allUsers.Count >= 3);
+    }
+
+    [Fact]
+    public void EdgeFunctions_DeploysCustomScriptAndExecutesWithContext()
+    {
+        var pm = new ProjectManagerService();
+        var host = new LocalMe.DataPlane.Compute.JintScriptHost();
+        var proj = pm.CreateProject(new CreateProjectRequest("محاسبات لبه", "compute-proj"));
+
+        // 1. Verify seeded fare-calculator exists
+        var funcs = pm.GetProjectFunctions(proj.Id);
+        Assert.NotEmpty(funcs);
+        Assert.Contains(funcs, f => f.Slug == "fare-calculator");
+
+        // 2. Deploy custom discount function
+        const string discountScript = """
+            function calculateDiscount(ctx) {
+                const total = ctx.order_total || 0;
+                const discount = total > 1000000 ? total * 0.15 : 0;
+                console.log(`محاسبه تخفیف: کل=${total}، تخفیف=${discount}`);
+                return {
+                    original: total,
+                    discount: discount,
+                    payable: total - discount
+                };
+            }
+            calculateDiscount(context);
+        """;
+
+        var deployed = pm.DeployFunction(proj.Id, "تخفیف هوشمند", discountScript, "smart-discount");
+        Assert.Equal("smart-discount", deployed.Slug);
+
+        // 3. Execute function with test payload
+        var execResult = host.ExecuteScript(new LocalMe.DataPlane.Compute.ScriptExecutionRequest(
+            Script: deployed.Script,
+            InputJson: "{\"order_total\": 2000000}"
+        ));
+
+        Assert.True(execResult.Success);
+        Assert.NotNull(execResult.Output);
+        Assert.NotEmpty(execResult.Logs);
+        Assert.True(execResult.ExecutionTimeMs >= 0);
+    }
 }
+

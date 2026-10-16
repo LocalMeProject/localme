@@ -3,52 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>مستندات فنی و راهنمای توسعه‌دهندگان | LocalMe BaaS</title>
+  <title>مستندات جامع فنی و راهنمای توسعه‌دهندگان | LocalMe BaaS</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    .code-tabs {
-      display: flex;
-      background: #1e293b;
-      border-bottom: 1px solid #334155;
-      padding: 0 8px;
-    }
-    .code-tab-btn {
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      padding: 8px 14px;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 120ms ease;
-    }
-    .code-tab-btn:hover {
-      color: #f8fafc;
-    }
-    .code-tab-btn.active {
-      color: #10b981;
-      border-bottom-color: #10b981;
-      font-weight: 700;
-    }
-    .code-pane {
-      display: none;
-    }
-    .code-pane.active {
-      display: block;
-    }
-    .badge-method {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
+    .code-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; padding: 0 8px; }
+    .code-tab-btn { background: transparent; border: none; color: #94a3b8; font-family: var(--font-mono); font-size: 11.5px; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 120ms ease; }
+    .code-tab-btn:hover { color: #f8fafc; }
+    .code-tab-btn.active { color: #10b981; border-bottom-color: #10b981; font-weight: 700; }
+    .code-pane { display: none; }
+    .code-pane.active { display: block; }
+    .badge-method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .method-get { background: #dbeafe; color: #1e40af; }
     .method-post { background: #dcfce7; color: #15803d; }
     .method-put { background: #fef9c3; color: #854d0e; }
@@ -74,13 +41,8 @@
       <div style="position: relative; width: 220px;">
         <input type="text" id="docs-search-input" class="input-field" placeholder="جستجو در مستندات..." style="font-size: 12px; padding: 5px 10px;" oninput="filterDocs(this.value)" />
       </div>
-
-      <a href="/panel" class="btn-primary" style="font-size: 11.5px; padding: 5px 12px;">
-        کنسول توسعه‌دهندگان
-      </a>
-      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 5px 12px;">
-        ورود
-      </a>
+      <a href="/panel" class="btn-primary" style="font-size: 11.5px; padding: 5px 12px;">کنسول توسعه‌دهندگان</a>
+      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 5px 12px;">ورود</a>
     </div>
   </header>
 
@@ -97,12 +59,11 @@
       </div>
 
       <div class="docs-nav-group">
-        <div class="docs-nav-title">سرویس‌های داده و هسته</div>
-        <a href="#section-database" class="docs-nav-link">پایگاه داده و رابط PostgREST</a>
-        <a href="#section-auth-service" class="docs-nav-link">احراز هویت پیامکی (SMS OTP)</a>
-        <a href="#section-storage" class="docs-nav-link">ذخیره‌سازی ابری چندرسانه‌ای</a>
-        <a href="#section-functions" class="docs-nav-link">توابع سرورلس لبه (Functions)</a>
-        <a href="#section-sms" class="docs-nav-link">سامانه پیام‌رسان خدماتی</a>
+        <div class="docs-nav-title">سرویس‌های ۴گانه هسته</div>
+        <a href="#section-database" class="docs-nav-link">۱. پایگاه داده رابطه‌ای (PostgreSQL)</a>
+        <a href="#section-auth-service" class="docs-nav-link">۲. احراز هویت جامع (OTP, رمز، OAuth)</a>
+        <a href="#section-storage" class="docs-nav-link">۳. ذخیره‌سازی ابری فایل (Storage)</a>
+        <a href="#section-functions" class="docs-nav-link">۴. توابع سرورلس لبه (Edge Functions)</a>
       </div>
 
       <div class="docs-nav-group">
@@ -113,11 +74,8 @@
 
       <div class="docs-nav-group">
         <div class="docs-nav-title">کدهای نمونه و مرجع</div>
-        <a href="#section-sdk-curl" class="docs-nav-link">نمونه کد cURL / Bash</a>
-        <a href="#section-sdk-js" class="docs-nav-link">نمونه کد JavaScript / TypeScript</a>
-        <a href="#section-sdk-python" class="docs-nav-link">نمونه کد Python</a>
-        <a href="#section-sdk-flutter" class="docs-nav-link">نمونه کد Dart / Flutter</a>
-        <a href="#section-errors" class="docs-nav-link">کدهای خطا و رفع اشکال</a>
+        <a href="#section-code-examples" class="docs-nav-link">نمونه کد چندزبانه (۴ زبان)</a>
+        <a href="#section-errors" class="docs-nav-link">کدهای وضعیت و رفع اشکال</a>
       </div>
     </aside>
 
@@ -128,19 +86,19 @@
       <section id="section-intro" class="docs-section">
         <h1>معرفی و معماری پلتفرم لوکال‌می (LocalMe BaaS)</h1>
         <p>
-          پلتفرم <strong>لوکال‌می</strong> یک زیرساخت جامع <em>Backend-as-a-Service</em> چندمستاجره (Multi-Tenant) بومی است که با هدف ارتقای سرعت توسعه اپلیکیشن‌های موبایل (Android, iOS) و وب‌اپلیکیشن‌ها پیاده‌سازی شده است. این سامانه توسعه‌دهنده را از زحمت کانفیگ سرور، مدیریت پایگاه داده، درگاه‌های پرداخت، احراز هویت پیامکی و سرورهای ذخیره‌سازی بی‌نیاز می‌سازد.
+          پلتفرم <strong>لوکال‌می</strong> یک زیرساخت جامع <em>Backend-as-a-Service</em> چندمستاجره (Multi-Tenant) بومی است که با هدف ارتقای چشمگیر سرعت توسعه اپلیکیشن‌های موبایل (Android, iOS) و وب‌اپلیکیشن‌ها پیاده‌سازی شده است. این سامانه توسعه‌دهندگان را از مدیریت سرورها، کانفیگ پایگاه داده، پیکربندی پیامک، و ستاپ باکت‌های ذخیره‌سازی کاملاً بی‌نیاز می‌سازد.
         </p>
 
         <h2>اصول کلیدی معماری لوکال‌می</h2>
         <ul>
-          <li><strong>ایزولاسیون بر پایه اسکیما (Schema-per-Project Isolation)</strong>: هر پروژه دارای یک اسکیمای مجزا در پایگاه داده PostgreSQL 18 است. داده‌های مستاجران مختلف تحت هیچ شرایطی با یکدیگر تداخل نداشته و از بالاترین سطح امنیت و سرعت کوئری برخوردارند.</li>
+          <li><strong>ایزولاسیون بر پایه اسکیما (Schema-per-Project Isolation)</strong>: هر پروژه دارای یک اسکیمای کاملاً مجزا در پایگاه داده PostgreSQL است. داده‌های مستاجران مختلف تحت هیچ شرایطی با یکدیگر تداخل نداشته و از بالاترین سطح امنیت و پرفورمنس برخوردارند.</li>
           <li><strong>کلیدهای تفکیک‌شده به ازای هر سرویس (Per-Service Scoped Keys)</strong>: برخلاف سیستم‌های قدیمی که از یک کلید عمومی سراسری استفاده می‌کردند، لوکال‌می برای هر سرویس یک کلید مستقل با ساختار <code>lm_[service]_[project]_[id]</code> صادر می‌کند. در صورت افشای کلید یک سرویس، سایر سرویس‌ها ایمن می‌مانند.</li>
           <li><strong>محاسبه مصرف دقیق و اعتباری (Pay-As-You-Go Ledger)</strong>: مصرف منابع (تعداد کوئری‌ها، پیامک‌ها، حجم فایل‌ها و زمان پردازش توابع) با دقت میلی‌ثانیه‌ای و ریالی در یک دفترکل دوبل حسابداری ثبت و از کیف پول کسر می‌گردد.</li>
         </ul>
 
         <h2>چرخه کار توسعه‌دهنده</h2>
         <ol>
-          <li>عضویت و ورود با شماره همراه در سامانه.</li>
+          <li>عضویت و ورود با شماره همراه در سامانه لوکال‌می.</li>
           <li>ایجاد یک پروژه جدید در کنسول توسعه‌دهندگان (هر توسعه‌دهنده در ابتدا با ۰ پروژه شروع می‌کند).</li>
           <li>ورود به صفحه اختصاصی هر سرویس در منوی کناری، تنظیم پارامترها و فعال‌سازی آن سرویس.</li>
           <li>کپی کردن کلید دسترسی اختصاصی همان سرویس و ارسال درخواست از اپلیکیشن کلاینت.</li>
@@ -151,7 +109,7 @@
       <section id="section-auth-keys" class="docs-section">
         <h1>احراز هویت و ساختار کلیدهای دسترسی API</h1>
         <p>
-          تمامی درخواست‌های ارسالی از سمت کلاینت‌ها (موبایل و وب) باید احراز هویت شوند. هدرهای استاندارد زیر برای برقراری ارتباط الزامی هستند:
+          تمامی درخواست‌های ارسالی از سمت کلاینت‌ها (موبایل و وب) باید احراز هویت شوند. هدرهای استاندارد زیر برای برقراری ارتباط با پلتفرم الزامی هستند:
         </p>
 
         <table class="docs-param-table">
@@ -181,26 +139,20 @@
           </tbody>
         </table>
 
-        <h2>قالب نام‌گذاری کلیدهای اختصاصی سرویس‌ها</h2>
+        <h2>قالب نام‌گذاری کلیدهای اختصاصی سرویس‌های ۴گانه</h2>
         <div class="docs-code-card">
-          <div class="docs-code-header">
-            <span>فرمت کلیدهای API</span>
-            <span>SPECIFICATION</span>
-          </div>
-          <pre><code>// پایگاه داده
+          <div class="docs-code-header"><span>فرمت کلیدهای API</span><span>SPECIFICATION</span></div>
+          <pre><code>// ۱. پایگاه داده رابطه‌ای
 lm_database_proj_xxxxxxxx_xxxxxxxxxxxx
 
-// احراز هویت پیامکی
+// ۲. احراز هویت جامع کاربران
 lm_auth_proj_xxxxxxxx_xxxxxxxxxxxx
 
-// ذخیره‌سازی ابری
+// ۳. ذخیره‌سازی ابری فایل
 lm_storage_proj_xxxxxxxx_xxxxxxxxxxxx
 
-// توابع سرورلس لبه
-lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx
-
-// سامانه پیام‌رسان
-lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
+// ۴. توابع سرورلس لبه شبکه
+lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
         </div>
       </section>
 
@@ -218,7 +170,7 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 
       <!-- 4. DATABASE SERVICE -->
       <section id="section-database" class="docs-section">
-        <h1>سرویس پایگاه داده رابطه‌ای و PostgREST</h1>
+        <h1>۱. سرویس پایگاه داده رابطه‌ای (PostgreSQL & PostgREST)</h1>
         <p>
           این سرویس جداول دیتابیس پروژه را مستقیماً به صورت RESTful در اختیار کلاینت قرار می‌دهد. نیازی به نوشتن کنترلرهای اضافه در بک‌اند نیست.
         </p>
@@ -230,7 +182,7 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
             <span class="badge-method method-get">GET</span>
             <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/db/{tableName}</code>
           </div>
-          <p>دریافت رکوردهای جدول به همراه قابلیت فیلترگذاری و صفحه‌بندی.</p>
+          <p>دریافت رکوردهای جدول به همراه قابلیت فیلترگذاری و صفحه‌بندی (مسیر هم‌ارز: <code>/_baas/v1/{projectId}/rest/{tableName}</code>).</p>
         </div>
 
         <div style="margin: 16px 0;">
@@ -239,6 +191,14 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
             <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/db/{tableName}</code>
           </div>
           <p>درج یک رکورد جدید در جدول مشخص‌شده.</p>
+        </div>
+
+        <div style="margin: 16px 0;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span class="badge-method method-post">POST</span>
+            <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/db/tables</code>
+          </div>
+          <p>ایجاد جدول جدید در اسکیمای پایگاه داده با ارسال <code>{"name": "orders"}</code>.</p>
         </div>
 
         <div style="margin: 16px 0;">
@@ -259,61 +219,35 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 
         <h2>فیلترها و عملگرهای جستجو (Query Operators)</h2>
         <table class="docs-param-table">
-          <thead>
-            <tr>
-              <th>عملگر</th>
-              <th>توضیح</th>
-              <th>نمونه استفاده</th>
-            </tr>
-          </thead>
+          <thead><tr><th>عملگر</th><th>توضیح</th><th>نمونه استفاده</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>eq</code></td>
-              <td>برابری دقیق</td>
-              <td><code>?status=eq.active</code></td>
-            </tr>
-            <tr>
-              <td><code>gt / gte</code></td>
-              <td>بزرگتر / بزرگتر مساوی</td>
-              <td><code>?price=gte.500000</code></td>
-            </tr>
-            <tr>
-              <td><code>lt / lte</code></td>
-              <td>کوچکتر / کوچکتر مساوی</td>
-              <td><code>?stock=lt.10</code></td>
-            </tr>
-            <tr>
-              <td><code>like</code></td>
-              <td>جستجوی متنی فازی</td>
-              <td><code>?title=like.*گوشی*</code></td>
-            </tr>
-            <tr>
-              <td><code>limit / offset</code></td>
-              <td>صفحه‌بندی نتایج</td>
-              <td><code>?limit=20&amp;offset=40</code></td>
-            </tr>
-            <tr>
-              <td><code>order</code></td>
-              <td>مرتب‌سازی صعودی یا نزولی</td>
-              <td><code>?order=created_at.desc</code></td>
-            </tr>
+            <tr><td><code>eq</code></td><td>برابری دقیق</td><td><code>?status=eq.active</code></td></tr>
+            <tr><td><code>gt / gte</code></td><td>بزرگتر / بزرگتر مساوی</td><td><code>?price=gte.500000</code></td></tr>
+            <tr><td><code>lt / lte</code></td><td>کوچکتر / کوچکتر مساوی</td><td><code>?stock=lt.10</code></td></tr>
+            <tr><td><code>like</code></td><td>جستجوی متنی فازی</td><td><code>?title=like.*گوشی*</code></td></tr>
+            <tr><td><code>limit / offset</code></td><td>صفحه‌بندی نتایج</td><td><code>?limit=20&amp;offset=40</code></td></tr>
+            <tr><td><code>order</code></td><td>مرتب‌سازی صعودی یا نزولی</td><td><code>?order=created_at.desc</code></td></tr>
           </tbody>
         </table>
       </section>
 
       <!-- 5. AUTH SERVICE -->
       <section id="section-auth-service" class="docs-section">
-        <h1>سرویس احراز هویت پیامکی (SMS OTP Authentication)</h1>
+        <h1>۲. سرویس احراز هویت جامع کاربران (Auth Service)</h1>
         <p>
-          احراز هویت بدون کلمه عبور (Passwordless) با شماره همراه و کد تصادفی شش‌رقمی یکبار مصرف، متناسب با رفتار کاربران ایرانی.
+          سامانه یکپارچه احراز هویت با پشتیبانی همزمان از <strong>پیامک یکبارمصرف (SMS OTP)</strong>، <strong>نام‌کاربری و رمز عبور (Credentials)</strong>، و <strong>ورود با شبکه‌های اجتماعی (OAuth 2.0 گوگل و گیت‌هاب)</strong>.
         </p>
 
-        <h3>مرحله ۱: درخواست ارسال کد تایید (Send OTP)</h3>
+        <div style="background: #f8fafc; border-right: 4px solid var(--brand-primary); padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
+          <strong>قوانین رگولاتوری پیامک در ایران:</strong> برای جلوگیری از سوءاستفاده و رعایت الزامات قانونی رگولاتوری مخابرات، ارسال پیامک صرفاً از طریق کلید API و خط اختصاصی ثبت‌شده خود توسعه‌دهنده (کاkeptت، ملی‌پیامک، یا مگفا) که در تنظیمات سرویس احراز هویت ذخیره می‌شود، انجام می‌پذیرد.
+        </div>
+
+        <h3>الف) احراز هویت پیامکی (SMS OTP)</h3>
+        <p>۱. درخواست ارسال کد تایید یکبارمصرف به شماره کاربر:</p>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
-          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/otp/send</code>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/otp/request</code>
         </div>
-        <p>ورودی درخواست:</p>
         <div class="docs-code-card">
           <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
           <pre><code>{
@@ -321,7 +255,7 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 }</code></pre>
         </div>
 
-        <h3>مرحله ۲: اعتبارسنجی کد و صدور JWT (Verify OTP)</h3>
+        <p>۲. تایید کد پیامک‌شده و دریافت JWT Token معتبر:</p>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/otp/verify</code>
@@ -333,37 +267,73 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
   "code": "489201"
 }</code></pre>
         </div>
-        <p>پاسخ موفق سرور (شامل توکن دسترسی معتبر و مشخصات کاربر):</p>
+
+        <h3>ب) ثبت‌نام و ورود با ایمیل و رمز عبور (Password)</h3>
+        <p>۱. ثبت‌نام کاربر جدید:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/signup</code>
+        </div>
         <div class="docs-code-card">
-          <div class="docs-code-header"><span>Response (200 OK)</span><span>RESPONSE</span></div>
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
           <pre><code>{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "tokenType": "Bearer",
-  "expiresInSeconds": 86400,
-  "user": {
-    "id": "usr_c83d8e92",
-    "phone": "+989121112233",
-    "isVerified": true
-  }
+  "email": "user@example.com",
+  "password": "StrongPassword123!",
+  "name": "سارا محمدی"
 }</code></pre>
         </div>
+
+        <p>۲. ورود و دریافت جلسه احراز هویت:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/login</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "email": "user@example.com",
+  "password": "StrongPassword123!"
+}</code></pre>
+        </div>
+
+        <h3>ج) تبادل توکن احراز هویت ثالث (OAuth 2.0)</h3>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/auth/oauth/{provider}</code>
+        </div>
+        <p>مقدار <code>provider</code> می‌تواند <code>google</code> یا <code>github</code> باشد. بدنه درخواست:</p>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "code": "4/0AfgeXvu...",
+  "redirectUri": "https://myapp.com/auth/callback"
+}</code></pre>
+        </div>
+
+        <h3>د) مدیریت کاربران پروژه</h3>
+        <p>دریافت لیست کاربران احراز هویت شده پروژه: <code>GET /_baas/v1/{projectId}/auth/users</code></p>
+        <p>ثبت مستقیم کاربر از سمت کلاینت دارای دسترسی: <code>POST /_baas/v1/{projectId}/auth/users</code></p>
       </section>
 
       <!-- 6. STORAGE -->
       <section id="section-storage" class="docs-section">
-        <h1>سرویس ذخیره‌سازی ابری فایل (Object Storage)</h1>
+        <h1>۳. سرویس ذخیره‌سازی ابری فایل (Object Storage)</h1>
         <p>
-          سامانه نگهداری فایل‌های رسانه‌ای، تصاویر پروفایل، کاتالوگ محصولات و اسناد با تفکیک باکت‌های عمومی (Public) و محرمانه (Private).
+          سامانه نگهداری فایل‌های چندرسانه‌ای، کاتالوگ محصولات و اسناد با تفکیک باکت‌های عمومی (Public) و محرمانه (Private).
         </p>
+
+        <h3>مدیریت باکت‌ها</h3>
+        <p>دریافت فهرست باکت‌های فعال: <code>GET /_baas/v1/{projectId}/storage/buckets</code></p>
+        <p>ایجاد باکت جدید: <code>POST /_baas/v1/{projectId}/storage/buckets</code> با بدنه <code>{"name": "assets", "isPublic": true}</code></p>
 
         <h3>آپلود فایل (Multipart Upload)</h3>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/storage/{bucketName}/upload</code>
         </div>
-        <p>هدرهای الزامی: <code>x-api-key: lm_storage_...</code> و ارسال فایل در فیلد <code>file</code> از نوع فرم چندبخشی.</p>
+        <p>هدر الزامی: <code>x-api-key: lm_storage_...</code> و ارسال فایل در فیلد <code>file</code> از نوع فرم چندبخشی (multipart/form-data).</p>
 
-        <h3>دریافت یا دانلود فایل</h3>
+        <h3>دریافت و استریم مستقیم فایل</h3>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-get">GET</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/storage/{bucketName}/{fileName}</code>
@@ -372,123 +342,77 @@ lm_sms_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 
       <!-- 7. FUNCTIONS -->
       <section id="section-functions" class="docs-section">
-        <h1>توابع سرورلس لبه (Edge Functions)</h1>
+        <h1>۴. توابع سرورلس لبه شبکه (Serverless Edge Functions)</h1>
         <p>
-          اجرای کدهای جاوااسکریپت خالص در موتور ایزوله و پرسرعت <strong>Jint</strong>. ایده‌آل برای اعتبارسنجی کدملی، نرمال‌سازی شماره‌های تماس، هش‌گذاری، یا اتصال وب‌هوک به سرویس‌های ثالث.
+          اجرای کدهای جاوااسکریپت خالص در موتور ایزوله و پرسرعت <strong>Jint</strong>. ایده‌آل برای منطق تجاری سمت سرور، فرمول‌های قیمت‌گذاری، اعتبارسنجی کدملی، نرمال‌سازی داده‌ها یا اتصال وب‌هوک به سرویس‌های ثالث.
         </p>
+
+        <h3>استقرار و مدیریت توابع</h3>
+        <p>دریافت فهرست توابع مستقر: <code>GET /_baas/v1/{projectId}/functions</code></p>
+        <p>استقرار یا به‌روزرسانی کد تابع: <code>POST /_baas/v1/{projectId}/functions</code> با بدنه <code>{"name": "محاسبه کرایه", "slug": "fare-calc", "script": "..."}</code></p>
 
         <h3>فراخوانی و اجرای تابع</h3>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
-          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/functions/{funcSlug}/exec</code>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/functions/{funcSlug}/invoke</code>
         </div>
-
-        <h3>محیط اجرایی اسکریپت</h3>
+        <p>مسیر هم‌ارز: <code>/_baas/v1/{projectId}/functions/{funcSlug}/exec</code>. نمونه ورودی و خروجی:</p>
         <div class="docs-code-card">
-          <div class="docs-code-header"><span>نمونه کد اسکریپت تابع</span><span>JAVASCRIPT</span></div>
-          <pre><code>// ورودی تابع در متغیر req قرار دارد
-var body = req.body;
-
-// اعتبارسنجی کدملی ایرانی (الگوریتم رسمی ثبت‌احوال)
-function isValidNationalCode(code) {
-  if (!code || code.length !== 10 || isNaN(code)) return false;
-  var sum = 0;
-  for (var i = 0; i < 9; i++) {
-    sum += parseInt(code.charAt(i), 10) * (10 - i);
-  }
-  var rem = sum % 11;
-  var last = parseInt(code.charAt(9), 10);
-  return (rem < 2 && last === rem) || (rem >= 2 && last === (11 - rem));
-}
-
-var valid = isValidNationalCode(body.national_code);
-
-// خروجی تابع در متغیر res بازگردانده می‌شود
-res.json({
-  is_valid: valid,
-  national_code: body.national_code,
-  verified_at: new Date().toISOString()
-});</code></pre>
-        </div>
-      </section>
-
-      <!-- 8. SMS -->
-      <section id="section-sms" class="docs-section">
-        <h1>سامانه پیام‌رسان خدماتی (SMS Service)</h1>
-        <p>
-          ارسال پیامک‌های متنی یا قالب‌محور از طریق اپراتورهای معتبر مخابراتی بدون نیاز به قرارداد مجزا با اپراتورها.
-        </p>
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-          <span class="badge-method method-post">POST</span>
-          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/sms/send</code>
-        </div>
-        <div class="docs-code-card">
-          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <div class="docs-code-header"><span>JSON Payload (Context)</span><span>REQUEST</span></div>
           <pre><code>{
-  "phone": "+989121112233",
-  "message": "سفارش شماره #۴۹۸۲ با موفقیت ثبت شد."
+  "distance_km": 15,
+  "service_type": "vip"
+}</code></pre>
+        </div>
+
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Result</span><span>RESPONSE</span></div>
+          <pre><code>{
+  "status": "success",
+  "output": {
+    "status": "ok",
+    "distance_km": 15,
+    "cost_irr": 375000,
+    "cost_toman": 37500
+  },
+  "logs": [
+    "محاسبه کرایه: مسافت 15 کیلومتر -> 375000 ریال"
+  ],
+  "latencyMs": 8
 }</code></pre>
         </div>
       </section>
 
-      <!-- 9. BILLING & IPG -->
+      <!-- 8. BILLING & IPG -->
       <section id="section-billing" class="docs-section">
         <h1>سیستم مالی، کیف پول و محاسبه مصرف (Billing & IPG)</h1>
         <p>
-          لوکال‌می فاقد اشتراک ماهیانه اجباری است؛ هزینه خدمات صرفاً بر اساس مصرف واقعی از کیف پول اعتباری کسر می‌شود.
+          لوکال‌می فاقد اشتراک ماهیانه اجباری است؛ هزینه خدمات صرفاً بر اساس مصرف واقعی از کیف پول اعتباری کسر می‌شود. کلیه مبالغ و تعرفه‌ها توسط سوپرادمین از پنل مدیریت قابل تنظیم هستند.
         </p>
 
         <table class="docs-param-table">
-          <thead>
-            <tr>
-              <th>سرویس</th>
-              <th>واحد سنجش</th>
-              <th>نرخ مصوب (ریال)</th>
-              <th>معادل تومان</th>
-            </tr>
-          </thead>
+          <thead><tr><th>سرویس هسته</th><th>واحد سنجش</th><th>نرخ مصوب پیش‌فرض (ریال)</th><th>معادل تومان</th></tr></thead>
           <tbody>
-            <tr>
-              <td>پایگاه داده رابطه‌ای</td>
-              <td>هر ۱,۰۰۰ کوئری REST</td>
-              <td>۱۰۰ ریال</td>
-              <td>۱۰ تومان</td>
-            </tr>
-            <tr>
-              <td>احراز هویت پیامکی</td>
-              <td>هر پیامک ارسالی OTP</td>
-              <td>۸۰۰ ریال</td>
-              <td>۸۰ تومان</td>
-            </tr>
-            <tr>
-              <td>ذخیره‌سازی ابری</td>
-              <td>هر گیگابایت در ماه</td>
-              <td>۵۰۰ ریال</td>
-              <td>۵۰ تومان</td>
-            </tr>
-            <tr>
-              <td>توابع سرورلس لبه</td>
-              <td>هر ۱۰۰ میلی‌ثانیه زمان اجرا</td>
-              <td>۱۰ ریال</td>
-              <td>۱ تومان</td>
-            </tr>
+            <tr><td>پایگاه داده رابطه‌ای</td><td>هر ۱,۰۰۰ کوئری REST</td><td>۱۰۰ ریال</td><td>۱۰ تومان</td></tr>
+            <tr><td>احراز هویت کاربران</td><td>هر درخواست OTP / بررسی هویت</td><td>۸۰۰ ریال</td><td>۸۰ تومان</td></tr>
+            <tr><td>ذخیره‌سازی ابری</td><td>هر گیگابایت در ماه</td><td>۵۰۰ ریال</td><td>۵۰ تومان</td></tr>
+            <tr><td>توابع سرورلس لبه</td><td>هر ۱۰۰ میلی‌ثانیه زمان اجرا</td><td>۱۰ ریال</td><td>۱ تومان</td></tr>
           </tbody>
         </table>
 
-        <h3>خطای اتمام موجودی (HTTP 402 Payment Required)</h3>
+        <h3 id="section-ipg">خطای اتمام موجودی (HTTP 402 Payment Required)</h3>
         <p>
-          چنانچه موجودی کیف پول اعتباری به صفر برسد، درخواست‌های API با خطای <code>402 Payment Required</code> مواجه خواهند شد. با افزایش اعتبار از طریق درگاه شاپرک، دسترسی بلافاصله احیا می‌گردد.
+          چنانچه موجودی کیف پول اعتباری به صفر برسد، درخواست‌های API با خطای <code>402 Payment Required</code> مواجه خواهند شد. با افزایش اعتبار از طریق درگاه‌های معتبر شاپرک (سامان‌کیش، زرین‌پال، به‌پرداخت ملت) در کنسول، دسترسی بلافاصله احیا می‌گردد.
         </p>
       </section>
 
-      <!-- 10. CODE EXAMPLES IN 4 LANGUAGES -->
-      <section id="section-sdk-curl" class="docs-section">
+      <!-- 9. CODE EXAMPLES IN 4 LANGUAGES -->
+      <section id="section-code-examples" class="docs-section">
         <h1>نمونه کدهای جامع و کتابخانه‌ها (Code Examples)</h1>
         <p>
-          برای سهولت ادغام با هر نوع زبان و فریم‌ورکی، کدهای نمونه کامل در ۴ محیط cURL، جاوااسکریپت/تایپ‌اسکریپت، پایتون و دارت/فلاتر ارائه گردیده است.
+          برای سهولت ادغام با اپلیکیشن‌های موبایل و وب، کدهای نمونه کامل در ۴ محیط cURL، جاوااسکریپت/تایپ‌اسکریپت، پایتون و دارت/فلاتر ارائه گردیده است.
         </p>
 
-        <!-- Multi-language code card -->
         <div class="docs-code-card">
           <div class="code-tabs">
             <button class="code-tab-btn active" onclick="switchCodeTab(this, 'tab-curl')">cURL (Bash)</button>
@@ -499,26 +423,32 @@ res.json({
 
           <!-- 1. cURL -->
           <div id="tab-curl" class="code-pane active">
-            <pre><code># ۱. کوئری گرفتن از جدول محصولات
-curl -X GET "https://api.localme.ir/_baas/v1/proj_56dea23/db/products?limit=10&order=created_at.desc" \
-  -H "x-api-key: lm_database_proj_56dea23_64b6d9e"
+            <pre><code># ۱. دریافت رکوردهای جدول دیتابیس
+curl -X GET "https://api.localme.ir/_baas/v1/proj_fdbb724/db/products?limit=10" \
+  -H "x-api-key: lm_database_proj_fdbb724_a1b2c3"
 
-# ۲. ارسال پیامک کد ورود به موبایل کاربر
-curl -X POST "https://api.localme.ir/_baas/v1/proj_56dea23/auth/otp/send" \
-  -H "x-api-key: lm_auth_proj_56dea23_2c158e583ed" \
+# ۲. درخواست ارسال پیامک OTP به شماره کاربر
+curl -X POST "https://api.localme.ir/_baas/v1/proj_fdbb724/auth/otp/request" \
+  -H "x-api-key: lm_auth_proj_fdbb724_d4e5f6" \
   -H "Content-Type: application/json" \
   -d '{"phone": "+989121112233"}'
 
-# ۳. اجرای تابع سرورلس
-curl -X POST "https://api.localme.ir/_baas/v1/proj_56dea23/functions/calc-distance/exec" \
-  -H "x-api-key: lm_functions_proj_56dea23_441bce" \
+# ۳. ورود کاربر با ایمیل و کلمه عبور
+curl -X POST "https://api.localme.ir/_baas/v1/proj_fdbb724/auth/login" \
+  -H "x-api-key: lm_auth_proj_fdbb724_d4e5f6" \
   -H "Content-Type: application/json" \
-  -d '{"origin_lat": 35.70, "origin_lng": 51.40, "dest_lat": 35.75, "dest_lng": 51.42}'</code></pre>
+  -d '{"email": "dev@example.com", "password": "SecretPassword123!"}'
+
+# ۴. اجرای تابع سرورلس لبه
+curl -X POST "https://api.localme.ir/_baas/v1/proj_fdbb724/functions/fare-calculator/invoke" \
+  -H "x-api-key: lm_functions_proj_fdbb724_g7h8i9" \
+  -H "Content-Type: application/json" \
+  -d '{"distance_km": 12}'</code></pre>
           </div>
 
           <!-- 2. JS / TS -->
           <div id="tab-js" class="code-pane">
-            <pre><code>// LocalMe Client SDK for Web & Node.js
+            <pre><code>// کلاینت جاوا اسکریپت / تایپ اسکریپت لوکال‌می
 class LocalMeClient {
   constructor(projectId, keys) {
     this.projectId = projectId;
@@ -526,54 +456,45 @@ class LocalMeClient {
     this.baseUrl = 'https://api.localme.ir/_baas/v1';
   }
 
-  // پایگاه داده
-  async getRecords(table, queryParams = {}) {
-    const qs = new URLSearchParams(queryParams).toString();
-    const url = `${this.baseUrl}/${this.projectId}/db/${table}${qs ? '?' + qs : ''}`;
-    const res = await fetch(url, {
+  // ۱. کوئری پایگاه داده
+  async getRecords(table, params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${this.baseUrl}/${this.projectId}/db/${table}${qs ? '?' + qs : ''}`, {
       headers: { 'x-api-key': this.keys.database }
     });
     return await res.json();
   }
 
-  // احراز هویت پیامکی
-  async sendOtp(phone) {
-    const url = `${this.baseUrl}/${this.projectId}/auth/otp/send`;
-    const res = await fetch(url, {
+  // ۲. احراز هویت پیامکی
+  async requestOtp(phone) {
+    const res = await fetch(`${this.baseUrl}/${this.projectId}/auth/otp/request`, {
       method: 'POST',
-      headers: {
-        'x-api-key': this.keys.auth,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'x-api-key': this.keys.auth, 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
     });
     return await res.json();
   }
 
-  // اجرای تابع لبه
-  async executeFunction(slug, payload) {
-    const url = `${this.baseUrl}/${this.projectId}/functions/${slug}/exec`;
-    const res = await fetch(url, {
+  // ۳. ورود با ایمیل و پسورد
+  async login(email, password) {
+    const res = await fetch(`${this.baseUrl}/${this.projectId}/auth/login`, {
       method: 'POST',
-      headers: {
-        'x-api-key': this.keys.functions,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+      headers: { 'x-api-key': this.keys.auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
     return await res.json();
   }
-}
 
-// نحوه فراخوانی:
-const localme = new LocalMeClient('proj_56dea23', {
-  database: 'lm_database_proj_56dea23_64b6d9e',
-  auth: 'lm_auth_proj_56dea23_2c158e583ed',
-  functions: 'lm_functions_proj_56dea23_441bce'
-});
-
-const products = await localme.getRecords('products', { limit: 10 });
-console.log('محصولات:', products);</code></pre>
+  // ۴. اجرای تابع سرورلس لبه
+  async invokeFunction(slug, context = {}) {
+    const res = await fetch(`${this.baseUrl}/${this.projectId}/functions/${slug}/invoke`, {
+      method: 'POST',
+      headers: { 'x-api-key': this.keys.functions, 'Content-Type': 'application/json' },
+      body: JSON.stringify(context)
+    });
+    return await res.json();
+  }
+}</code></pre>
           </div>
 
           <!-- 3. Python -->
@@ -589,38 +510,23 @@ class LocalMeClient:
     def get_records(self, table: str, params: dict = None) -> list:
         url = f"{self.base_url}/{self.project_id}/db/{table}"
         headers = {"x-api-key": self.keys.get("database")}
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json()
+        r = requests.get(url, headers=headers, params=params)
+        r.raise_for_status()
+        return r.json()
 
-    def send_otp(self, phone: str) -> dict:
-        url = f"{self.base_url}/{self.project_id}/auth/otp/send"
-        headers = {
-            "x-api-key": self.keys.get("auth"),
-            "Content-Type": "application/json"
-        }
-        response = requests.post(url, headers=headers, json={"phone": phone})
-        response.raise_for_status()
-        return response.json()
+    def request_otp(self, phone: str) -> dict:
+        url = f"{self.base_url}/{self.project_id}/auth/otp/request"
+        headers = {"x-api-key": self.keys.get("auth"), "Content-Type": "application/json"}
+        r = requests.post(url, headers=headers, json={"phone": phone})
+        r.raise_for_status()
+        return r.json()
 
-    def exec_function(self, slug: str, payload: dict) -> dict:
-        url = f"{self.base_url}/{self.project_id}/functions/{slug}/exec"
-        headers = {
-            "x-api-key": self.keys.get("functions"),
-            "Content-Type": "application/json"
-        }
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()
-
-# استفاده:
-client = LocalMeClient("proj_56dea23", {
-    "database": "lm_database_proj_56dea23_64b6d9e",
-    "auth": "lm_auth_proj_56dea23_2c158e583ed"
-})
-
-items = client.get_records("products", params={"limit": 5})
-print("تعداد رکوردهای بازیابی شده:", len(items))</code></pre>
+    def invoke_function(self, slug: str, context: dict) -> dict:
+        url = f"{self.base_url}/{self.project_id}/functions/{slug}/invoke"
+        headers = {"x-api-key": self.keys.get("functions"), "Content-Type": "application/json"}
+        r = requests.post(url, headers=headers, json=context)
+        r.raise_for_status()
+        return r.json()</code></pre>
           </div>
 
           <!-- 4. Flutter / Dart -->
@@ -635,100 +541,57 @@ class LocalMeService {
 
   LocalMeService({required this.projectId, required this.keys});
 
-  // ۱. دریافت لیست رکوردهای جدول
+  // ۱. دریافت رکوردهای جدول دیتابیس
   Future<List<dynamic>> getTableRecords(String table) async {
     final uri = Uri.parse('$baseUrl/$projectId/db/$table');
-    final response = await http.get(uri, headers: {
-      'x-api-key': keys['database'] ?? '',
-    });
-
-    if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-    } else {
-      throw Exception('خطا در دریافت اطلاعات: ${response.statusCode}');
+    final res = await http.get(uri, headers: {'x-api-key': keys['database'] ?? ''});
+    if (res.statusCode == 200) {
+      return jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
     }
+    throw Exception('خطا در دریافت اطلاعات: ${res.statusCode}');
   }
 
-  // ۲. ارسال پیامک OTP به شماره همراه کاربر
-  Future<bool> sendOtp(String phoneNumber) async {
-    final uri = Uri.parse('$baseUrl/$projectId/auth/otp/send');
-    final response = await http.post(
+  // ۲. ارسال درخواست کد تایید پیامک
+  Future<bool> requestOtp(String phone) async {
+    final uri = Uri.parse('$baseUrl/$projectId/auth/otp/request');
+    final res = await http.post(
       uri,
-      headers: {
-        'x-api-key': keys['auth'] ?? '',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'phone': phoneNumber}),
+      headers: {'x-api-key': keys['auth'] ?? '', 'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phone}),
     );
-
-    return response.statusCode == 200;
+    return res.statusCode == 200;
   }
-}
 
-// استفاده در فلاتر:
-final localMe = LocalMeService(
-  projectId: 'proj_56dea23',
-  keys: {
-    'database': 'lm_database_proj_56dea23_64b6d9e',
-    'auth': 'lm_auth_proj_56dea23_2c158e583ed',
-  },
-);</code></pre>
+  // ۳. فراخوانی تابع لبه
+  Future<Map<String, dynamic>> invokeFunction(String slug, Map<String, dynamic> context) async {
+    final uri = Uri.parse('$baseUrl/$projectId/functions/$slug/invoke');
+    final res = await http.post(
+      uri,
+      headers: {'x-api-key': keys['functions'] ?? '', 'Content-Type': 'application/json'},
+      body: jsonEncode(context),
+    );
+    return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+  }
+}</code></pre>
           </div>
         </div>
       </section>
 
-      <!-- 11. ERRORS -->
+      <!-- 10. ERRORS -->
       <section id="section-errors" class="docs-section">
         <h1>کدهای وضعیت HTTP و راهنمای رفع اشکال</h1>
         <table class="docs-param-table">
-          <thead>
-            <tr>
-              <th>کد وضعیت</th>
-              <th>عنوان خطا</th>
-              <th>علت و راهکار رفع</th>
-            </tr>
-          </thead>
+          <thead><tr><th>کد وضعیت</th><th>عنوان خطا</th><th>علت و راهکار رفع</th></tr></thead>
           <tbody>
-            <tr>
-              <td><code>200 OK</code></td>
-              <td>عملیات موفق</td>
-              <td>درخواست با موفقیت پردازش شد.</td>
-            </tr>
-            <tr>
-              <td><code>201 Created</code></td>
-              <td>ایجاد موفق رکورد</td>
-              <td>رکورد در جدول یا کاربر در سیستم با موفقیت ثبت شد.</td>
-            </tr>
-            <tr>
-              <td><code>400 Bad Request</code></td>
-              <td>قالب داده نامعتبر</td>
-              <td>بدنه JSON ارسالی معتبر نیست یا فیلدهای اجباری ارسال نشده‌اند.</td>
-            </tr>
-            <tr>
-              <td><code>401 Unauthorized</code></td>
-              <td>کلید نامعتبر</td>
-              <td>کلید هدر <code>x-api-key</code> ارسال نشده یا نامعتبر است.</td>
-            </tr>
-            <tr>
-              <td><code>402 Payment Required</code></td>
-              <td>اتمام موجودی کیف پول</td>
-              <td>اعتبار کیف پول پروژه تمام شده است. از پنل توسعه کیف پول را شارژ نمایید.</td>
-            </tr>
-            <tr>
-              <td><code>403 Forbidden</code></td>
-              <td>عدم دسترسی به منبع</td>
-              <td>سرویس مورد نظر برای پروژه غیرفعال شده یا سطح دسترسی ناکافی است.</td>
-            </tr>
-            <tr>
-              <td><code>404 Not Found</code></td>
-              <td>منبع یافت نشد</td>
-              <td>پروژه، جدول یا فایل مورد نظر در سامانه وجود ندارد.</td>
-            </tr>
-            <tr>
-              <td><code>429 Too Many Requests</code></td>
-              <td>محدودیت نرخ فراخوانی</td>
-              <td>تعداد درخواست‌ها در دقیقه از سقف تعیین‌شده فراتر رفته است.</td>
-            </tr>
+            <tr><td><code>200 OK</code></td><td>عملیات موفق</td><td>درخواست با موفقیت پردازش شد.</td></tr>
+            <tr><td><code>201 Created</code></td><td>ایجاد موفق رکورد</td><td>رکورد در جدول یا کاربر در سیستم با موفقیت ثبت شد.</td></tr>
+            <tr><td><code>400 Bad Request</code></td><td>قالب داده نامعتبر</td><td>بدنه JSON ارسالی معتبر نیست یا فیلدهای اجباری ارسال نشده‌اند.</td></tr>
+            <tr><td><code>401 Unauthorized</code></td><td>کلید نامعتبر</td><td>کلید هدر <code>x-api-key</code> ارسال نشده یا نامعتبر است.</td></tr>
+            <tr><td><code>402 Payment Required</code></td><td>اتمام موجودی کیف پول</td><td>اعتبار کیف پول پروژه تمام شده است. از پنل توسعه کیف پول را شارژ نمایید.</td></tr>
+            <tr><td><code>403 Forbidden</code></td><td>عدم دسترسی به منبع</td><td>سرویس مورد نظر برای پروژه غیرفعال شده یا سطح دسترسی ناکافی است.</td></tr>
+            <tr><td><code>404 Not Found</code></td><td>منبع یافت نشد</td><td>پروژه، جدول، باکت یا تابع مورد نظر در سامانه وجود ندارد.</td></tr>
+            <tr><td><code>429 Too Many Requests</code></td><td>محدودیت نرخ فراخوانی</td><td>تعداد درخواست‌ها در دقیقه از سقف تعیین‌شده فراتر رفته است.</td></tr>
+            <tr><td><code>500 Server Error</code></td><td>خطای سرور</td><td>خطای پردازش داخلی در زمان اجرای اسکریپت یا کوئری دیتابیس.</td></tr>
           </tbody>
         </table>
       </section>
@@ -741,7 +604,6 @@ final localMe = LocalMeService(
       const card = btn.closest('.docs-code-card');
       card.querySelectorAll('.code-tab-btn').forEach(b => b.classList.remove('active'));
       card.querySelectorAll('.code-pane').forEach(p => p.classList.remove('active'));
-
       btn.classList.add('active');
       const pane = document.getElementById(tabId);
       if (pane) pane.classList.add('active');
@@ -751,12 +613,10 @@ final localMe = LocalMeService(
       const q = query.trim().toLowerCase();
       const sections = document.querySelectorAll('.docs-section');
       const links = document.querySelectorAll('.docs-nav-link');
-
       sections.forEach(s => {
         const text = s.innerText.toLowerCase();
         s.style.display = text.includes(q) ? 'block' : 'none';
       });
-
       links.forEach(l => {
         const targetId = l.getAttribute('href').replace('#', '');
         const targetSection = document.getElementById(targetId);
@@ -764,26 +624,18 @@ final localMe = LocalMeService(
       });
     }
 
-    // Scrollspy for sidebar links
     window.addEventListener('scroll', () => {
       const sections = document.querySelectorAll('.docs-section');
       const links = document.querySelectorAll('.docs-nav-link');
       let currentId = '';
-
       sections.forEach(s => {
         const top = s.offsetTop - 120;
-        if (window.scrollY >= top) {
-          currentId = s.id;
-        }
+        if (window.scrollY >= top) currentId = s.id;
       });
-
       if (currentId) {
         links.forEach(l => {
-          if (l.getAttribute('href') === '#' + currentId) {
-            l.classList.add('active');
-          } else {
-            l.classList.remove('active');
-          }
+          if (l.getAttribute('href') === '#' + currentId) l.classList.add('active');
+          else l.classList.remove('active');
         });
       }
     });

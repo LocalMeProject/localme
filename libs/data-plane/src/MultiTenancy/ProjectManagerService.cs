@@ -73,8 +73,10 @@ public sealed record ConfigureServiceRequest(
 
 public sealed record ProjectAuthUser(
     string Id,
-    string Phone,
+    string? Phone,
+    string? Email,
     string? FullName,
+    string Provider, // "sms_otp", "password", "oauth_google", "oauth_github"
     bool IsConfirmed,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset LastSignInUtc
@@ -86,6 +88,15 @@ public sealed record ProjectBucket(
     long ObjectCount,
     long TotalSizeBytes,
     DateTimeOffset CreatedAtUtc
+);
+
+public sealed record ProjectStorageFile(
+    string Bucket,
+    string FileName,
+    string ContentType,
+    long SizeBytes,
+    DateTimeOffset UploadedAtUtc,
+    string DownloadUrl
 );
 
 public sealed record ProjectEdgeFunction(
@@ -109,6 +120,7 @@ public sealed class ProjectManagerService
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<JsonObject>>> _projectTables = new();
     private readonly ConcurrentDictionary<string, List<ProjectAuthUser>> _projectUsers = new();
     private readonly ConcurrentDictionary<string, List<ProjectBucket>> _projectBuckets = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<ProjectStorageFile>>> _projectFiles = new();
     private readonly ConcurrentDictionary<string, List<ProjectEdgeFunction>> _projectFunctions = new();
 
     public ProjectManagerService()
@@ -253,10 +265,54 @@ public sealed class ProjectManagerService
         );
 
         _projects[projectId] = project;
-        _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        _projectUsers.GetOrAdd(projectId, _ => []);
-        _projectBuckets.GetOrAdd(projectId, _ => []);
-        _projectFunctions.GetOrAdd(projectId, _ => []);
+
+        // 1. Seed default table (products)
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        var prodRows = tables.GetOrAdd("products", _ => []);
+        prodRows.Add(new JsonObject
+        {
+            ["id"] = "prod_01",
+            ["title"] = "بسته اشتراک ماهانه",
+            ["category"] = "خدمات",
+            ["price"] = 4900000,
+            ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
+        });
+        prodRows.Add(new JsonObject
+        {
+            ["id"] = "prod_02",
+            ["title"] = "بسته ترافیک ۱۰ گیگابایت",
+            ["category"] = "ترافیک",
+            ["price"] = 1200000,
+            ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
+        });
+
+        // 2. Seed default bucket (assets)
+        var buckets = _projectBuckets.GetOrAdd(projectId, _ => []);
+        buckets.Add(new ProjectBucket("assets", true, 2, 450 * 1024, DateTimeOffset.UtcNow));
+
+        // 3. Seed default Edge Function (fare-calculator)
+        var funcs = _projectFunctions.GetOrAdd(projectId, _ => []);
+        const string defaultFuncScript = "function handler(req) {\n  const km = (req && req.distance_km) ? Number(req.distance_km) : 5;\n  const baseRate = 25000;\n  const totalCostIrr = km * baseRate;\n  console.log('محاسبه کرایه: مسافت=' + km + ' کیلومتر، هزینه کل=' + totalCostIrr + ' ریال');\n  return {\n    status: 'success',\n    distance_km: km,\n    cost_irr: totalCostIrr,\n    cost_toman: Math.floor(totalCostIrr / 10),\n    region: 'ir-central-tehran',\n    timestamp: new Date().toISOString()\n  };\n}\nhandler(context);";
+        funcs.Add(new ProjectEdgeFunction(
+            Name: "محاسبه‌گر کرایه مسافت",
+            Slug: "fare-calculator",
+            TriggerPath: "/functions/fare-calculator",
+            Script: defaultFuncScript,
+            CreatedAtUtc: DateTimeOffset.UtcNow
+        ));
+
+        // 4. Seed default user
+        var users = _projectUsers.GetOrAdd(projectId, _ => []);
+        users.Add(new ProjectAuthUser(
+            Id: "usr_demo_01",
+            Phone: "+989123456789",
+            Email: "demo@example.com",
+            FullName: "علی رضایی",
+            Provider: "sms_otp",
+            IsConfirmed: true,
+            CreatedAtUtc: DateTimeOffset.UtcNow.AddDays(-2),
+            LastSignInUtc: DateTimeOffset.UtcNow
+        ));
 
         return project;
     }
@@ -323,6 +379,12 @@ public sealed class ProjectManagerService
             case "auth":
                 settings["otp_length"] = "6";
                 settings["otp_expiry_seconds"] = "120";
+                settings["sms_provider"] = "kavenegar";
+                settings["sms_api_key"] = "kav_live_sample_key_98a7";
+                settings["sms_sender_number"] = "3000777";
+                settings["sms_pattern_code"] = "localme-verify";
+                settings["allow_password_auth"] = "true";
+                settings["allow_oauth"] = "true";
                 break;
             case "storage":
                 settings["default_bucket"] = "assets";
@@ -447,17 +509,33 @@ public sealed class ProjectManagerService
         return tables.Keys.OrderBy(k => k).ToList();
     }
 
-    // 5. Project Users
+    public bool CreateTable(string projectId, string tableName)
+    {
+        var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        if (tables.ContainsKey(cleanName)) return false;
+        tables[cleanName] = [];
+        return true;
+    }
+
+    // 5. Project Users (SMS OTP, Email/Password, OAuth)
     public IReadOnlyList<ProjectAuthUser> GetProjectUsers(string projectId) =>
         _projectUsers.TryGetValue(projectId, out var users) ? users : [];
 
-    public ProjectAuthUser AddProjectUser(string projectId, string phone, string? fullName = null)
+    public ProjectAuthUser AddProjectUser(
+        string projectId,
+        string? phone = null,
+        string? email = null,
+        string? fullName = null,
+        string provider = "sms_otp")
     {
         var list = _projectUsers.GetOrAdd(projectId, _ => []);
         var user = new ProjectAuthUser(
             Id: $"usr_{Guid.NewGuid():N}"[..10],
-            Phone: phone,
-            FullName: fullName,
+            Phone: string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
+            Email: string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant(),
+            FullName: fullName?.Trim(),
+            Provider: provider,
             IsConfirmed: true,
             CreatedAtUtc: DateTimeOffset.UtcNow,
             LastSignInUtc: DateTimeOffset.UtcNow
@@ -466,28 +544,106 @@ public sealed class ProjectManagerService
         return user;
     }
 
-    // 6. Project Buckets
+    public ProjectAuthUser? FindProjectUser(string projectId, string phoneOrEmail)
+    {
+        if (!_projectUsers.TryGetValue(projectId, out var list)) return null;
+        var query = phoneOrEmail.Trim().ToLowerInvariant();
+        return list.FirstOrDefault(u =>
+            (u.Email != null && u.Email.Equals(query, StringComparison.OrdinalIgnoreCase)) ||
+            (u.Phone != null && u.Phone.Equals(query, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    // 6. Project Buckets & Files
     public IReadOnlyList<ProjectBucket> GetProjectBuckets(string projectId) =>
         _projectBuckets.TryGetValue(projectId, out var b) ? b : [];
 
     public ProjectBucket CreateBucket(string projectId, string name, bool isPublic)
     {
         var list = _projectBuckets.GetOrAdd(projectId, _ => []);
-        var bucket = new ProjectBucket(name, isPublic, 0, 0, DateTimeOffset.UtcNow);
+        var cleanName = name.Trim().ToLowerInvariant().Replace(' ', '-');
+        var existing = list.FirstOrDefault(b => b.Name == cleanName);
+        if (existing != null) return existing;
+
+        var bucket = new ProjectBucket(cleanName, isPublic, 0, 0, DateTimeOffset.UtcNow);
         list.Add(bucket);
         return bucket;
+    }
+
+    public IReadOnlyList<ProjectStorageFile> GetBucketFiles(string projectId, string bucket)
+    {
+        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
+        return buckets.TryGetValue(bucket.ToLowerInvariant().Trim(), out var files) ? files : [];
+    }
+
+    public ProjectStorageFile UploadBucketFile(string projectId, string bucket, string fileName, string contentType, long sizeBytes)
+    {
+        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
+        var files = buckets.GetOrAdd(bucket.ToLowerInvariant().Trim(), _ => []);
+
+        var cleanName = Path.GetFileName(fileName);
+        var file = new ProjectStorageFile(
+            Bucket: bucket,
+            FileName: cleanName,
+            ContentType: contentType,
+            SizeBytes: sizeBytes,
+            UploadedAtUtc: DateTimeOffset.UtcNow,
+            DownloadUrl: $"/_baas/v1/{projectId}/storage/{bucket}/{cleanName}"
+        );
+        files.Insert(0, file);
+
+        // Update bucket counts
+        if (_projectBuckets.TryGetValue(projectId, out var bucketList))
+        {
+            var idx = bucketList.FindIndex(b => b.Name == bucket);
+            if (idx >= 0)
+            {
+                var cur = bucketList[idx];
+                bucketList[idx] = cur with
+                {
+                    ObjectCount = cur.ObjectCount + 1,
+                    TotalSizeBytes = cur.TotalSizeBytes + sizeBytes
+                };
+            }
+        }
+
+        return file;
     }
 
     // 7. Project Functions
     public IReadOnlyList<ProjectEdgeFunction> GetProjectFunctions(string projectId) =>
         _projectFunctions.TryGetValue(projectId, out var f) ? f : [];
 
-    public ProjectEdgeFunction DeployFunction(string projectId, string name, string script)
+    public ProjectEdgeFunction DeployFunction(string projectId, string name, string script, string? slug = null)
     {
         var list = _projectFunctions.GetOrAdd(projectId, _ => []);
-        var slug = name.Trim().ToLowerInvariant().Replace(' ', '-');
-        var func = new ProjectEdgeFunction(name, slug, $"/functions/{slug}", script, DateTimeOffset.UtcNow);
-        list.Add(func);
+        var cleanSlug = string.IsNullOrWhiteSpace(slug)
+            ? name.Trim().ToLowerInvariant().Replace(' ', '-')
+            : slug.Trim().ToLowerInvariant().Replace(' ', '-');
+
+        var idx = list.FindIndex(f => f.Slug.Equals(cleanSlug, StringComparison.OrdinalIgnoreCase));
+        var func = new ProjectEdgeFunction(name.Trim(), cleanSlug, $"/functions/{cleanSlug}", script, DateTimeOffset.UtcNow);
+
+        if (idx >= 0)
+        {
+            list[idx] = func;
+        }
+        else
+        {
+            list.Add(func);
+        }
+
         return func;
+    }
+
+    public bool DeleteFunction(string projectId, string slug)
+    {
+        if (!_projectFunctions.TryGetValue(projectId, out var list)) return false;
+        var idx = list.FindIndex(f => f.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
+        if (idx >= 0)
+        {
+            list.RemoveAt(idx);
+            return true;
+        }
+        return false;
     }
 }

@@ -395,6 +395,164 @@ function initModals() {
     });
   }
 
+  // Deploy Function Modal & Form
+  const btnDeployModal = document.getElementById('btn-modal-deploy-func');
+  if (btnDeployModal) {
+    btnDeployModal.addEventListener('click', () => openModal('modal-deploy-func'));
+  }
+
+  const formDeployFunc = document.getElementById('form-deploy-func');
+  if (formDeployFunc) {
+    formDeployFunc.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!activeProjectId) {
+        alert('لطفاً ابتدا یک پروژه انتخاب نمایید.');
+        return;
+      }
+
+      const name = document.getElementById('deploy-func-name').value.trim();
+      const slug = document.getElementById('deploy-func-slug').value.trim();
+      const script = document.getElementById('deploy-func-script').value;
+
+      try {
+        const res = await fetch(`/_baas/v1/${activeProjectId}/functions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, slug, script })
+        });
+
+        if (res.ok) {
+          const deployed = await res.json();
+          closeModal('modal-deploy-func');
+          formDeployFunc.reset();
+          alert(`تابع "${deployed.name}" با موفقیت در لبه شبکه مستقر گردید.`);
+          await loadProjectFunctions();
+          selectTestFunc(deployed.slug);
+        } else {
+          alert('خطا در استقرار تابع.');
+        }
+      } catch (err) {
+        alert('خطای ارتباط با سرور: ' + err.message);
+      }
+    });
+  }
+
+  // Add Project User Modal & Form
+  const btnAddUserModal = document.getElementById('btn-modal-add-user');
+  if (btnAddUserModal) {
+    btnAddUserModal.addEventListener('click', () => openModal('modal-add-user'));
+  }
+
+  const formAddUser = document.getElementById('form-add-project-user');
+  if (formAddUser) {
+    formAddUser.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!activeProjectId) return;
+
+      const provider = document.getElementById('new-user-provider').value;
+      const identifier = document.getElementById('new-user-identifier').value.trim();
+      const fullName = document.getElementById('new-user-name').value.trim();
+
+      const isPhone = identifier.startsWith('+') || /^\d+$/.test(identifier);
+      const payload = {
+        provider,
+        phone: isPhone ? identifier : null,
+        email: !isPhone ? identifier : null,
+        full_name: fullName
+      };
+
+      try {
+        const res = await fetch(`/_baas/v1/${activeProjectId}/auth/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          closeModal('modal-add-user');
+          formAddUser.reset();
+          alert('کاربر جدید با موفقیت در پروژه ثبت گردید.');
+          await loadProjectUsers();
+        } else {
+          alert('خطا در ثبت کاربر.');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور.');
+      }
+    });
+  }
+
+  // Create Storage Bucket Modal & Form
+  const btnCreateBucketModal = document.getElementById('btn-modal-create-bucket');
+  if (btnCreateBucketModal) {
+    btnCreateBucketModal.addEventListener('click', () => openModal('modal-create-bucket'));
+  }
+
+  const formCreateBucket = document.getElementById('form-create-bucket');
+  if (formCreateBucket) {
+    formCreateBucket.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!activeProjectId) return;
+
+      const name = document.getElementById('new-bucket-name').value.trim();
+      const isPublic = document.getElementById('new-bucket-public').value === 'true';
+
+      try {
+        const res = await fetch(`/_baas/v1/${activeProjectId}/storage/buckets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, is_public: isPublic })
+        });
+
+        if (res.ok) {
+          closeModal('modal-create-bucket');
+          formCreateBucket.reset();
+          alert(`باکت "${name}" با موفقیت ایجاد گردید.`);
+          await loadProjectBuckets();
+        } else {
+          alert('خطا در ایجاد باکت.');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور.');
+      }
+    });
+  }
+
+  // Create Database Table Modal & Form
+  const btnCreateTableModal = document.getElementById('btn-modal-create-table');
+  if (btnCreateTableModal) {
+    btnCreateTableModal.addEventListener('click', () => openModal('modal-create-table'));
+  }
+
+  const formCreateTable = document.getElementById('form-create-table');
+  if (formCreateTable) {
+    formCreateTable.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!activeProjectId) return;
+
+      const name = document.getElementById('new-table-name').value.trim();
+
+      try {
+        const res = await fetch(`/_baas/v1/${activeProjectId}/db/tables`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+
+        if (res.ok) {
+          closeModal('modal-create-table');
+          formCreateTable.reset();
+          alert(`جدول "${name}" با موفقیت ایجاد شد.`);
+          await loadProjectTables();
+        } else {
+          alert('خطا: جدول با این نام از قبل وجود دارد.');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور.');
+      }
+    });
+  }
+
   const formInsert = document.getElementById('form-insert-db-row');
   if (formInsert) {
     formInsert.addEventListener('submit', async (e) => {
@@ -430,23 +588,43 @@ function initModals() {
     });
   }
 
+  // Interactive Edge Function Test Runner
   const btnExecFunc = document.getElementById('btn-exec-func-test');
   if (btnExecFunc) {
     btnExecFunc.addEventListener('click', async () => {
-      if (!activeProjectId || !currentFuncSlug) return;
-
-      const outEl = document.getElementById('func-test-output');
-      let bodyObj = {};
-      try {
-        bodyObj = JSON.parse(document.getElementById('func-test-input').value);
-      } catch {
-        alert('قالب JSON ورودی معتبر نیست.');
+      if (!activeProjectId) {
+        alert('لطفاً ابتدا یک پروژه انتخاب کنید.');
+        return;
+      }
+      if (!currentFuncSlug) {
+        alert('هیچ تابعی انتخاب نشده است. لطفاً ابتدا از جدول توابع، یک تابع را انتخاب نمایید.');
         return;
       }
 
-      outEl.textContent = '// در حال پردازش در موتور Jint...';
+      const outEl = document.getElementById('func-test-output');
+      const logsEl = document.getElementById('func-test-logs');
+      const latencyBadge = document.getElementById('func-test-latency');
+      const statusBadge = document.getElementById('func-test-status');
+
+      let bodyObj = {};
       try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/functions/${currentFuncSlug}/exec`, {
+        const inputVal = document.getElementById('func-test-input').value.trim();
+        bodyObj = inputVal ? JSON.parse(inputVal) : {};
+      } catch {
+        alert('قالب ورودی JSON معتبر نمی‌باشد. لطفاً فرمت صحیح JSON وارد کنید.');
+        return;
+      }
+
+      if (outEl) outEl.textContent = '// در حال پردازش در محیط ایزوله سرورلس (Jint)...';
+      if (logsEl) logsEl.textContent = '// در حال دریافت خروجی‌های لاگ...';
+      if (statusBadge) {
+        statusBadge.style.display = 'inline-block';
+        statusBadge.textContent = 'در حال اجرا';
+        statusBadge.className = 'badge badge-info';
+      }
+
+      try {
+        const res = await fetch(`/_baas/v1/${activeProjectId}/functions/${currentFuncSlug}/invoke`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bodyObj)
@@ -454,13 +632,45 @@ function initModals() {
 
         if (res.ok) {
           const result = await res.json();
-          outEl.textContent = JSON.stringify(result, null, 2);
+          if (outEl) {
+            outEl.textContent = result.output !== null && result.output !== undefined
+              ? (typeof result.output === 'object' ? JSON.stringify(result.output, null, 2) : String(result.output))
+              : (result.error ? `// خطا: ${result.error}` : '// تابع بدون خروجی اجرا شد.');
+          }
+
+          if (logsEl) {
+            logsEl.textContent = result.logs && result.logs.length > 0
+              ? result.logs.join('\n')
+              : '// کنسول بدون لاگ.';
+          }
+
+          if (latencyBadge) {
+            latencyBadge.style.display = 'inline-block';
+            latencyBadge.textContent = `زمان: ${Shamsi.toPersianDigits(result.executionTimeMs || 0)} ms`;
+          }
+
+          if (statusBadge) {
+            statusBadge.style.display = 'inline-block';
+            statusBadge.textContent = result.success ? 'اجرای موفق' : 'خطای منطقی تابع';
+            statusBadge.className = result.success ? 'badge badge-active' : 'badge badge-paused';
+          }
+
           loadUsageData();
         } else {
-          outEl.textContent = `// خطا در اجرا: وضعیت ${res.status}`;
+          if (outEl) outEl.textContent = `// خطای سرور با کد وضعیت: ${res.status}`;
+          if (statusBadge) {
+            statusBadge.style.display = 'inline-block';
+            statusBadge.textContent = `خطای ${res.status}`;
+            statusBadge.className = 'badge badge-paused';
+          }
         }
       } catch (err) {
-        outEl.textContent = `// خطای شبکه: ${err.message}`;
+        if (outEl) outEl.textContent = `// خطای ارتباط شبکه: ${err.message}`;
+        if (statusBadge) {
+          statusBadge.style.display = 'inline-block';
+          statusBadge.textContent = 'خطای ارتباط';
+          statusBadge.className = 'badge badge-paused';
+        }
       }
     });
   }

@@ -4,14 +4,21 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
-public sealed record OtpRequest(string Phone, string Channel = "sms");
+public sealed record OtpRequest(
+    string Phone,
+    string Channel = "sms",
+    string? Provider = null,
+    string? ProviderApiKey = null,
+    string? SenderNumber = null,
+    string? TemplatePattern = null
+);
 public sealed record OtpVerifyRequest(string Phone, string Code);
 public sealed record AuthTokenResponse(string AccessToken, string RefreshToken, string TokenType, int ExpiresInSeconds, string UserId, string Role);
 
 /// <summary>
 /// Iranian domestic OTP authentication engine (Section 5.2 SSOT).
 /// Implements CSPRNG 6-digit OTP generation, HMAC-SHA256 verification,
-/// rate-limiting sliding windows, and session token generation.
+/// rate-limiting sliding windows, developer provider credentials, and session token generation.
 /// </summary>
 public sealed class OtpAuthService
 {
@@ -53,7 +60,11 @@ public sealed class OtpAuthService
         _otpStore[normalizedPhone] = entry;
         _rateLimitWindow[normalizedPhone] = DateTimeOffset.UtcNow.AddSeconds(120);
 
-        return (true, "OTP generated and dispatched successfully via " + request.Channel, code);
+        var providerInfo = string.IsNullOrWhiteSpace(request.Provider)
+            ? request.Channel
+            : $"{request.Provider} (line: {request.SenderNumber ?? "3000777"})";
+
+        return (true, $"OTP generated and dispatched successfully via {providerInfo}", code);
     }
 
     public (bool Success, string Message, AuthTokenResponse? Tokens) VerifyOtp(OtpVerifyRequest request)
@@ -94,19 +105,24 @@ public sealed class OtpAuthService
         // Code verified — consume OTP immediately
         _otpStore.TryRemove(normalizedPhone, out _);
 
-        // Generate Ed25519-compatible access token payload
+        // Generate session tokens
         var userId = Guid.NewGuid().ToString();
-        var accessToken = $"ey.localme.{Convert.ToBase64String(Encoding.UTF8.GetBytes(userId + ":authenticated:" + DateTimeOffset.UtcNow.ToUnixTimeSeconds()))}";
+        var tokens = GenerateSessionToken(userId, "authenticated");
+
+        return (true, "OTP verified successfully.", tokens);
+    }
+
+    public static AuthTokenResponse GenerateSessionToken(string userId, string role = "authenticated")
+    {
+        var accessToken = $"ey.localme.{Convert.ToBase64String(Encoding.UTF8.GetBytes(userId + ":" + role + ":" + DateTimeOffset.UtcNow.ToUnixTimeSeconds()))}";
         var refreshToken = $"rt_{Guid.NewGuid():N}";
 
-        var tokens = new AuthTokenResponse(
+        return new AuthTokenResponse(
             AccessToken: accessToken,
             RefreshToken: refreshToken,
             TokenType: "Bearer",
             ExpiresInSeconds: 900,
             UserId: userId,
-            Role: "authenticated");
-
-        return (true, "OTP verified successfully.", tokens);
+            Role: role);
     }
 }

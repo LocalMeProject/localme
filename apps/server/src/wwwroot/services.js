@@ -1,6 +1,7 @@
-// LocalMe BaaS Services Module (Database, Auth, Storage, Functions, SMS)
+// LocalMe BaaS Services Module (Database, Auth, Storage, Functions)
 let currentDbTable = null;
 let currentFuncSlug = null;
+window.projectFunctionsMap = {};
 
 // 1. Render Each Service Page (Disabled banner vs Active container)
 function renderAllServices() {
@@ -8,10 +9,9 @@ function renderAllServices() {
 
   const services = [
     { key: 'database', title: 'پایگاه داده رابطه‌ای (PostgreSQL REST)', desc: 'اسکیمای مجزا و دسترسی مستقیم REST', view: 'view-db' },
-    { key: 'auth', title: 'احراز هویت پیامکی کاربران (SMS OTP)', desc: 'کدهای ورود ۶ رقمی و توکن‌های JWT', view: 'view-auth' },
-    { key: 'storage', title: 'ذخیره‌سازی ابری چندرسانه‌ای (Blob Storage)', desc: 'باکت‌های ذخیره فایل‌ها و اسناد', view: 'view-storage' },
-    { key: 'functions', title: 'توابع سرورلس لبه (Edge Functions)', desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله', view: 'view-functions' },
-    { key: 'sms', title: 'سامانه پیام‌رسان خدماتی (SMS Service)', desc: 'ارسال اعلان‌ها و پیام‌های سیستمی', view: 'view-sms' }
+    { key: 'auth', title: 'احراز هویت جامع کاربران (Auth)', desc: 'ورود پیامکی OTP با خط اختصاصی، کلمه‌عبور، و توکن‌های OAuth', view: 'view-auth' },
+    { key: 'storage', title: 'ذخیره‌سازی ابری چندرسانه‌ای (Blob Storage)', desc: 'باکت‌های ذخیره فایل‌ها و اسناد با صدور آدرس امن', view: 'view-storage' },
+    { key: 'functions', title: 'توابع سرورلس لبه (Edge Functions)', desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله سریع', view: 'view-functions' }
   ];
 
   let activeCount = 0;
@@ -42,7 +42,7 @@ function renderAllServices() {
     }).join('');
   }
 
-  setText('ov-val-active-services', `${Shamsi.toPersianDigits(activeCount)} / ۵`);
+  setText('ov-val-active-services', `${Shamsi.toPersianDigits(activeCount)} / ۴`);
 
   // Individual Service Pages
   services.forEach(s => {
@@ -78,7 +78,6 @@ function getServicePrefix(serviceKey) {
     case 'auth': return 'auth';
     case 'storage': return 'storage';
     case 'functions': return 'func';
-    case 'sms': return 'sms';
     default: return serviceKey;
   }
 }
@@ -92,10 +91,17 @@ function populateServiceInputs(serviceKey, settings) {
       setVal('db-active-conn', settings['max_connections'] || '20');
       break;
     case 'auth':
+      setVal('auth-cfg-provider', settings['sms_provider'] || 'kavenegar');
+      setVal('auth-cfg-sms-key', settings['sms_api_key'] || '');
+      setVal('auth-cfg-sms-num', settings['sms_sender_number'] || '3000777');
+      setVal('auth-cfg-sms-pat', settings['sms_pattern_code'] || 'localme-verify');
       setVal('auth-cfg-len', settings['otp_length'] || '6');
       setVal('auth-cfg-ttl', settings['otp_expiry_seconds'] || '120');
-      setVal('auth-active-len', settings['otp_length'] || '6');
-      setVal('auth-active-ttl', settings['otp_expiry_seconds'] || '120');
+
+      setVal('auth-active-provider', settings['sms_provider'] || 'kavenegar');
+      setVal('auth-active-sms-key', settings['sms_api_key'] || '');
+      setVal('auth-active-sms-num', settings['sms_sender_number'] || '3000777');
+      setVal('auth-active-sms-pat', settings['sms_pattern_code'] || 'localme-verify');
       break;
     case 'storage':
       setVal('storage-cfg-bucket', settings['default_bucket'] || 'assets');
@@ -108,12 +114,6 @@ function populateServiceInputs(serviceKey, settings) {
       setVal('func-cfg-timeout', settings['timeout_seconds'] || '5');
       setVal('func-active-mem', settings['memory_limit_mb'] || '16');
       setVal('func-active-timeout', settings['timeout_seconds'] || '5');
-      break;
-    case 'sms':
-      setVal('sms-cfg-provider', settings['provider'] || 'magfa');
-      setVal('sms-cfg-number', settings['sender_number'] || '3000777');
-      setVal('sms-active-provider', settings['provider'] || 'magfa');
-      setVal('sms-active-number', settings['sender_number'] || '3000777');
       break;
   }
 }
@@ -130,12 +130,18 @@ function initServiceForms() {
   }));
 
   bindServiceForm('form-enable-auth', 'auth', true, () => ({
+    sms_provider: document.getElementById('auth-cfg-provider').value,
+    sms_api_key: document.getElementById('auth-cfg-sms-key').value.trim(),
+    sms_sender_number: document.getElementById('auth-cfg-sms-num').value.trim(),
+    sms_pattern_code: document.getElementById('auth-cfg-sms-pat').value.trim(),
     otp_length: document.getElementById('auth-cfg-len').value,
     otp_expiry_seconds: document.getElementById('auth-cfg-ttl').value
   }));
   bindServiceForm('form-update-auth-settings', 'auth', true, () => ({
-    otp_length: document.getElementById('auth-active-len').value,
-    otp_expiry_seconds: document.getElementById('auth-active-ttl').value
+    sms_provider: document.getElementById('auth-active-provider').value,
+    sms_api_key: document.getElementById('auth-active-sms-key').value.trim(),
+    sms_sender_number: document.getElementById('auth-active-sms-num').value.trim(),
+    sms_pattern_code: document.getElementById('auth-active-sms-pat').value.trim()
   }));
 
   bindServiceForm('form-enable-storage', 'storage', true, () => ({
@@ -155,41 +161,6 @@ function initServiceForms() {
     memory_limit_mb: document.getElementById('func-active-mem').value,
     timeout_seconds: document.getElementById('func-active-timeout').value
   }));
-
-  bindServiceForm('form-enable-sms', 'sms', true, () => ({
-    provider: document.getElementById('sms-cfg-provider').value,
-    sender_number: document.getElementById('sms-cfg-number').value.trim()
-  }));
-  bindServiceForm('form-update-sms-settings', 'sms', true, () => ({
-    provider: document.getElementById('sms-active-provider').value,
-    sender_number: document.getElementById('sms-active-number').value.trim()
-  }));
-
-  const smsTestForm = document.getElementById('form-send-sms-test');
-  if (smsTestForm) {
-    smsTestForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const phone = document.getElementById('sms-test-phone').value.trim();
-      const message = document.getElementById('sms-test-text').value.trim();
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/sms/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, message })
-        });
-        if (res.ok) {
-          alert('پیامک تستی با موفقیت به سرشماره مقصد ارسال و هزینه آن ثبت شد.');
-          document.getElementById('sms-test-text').value = '';
-          loadUsageData();
-        } else {
-          alert('خطا در ارسال پیامک.');
-        }
-      } catch {
-        alert('خطای ارتباط با سرور پیامک.');
-      }
-    });
-  }
 }
 
 function bindServiceForm(formId, serviceKey, isEnabled, getSettingsFn) {
@@ -335,16 +306,24 @@ async function loadProjectUsers() {
         return;
       }
 
-      tbody.innerHTML = users.map(u => `
-        <tr>
-          <td style="font-family: var(--font-mono); font-size: 11px;">${u.id}</td>
-          <td style="font-family: var(--font-mono); font-weight: 600;">${u.phone}</td>
-          <td>${u.fullName || '-'}</td>
-          <td><span class="badge ${u.isVerified ? 'badge-active' : 'badge-paused'}">${u.isVerified ? 'تایید شده' : 'در انتظار'}</span></td>
-          <td style="font-size: 11.5px;">${Shamsi.formatDate(u.createdAtUtc)}</td>
-          <td style="font-size: 11.5px;">${u.lastSignInAtUtc ? Shamsi.formatDate(u.lastSignInAtUtc) : '-'}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = users.map(u => {
+        const identifier = u.phone || u.email || '-';
+        const providerName = u.provider === 'sms_otp' ? 'پیامک OTP' :
+                             u.provider === 'password' ? 'رمز عبور' :
+                             u.provider === 'oauth_google' ? 'گوگل (OAuth)' :
+                             u.provider === 'oauth_github' ? 'گیت‌هاب (OAuth)' : (u.provider || 'سیستمی');
+
+        return `
+          <tr>
+            <td style="font-family: var(--font-mono); font-size: 11px; color: var(--color-info);">${u.id}</td>
+            <td style="font-family: var(--font-mono); font-weight: 600;">${identifier}</td>
+            <td>${u.fullName || '-'}</td>
+            <td><span class="badge badge-info" style="font-size: 11px;">${providerName}</span></td>
+            <td><span class="badge ${u.isConfirmed !== false ? 'badge-active' : 'badge-paused'}">${u.isConfirmed !== false ? 'فعال و تاییدشده' : 'در انتظار'}</span></td>
+            <td style="font-size: 11.5px;">${Shamsi.formatDate(u.createdAtUtc)}</td>
+          </tr>
+        `;
+      }).join('');
     }
   } catch (err) {
     console.warn('Users fetch error:', err);
@@ -365,15 +344,19 @@ async function loadProjectBuckets() {
         return;
       }
 
-      tbody.innerHTML = buckets.map(b => `
-        <tr>
-          <td style="font-family: var(--font-mono); font-weight: 700;">${b.name}</td>
-          <td><span class="badge ${b.isPublic ? 'badge-info' : 'badge-paused'}">${b.isPublic ? 'عمومی (Public)' : 'محرمانه (Private)'}</span></td>
-          <td style="font-family: var(--font-mono);">${Shamsi.toPersianDigits(b.fileCount)}</td>
-          <td style="font-family: var(--font-mono); font-size: 11.5px;">${(b.totalBytes / (1024*1024)).toFixed(2)} MB</td>
-          <td style="font-size: 11.5px;">${Shamsi.formatDate(b.createdAtUtc)}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = buckets.map(b => {
+        const count = b.objectCount ?? b.fileCount ?? 0;
+        const bytes = b.totalSizeBytes ?? b.totalBytes ?? 0;
+        return `
+          <tr>
+            <td style="font-family: var(--font-mono); font-weight: 700;">${b.name}</td>
+            <td><span class="badge ${b.isPublic ? 'badge-info' : 'badge-paused'}">${b.isPublic ? 'عمومی (Public)' : 'محرمانه (Private)'}</span></td>
+            <td style="font-family: var(--font-mono);">${Shamsi.toPersianDigits(count)}</td>
+            <td style="font-family: var(--font-mono); font-size: 11.5px;">${(bytes / (1024*1024)).toFixed(2)} MB</td>
+            <td style="font-size: 11.5px;">${Shamsi.formatDate(b.createdAtUtc)}</td>
+          </tr>
+        `;
+      }).join('');
     }
   } catch (err) {
     console.warn('Buckets load error:', err);
@@ -389,10 +372,20 @@ async function loadProjectFunctions() {
     const res = await fetch(`/_baas/v1/${activeProjectId}/functions`);
     if (res.ok) {
       const funcs = await res.json();
+      window.projectFunctionsMap = {};
+
       if (!funcs || funcs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">تابعی برای این پروژه تعریف نشده است.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">تابعی برای این پروژه مستقر نشده است. برای شروع «+ استقرار تابع جدید» را کلیک کنید.</td></tr>';
+        currentFuncSlug = null;
+        setText('active-test-func-slug', '-');
+        const preview = document.getElementById('func-script-preview');
+        if (preview) preview.value = '// تابعی انتخاب نشده است.';
         return;
       }
+
+      funcs.forEach(f => {
+        window.projectFunctionsMap[f.slug] = f;
+      });
 
       tbody.innerHTML = funcs.map(f => `
         <tr>
@@ -401,12 +394,15 @@ async function loadProjectFunctions() {
           <td style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-info);">/_baas/v1/${activeProjectId}/functions/${f.slug}</td>
           <td style="font-size: 11.5px;">${Shamsi.formatDate(f.createdAtUtc)}</td>
           <td>
-            <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="selectTestFunc('${f.slug}')">تست زنده</button>
+            <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="selectTestFunc('${f.slug}')">انتخاب و تست</button>
+            <button type="button" class="btn-danger" style="font-size: 11px; padding: 2px 8px; margin-right: 4px;" onclick="deleteProjectFunction('${f.slug}')">حذف</button>
           </td>
         </tr>
       `).join('');
 
-      if (!currentFuncSlug && funcs.length > 0) {
+      if (currentFuncSlug && window.projectFunctionsMap[currentFuncSlug]) {
+        selectTestFunc(currentFuncSlug);
+      } else if (funcs.length > 0) {
         selectTestFunc(funcs[0].slug);
       }
     }
@@ -418,4 +414,27 @@ async function loadProjectFunctions() {
 function selectTestFunc(slug) {
   currentFuncSlug = slug;
   setText('active-test-func-slug', slug);
+  const func = window.projectFunctionsMap?.[slug];
+  const preview = document.getElementById('func-script-preview');
+  if (preview && func) {
+    preview.value = func.script;
+  }
+}
+
+async function deleteProjectFunction(slug) {
+  if (!confirm(`آیا از حذف تابع "${slug}" اطمینان دارید؟`)) return;
+
+  try {
+    const res = await fetch(`/_baas/v1/${activeProjectId}/functions/${slug}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      if (currentFuncSlug === slug) currentFuncSlug = null;
+      await loadProjectFunctions();
+    } else {
+      alert('خطا در حذف تابع.');
+    }
+  } catch (err) {
+    console.warn('Delete function error:', err);
+  }
 }
