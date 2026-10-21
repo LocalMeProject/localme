@@ -25,7 +25,10 @@ EXCLUDED_DIRS = {
     ".venv",
     "vendor",
     "templates",
+    "references",
     "__pycache__",
+    "bin",
+    "obj",
 }
 
 VALID_STATUSES = {"OPEN", "RESOLVED", "ABANDONED"}
@@ -60,6 +63,8 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
     stripped_content = content.lstrip("\ufeff \t\r\n")
     norm_path = file_path.replace("\\", "/")
     basename = os.path.basename(norm_path)
+    if basename.lower() in ("nc-protocol.md", "need_clarification.template.md", "nc.md"):
+        return None
     is_nc_designated = basename.upper().startswith("NC-") or "/docs/nc/" in norm_path or norm_path.startswith("docs/nc/")
 
     if not stripped_content.startswith("---"):

@@ -1,0 +1,92 @@
+name: Enterprise Monorepo CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mechanical-gates:
+    name: Mechanical Governance Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify Nx Project Target Contracts
+        run: python3 scripts/verify-nx-targets.py
+
+      - name: Lint AGENT.md Manifests & Tier Overrides
+        run: python3 scripts/verify-agent-manifests.py
+
+      - name: Check Open NC Items for 14-Day Expiration
+        run: python3 scripts/check-nc-items.py --max-age 14
+
+      - name: Validate PR Change Surface
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/validate-change-surface.py
+
+  nx-pipeline:
+    name: Nx Affected Matrix
+    runs-on: ubuntu-latest
+    needs: [mechanical-gates]
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js & Tooling
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set Nx Base & Head SHAs
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Nx Affected Lint
+        run: pnpm nx affected -t lint --parallel=3
+
+      - name: Start Ephemeral Containers for Integration Tests
+        run: |
+          echo "Starting Podman/Docker test environment..."
+
+      - name: Nx Affected Test (with Ephemeral Containers)
+        run: pnpm nx affected -t test --parallel=2
+
+      - name: Nx Affected Build
+        run: pnpm nx affected -t build --parallel=3
+
+      - name: Nx Affected Audit
+        run: pnpm nx affected -t audit --parallel=3
+
+  gatekeeper-verdict:
+    name: Enterprise Gatekeeper Verdict
+    runs-on: ubuntu-latest
+    needs: [mechanical-gates, nx-pipeline]
+    if: always()
+    steps:
+      - name: Evaluate Pipeline Status
+        run: |
+          if [ "${{ needs.mechanical-gates.result }}" != "success" ] || [ "${{ needs.nx-pipeline.result }}" != "success" ]; then
+            echo "::error ::Enterprise Gatekeeper checks failed. Pull request cannot be merged."
+            exit 1
+          fi
+          echo "All enterprise mechanical gates and Nx affected targets succeeded."
