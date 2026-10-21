@@ -1,5 +1,7 @@
 # .NET build artifacts
 bin/
+!scripts/bin/
+!scripts/bin/**
 obj/
 *.user
 *.suo
@@ -47,3 +49,9 @@ Thumbs.db
 
 # Local runtime storage
 .localme-storage/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+

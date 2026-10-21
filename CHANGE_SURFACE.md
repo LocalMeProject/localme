@@ -6,6 +6,7 @@ target_branch: "main"
 risk_level: "MEDIUM"
 affected_projects:
   - "apps/server"
+  - "apps/web-console"
   - "libs/core-domain"
   - "libs/data-plane"
   - "libs/infrastructure"
@@ -146,6 +147,27 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/server/src/wwwroot/services-charts.js`: Extracted SVG dashboard analytics and charts from `services.js`.
   - `apps/server/src/wwwroot/app-tabs.js`: Extracted workspace keep-alive tabs, routing engine, and breadcrumb system from `app.js`.
   - Enforced strict $\le 800$ line ceilings across 100% of codebase files, eliminated untyped `any` in TypeScript, and resolved all empty catch blocks. Zero blocking defects on 10-Dimension Enterprise Audit.
+- **Milestone 3 Architectural & Structural Hardening**:
+  - `apps/server/src/Routes/BaasServiceRoutes.cs`: Formatted whitespace and indentation according to dotnet format.
+  - `apps/web-console/index.html`: Set Persian RTL and dark mode (`lang="fa" dir="rtl"`).
+  - `apps/web-console/src/App.tsx`: Resolved navigation tab callback typing and added accessible `role="tabpanel"`.
+  - `apps/web-console/src/components/Navigation.tsx`: Added `role="tablist"` and `role="tab"` ARIA semantics.
+  - `apps/web-console/src/views/OverviewView.tsx`: Typed `onNavigateTab: (tab: TabId) => void`.
+  - `apps/web-console/src/views/AuthView.tsx`: Strongly typed `OtpProvider` select state.
+  - `apps/web-console/src/views/IpgView.tsx`: Strongly typed `PspGateway` select state.
+  - `apps/web-console/src/components/modals/AddUserModal.tsx`: Strongly typed user provider and added WCAG 2.2 dialog semantics.
+  - `apps/web-console/src/components/modals/TopupModal.tsx`: Strongly typed gateway provider and added accessible radiogroup semantics.
+  - `apps/web-console/src/components/modals/CreateProjectModal.tsx`: Added Escape key listener and ARIA dialog semantics.
+  - `apps/web-console/src/components/modals/DeployFunctionModal.tsx`: Added Escape key listener and ARIA dialog semantics.
+  - `apps/web-console/src/components/modals/CreateTableModal.tsx`: Added Escape key listener and ARIA dialog semantics.
+  - `apps/web-console/src/components/modals/CreateBucketModal.tsx`: Added Escape key listener and ARIA dialog semantics.
+  - `apps/web-console/src/components/modals/AddDomainModal.tsx`: Added Escape key listener and ARIA dialog semantics.
+  - `libs/contracts/schemas/openapi.json`: Comprehensive OpenAPI 3.1 contract catalog covering all BaaS routes.
+  - `libs/client-sdk/src/index.ts`: Route-aligned TypeScript client SDK.
+  - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Sourced connection strings from `LOCALME_POSTGRES_URL`/`LOCALME_REDIS_URL` and seeded baseline platform users.
+  - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.Entities.cs`: Enforced explicit UTC `DateTimeKind.Utc` on timestamp readers.
+  - `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Cleaned trailing whitespace to satisfy dotnet format.
+  - `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`: Cleansed synthetic connection strings.
 
 ## 4. Test Surface
 ### Unit & Domain Tests

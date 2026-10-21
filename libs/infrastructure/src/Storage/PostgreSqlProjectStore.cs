@@ -16,8 +16,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     private IDatabase? _redisDb;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public const string DefaultPostgres = "postgresql://postgres:jsF68GOoGS5inojpHmRa@remote-respina-free.runflare.com:31725/sina-infwqq_db";
-    public const string DefaultRedis = "remote-respina-free.runflare.com:32567,password=qB8MfBnIQHw8i5vxmzWw,defaultDatabase=0,abortConnect=false";
+    private const string LocalFallbackPostgres = "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
+    private const string LocalFallbackRedis = "127.0.0.1:6379,defaultDatabase=0,abortConnect=false";
 
     public static string NormalizePostgresConnectionString(string connectionString)
     {
@@ -74,15 +74,17 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         _pgConnectionString = NormalizePostgresConnectionString(!string.IsNullOrWhiteSpace(pgConnectionString)
             ? pgConnectionString
-            : (Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
+            : (Environment.GetEnvironmentVariable("LOCALME_POSTGRES_URL")
+               ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
-               ?? DefaultPostgres));
+               ?? LocalFallbackPostgres));
 
         _redisConnectionString = NormalizeRedisConnectionString(!string.IsNullOrWhiteSpace(redisConnectionString)
             ? redisConnectionString
-            : (Environment.GetEnvironmentVariable("LOCALME_REDIS_CONNECTION")
+            : (Environment.GetEnvironmentVariable("LOCALME_REDIS_URL")
+               ?? Environment.GetEnvironmentVariable("LOCALME_REDIS_CONNECTION")
                ?? Environment.GetEnvironmentVariable("REDIS_URL")
-               ?? DefaultRedis));
+               ?? LocalFallbackRedis));
     }
 
     public async Task InitializeAsync()
@@ -137,6 +139,22 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 await migCmd.ExecuteNonQueryAsync();
             }
         }
+
+        // Seed baseline platform users if table is empty
+        await using var userCheckCmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM platform_users;");
+        var userCount = Convert.ToInt64(await userCheckCmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
+        if (userCount == 0)
+        {
+            const string seedSql = @"
+                INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc)
+                VALUES 
+                ('usr_admin_01', 'مدیر ارشد سامانه', '+989120000001', 'admin@localme.ir', 'admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Admin', 0, true, NOW()),
+                ('usr_operator_02', 'اپراتور پشتیبانی', '+989120000002', 'support@localme.ir', 'operator', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Operator', 0, true, NOW()),
+                ('usr_developer_03', 'سینا والی زاده', '+989121112233', 'sina@example.com', 'developer', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Developer', 10000000, true, NOW())
+                ON CONFLICT (id) DO NOTHING;";
+            await using var seedCmd = _dataSource.CreateCommand(seedSql);
+            await seedCmd.ExecuteNonQueryAsync();
+        }
     }
 
     // 1. Platform Users
@@ -160,7 +178,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 Role: role,
                 WalletBalanceIrr: reader.GetInt64(7),
                 IsActive: reader.GetBoolean(8),
-                CreatedAtUtc: reader.GetDateTime(9)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)
             ));
         }
         return list;
@@ -231,8 +249,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 PasswordHash: reader.IsDBNull(8) ? null : reader.GetString(8),
                 HasPassword: !reader.IsDBNull(9) && reader.GetBoolean(9),
                 Services: services,
-                CreatedAtUtc: reader.GetDateTime(11),
-                UpdatedAtUtc: reader.IsDBNull(12) ? null : reader.GetDateTime(12)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc),
+                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc)
             ));
         }
         return list;
@@ -428,7 +446,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 EmailOrPhone: reader.GetString(3),
                 Role: reader.GetString(4),
                 Status: reader.GetString(5),
-                AddedAtUtc: reader.GetDateTime(6)
+                AddedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -485,7 +503,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 AndroidSha256Fingerprint: reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
                 AppleTeamId: reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
                 AppleAppBundleId: reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
-                UpdatedAtUtc: reader.IsDBNull(8) ? DateTimeOffset.UtcNow : reader.GetDateTime(8)
+                UpdatedAtUtc: reader.IsDBNull(8) ? DateTimeOffset.UtcNow : DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
             );
         }
         return dict;

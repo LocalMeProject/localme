@@ -214,13 +214,18 @@ export default function App() {
       />
 
       {/* Main Workspace Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main
+        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8"
+        role="tabpanel"
+        id={`panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+      >
         {activeTab === 'overview' && (
           <OverviewView
             project={currentProject}
             activeCapabilities={activeCapabilities}
             onToggleCapability={handleToggleCapability}
-            onNavigateTab={(tab) => setActiveTab(tab)}
+            onNavigateTab={setActiveTab}
             onDeployBuild={() => setIsDeployFunctionOpen(true)}
           />
         )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Project, CapabilityCode } from '../types';
+import { TabId } from '../components/Navigation';
 import { buildCapabilitiesList, resolvePrimitives } from '../dagEngine';
 import {
   ExternalLink,
@@ -13,7 +14,7 @@ interface OverviewViewProps {
   project: Project;
   activeCapabilities: Set<CapabilityCode>;
   onToggleCapability: (code: CapabilityCode) => void;
-  onNavigateTab: (tab: string) => void;
+  onNavigateTab: (tab: TabId) => void;
   onDeployBuild: () => void;
 }
 

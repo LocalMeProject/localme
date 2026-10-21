@@ -33,7 +33,7 @@ public sealed partial class PostgreSqlProjectStore
                 Status: reader.GetString(5),
                 SizeBytes: reader.GetInt64(6),
                 PreviewUrl: reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
-                DeployedAtUtc: reader.GetDateTime(8)
+                DeployedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -82,7 +82,7 @@ public sealed partial class PostgreSqlProjectStore
                 Domain: reader.GetString(2),
                 IsVerified: reader.GetBoolean(3),
                 SslStatus: reader.GetString(4),
-                CreatedAtUtc: reader.GetDateTime(5)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -148,7 +148,7 @@ public sealed partial class PostgreSqlProjectStore
                 IsPublic: reader.GetBoolean(3),
                 ObjectCount: reader.GetInt64(5),
                 TotalSizeBytes: reader.GetInt64(6),
-                CreatedAtUtc: reader.GetDateTime(4)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -204,7 +204,7 @@ public sealed partial class PostgreSqlProjectStore
                 ContentType: reader.GetString(4),
                 SizeBytes: reader.GetInt64(5),
                 DownloadUrl: reader.IsDBNull(6) ? $"/_baas/v1/{prjId}/storage/{reader.GetString(2)}/{reader.GetString(3)}" : reader.GetString(6),
-                UploadedAtUtc: reader.GetDateTime(7)
+                UploadedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -266,7 +266,7 @@ public sealed partial class PostgreSqlProjectStore
                 Slug: reader.GetString(3),
                 TriggerPath: reader.GetString(4),
                 Script: reader.GetString(5),
-                CreatedAtUtc: reader.GetDateTime(6)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -328,8 +328,8 @@ public sealed partial class PostgreSqlProjectStore
                 FullName: reader.IsDBNull(4) ? null : reader.GetString(4),
                 Provider: reader.GetString(5),
                 IsConfirmed: reader.GetBoolean(6),
-                CreatedAtUtc: reader.GetDateTime(7),
-                LastSignInUtc: reader.GetDateTime(8)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc),
+                LastSignInUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
             ));
         }
         return dict;
@@ -485,7 +485,7 @@ public sealed partial class PostgreSqlProjectStore
                 TraceId: reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
                 StatusCode: reader.IsDBNull(6) ? 200 : reader.GetInt32(6),
                 LatencyMs: reader.IsDBNull(7) ? 0 : reader.GetInt64(7),
-                TimestampUtc: reader.GetDateTime(8)
+                TimestampUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
             ));
         }
         return dict;

@@ -41,9 +41,11 @@ const INITIAL_TRANSACTIONS: LedgerTransaction[] = [
   },
 ];
 
+export type PspGateway = 'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD';
+
 export const IpgView: React.FC<IpgViewProps> = ({ project }) => {
   const [transactions, setTransactions] = useState<LedgerTransaction[]>(INITIAL_TRANSACTIONS);
-  const [defaultPsp, setDefaultPsp] = useState<'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD'>('ZARINPAL');
+  const [defaultPsp, setDefaultPsp] = useState<PspGateway>('ZARINPAL');
   const [isSandbox, setIsSandbox] = useState(true);
 
   // Shetab Simulator State
@@ -131,8 +133,8 @@ export const IpgView: React.FC<IpgViewProps> = ({ project }) => {
               <label className="text-[11px] text-zinc-400 block mb-1">درگاه پیش‌فرض شاپرک (Default PSP)</label>
               <select
                 value={defaultPsp}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDefaultPsp(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-semibold text-zinc-200"
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDefaultPsp(e.target.value as PspGateway)}
+                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-semibold text-zinc-200 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
               >
                 <option value="ZARINPAL">زرین‌پال (ZarinPal REST v4)</option>
                 <option value="BEHPARDAKHT">به‌پرداخت ملت (Mellat bpPayRequest)</option>

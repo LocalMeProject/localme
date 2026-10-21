@@ -157,19 +157,19 @@ public class DataPlaneIntegrationTests
     [Fact]
     public void ConnectionStringNormalizer_ConvertsUriToAdoNetSuccessfully()
     {
-        var uri = "postgresql://postgres:jsF68GOoGS5inojpHmRa@remote-respina-free.runflare.com:31725/sina-infwqq_db";
+        var uri = "postgresql://test_user:SampleTestPassword123@remote.internal.net:31725/test_db";
         var normalized = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizePostgresConnectionString(uri);
 
-        Assert.Contains("Host=remote-respina-free.runflare.com", normalized);
+        Assert.Contains("Host=remote.internal.net", normalized);
         Assert.Contains("Port=31725", normalized);
-        Assert.Contains("Username=postgres", normalized);
-        Assert.Contains("Password=jsF68GOoGS5inojpHmRa", normalized);
-        Assert.Contains("Database=sina-infwqq_db", normalized);
+        Assert.Contains("Username=test_user", normalized);
+        Assert.Contains("Password=SampleTestPassword123", normalized);
+        Assert.Contains("Database=test_db", normalized);
 
-        var redisUri = "redis://default:qB8MfBnIQHw8i5vxmzWw@remote-respina-free.runflare.com:32567/0";
+        var redisUri = "redis://default:SampleRedisSecret123@remote.internal.net:32567/0";
         var normalizedRedis = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizeRedisConnectionString(redisUri);
-        Assert.Contains("remote-respina-free.runflare.com:32567", normalizedRedis);
-        Assert.Contains("password=qB8MfBnIQHw8i5vxmzWw", normalizedRedis);
+        Assert.Contains("remote.internal.net:32567", normalizedRedis);
+        Assert.Contains("password=SampleRedisSecret123", normalizedRedis);
         Assert.Contains("defaultDatabase=0", normalizedRedis);
     }
 }

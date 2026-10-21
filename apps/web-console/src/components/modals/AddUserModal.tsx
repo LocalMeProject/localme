@@ -8,6 +8,8 @@ interface AddUserModalProps {
   onAdd: (user: Omit<ProjectUser, 'id' | 'createdAt'>) => void;
 }
 
+export type UserAuthProvider = 'sms_otp' | 'password' | 'samandehi_sso';
+
 export const AddUserModal: React.FC<AddUserModalProps> = ({
   isOpen,
   onClose,
@@ -16,7 +18,16 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [provider, setProvider] = useState<'sms_otp' | 'password' | 'samandehi_sso'>('sms_otp');
+  const [provider, setProvider] = useState<UserAuthProvider>('sms_otp');
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -37,7 +48,12 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-user-modal-title"
+    >
       <div className="relative w-full max-w-md rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div className="flex items-center space-x-2.5">
@@ -45,13 +61,14 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-zinc-100">افزودن کاربر جدید</h3>
+              <h3 id="add-user-modal-title" className="text-base font-bold text-zinc-100">افزودن کاربر جدید</h3>
               <p className="text-xs text-zinc-400">ثبت مستقیم کاربر در دیتابیس ایزوله احراز هویت IDaaS</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition"
+            aria-label="بستن"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -102,8 +119,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
             <label className="block text-zinc-300 font-medium mb-1.5">روش احراز هویت اولیه</label>
             <select
               value={provider}
-              onChange={(e) => setProvider(e.target.value as any)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+              onChange={(e) => setProvider(e.target.value as UserAuthProvider)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus:outline-none text-zinc-100 font-mono"
             >
               <option value="sms_otp">کاوه‌نگار / ملی پیامک (OTP SMS)</option>
               <option value="password">نام کاربری و رمز عبور (Argon2id)</option>

@@ -55,14 +55,22 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <div className="border-b border-zinc-800/80 bg-zinc-950/60 backdrop-blur-md px-6">
-      <nav className="flex space-x-1 overflow-x-auto py-2 no-scrollbar">
+      <nav
+        className="flex gap-1 overflow-x-auto py-2 no-scrollbar"
+        role="tablist"
+        aria-label="تب‌های میزکار توسعه‌دهنده"
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              id={`tab-${tab.id}`}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`panel-${tab.id}`}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none ${
                 isActive
                   ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'

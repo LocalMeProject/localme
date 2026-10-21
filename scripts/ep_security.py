@@ -192,7 +192,7 @@ def scan_directory(scan_dir: str = ".") -> List[Dict[str, Any]]:
         dirs[:] = [d for d in dirs if d not in EXCLUDED_SCAN_DIRS and not d.startswith(".")]
         for f in files:
             ext = os.path.splitext(f)[1].lower()
-            if ext in (".ts", ".js", ".go", ".rs", ".py", ".php", ".env", ".json", ".yaml", ".yml", ".toml"):
+            if ext in (".cs", ".ts", ".js", ".go", ".rs", ".py", ".php", ".env", ".json", ".yaml", ".yml", ".toml"):
                 path = os.path.join(root, f)
                 try:
                     with open(path, "r", encoding="utf-8", errors="ignore") as fh:

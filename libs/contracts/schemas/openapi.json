@@ -1,33 +1,302 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "LocalMe Unified BaaS & Edge PaaS API",
-    "version": "1.0.0-FINAL",
-    "description": "API wire specification for LocalMe pure .NET 10 stack"
+    "title": "LocalMe Sovereign BaaS & Edge PaaS API",
+    "version": "1.0.0-PROD",
+    "description": "Formal OpenAPI 3.1 wire specification for LocalMe pure .NET 10 + PostgreSQL 18.1 + Redis 7/8 multi-tenant stack."
   },
   "servers": [
     {
       "url": "https://{projectSlug}.localme.ir",
+      "description": "Tenant-scoped subdomain production gateway",
       "variables": {
         "projectSlug": {
           "default": "app",
-          "description": "Unique project subdomain"
+          "description": "Unique project identifier or subdomain slug"
         }
       }
+    },
+    {
+      "url": "http://localhost:5000",
+      "description": "Local development and sandbox gateway"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System & Diagnostics",
+      "description": "Liveness probes, system config, regulatory tokens"
+    },
+    {
+      "name": "Platform Auth",
+      "description": "Developer & operator authentication and session management"
+    },
+    {
+      "name": "Projects",
+      "description": "Tenant project provisioning, configurations, and team RBAC"
+    },
+    {
+      "name": "Project End-User Auth",
+      "description": "Multi-tenant end-user OTP, password, captcha, and OAuth"
+    },
+    {
+      "name": "Dynamic Relational Database",
+      "description": "PostgREST zero-alloc queries, dynamic tables, schema introspection, visual SQL"
+    },
+    {
+      "name": "Blob Storage",
+      "description": "Multi-tenant object storage, bucket governance, and streaming download"
+    },
+    {
+      "name": "Edge Functions",
+      "description": "Serverless compute execution in sandboxed Jint JS runtime"
+    },
+    {
+      "name": "Iranian IPG Payments",
+      "description": "Shaparak payment gateways (SEP, Behpardakht, Zarinpal, Sadad) and IRR wallet"
+    },
+    {
+      "name": "Mobile Push Notifications",
+      "description": "Iranian & global push provider registry (Najva, FCM, APNs, Pushy, Charkhooneh)"
+    },
+    {
+      "name": "Mobile In-App Purchases",
+      "description": "Cafe Bazaar & Myket IAB cryptographic receipt verification"
+    },
+    {
+      "name": "Realtime WebSocket",
+      "description": "Duplex table streaming and event pub/sub broker"
+    },
+    {
+      "name": "Hosting & Domains",
+      "description": "Edge static hosting, deployment pipeline, custom domains, Let's Encrypt TLS"
+    },
+    {
+      "name": "Compliance & Regulatory",
+      "description": "Iranian sovereign compliance (e-Namad, Samandehi, Tax, National ID)"
+    },
+    {
+      "name": "Superadmin & Operator",
+      "description": "Platform-wide governance, system metrics, pricing catalog, audit log buffer, tickets"
     }
   ],
   "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "System & Diagnostics"
+        ],
+        "summary": "Health and node role liveness check",
+        "responses": {
+          "200": {
+            "description": "Node healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "HEALTHY"
+                    },
+                    "platform": {
+                      "type": "string",
+                      "example": "LocalMe Multi-Tenant BaaS"
+                    },
+                    "role": {
+                      "type": "string",
+                      "example": "all"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "role",
+                    "timestamp"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/config": {
+      "get": {
+        "tags": [
+          "System & Diagnostics"
+        ],
+        "summary": "Platform runtime configuration & egress NAT",
+        "responses": {
+          "200": {
+            "description": "Platform stack configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stack": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": "string"
+                    },
+                    "multi_tenancy": {
+                      "type": "string"
+                    },
+                    "egress_nat": {
+                      "type": "string",
+                      "example": "2.180.12.94"
+                    },
+                    "brand_color": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/system/config": {
+      "get": {
+        "tags": [
+          "System & Diagnostics"
+        ],
+        "summary": "System tier limits and default pricing catalog",
+        "responses": {
+          "200": {
+            "description": "System config details"
+          }
+        }
+      }
+    },
     "/enamad.txt": {
       "get": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
         "summary": "e-Namad plain-text verification token",
         "responses": {
-          "200": { "description": "Token string", "content": { "text/plain": {} } }
+          "200": {
+            "description": "Token string",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/samandehi.txt": {
+      "get": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
+        "summary": "Samandehi electronic content trust verification token",
+        "responses": {
+          "200": {
+            "description": "Token string",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/assetlinks.json": {
+      "get": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
+        "summary": "Android Digital Asset Links verification for Iranian app stores",
+        "responses": {
+          "200": {
+            "description": "Asset links JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/apple-app-site-association": {
+      "get": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
+        "summary": "Apple Universal Links & App Site Association verification",
+        "responses": {
+          "200": {
+            "description": "App site association JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/users/me": {
+      "get": {
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Get current authenticated developer/admin session user",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current platform user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/_baas/v1/auth/otp/request": {
       "post": {
-        "summary": "Request Iranian mobile OTP",
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Request Iranian mobile OTP for developer login",
         "requestBody": {
           "required": true,
           "content": {
@@ -35,23 +304,50 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "phone": { "type": "string", "example": "+989123456789" },
-                  "channel": { "type": "string", "enum": ["sms", "call", "bale"] }
+                  "phone": {
+                    "type": "string",
+                    "example": "09121234567"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "sms",
+                      "call",
+                      "bale"
+                    ],
+                    "default": "sms"
+                  }
                 },
-                "required": ["phone"]
+                "required": [
+                  "phone"
+                ]
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "OTP sent successfully" },
-          "429": { "description": "Rate limit exceeded" }
+          "200": {
+            "description": "OTP sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthOtpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid phone number or provider error"
+          }
         }
       }
     },
-    "/_baas/v1/pay/ipg/request": {
+    "/_baas/v1/auth/otp/verify": {
       "post": {
-        "summary": "Request Shaparak payment token via Static Egress NAT",
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Verify developer mobile OTP and establish session",
         "requestBody": {
           "required": true,
           "content": {
@@ -59,18 +355,4504 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "amount_irr": { "type": "integer", "format": "int64", "minimum": 10000 },
-                  "provider": { "type": "string", "enum": ["ZARINPAL", "SEP", "BEHPARDAKHT"] },
-                  "callback_deep_link": { "type": "string", "example": "myapp://checkout/result" }
+                  "phone": {
+                    "type": "string",
+                    "example": "09121234567"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "123456"
+                  }
                 },
-                "required": ["amount_irr", "provider", "callback_deep_link"]
+                "required": [
+                  "phone",
+                  "code"
+                ]
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Payment token and redirect URL acquired" }
+          "200": {
+            "description": "OTP verified; session cookie & JWT tokens returned"
+          },
+          "400": {
+            "description": "Invalid or expired OTP code"
+          }
         }
+      }
+    },
+    "/_baas/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Platform developer / operator password login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "400": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/_baas/v1/auth/project-login": {
+      "post": {
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Project-scoped password authentication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectSlug": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "projectSlug",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project-scoped token generated"
+          },
+          "400": {
+            "description": "Invalid project credentials"
+          }
+        }
+      }
+    },
+    "/_baas/v1/auth/password/change": {
+      "post": {
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Change current user password",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "CookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                },
+                "required": [
+                  "newPassword"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully"
+          },
+          "400": {
+            "description": "Invalid password length or current password mismatch"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/_baas/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Platform Auth"
+        ],
+        "summary": "Log out and invalidate session cookie",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List tenant projects owned by developer",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BaasProject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Provision a new multi-tenant project",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "CookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "My E-Commerce"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "example": "my-store"
+                  },
+                  "region": {
+                    "type": "string",
+                    "default": "ir-central-tehran"
+                  },
+                  "tier": {
+                    "type": "string",
+                    "default": "DeveloperFree"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasProject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tier limit reached"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden in project-scoped mode"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get project metadata and service credentials",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasProject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update project metadata",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasProject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete project and deprovision tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project deleted"
+          },
+          "404": {
+            "description": "Project not found"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/password-status": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Check whether project has dedicated password set",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status object"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/password": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Set project-scoped password",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 4
+                  }
+                },
+                "required": [
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password registered"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Remove project-scoped password",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password removed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/services/{service}/config": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get service configuration and API key",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasServiceConfig"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Configure service settings",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigureServiceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasServiceConfig"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update service configuration",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigureServiceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasServiceConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/services/{service}/regenerate-key": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Regenerate/rotate service API key",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaasServiceConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/metrics": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get resource consumption metrics (DB queries, storage MB, SMS, compute ms)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project metrics summary"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/team": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List project team collaborators",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collaborators list"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Add collaborator to project team",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "email_or_phone": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "Developer",
+                      "Operator",
+                      "Admin"
+                    ],
+                    "default": "Developer"
+                  }
+                },
+                "required": [
+                  "email_or_phone"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Collaborator added"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/team/{collaboratorId}": {
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Remove collaborator from project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "collaboratorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collaborator removed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/users": {
+      "get": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "List end-users of a tenant project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project users array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Manually create end-user in tenant project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/users/{userId}": {
+      "delete": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Delete tenant project end-user",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/users/{userId}/status": {
+      "put": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Toggle end-user active status",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "is_confirmed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/users/{userId}/reset-password": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Reset password for tenant end-user",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 4
+                  }
+                },
+                "required": [
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/sms-logs": {
+      "get": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Get SMS OTP dispatch logs",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SMS log entries"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/policies": {
+      "get": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Get auth policies (OTP expiry, lockouts, captcha flags)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auth policies"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Update auth policies",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated policies"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/captcha": {
+      "get": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Generate anti-bot SVG captcha challenge",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Captcha challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "captchaId": {
+                      "type": "string"
+                    },
+                    "svg": {
+                      "type": "string"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer"
+                    },
+                    "codeForTesting": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/captcha/verify": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Verify captcha challenge code",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "captcha_id": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "captcha_id",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification result"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/otp/request": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Request end-user OTP dispatch via project SMS gateway",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+989123456789"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "sms",
+                      "call",
+                      "bale"
+                    ],
+                    "default": "sms"
+                  }
+                },
+                "required": [
+                  "phone"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully"
+          },
+          "403": {
+            "description": "Auth service disabled"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Verify end-user OTP and receive JWT tokens",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "phone",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verified; tokens returned"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/signup": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Register project end-user with credentials + optional captcha",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "full_name": {
+                    "type": "string"
+                  },
+                  "captcha_id": {
+                    "type": "string"
+                  },
+                  "captcha_code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signup successful"
+          },
+          "409": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/login": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "End-user password login + optional captcha",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "captcha_id": {
+                    "type": "string"
+                  },
+                  "captcha_code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "login"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/auth/oauth/{provider}": {
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "OAuth token exchange (Google, GitHub, Apple)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OAuth token exchanged"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/rest/{table}": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "PostgREST query rows from tenant relational table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rows array"
+          },
+          "403": {
+            "description": "Database service disabled"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Insert row into tenant relational table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inserted row"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List table names in tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table names array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Create new relational table in tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Table created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Drop table in tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table dropped"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/{table}/rows/{rowId}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Delete row by primary key ID",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Row deleted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/sql/execute": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Execute raw SQL query against tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sql": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sql"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SQL execution result"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/schema": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Introspect table schema and columns",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "products"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schema info"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/storage/buckets": {
+      "get": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "List project storage buckets",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buckets array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Create new storage bucket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "is_public": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bucket created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/storage/buckets/{bucket}": {
+      "delete": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Delete storage bucket and all objects",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bucket deleted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/storage/{bucket}/files": {
+      "get": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "List files in storage bucket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files metadata array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/storage/{bucket}/upload": {
+      "post": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Upload object (multipart/form-data or JSON payload)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file_name": {
+                    "type": "string"
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "content_base64": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File metadata"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/storage/{bucket}/{fileName}": {
+      "get": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Download / stream object from storage bucket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object binary stream",
+            "content": {
+              "*/*": {}
+            }
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Delete object from storage bucket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object deleted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/functions": {
+      "get": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "List edge functions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Functions array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Deploy new edge function",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "script": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "script"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Function deployed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/functions/{funcSlug}": {
+      "get": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Get edge function definition",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "funcSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Function definition"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Update edge function code",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "funcSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "script": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Function updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Delete edge function",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "funcSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Function deleted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/functions/{funcSlug}/invoke": {
+      "post": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Execute edge function with sandboxed Jint runtime",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "funcSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution result and runtime logs"
+          }
+        }
+      }
+    },
+    "/_baas/v1/wallet/{phone}": {
+      "get": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Query Iranian Rial wallet balance",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet balance object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "phone": {
+                      "type": "string"
+                    },
+                    "balanceIrr": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "formattedToman": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/pay/initiate": {
+      "post": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Initiate Shaparak IPG payment token via Static Egress NAT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amountIrr": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 10000,
+                    "description": "Amount stored in exact Iranian Rials (IRR)"
+                  },
+                  "gateway": {
+                    "type": "string",
+                    "enum": [
+                      "ZARINPAL",
+                      "SEP",
+                      "BEHPARDAKHT",
+                      "SADAD"
+                    ]
+                  },
+                  "callbackUrl": {
+                    "type": "string",
+                    "example": "https://app.localme.ir/checkout/result"
+                  },
+                  "customerPhone": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "idempotencyKey": {
+                    "type": "string"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "amountIrr",
+                  "gateway",
+                  "callbackUrl"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment authority token & bank redirect URL acquired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "authorityToken": {
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/pay/initiate": {
+      "post": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Initiate tenant project-scoped Shaparak payment",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/paths/~1_baas~1v1~1pay~1initiate/post/requestBody/content/application~1json/schema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/pay/verify": {
+      "post": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Verify Shaparak payment authority upon return from bank",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gateway": {
+                    "type": "string"
+                  },
+                  "authorityToken": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "default": "OK"
+                  },
+                  "trackingCode": {
+                    "type": "string"
+                  },
+                  "customerPhone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authorityToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification result and settlement details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "amountIrr": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "referenceId": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "formattedToman": {
+                      "type": "string"
+                    },
+                    "shaparakRefId": {
+                      "type": "string"
+                    },
+                    "newWalletBalanceIrr": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/ipg/config": {
+      "get": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Get Shetab IPG merchant credentials (SEP, Mellat, Zarinpal, Sadad)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merchant IPG configuration"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Update Shetab IPG merchant credentials",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated configuration"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/ipg/transactions": {
+      "get": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "List all IPG transactions and statuses",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transactions array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/devices/register": {
+      "post": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Register mobile device token (FCM, APNs, Najva, Pushy, Charkhooneh)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deviceId": {
+                    "type": "string"
+                  },
+                  "pushToken": {
+                    "type": "string"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "ios",
+                      "android",
+                      "web"
+                    ]
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "fcm",
+                      "apns",
+                      "najva",
+                      "pushy",
+                      "charkhooneh"
+                    ]
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "deviceId",
+                  "pushToken",
+                  "platform"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device registered"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/devices/{deviceId}": {
+      "delete": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Unregister mobile device token",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device removed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/devices": {
+      "get": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "List registered devices with optional user/platform filters",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devices list"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/send": {
+      "post": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Send targeted push notification",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "targetUserIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "targetDeviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "targetPlatforms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "title",
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Push dispatched"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/config": {
+      "get": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Get push notification provider configuration",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Push config"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Update push notification provider configuration",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration saved"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/push/history": {
+      "get": {
+        "tags": [
+          "Mobile Push Notifications"
+        ],
+        "summary": "Get push dispatch history logs",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History list"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/iap/verify/bazaar": {
+      "post": {
+        "tags": [
+          "Mobile In-App Purchases"
+        ],
+        "summary": "Verify Cafe Bazaar In-App Purchase token",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "packageName": {
+                    "type": "string"
+                  },
+                  "productId": {
+                    "type": "string"
+                  },
+                  "purchaseToken": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "priceIrr": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                },
+                "required": [
+                  "packageName",
+                  "productId",
+                  "purchaseToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/iap/verify/myket": {
+      "post": {
+        "tags": [
+          "Mobile In-App Purchases"
+        ],
+        "summary": "Verify Myket In-App Purchase token",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "packageName": {
+                    "type": "string"
+                  },
+                  "productId": {
+                    "type": "string"
+                  },
+                  "purchaseToken": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "priceIrr": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                },
+                "required": [
+                  "packageName",
+                  "productId",
+                  "purchaseToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/iap/purchases": {
+      "get": {
+        "tags": [
+          "Mobile In-App Purchases"
+        ],
+        "summary": "List validated in-app purchases",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchases array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/iap/config": {
+      "get": {
+        "tags": [
+          "Mobile In-App Purchases"
+        ],
+        "summary": "Get Bazaar/Myket API client credentials",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "IAP config"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Mobile In-App Purchases"
+        ],
+        "summary": "Update Bazaar/Myket API credentials",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/realtime": {
+      "get": {
+        "tags": [
+          "Realtime WebSocket"
+        ],
+        "summary": "Duplex WebSocket streaming connection for live table changes",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols to WebSocket"
+          },
+          "400": {
+            "description": "WebSocket connection expected"
+          },
+          "403": {
+            "description": "Mobile / realtime service disabled"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/realtime/broadcast": {
+      "post": {
+        "tags": [
+          "Realtime WebSocket"
+        ],
+        "summary": "Broadcast event to subscribed WebSocket clients",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "table": {
+                    "type": "string",
+                    "default": "*"
+                  },
+                  "action": {
+                    "type": "string",
+                    "default": "BROADCAST"
+                  },
+                  "data": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event broadcasted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/hosting/deployments": {
+      "get": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "List deployments",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployments array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "Create deployment",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deployment created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/hosting/domains": {
+      "get": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "List custom domains",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domains array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "Add custom domain",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "domain"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Domain added"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/hosting/domains/verify": {
+      "post": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "Verify custom domain DNS resolution",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "domain"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Domain verified"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/hosting/domains/{domain}": {
+      "delete": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "Remove custom domain",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain removed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/hosting/domains/{domain}/ssl": {
+      "post": {
+        "tags": [
+          "Hosting & Domains"
+        ],
+        "summary": "Provision Let's Encrypt TLS certificate for domain",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate provisioned"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/compliance": {
+      "get": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
+        "summary": "Get Iranian sovereign compliance configuration",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compliance settings"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Compliance & Regulatory"
+        ],
+        "summary": "Update Iranian sovereign compliance configuration",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/logs": {
+      "get": {
+        "tags": [
+          "System & Diagnostics"
+        ],
+        "summary": "Query structured project audit & telemetry logs",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "System & Diagnostics"
+        ],
+        "summary": "Ingest application telemetry log",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "service": {
+                    "type": "string",
+                    "default": "app"
+                  },
+                  "level": {
+                    "type": "string",
+                    "default": "INFO"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "trace_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Log accepted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/users": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Superadmin list all platform developer users",
+        "responses": {
+          "200": {
+            "description": "Platform users array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/users/{userId}/role": {
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Update user platform role (Admin, Operator, Developer)",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/users/{userId}/credit": {
+      "post": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Admin adjust developer wallet credit",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deltaIrr": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credit updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/users/{userId}/status": {
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Admin toggle user active status",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/users/{userId}/projects": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "List projects owned by user",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/stats": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Get platform-wide runtime telemetry statistics",
+        "responses": {
+          "200": {
+            "description": "System stats"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/pricing": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Get snapshot of platform billing rates per unit",
+        "responses": {
+          "200": {
+            "description": "Pricing catalog"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Admin update platform billing rates",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/config": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Get full platform configuration",
+        "responses": {
+          "200": {
+            "description": "Platform config"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Admin update platform configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/logs": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Get platform-wide audit & error log buffer",
+        "parameters": [
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs array"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Admin clear platform log buffer",
+        "responses": {
+          "200": {
+            "description": "Logs cleared"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/tickets": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "List operator support tickets",
+        "responses": {
+          "200": {
+            "description": "Tickets array"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/tickets/{ticketId}": {
+      "get": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Get support ticket conversation thread",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket object"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Update support ticket status",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket status updated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/tickets/{ticketId}/reply": {
+      "post": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Add operator reply to support ticket",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reply posted"
+          }
+        }
+      }
+    },
+    "/_baas/v1/admin/projects/{projectId}/status": {
+      "put": {
+        "tags": [
+          "Superadmin & Operator"
+        ],
+        "summary": "Operator toggle project lifecycle status (Active / Suspended)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project status changed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/pay/mock-gateway": {
+      "get": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Interactive HTML simulator for Shaparak IPG payment page",
+        "parameters": [
+          {
+            "name": "authority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateway",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML gateway page",
+            "content": {
+              "text/html": {}
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/pay/mock-gateway/action": {
+      "post": {
+        "tags": [
+          "Iranian IPG Payments"
+        ],
+        "summary": "Mock gateway form action to simulate payment success or cancellation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authority": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "pay",
+                      "cancel"
+                    ]
+                  }
+                },
+                "required": [
+                  "authority",
+                  "action"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirect to merchant callback URL"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/services/configure": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Bulk configure service settings",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "": "#/components/schemas/ConfigureServiceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service configured"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/users": {
+      "get": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "List end-users of a tenant project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project users array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project End-User Auth"
+        ],
+        "summary": "Manually create end-user in tenant project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/billing/usage": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get resource consumption metrics (DB queries, storage MB, SMS, compute ms)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project metrics summary"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/{table}": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "PostgREST query rows from tenant relational table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rows array"
+          },
+          "403": {
+            "description": "Database service disabled"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Insert row into tenant relational table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inserted row"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/tables": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List table names in tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table names array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Create new relational table in tenant schema",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Table created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/buckets": {
+      "get": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "List project storage buckets",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buckets array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Blob Storage"
+        ],
+        "summary": "Create new storage bucket",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "is_public": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bucket created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/projects/{projectId}/functions": {
+      "get": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "List edge functions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Functions array"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Deploy new edge function",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "script": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "script"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Function deployed"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/functions/{funcSlug}/exec": {
+      "post": {
+        "tags": [
+          "Edge Functions"
+        ],
+        "summary": "Execute edge function with sandboxed Jint runtime",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "funcSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution result and runtime logs"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JSON Web Token for developer, operator, or end-user session authentication"
+      },
+      "CookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "localme_session",
+        "description": "HttpOnly session cookie"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Service-scoped API Key (Bearer proj_svc_key_...)"
+      }
+    },
+    "schemas": {
+      "PlatformUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "integer",
+            "description": "0: Admin, 1: Operator, 2: Developer, 3: Viewer"
+          },
+          "walletBalanceIrr": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Account credit in exact Iranian Rials"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "phone",
+          "role",
+          "walletBalanceIrr",
+          "createdAtUtc",
+          "isActive"
+        ]
+      },
+      "BaasProject": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerPhone": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "hasPassword": {
+            "type": "boolean"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "services": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BaasServiceConfig"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "ownerId",
+          "ownerPhone",
+          "status",
+          "createdAtUtc"
+        ]
+      },
+      "BaasServiceConfig": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "service",
+          "isEnabled",
+          "apiKey"
+        ]
+      },
+      "ConfigureServiceRequest": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "isEnabled"
+        ]
+      },
+      "AuthOtpResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "codeForTesting": {
+            "type": "string",
+            "nullable": true
+          },
+          "dispatchedVia": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "dispatchedVia"
+        ]
       }
     }
   }

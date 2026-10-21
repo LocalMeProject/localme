@@ -41,10 +41,12 @@ const INITIAL_USERS: ProjectUser[] = [
   },
 ];
 
+export type OtpProvider = 'kavenegar' | 'melipayamak';
+
 export const AuthView: React.FC<AuthViewProps> = ({ project, onOpenAddUserModal }) => {
   const [users, setUsers] = useState<ProjectUser[]>(INITIAL_USERS);
   const [testPhone, setTestPhone] = useState('09121112233');
-  const [otpProvider, setOtpProvider] = useState<'kavenegar' | 'melipayamak'>('kavenegar');
+  const [otpProvider, setOtpProvider] = useState<OtpProvider>('kavenegar');
   const [otpSentFeedback, setOtpSentFeedback] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
@@ -182,8 +184,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ project, onOpenAddUserModal 
                 <label className="text-[11px] text-zinc-400 block mb-1">ارائه‌دهنده پیامک</label>
                 <select
                   value={otpProvider}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOtpProvider(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200"
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOtpProvider(e.target.value as OtpProvider)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
                 >
                   <option value="kavenegar">کاوه‌نگار (خط ۳۰۰۰۷۷۷)</option>
                   <option value="melipayamak">ملی‌پیامک (وب‌سرویس خدماتی)</option>

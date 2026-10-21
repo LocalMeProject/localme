@@ -20,6 +20,15 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     { name: 'title', dataType: 'VARCHAR(255)', isPrimaryKey: false, isNullable: false },
   ]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleAddColumn = () => {
@@ -57,7 +66,12 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-table-modal-title"
+    >
       <div className="relative w-full max-w-2xl rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div className="flex items-center space-x-2.5">
@@ -65,13 +79,14 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
               <TableIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-zinc-100">ساخت جدول جدید در PostgreSQL 18</h3>
+              <h3 id="create-table-modal-title" className="text-base font-bold text-zinc-100">ساخت جدول جدید در PostgreSQL 18</h3>
               <p className="text-xs text-zinc-400">طرحواره اختصاصی در شمای ایزوله پروژه</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition"
+            aria-label="بستن"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
           >
             <X className="w-5 h-5" />
           </button>

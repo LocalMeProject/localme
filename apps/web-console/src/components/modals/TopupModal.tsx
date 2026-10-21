@@ -15,13 +15,24 @@ const PRESET_AMOUNTS = [
   { toman: 5_000_000, label: '۵ میلیون تومان' },
 ];
 
+export type TopupGateway = 'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD';
+
 export const TopupModal: React.FC<TopupModalProps> = ({
   isOpen,
   onClose,
   onTopup,
 }) => {
   const [amountToman, setAmountToman] = useState<number>(500_000);
-  const [gateway, setGateway] = useState<'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD'>('ZARINPAL');
+  const [gateway, setGateway] = useState<TopupGateway>('ZARINPAL');
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -35,7 +46,12 @@ export const TopupModal: React.FC<TopupModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="topup-modal-title"
+    >
       <div className="relative w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div className="flex items-center space-x-2.5">
@@ -43,13 +59,14 @@ export const TopupModal: React.FC<TopupModalProps> = ({
               <Wallet className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-zinc-100">شارژ کیف پول ریالی پروژه (IRR)</h3>
+              <h3 id="topup-modal-title" className="text-base font-bold text-zinc-100">شارژ کیف پول ریالی پروژه (IRR)</h3>
               <p className="text-xs text-zinc-400">پرداخت امن از طریق درگاه‌های شاپرک با کارت‌های عضو شتاب</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition"
+            aria-label="بستن"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -95,7 +112,7 @@ export const TopupModal: React.FC<TopupModalProps> = ({
 
           <div>
             <label className="block text-zinc-300 font-medium mb-1.5">انتخاب درگاه پرداخت شاپرک</label>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="درگاه‌های پرداخت">
               {[
                 { id: 'ZARINPAL', name: 'زرین‌پال (Zarinpal ZarinGate)' },
                 { id: 'BEHPARDAKHT', name: 'به‌پرداخت ملت (Mellat PSP)' },
@@ -104,8 +121,17 @@ export const TopupModal: React.FC<TopupModalProps> = ({
               ].map((gw) => (
                 <div
                   key={gw.id}
-                  onClick={() => setGateway(gw.id as any)}
-                  className={`cursor-pointer p-3 rounded-xl border flex items-center space-x-2 transition ${
+                  onClick={() => setGateway(gw.id as TopupGateway)}
+                  role="radio"
+                  aria-checked={gateway === gw.id}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      setGateway(gw.id as TopupGateway);
+                    }
+                  }}
+                  className={`cursor-pointer p-3 rounded-xl border flex items-center space-x-2 transition focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none ${
                     gateway === gw.id
                       ? 'border-amber-500/60 bg-amber-500/10 text-amber-300'
                       : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'
