@@ -12,7 +12,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "dotnet format --verify-no-changes",
+        "command": "dotnet format src/LocalMe.Core.csproj --verify-no-changes",
         "cwd": "libs/core-domain"
       }
     },

@@ -46,40 +46,20 @@ public sealed class SuperadminService
     private readonly PricingCatalog _pricing;
     private readonly ProjectManagerService _projectManager;
     private readonly UsageMeteringService _metering;
+    private readonly PlatformConfigurationService? _configService;
     private readonly DateTimeOffset _bootTimeUtc = DateTimeOffset.UtcNow;
     private readonly List<SupportTicket> _tickets = [];
 
     public SuperadminService(
         PricingCatalog pricing,
         ProjectManagerService projectManager,
-        UsageMeteringService metering)
+        UsageMeteringService metering,
+        PlatformConfigurationService? configService = null)
     {
         _pricing = pricing;
         _projectManager = projectManager;
         _metering = metering;
-
-        // Seed initial support tickets for operator maintenance workflow
-        _tickets.Add(new SupportTicket(
-            Id: "tkt_01",
-            CustomerPhone: "+989121112233",
-            Subject: "درخواست اتصال درگاه اختصاصی سامان‌کیش",
-            Message: "برای اپلیکیشن اسنپ‌فود نیاز به فعال‌سازی ترمینال مجزای شاپرک داریم.",
-            Status: "Open",
-            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-4),
-            Replies:
-            [
-                new TicketReply("rep_01", "اپراتور پشتیبانی", "Operator", "درخواست شما دریافت شد و جهت استعلام ترمینال به شاپرک ارسال گردید.", DateTimeOffset.UtcNow.AddHours(-2))
-            ]
-        ));
-        _tickets.Add(new SupportTicket(
-            Id: "tkt_02",
-            CustomerPhone: "+989354443322",
-            Subject: "افزایش سقف حافظه تابع سرورلس به ۶۴ مگابایت",
-            Message: "جهت پردازش تصاویر بندانگشتی نیاز به سقف رم بالاتر داریم.",
-            Status: "Investigating",
-            CreatedAtUtc: DateTimeOffset.UtcNow.AddHours(-12),
-            Replies: []
-        ));
+        _configService = configService;
     }
 
     public SuperadminSystemStats GetSystemStats()
@@ -101,6 +81,7 @@ public sealed class SuperadminService
         }
 
         var rial = new RialAmount(totalRevenue);
+        var egressNat = _configService?.GetConfig().SovereignEgressNat ?? "2.180.12.94 (Static Domestic NAT Active)";
         return new SuperadminSystemStats(
             TotalUsers: users.Count,
             TotalProjects: projects.Count,
@@ -111,7 +92,7 @@ public sealed class SuperadminService
             FormattedRevenueToman: rial.ToTomanString(),
             Pricing: _pricing.GetSnapshot(),
             SystemUptimeUtc: _bootTimeUtc,
-            SovereignEgressNat: "2.180.12.94 (Static Domestic NAT Active)",
+            SovereignEgressNat: egressNat,
             RecentTickets: _tickets.AsReadOnly()
         );
     }
@@ -129,6 +110,24 @@ public sealed class SuperadminService
         lock (_tickets)
         {
             return _tickets.Find(t => t.Id == ticketId);
+        }
+    }
+
+    public SupportTicket CreateTicket(string customerPhone, string subject, string message, string? id = null)
+    {
+        lock (_tickets)
+        {
+            var ticket = new SupportTicket(
+                Id: string.IsNullOrWhiteSpace(id) ? $"tkt_{Guid.NewGuid():N}"[..8] : id.Trim(),
+                CustomerPhone: customerPhone,
+                Subject: subject,
+                Message: message,
+                Status: "Open",
+                CreatedAtUtc: DateTimeOffset.UtcNow,
+                Replies: [new TicketReply($"rep_{Guid.NewGuid():N}"[..8], customerPhone, "User", message, DateTimeOffset.UtcNow)]
+            );
+            _tickets.Add(ticket);
+            return ticket;
         }
     }
 
@@ -161,6 +160,13 @@ public sealed class SuperadminService
     {
         _pricing.UpdatePricing(request, adminUser);
         return _pricing.GetSnapshot();
+    }
+
+    public PlatformConfig GetPlatformConfig() => _configService?.GetConfig() ?? new PlatformConfig();
+
+    public PlatformConfig UpdatePlatformConfig(PlatformConfig newConfig, string adminUser = "superadmin")
+    {
+        return _configService?.UpdateConfig(newConfig, adminUser) ?? newConfig;
     }
 
     public bool UpdateTicketStatus(string ticketId, string status)

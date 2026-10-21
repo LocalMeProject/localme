@@ -41,3 +41,9 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Agent Coordination & Telemetry
+.agents/
+
+# Local runtime storage
+.localme-storage/

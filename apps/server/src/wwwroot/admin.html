@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -22,20 +22,20 @@
 
     <!-- Right Utilities -->
     <div class="topbar-utils">
-      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
         <span id="admin-user-name" style="font-weight: 700;">مدیر ارشد سامانه</span>
         <span id="admin-user-role-badge" class="badge badge-paused">مدیر ارشد</span>
       </div>
 
-      <a href="/docs" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 4px 10px;">
         مستندات
       </a>
 
-      <a href="/panel" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+      <a href="/panel" class="btn-secondary" style="font-size: 13px; padding: 4px 10px;">
         پنل توسعه‌دهندگان
       </a>
 
-      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+      <a href="/auth" class="btn-secondary" style="font-size: 13px; padding: 4px 10px;">
         خروج
       </a>
     </div>
@@ -49,7 +49,7 @@
       <span id="admin-bc-view-name" class="active">مدیریت کاربران و دسترسی‌ها</span>
     </div>
 
-    <div style="font-size: 11.5px; color: var(--text-light); font-family: var(--font-mono);">
+    <div style="font-size: 13px; color: var(--text-light); font-family: var(--font-persian);">
       Egress NAT: 2.180.12.94 • سرور مرکزی تهران
     </div>
   </div>
@@ -67,13 +67,16 @@
         <span>تمام پروژه‌های پلتفرم</span>
       </button>
       <button class="sidebar-link" data-view="admin-view-pricing">
-        <span>کاتالوگ تعرفه‌گذاری و متغیرها</span>
+        <span>تنظیمات کلان سامانه و متغیرها</span>
       </button>
       <button class="sidebar-link" data-view="admin-view-tickets">
         <span>تیکت‌های پشتیبانی اپراتور</span>
       </button>
       <button class="sidebar-link" data-view="admin-view-stats">
         <span>گزارش‌ها و آمار کلان</span>
+      </button>
+      <button class="sidebar-link" data-view="admin-view-logs">
+        <span>پایش و کنترل لاگ‌های سیستم</span>
       </button>
     </aside>
 
@@ -138,55 +141,277 @@
         </div>
       </section>
 
-      <!-- 3. PRICING & VARIABLES (SuperAdmin only can edit) -->
+      <!-- 3. PLATFORM CONFIGURATION & SYSTEM VARIABLES (SuperAdmin only can edit) -->
       <section id="admin-view-pricing" class="tab-view">
-        <div class="card">
+        <div class="card" style="margin-bottom: 24px;">
           <div class="card-header">
             <div>
-              <div class="card-title">کاتالوگ تعرفه‌گذاری و متغیرهای عملیاتی</div>
-              <div class="card-desc">تنظیم نرخ واحد منابع به ازای هر واحد مصرفی بر حسب ریال.</div>
+              <div class="card-title">تنظیمات کلان سامانه و متغیرهای عملیاتی پلتفرم (Platform Master Configuration)</div>
+              <div class="card-desc">پیکربندی یکپارچه تعرفه‌گذاری، سقف‌های طرح، درگاه پیامک، پرداخت شتاب، امنیت توکن‌ها و اعلان سراسری.</div>
             </div>
             <span id="pricing-access-badge" class="badge badge-paused">فقط مدیر ارشد</span>
           </div>
 
-          <form id="form-admin-pricing" style="max-width: 650px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <form id="form-admin-pricing" style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Category 1: Financial & Resource Pricing -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱,۰۰۰ کوئری دیتابیس (ریال)</label>
-              <input type="number" id="adm-p-db" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۱. تعرفه‌گذاری مصرف منابع و کیف پول شتابی (ریال)
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱,۰۰۰ کوئری دیتابیس (ریال)</label>
+                  <input type="number" id="adm-p-db" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر پیامک OTP (ریال)</label>
+                  <input type="number" id="adm-p-sms" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر گیگابایت ذخیره‌سازی در ماه (ریال)</label>
+                  <input type="number" id="adm-p-storage" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱۰۰ میلی‌ثانیه پردازش تابع (ریال)</label>
+                  <input type="number" id="adm-p-compute" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر گیگابایت ترافیک خروجی شبکه (ریال)</label>
+                  <input type="number" id="adm-p-egress" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل مبلغ شارژ کیف پول (ریال)</label>
+                  <input type="number" id="adm-p-min-topup" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">اعتبار هدیه اولیه توسعه‌دهنده (ریال)</label>
+                  <input type="number" id="adm-p-free-credit" class="input-field" required />
+                </div>
+              </div>
             </div>
 
+            <!-- Category 2: Tier Limits & Quotas -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر پیامک OTP (ریال)</label>
-              <input type="number" id="adm-p-sms" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۲. سقف‌ها و محدودیت‌های طرح توسعه‌دهنده (Developer Tier Caps)
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداکثر تعداد پروژه مجاز کاربر</label>
+                  <input type="number" id="adm-cfg-max-projects" class="input-field" min="1" max="100" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداکثر تعداد اعضای تیم در هر پروژه</label>
+                  <input type="number" id="adm-cfg-max-members" class="input-field" min="1" max="100" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف فضای ذخیره‌سازی ابری (مگابایت)</label>
+                  <input type="number" id="adm-cfg-storage-quota" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداکثر حجم مجاز آپلود فایل (مگابایت)</label>
+                  <input type="number" id="adm-cfg-max-filesize" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف رم توابع سرورلس (مگابایت)</label>
+                  <input type="number" id="adm-cfg-func-memory" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">تایم‌اوت توابع لبه (میلی‌ثانیه)</label>
+                  <input type="number" id="adm-cfg-func-timeout" class="input-field" required />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداکثر اتصالات استخر پایگاه داده</label>
+                  <input type="number" id="adm-cfg-db-conn" class="input-field" required />
+                </div>
+              </div>
             </div>
 
+            <!-- Category 3: SMS Gateway Defaults -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر گیگابایت ذخیره‌سازی در ماه (ریال)</label>
-              <input type="number" id="adm-p-storage" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۳. درگاه پیامک و احراز هویت OTP سراسری پلتفرم
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">سامانه پیامکی پیش‌فرض</label>
+                  <select id="adm-sms-provider" class="input-field">
+                    <option value="kavenegar">کاوه‌نگار (Kavenegar)</option>
+                    <option value="melipayamak">ملی‌پیامک (Melipayamak)</option>
+                    <option value="magfa">مگفا (Magfa)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کلید سراسری API پنل پیامک</label>
+                  <input type="text" id="adm-sms-key" class="input-field" placeholder="اختیاری در محیط توسعه" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">شماره خط ارسال‌کننده پیامک</label>
+                  <input type="text" id="adm-sms-sender" class="input-field" placeholder="3000777" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کد الگوی وب‌سرویس تایید (Pattern Code)</label>
+                  <input type="text" id="adm-sms-pattern" class="input-field" placeholder="localme-verify" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">طول کد تایید یکبار مصرف</label>
+                  <input type="number" id="adm-sms-otp-len" class="input-field" min="4" max="8" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">مدت اعتبار کد OTP (ثانیه)</label>
+                  <input type="number" id="adm-sms-otp-ttl" class="input-field" min="30" max="600" />
+                </div>
+              </div>
             </div>
 
+            <!-- Category 4: Shetab IPG Settings -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">تعرفه هر ۱۰۰ میلی‌ثانیه پردازش تابع (ریال)</label>
-              <input type="number" id="adm-p-compute" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۴. درگاه پرداخت الکترونیک شتاب و شاپرک سراسری
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">پرداخت‌یار / PSP پیش‌فرض</label>
+                  <select id="adm-ipg-psp" class="input-field">
+                    <option value="zarinpal">زرین‌پال (ZarinPal REST v4)</option>
+                    <option value="behpardakht">به‌پرداخت ملت (Mellat IPG)</option>
+                    <option value="sep">پرداخت الکترونیک سامان (SEP)</option>
+                    <option value="sadad">سداد بانک ملی (Sadad)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">مرچنت کد / ترمینال آی‌دی پیش‌فرض</label>
+                  <input type="text" id="adm-ipg-merchant" class="input-field" placeholder="شناسه ترمینال بانکی" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس بازگشت تراکنش (Callback URL)</label>
+                  <input type="text" id="adm-ipg-callback" class="input-field" style="direction: ltr; font-family: monospace;" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کارمزد شاپرک ثبت هر سند (ریال)</label>
+                  <input type="number" id="adm-ipg-wage" class="input-field" />
+                </div>
+              </div>
             </div>
 
+            <!-- Category 5: Security, Tokens & Rate-Limiting -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل مبلغ شارژ کیف پول (ریال)</label>
-              <input type="number" id="adm-p-min-topup" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۵. امنیت، توکن‌ها و سیاست‌های احراز هویت
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کلید محرمانه امضای JWT (Secret Key)</label>
+                  <input type="text" id="adm-sec-jwt-secret" class="input-field" style="direction: ltr; font-family: monospace;" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">مدت اعتبار توکن دسترسی (ساعت)</label>
+                  <input type="number" id="adm-sec-jwt-hours" class="input-field" min="1" max="720" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">مدت اعتبار توکن رفرش (روز)</label>
+                  <input type="number" id="adm-sec-refresh-days" class="input-field" min="1" max="365" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">سقف تلاش‌های ناموفق قبل از قفل</label>
+                  <input type="number" id="adm-sec-max-retries" class="input-field" min="3" max="20" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">مدت قفل موقت حساب (دقیقه)</label>
+                  <input type="number" id="adm-sec-lockout-mins" class="input-field" min="1" max="120" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">دامنه مجاز CORS</label>
+                  <input type="text" id="adm-sec-cors" class="input-field" style="direction: ltr;" placeholder="*" />
+                </div>
+              </div>
             </div>
 
+            <!-- Category 6: Infrastructure & Sovereign Network -->
             <div>
-              <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 3px;">اعتبار هدیه اولیه توسعه‌دهنده (ریال)</label>
-              <input type="number" id="adm-p-free-credit" class="input-field input-mono" required />
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۶. زیرساخت ابری بومی و شبکه ملی اطلاعات
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">نام رسمی پلتفرم</label>
+                  <input type="text" id="adm-infra-name" class="input-field" />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">منطقه ابری پیش‌فرض (Region)</label>
+                  <input type="text" id="adm-infra-region" class="input-field" style="direction: ltr;" />
+                </div>
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس‌های IP ایستا خروجی شبکه (Sovereign NAT)</label>
+                  <input type="text" id="adm-infra-nat" class="input-field" style="direction: ltr; font-family: monospace;" />
+                </div>
+              </div>
             </div>
 
-            <div style="grid-column: span 2; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
-                <input type="checkbox" id="adm-p-maint" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" />
-                <span>حالت تعمیرات سراسری سیستم (Maintenance Mode)</span>
-              </label>
+            <!-- Category 7: Maintenance Mode & System Announcement -->
+            <div>
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۷. وضعیت عملیاتی سراسری و اعلان به توسعه‌دهندگان
+              </h4>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="adm-p-maint" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" />
+                  <strong>فعال‌سازی حالت تعمیرات سراسری سیستم (Maintenance Mode)</strong>
+                </label>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">متن پیام حالت تعمیرات</label>
+                  <input type="text" id="adm-cfg-maint-msg" class="input-field" placeholder="سامانه در حال به‌روزرسانی زیرساختی می‌باشد..." />
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">اعلان سراسری پلتفرم (نمایش در بالای پنل توسعه‌دهندگان)</label>
+                  <input type="text" id="adm-cfg-broadcast-msg" class="input-field" placeholder="متن اختیاری جهت اطلاع‌رسانی سراسری به کاربران..." />
+                </div>
+              </div>
+            </div>
 
-              <button type="submit" id="btn-save-admin-pricing" class="btn-primary">ذخیره و اعمال بلادرنگ تعرفه‌ها</button>
+            <!-- Category 8: Platform & Console Logging Controls -->
+            <div>
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                ۸. تنظیمات و کنترل جامع لاگ‌های کنسول و پلتفرم
+              </h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 12px;">
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل سطح لاگ‌گیری (Log Level)</label>
+                  <select id="adm-log-level" class="input-field">
+                    <option value="Trace">Trace (بسیار دقیق و عمیق)</option>
+                    <option value="Debug">Debug (اشکال‌زدایی توسعه)</option>
+                    <option value="Information" selected>Information (اطلاعاتی استاندارد)</option>
+                    <option value="Warning">Warning (هشدارهای سیستم)</option>
+                    <option value="Error">Error (خطاهای سیستمی)</option>
+                    <option value="Critical">Critical (خطاهای بحرانی)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">میزان جزئیات لاگ (Granularity)</label>
+                  <select id="adm-log-granularity" class="input-field">
+                    <option value="Verbose">Verbose (حداکثر جزئیات و پشته خطا)</option>
+                    <option value="Standard" selected>Standard (استاندارد عملیاتی)</option>
+                    <option value="Minimal">Minimal (خلاصه کم‌حجم)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="adm-log-platform-active" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" checked />
+                  <strong>ثبت لاگ‌های پلتفرم جهت پایش آنلاین مدیران (Platform Logging)</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="adm-log-console-enabled" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" checked />
+                  <strong>خروجی لاگ زنده در کنسول ترمینال سرور (Console Logging)</strong>
+                </label>
+              </div>
+            </div>
+
+            <!-- Submit Button Bar -->
+            <div style="padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
+              <button type="submit" id="btn-save-admin-pricing" class="btn-primary" style="padding: 10px 24px; font-size: 13.5px; font-weight: 700;">
+                ⚡ ذخیره و اعمال آنی تمام تنظیمات کلان
+              </button>
             </div>
           </form>
         </div>
@@ -255,6 +480,74 @@
         </div>
       </section>
 
+      <!-- 6. PLATFORM & CONSOLE LOGS -->
+      <section id="admin-view-logs" class="tab-view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">مرکز پایش و کنترل جامع لاگ‌های پلتفرم و کنسول</div>
+              <div class="card-desc">جریان زنده وقایع، لاگ‌های سیستمی ASP.NET و خطایابی پیشرفته با قابلیت فیلتر، جستجو و تنظیم آنی.</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" id="btn-admin-clear-logs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">پاک‌سازی لاگ‌ها</button>
+              <button type="button" id="btn-admin-refresh-logs" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">تازه‌سازی</button>
+            </div>
+          </div>
+
+          <!-- Quick Logging Controls & Stats Banner -->
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 20px; font-size: 13px; align-items: center; flex-wrap: wrap;">
+              <span>وضعیت پلتفرم: <strong id="adm-logs-stat-platform" class="badge badge-active">فعال</strong></span>
+              <span>کنسول سرور: <strong id="adm-logs-stat-console" class="badge badge-active">فعال</strong></span>
+              <span>سطح جاری: <strong id="adm-logs-stat-level" style="font-family: monospace;">Information</strong></span>
+              <span>تعداد کل در بافر: <strong id="adm-logs-stat-count">۰</strong></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <input type="checkbox" id="adm-logs-auto-refresh" style="accent-color: var(--brand-primary);" checked />
+              <label for="adm-logs-auto-refresh" style="cursor: pointer;">به‌روزرسانی خودکار هر ۳ ثانیه</label>
+            </div>
+          </div>
+
+          <!-- Filter Toolbar -->
+          <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+            <select id="adm-filter-log-level" class="input-field" style="width: 150px;">
+              <option value="all">همه سطوح</option>
+              <option value="Trace">Trace</option>
+              <option value="Debug">Debug</option>
+              <option value="Information">Information</option>
+              <option value="Warning">Warning</option>
+              <option value="Error">Error</option>
+              <option value="Critical">Critical</option>
+            </select>
+            <input type="text" id="adm-filter-log-search" class="input-field" placeholder="جستجو در متن پیام یا دسته‌بندی لاگ..." style="flex: 1; min-width: 200px;" />
+            <select id="adm-filter-log-limit" class="input-field" style="width: 110px;">
+              <option value="50">۵۰ ردیف</option>
+              <option value="100" selected>۱۰۰ ردیف</option>
+              <option value="200">۲۰۰ ردیف</option>
+              <option value="500">۵۰۰ ردیف</option>
+            </select>
+            <button type="button" id="btn-admin-apply-log-filter" class="btn-secondary" style="padding: 6px 16px; font-size: 13px;">اعمال فیلتر</button>
+          </div>
+
+          <!-- Logs Stream Table -->
+          <div class="table-container" style="max-height: 520px; overflow-y: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">زمان</th>
+                  <th style="width: 90px;">سطح</th>
+                  <th style="width: 200px;">دسته‌بندی (Category)</th>
+                  <th>پیام لاگ</th>
+                </tr>
+              </thead>
+              <tbody id="admin-logs-tbody">
+                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">در حال دریافت لاگ‌ها...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -264,19 +557,19 @@
       <div class="modal-header">
         <div>
           <h3 id="modal-ticket-title">جزئیات تیکت پشتیبانی</h3>
-          <span id="modal-ticket-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+          <span id="modal-ticket-id" style="font-family: var(--font-persian); font-size: 13px; color: var(--text-light);"></span>
         </div>
         <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-ticket')">✕</button>
       </div>
       <div class="modal-body">
         <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">شماره مشتری:</div>
-            <div id="modal-ticket-phone" style="font-family: var(--font-mono); font-weight: 700;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">شماره مشتری:</div>
+            <div id="modal-ticket-phone" style="font-family: var(--font-persian); font-weight: 700;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">تاریخ ثبت:</div>
-            <div id="modal-ticket-date" style="font-size: 12px;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">تاریخ ثبت:</div>
+            <div id="modal-ticket-date" style="font-size: 13px;"></div>
           </div>
           <div>
             <span id="modal-ticket-status-badge" class="badge"></span>
@@ -284,7 +577,7 @@
         </div>
 
         <div>
-          <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">مکالمات و پیام‌ها:</div>
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">مکالمات و پیام‌ها:</div>
           <div id="modal-ticket-thread" style="max-height: 240px; overflow-y: auto; padding-left: 4px;"></div>
         </div>
 
@@ -292,13 +585,13 @@
         <form id="form-ticket-reply" style="border-top: 1px solid var(--border-color); padding-top: 14px;">
           <input type="hidden" id="modal-ticket-reply-id" />
           <div style="margin-bottom: 10px;">
-            <label style="font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 4px;">متن پاسخ اپراتور / مدیر:</label>
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">متن پاسخ اپراتور / مدیر:</label>
             <textarea id="modal-ticket-reply-msg" class="input-field" rows="3" placeholder="پاسخ خود را برای کاربر بنویسید..." required></textarea>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 11.5px; font-weight: 600;">تغییر وضعیت تیکت:</span>
-              <select id="modal-ticket-reply-status" class="input-field" style="width: auto; padding: 4px 8px; font-size: 11.5px;">
+              <span style="font-size: 13px; font-weight: 600;">تغییر وضعیت تیکت:</span>
+              <select id="modal-ticket-reply-status" class="input-field" style="width: auto; padding: 4px 8px; font-size: 13px;">
                 <option value="Open">باز</option>
                 <option value="Investigating">در حال بررسی</option>
                 <option value="Resolved" selected>پاسخ داده شده / حل شده</option>
@@ -318,7 +611,7 @@
       <div class="modal-header">
         <div>
           <h3 id="modal-user-name">پروفایل و مدیریت حساب کاربر</h3>
-          <span id="modal-user-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+          <span id="modal-user-id" style="font-family: var(--font-persian); font-size: 13px; color: var(--text-light);"></span>
         </div>
         <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-user')">✕</button>
       </div>
@@ -326,19 +619,19 @@
         <!-- Overview Grid -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-main); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">شماره همراه:</div>
-            <div id="modal-user-phone" style="font-family: var(--font-mono); font-weight: 700;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">شماره همراه:</div>
+            <div id="modal-user-phone" style="font-family: var(--font-persian); font-weight: 700;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">پست الکترونیکی:</div>
-            <div id="modal-user-email" style="font-family: var(--font-mono); font-size: 12px;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">پست الکترونیکی:</div>
+            <div id="modal-user-email" style="font-family: var(--font-persian); font-size: 13px;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">تاریخ عضویت:</div>
-            <div id="modal-user-date" style="font-size: 12px;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">تاریخ عضویت:</div>
+            <div id="modal-user-date" style="font-size: 13px;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">وضعیت حساب:</div>
+            <div style="font-size: 13px; color: var(--text-light);">وضعیت حساب:</div>
             <div id="modal-user-status"></div>
           </div>
         </div>
@@ -346,11 +639,11 @@
         <!-- Wallet Adjustment -->
         <div class="card" style="margin-bottom: 0;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 12.5px; font-weight: 700;">تراز مالی و کیف پول</span>
+            <span style="font-size: 13px; font-weight: 700;">تراز مالی و کیف پول</span>
             <span id="modal-user-wallet" style="font-size: 13.5px; font-weight: 800; color: var(--brand-dark);"></span>
           </div>
           <form id="form-user-credit" style="display: flex; gap: 8px; align-items: center;">
-            <input type="number" id="modal-user-credit-toman" class="input-field input-mono" placeholder="مبلغ شارژ به تومان (مثال: ۵۰۰۰۰۰)" required style="flex: 1;" />
+            <input type="number" id="modal-user-credit-toman" class="input-field" placeholder="مبلغ شارژ به تومان (مثال: ۵۰۰۰۰۰)" required style="flex: 1;" />
             <button type="submit" class="btn-secondary" style="white-space: nowrap;">افزایش اعتبار کیف پول</button>
           </form>
         </div>
@@ -358,25 +651,25 @@
         <!-- Role & Status Actions -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--border-color);">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 11.5px; font-weight: 600;">نقش دسترسی:</span>
-            <select id="modal-user-role-select" class="input-field" style="width: auto; padding: 4px 8px; font-size: 11.5px;">
+            <span style="font-size: 13px; font-weight: 600;">نقش دسترسی:</span>
+            <select id="modal-user-role-select" class="input-field" style="width: auto; padding: 4px 8px; font-size: 13px;">
               <option value="Admin">مدیر ارشد (Admin)</option>
               <option value="Operator">اپراتور (Operator)</option>
               <option value="Developer">توسعه‌دهنده (Developer)</option>
             </select>
-            <button type="button" id="btn-save-user-role" class="btn-primary" style="padding: 4px 10px; font-size: 11px;">ذخیره نقش</button>
+            <button type="button" id="btn-save-user-role" class="btn-primary" style="padding: 4px 10px; font-size: 13px;">ذخیره نقش</button>
           </div>
 
-          <button type="button" id="btn-toggle-user-status" class="btn-danger" style="font-size: 11.5px; padding: 4px 12px;">
+          <button type="button" id="btn-toggle-user-status" class="btn-danger" style="font-size: 13px; padding: 4px 12px;">
             مسدودسازی کاربر
           </button>
         </div>
 
         <!-- User Projects -->
         <div>
-          <div style="font-size: 12px; font-weight: 700; margin-bottom: 6px;">پروژه‌های این کاربر:</div>
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">پروژه‌های این کاربر:</div>
           <div class="table-container" style="max-height: 160px; overflow-y: auto;">
-            <table class="data-table" style="font-size: 11.5px;">
+            <table class="data-table" style="font-size: 13px;">
               <thead>
                 <tr>
                   <th>شناسه</th>
@@ -399,41 +692,41 @@
       <div class="modal-header">
         <div>
           <h3 id="modal-proj-name">مدیریت پروژه و سرویس‌ها</h3>
-          <span id="modal-proj-id" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-light);"></span>
+          <span id="modal-proj-id" style="font-family: var(--font-persian); font-size: 13px; color: var(--text-light);"></span>
         </div>
         <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-project')">✕</button>
       </div>
       <div class="modal-body">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-main); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">شناسه انگلیسی (اسلاگ):</div>
-            <div id="modal-proj-slug" style="font-family: var(--font-mono); font-weight: 700;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">شناسه انگلیسی (اسلاگ):</div>
+            <div id="modal-proj-slug" style="font-family: var(--font-persian); font-weight: 700;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">شماره همراه مالک:</div>
-            <div id="modal-proj-owner" style="font-family: var(--font-mono);"></div>
+            <div style="font-size: 13px; color: var(--text-light);">شماره همراه مالک:</div>
+            <div id="modal-proj-owner" style="font-family: var(--font-persian);"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">منطقه دیتاسنتر:</div>
-            <div id="modal-proj-region" style="font-family: var(--font-mono); font-size: 12px;"></div>
+            <div style="font-size: 13px; color: var(--text-light);">منطقه دیتاسنتر:</div>
+            <div id="modal-proj-region" style="font-family: var(--font-persian); font-size: 13px;"></div>
           </div>
           <div>
-            <div style="font-size: 11px; color: var(--text-light);">وضعیت جاری:</div>
+            <div style="font-size: 13px; color: var(--text-light);">وضعیت جاری:</div>
             <div id="modal-proj-status-badge"></div>
           </div>
         </div>
 
         <div style="display: flex; justify-content: flex-end;">
-          <button type="button" id="btn-toggle-proj-status" class="btn-secondary" style="font-size: 11.5px;">
+          <button type="button" id="btn-toggle-proj-status" class="btn-secondary" style="font-size: 13px;">
             تغییر وضعیت پروژه (معلق / فعال)
           </button>
         </div>
 
         <!-- Services & Keys in Project -->
         <div>
-          <div style="font-size: 12px; font-weight: 700; margin-bottom: 6px;">وضعیت سرویس‌ها و کلیدهای تفکیک‌شده:</div>
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">وضعیت سرویس‌ها و کلیدهای تفکیک‌شده:</div>
           <div class="table-container">
-            <table class="data-table" style="font-size: 11.5px;">
+            <table class="data-table" style="font-size: 13px;">
               <thead>
                 <tr>
                   <th>سرویس</th>
@@ -451,5 +744,6 @@
 
   <script src="/shamsi.js"></script>
   <script src="/admin.js"></script>
+  <script src="/admin-logs.js"></script>
 </body>
 </html>

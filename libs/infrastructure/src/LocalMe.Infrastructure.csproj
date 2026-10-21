@@ -8,4 +8,15 @@
     <ProjectReference Include="..\..\core-domain\src\LocalMe.Core.csproj" />
     <ProjectReference Include="..\..\data-plane\src\LocalMe.DataPlane.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="StackExchange.Redis" Version="3.4.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Migrations\*.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

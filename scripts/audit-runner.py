@@ -143,6 +143,8 @@ EXCLUDED_DIRS = {
     "fixtures",
     "templates",
     "__pycache__",
+    "bin",
+    "obj",
 }
 
 CODE_EXTENSIONS = {

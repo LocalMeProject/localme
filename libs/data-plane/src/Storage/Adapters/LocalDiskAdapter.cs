@@ -19,10 +19,27 @@ public sealed class LocalDiskAdapter : IBlobStorageAdapter
 
     private string GetFullPath(string bucket, string objectKey)
     {
+        var canonicalRoot = Path.GetFullPath(_rootPath);
+        if (!canonicalRoot.EndsWith(Path.DirectorySeparatorChar))
+        {
+            canonicalRoot += Path.DirectorySeparatorChar;
+        }
+
         var safeKey = objectKey.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var dir = Path.Combine(_rootPath, bucket, Path.GetDirectoryName(safeKey) ?? string.Empty);
-        Directory.CreateDirectory(dir);
-        return Path.Combine(_rootPath, bucket, safeKey);
+        var combined = Path.GetFullPath(Path.Combine(_rootPath, bucket, safeKey));
+
+        if (!combined.StartsWith(canonicalRoot, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException($"Invalid storage path: '{objectKey}' traverses outside root boundary.");
+        }
+
+        var dir = Path.GetDirectoryName(combined);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        return combined;
     }
 
     public async Task PutObjectAsync(

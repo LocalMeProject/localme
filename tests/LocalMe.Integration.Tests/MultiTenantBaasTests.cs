@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using LocalMe.DataPlane.Admin;
 using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
+using LocalMe.DataPlane.Compute;
 using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
 using Xunit;
@@ -199,6 +200,8 @@ public class MultiTenantBaasTests
         var pm = new ProjectManagerService();
         var admin = new SuperadminService(pricing, pm, metering);
 
+        Assert.Empty(admin.GetAllTickets());
+        admin.CreateTicket("+989121112233", "مشکل درگاه", "خطای شبیه‌ساز", "tkt_01");
         var tickets = admin.GetAllTickets();
         Assert.NotEmpty(tickets);
 
@@ -277,12 +280,45 @@ public class MultiTenantBaasTests
         Assert.Equal("developer@gmail.com", oauthUser.Email);
 
         // 3. Register Email/Password User without OTP
-        var pwdUser = pm.AddProjectUser(proj.Id, email: "user@localme.ir", fullName: "احمد رضوی", provider: "password");
+        var pwdUser = pm.AddProjectUser(proj.Id, email: "user@localme.ir", fullName: "احمد رضوی", provider: "password", username: "ahmad_dev", password: "StrongPassword!987");
         Assert.NotNull(pwdUser);
         Assert.Equal("password", pwdUser.Provider);
+        Assert.Equal("ahmad_dev", pwdUser.Username);
+        Assert.NotNull(pwdUser.PasswordHash);
+        Assert.True(ProjectManagerService.VerifyPassword("StrongPassword!987", pwdUser.PasswordHash));
+        Assert.False(ProjectManagerService.VerifyPassword("WrongPassword123", pwdUser.PasswordHash));
+
+        // Find by username
+        var foundByUsername = pm.FindProjectUser(proj.Id, "ahmad_dev");
+        Assert.NotNull(foundByUsername);
+        Assert.Equal(pwdUser.Id, foundByUsername.Id);
 
         var allUsers = pm.GetProjectUsers(proj.Id);
-        Assert.True(allUsers.Count >= 3);
+        Assert.Equal(2, allUsers.Count);
+    }
+
+    [Fact]
+    public void CaptchaService_GeneratesSvgAndVerifiesCodeWithSingleUseProtection()
+    {
+        var captcha = new LocalMe.DataPlane.Auth.CaptchaService();
+        var challenge = captcha.Generate(length: 5, ttlSeconds: 120);
+
+        Assert.NotEmpty(challenge.CaptchaId);
+        Assert.NotEmpty(challenge.Svg);
+        Assert.Contains("<svg", challenge.Svg);
+        Assert.Equal(5, challenge.CodeForTesting.Length);
+
+        // Verification with wrong code fails
+        Assert.False(captcha.Verify(challenge.CaptchaId, "WRONG"));
+
+        // Single-use token: once failed/used, it cannot be reused
+        Assert.False(captcha.Verify(challenge.CaptchaId, challenge.CodeForTesting));
+
+        // Fresh token verification
+        var challenge2 = captcha.Generate(length: 5, ttlSeconds: 120);
+        Assert.True(captcha.Verify(challenge2.CaptchaId, challenge2.CodeForTesting.ToLowerInvariant()));
+        // Token consumed
+        Assert.False(captcha.Verify(challenge2.CaptchaId, challenge2.CodeForTesting));
     }
 
     [Fact]
@@ -292,10 +328,9 @@ public class MultiTenantBaasTests
         var host = new LocalMe.DataPlane.Compute.JintScriptHost();
         var proj = pm.CreateProject(new CreateProjectRequest("محاسبات لبه", "compute-proj"));
 
-        // 1. Verify seeded fare-calculator exists
+        // 1. Verify project starts clean with zero pre-seeded functions
         var funcs = pm.GetProjectFunctions(proj.Id);
-        Assert.NotEmpty(funcs);
-        Assert.Contains(funcs, f => f.Slug == "fare-calculator");
+        Assert.Empty(funcs);
 
         // 2. Deploy custom discount function
         const string discountScript = """
@@ -326,5 +361,438 @@ public class MultiTenantBaasTests
         Assert.NotEmpty(execResult.Logs);
         Assert.True(execResult.ExecutionTimeMs >= 0);
     }
-}
 
+    [Fact]
+    public void ShetabIpg_InitiatesPayment_RetrievesStoredPayment_AndVerifiesWithLedger()
+    {
+        var pm = new ProjectManagerService();
+        var ipg = new PaymentIpgService(pm);
+
+        // 1. Initiate IPG payment
+        var initRes = ipg.InitiatePayment(new IpgInitiateRequest(
+            Gateway: "SEP",
+            AmountIrr: 25_000_000, // 2.5M Toman
+            CallbackUrl: "https://myclient.ir/pay/callback",
+            CustomerPhone: "+989121112233",
+            Description: "شارژ آنلاین از طریق سامان‌کیش"
+        ));
+
+        Assert.True(initRes.Success);
+        Assert.NotEmpty(initRes.AuthorityToken);
+        Assert.Contains("/_baas/v1/pay/mock-gateway", initRes.RedirectUrl);
+
+        // 2. Query stored payment
+        var stored = ipg.GetPayment(initRes.AuthorityToken);
+        Assert.NotNull(stored);
+        Assert.Equal("SEP", stored!.Gateway);
+        Assert.Equal(25_000_000, stored.Amount.AmountIrr);
+        Assert.False(stored.IsVerified);
+
+        // 3. Verify payment (simulating user completed gateway payment)
+        var verifyRes = ipg.VerifyPayment(new IpgVerifyRequest(
+            AuthorityToken: initRes.AuthorityToken,
+            Gateway: "SEP",
+            Status: "OK",
+            TrackingCode: "TRK_981240"
+        ));
+
+        Assert.True(verifyRes.Success);
+        Assert.NotNull(verifyRes.ReferenceId);
+
+        // 4. Stored payment updated
+        var updated = ipg.GetPayment(initRes.AuthorityToken);
+        Assert.NotNull(updated);
+        Assert.True(updated!.IsVerified);
+
+        // 5. User wallet balance credited
+        var bal = ipg.GetWalletBalance("+989121112233");
+        Assert.True(bal.BalanceIrr >= 25_000_000);
+    }
+
+    [Fact]
+    public void HostingAndDomains_CreatesDeployment_AndVerifiesCustomDomain()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("فروشگاه سازنده", "maker-shop"));
+
+        // 1. Initial deployments are empty
+        var deps = pm.GetDeployments(proj.Id);
+        Assert.Empty(deps);
+
+        // 2. Deploy new version
+        var newDep = pm.CreateDeployment(proj.Id, "release/v1.2", "abc9876", "shop.maker.ir");
+        Assert.NotNull(newDep);
+        Assert.Equal("Live", newDep.Status);
+        Assert.Equal("shop.maker.ir", newDep.Domain);
+
+        // 3. Register custom domain
+        var dom = pm.AddDomain(proj.Id, "shop.maker.ir");
+        Assert.NotNull(dom);
+        Assert.Equal("Pending_Dns", dom.SslStatus);
+
+        // 4. Verify domain DNS
+        var verifiedDom = pm.VerifyDomain(proj.Id, "shop.maker.ir");
+        Assert.NotNull(verifiedDom);
+        Assert.True(verifiedDom!.IsVerified);
+        Assert.Equal("Active", verifiedDom.SslStatus);
+    }
+
+    [Fact]
+    public void InteractiveSql_ExecutesQuery_AndInspectsTableSchema()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("داده تحلیلی", "analytics-db"));
+
+        // 1. Run CREATE TABLE
+        var createResult = pm.ExecuteSql(proj.Id, "CREATE TABLE products (id text, title text, price bigint);");
+        Assert.True(createResult.Success);
+        Assert.Contains("products", pm.GetProjectTableNames(proj.Id));
+
+        // 2. Insert records
+        pm.InsertRow(proj.Id, "products", new System.Text.Json.Nodes.JsonObject
+        {
+            ["id"] = "prod_1",
+            ["title"] = "سرویس ابری",
+            ["price"] = 5000000
+        });
+
+        // 3. Run SELECT on created table
+        var selResult = pm.ExecuteSql(proj.Id, "SELECT * FROM products;");
+        Assert.True(selResult.Success);
+        Assert.True(selResult.RowCount >= 1);
+        Assert.Contains("title", selResult.Columns);
+
+        // 4. Inspect schema
+        var schema = pm.GetTableSchema(proj.Id, "products");
+        Assert.NotEmpty(schema);
+        Assert.Contains(schema, c => c.Name == "id");
+        Assert.Contains(schema, c => c.Name == "title");
+    }
+
+    [Fact]
+    public void TeamCollaborators_SupportsRbacInviteAndRemoval()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("پروژه تیمی", "team-project"));
+
+        // 1. Initial owner seeded
+        var team = pm.GetCollaborators(proj.Id);
+        Assert.NotEmpty(team);
+        Assert.Contains(team, c => c.Role == "Owner");
+
+        // 2. Invite developer
+        var newMember = pm.AddCollaborator(proj.Id, "سارا حسینی", "+989354445566", "Developer");
+        Assert.NotNull(newMember);
+        Assert.Equal("Developer", newMember.Role);
+
+        // 3. Remove collaborator
+        var removed = pm.RemoveCollaborator(proj.Id, newMember.Id);
+        Assert.True(removed);
+        var updatedTeam = pm.GetCollaborators(proj.Id);
+        Assert.DoesNotContain(updatedTeam, c => c.Id == newMember.Id);
+    }
+
+    [Fact]
+    public void ComplianceHub_UpdatesRegulatoryConfigAndAssetLinks()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("سامانه قانونی", "legal-app"));
+
+        // 1. Initial clean compliance
+        var comp = pm.GetCompliance(proj.Id);
+        Assert.NotNull(comp);
+        Assert.Empty(comp.EnamadSymbolCode);
+
+        // 2. Update compliance config
+        var updated = pm.UpdateCompliance(proj.Id, comp with
+        {
+            EnamadSymbolCode = "14039999",
+            AndroidPackageName = "ir.legalapp.client"
+        });
+
+        Assert.Equal("14039999", updated.EnamadSymbolCode);
+        Assert.Equal("ir.legalapp.client", updated.AndroidPackageName);
+    }
+
+    [Fact]
+    public void LiveLogs_RecordsAndFiltersTelemetryEvents()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تله‌متری پروژه", "telemetry-proj"));
+
+        // 1. Record logs
+        pm.AddProjectLog(proj.Id, "auth", "INFO", "ورود موفق کاربر با رمز یکبارمصرف");
+        pm.AddProjectLog(proj.Id, "database", "WARN", "کوئری سنگین شناسایی شد", latencyMs: 250);
+
+        // 2. Query all logs
+        var allLogs = pm.GetProjectLogs(proj.Id);
+        Assert.True(allLogs.Count >= 2);
+
+        // 3. Query filtered by service
+        var authLogs = pm.GetProjectLogs(proj.Id, serviceFilter: "auth");
+        Assert.Contains(authLogs, l => l.Service == "auth");
+
+        // 4. Query filtered by level
+        var warnLogs = pm.GetProjectLogs(proj.Id, levelFilter: "WARN");
+        Assert.Contains(warnLogs, l => l.Level == "WARN");
+    }
+
+    [Fact]
+    public void UserAuth_ValidatesUsernameAndPasswordForGlobalAccess()
+    {
+        var pm = new ProjectManagerService();
+
+        // 1. Successful credential login by username
+        var (devSuccess, _, devUser) = pm.ValidateUserCredentials("sina", "developer123456");
+        Assert.True(devSuccess);
+        Assert.NotNull(devUser);
+        Assert.Equal("usr_developer_03", devUser.Id);
+
+        // 2. Successful login by email and phone aliases
+        var (emailSuccess, _, _) = pm.ValidateUserCredentials("sina@example.com", "developer123456");
+        Assert.True(emailSuccess);
+
+        var (phoneSuccess, _, _) = pm.ValidateUserCredentials("+989121112233", "developer123456");
+        Assert.True(phoneSuccess);
+
+        // 3. Admin user authentication
+        var (adminSuccess, _, adminUser) = pm.ValidateUserCredentials("admin", "admin123456");
+        Assert.True(adminSuccess);
+        Assert.NotNull(adminUser);
+        Assert.Equal(UserRole.Admin, adminUser.Role);
+
+        // 4. Invalid password rejection
+        var (failPass, _, _) = pm.ValidateUserCredentials("sina", "WrongPassword!");
+        Assert.False(failPass);
+
+        // 5. Non-existent user rejection
+        var (failUser, _, _) = pm.ValidateUserCredentials("ghost_user", "somepassword");
+        Assert.False(failUser);
+
+        // 6. Password update
+        pm.SetUserPassword(devUser.Id, "BrandNewPassword2026!");
+        var (newPassSuccess, _, _) = pm.ValidateUserCredentials("sina", "BrandNewPassword2026!");
+        Assert.True(newPassSuccess);
+    }
+
+    [Fact]
+    public void ProjectScopedAuth_ValidatesProjectSlugAndPassword_AndEnforcesIsolation()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("فروشگاه آنلاین تستی", "test-scoped-store"));
+
+        // 1. Initially no project password set
+        var (initFail, _, _) = pm.ValidateProjectCredentials("test-scoped-store", "AnyPassword");
+        Assert.False(initFail);
+
+        // 2. Set project password
+        var setOk = pm.SetProjectPassword(proj.Id, "StoreSecret2026!");
+        Assert.True(setOk);
+
+        var updatedProj = pm.GetProject(proj.Id);
+        Assert.NotNull(updatedProj);
+        Assert.True(updatedProj.HasPassword);
+
+        // 3. Validate correct project credentials by slug
+        var (loginSuccess, _, scopedProj) = pm.ValidateProjectCredentials("test-scoped-store", "StoreSecret2026!");
+        Assert.True(loginSuccess);
+        Assert.NotNull(scopedProj);
+        Assert.Equal(proj.Id, scopedProj.Id);
+
+        // 4. Validate by project ID
+        var (loginByIdSuccess, _, _) = pm.ValidateProjectCredentials(proj.Id, "StoreSecret2026!");
+        Assert.True(loginByIdSuccess);
+
+        // 5. Wrong password rejected
+        var (wrongPassSuccess, _, _) = pm.ValidateProjectCredentials("test-scoped-store", "BadPassword");
+        Assert.False(wrongPassSuccess);
+
+        // 6. Generate project-scoped JWT token and verify scope extraction
+        var tokens = LocalMe.DataPlane.Auth.OtpAuthService.GenerateSessionToken(
+            userId: $"proj_user_{proj.Id}",
+            role: "project_developer",
+            scopedProjectId: proj.Id
+        );
+        Assert.NotNull(tokens.AccessToken);
+
+        var (tokenValid, tokenUserId, tokenRole, scopedId) = LocalMe.DataPlane.Auth.OtpAuthService.ValidateTokenWithScope(tokens.AccessToken);
+        Assert.True(tokenValid);
+        Assert.Equal($"proj_user_{proj.Id}", tokenUserId);
+        Assert.Equal("project_developer", tokenRole);
+        Assert.Equal(proj.Id, scopedId);
+
+        // 7. Remove project password
+        var removeOk = pm.RemoveProjectPassword(proj.Id);
+        Assert.True(removeOk);
+        var (afterRemove, _, _) = pm.ValidateProjectCredentials("test-scoped-store", "StoreSecret2026!");
+        Assert.False(afterRemove);
+    }
+
+    [Fact]
+    public void CreateProject_ProducesCompletelyCleanProjectWithZeroSeededData()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("پروژه تمیز سازمانی", "clean-org-app"));
+
+        Assert.NotNull(proj);
+        Assert.Equal("clean-org-app", proj.Slug);
+
+        // Verify zero fake/demo entities
+        Assert.Empty(pm.GetProjectTableNames(proj.Id));
+        Assert.Empty(pm.GetProjectBuckets(proj.Id));
+        Assert.Empty(pm.GetProjectFunctions(proj.Id));
+        Assert.Empty(pm.GetProjectUsers(proj.Id));
+        Assert.Empty(pm.GetDeployments(proj.Id));
+        Assert.Empty(pm.GetDomains(proj.Id));
+
+        // Team must only have the owner
+        var team = pm.GetCollaborators(proj.Id);
+        Assert.Single(team);
+        Assert.Equal("Owner", team[0].Role);
+
+        // IPG and Compliance start unconfigured
+        var ipg = pm.GetIpgConfig(proj.Id);
+        Assert.Empty(ipg.TerminalId);
+        Assert.Empty(ipg.MerchantKey);
+
+        var comp = pm.GetCompliance(proj.Id);
+        Assert.Empty(comp.EnamadSymbolCode);
+    }
+
+    [Fact]
+    public void ShetabIpg_SupportsBankSpecificFieldsForMellatSepZarinpalSadad()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("درگاه بانکی", "bank-ipg-app"));
+
+        // 1. Mellat Behpardakht 1-to-1 official parameters
+        var mellatConfig = new IpgMerchantConfig(
+            TerminalId: "7891234",
+            MerchantKey: "sec_mellat",
+            DefaultPsp: "BEHPARDAKHT",
+            EnforceShetabCardMask: true,
+            IsSandbox: false,
+            MellatTerminalId: "7891234",
+            MellatUserName: "mellat_ws_user",
+            MellatUserPassword: "MellatSecretPassword!1",
+            MellatPayerId: "12345"
+        );
+        var savedMellat = pm.UpdateIpgConfig(proj.Id, mellatConfig);
+        Assert.Equal("7891234", savedMellat.MellatTerminalId);
+        Assert.Equal("mellat_ws_user", savedMellat.MellatUserName);
+        Assert.Equal("MellatSecretPassword!1", savedMellat.MellatUserPassword);
+
+        // 2. Saman Kish (SEP) 1-to-1 official parameters
+        var sepConfig = new IpgMerchantConfig(
+            TerminalId: "10987654",
+            MerchantKey: "sep_pass_88",
+            DefaultPsp: "SEP",
+            EnforceShetabCardMask: true,
+            IsSandbox: false,
+            SepTerminalId: "10987654",
+            SepMerchantId: "sep_merchant_pass_123",
+            SepCellNumber: "09121112233"
+        );
+        var savedSep = pm.UpdateIpgConfig(proj.Id, sepConfig);
+        Assert.Equal("10987654", savedSep.SepTerminalId);
+        Assert.Equal("sep_merchant_pass_123", savedSep.SepMerchantId);
+        Assert.Equal("09121112233", savedSep.SepCellNumber);
+
+        // 3. Zarinpal 1-to-1 official parameters (36-char UUID)
+        const string zpUuid = "c7a8b9d0-1234-5678-90ab-cdef12345678";
+        var zarinpalConfig = new IpgMerchantConfig(
+            TerminalId: zpUuid,
+            MerchantKey: zpUuid,
+            DefaultPsp: "ZARINPAL",
+            EnforceShetabCardMask: true,
+            IsSandbox: true,
+            ZarinpalMerchantId: zpUuid,
+            ZarinpalIsZarinGate: true,
+            ZarinpalSandbox: true
+        );
+        var savedZp = pm.UpdateIpgConfig(proj.Id, zarinpalConfig);
+        Assert.Equal(zpUuid, savedZp.ZarinpalMerchantId);
+        Assert.True(savedZp.ZarinpalIsZarinGate);
+        Assert.True(savedZp.ZarinpalSandbox);
+
+        // 4. Sadad Bank Melli 1-to-1 official parameters
+        var sadadConfig = new IpgMerchantConfig(
+            TerminalId: "24009988",
+            MerchantKey: "sadad_sym_key",
+            DefaultPsp: "SADAD",
+            EnforceShetabCardMask: true,
+            IsSandbox: false,
+            SadadMerchantId: "000000140299881",
+            SadadTerminalId: "24009988",
+            SadadTerminalKey: "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU="
+        );
+        var savedSadad = pm.UpdateIpgConfig(proj.Id, sadadConfig);
+        Assert.Equal("000000140299881", savedSadad.SadadMerchantId);
+        Assert.Equal("24009988", savedSadad.SadadTerminalId);
+        Assert.Equal("QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU=", savedSadad.SadadTerminalKey);
+    }
+
+    [Fact]
+    public void Function_Update_PersistsAndCanBeInvoked()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("توابع لبه", "edge-functions-app"));
+
+        // 1. Initial Deploy
+        var initialScript = "function handler(req) { return { initial: true }; } handler(context);";
+        var deployed = pm.DeployFunction(proj.Id, "محاسبه گر", initialScript, "calc-fn");
+        Assert.NotNull(deployed);
+        Assert.Equal("calc-fn", deployed.Slug);
+
+        // 2. Update Function Script via UpdateFunction
+        var updatedScript = "function handler(req) { return { total: (req ? req.a : 0) + (req ? req.b : 0), version: 2 }; } handler(context);";
+        var updated = pm.UpdateFunction(proj.Id, "calc-fn", "محاسبه گر پیشرفته", updatedScript);
+        Assert.NotNull(updated);
+        Assert.Equal("محاسبه گر پیشرفته", updated!.Name);
+        Assert.Equal(updatedScript, updated.Script);
+
+        // 3. Verify retrieved function matches updated script
+        var retrieved = pm.GetProjectFunction(proj.Id, "calc-fn");
+        Assert.NotNull(retrieved);
+        Assert.Equal(updatedScript, retrieved!.Script);
+
+        // 4. Execute updated script in Jint host
+        var jint = new JintScriptHost();
+        var executionResult = jint.ExecuteScript(new ScriptExecutionRequest(retrieved.Script, "{\"a\": 15, \"b\": 25}"));
+        Assert.True(executionResult.Success);
+        Assert.NotNull(executionResult.Output);
+        var jsonOutput = System.Text.Json.JsonSerializer.Serialize(executionResult.Output);
+        Assert.Contains("40", jsonOutput);
+        Assert.Contains("version", jsonOutput);
+    }
+
+    [Fact]
+    public void Auth_UserManagement_StatusToggleAndResetPassword()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("احراز هویت", "auth-users-app"));
+
+        // 1. Create a user
+        var user = pm.AddProjectUser(proj.Id, email: "user@example.ir", fullName: "کاربر تستی", provider: "password", password: "OldPassword123!");
+        Assert.NotNull(user);
+        Assert.True(user.IsConfirmed);
+        var originalHash = user.PasswordHash;
+
+        // 2. Toggle Status (Suspend user)
+        var suspended = pm.UpdateProjectUserStatus(proj.Id, user.Id, false);
+        Assert.NotNull(suspended);
+        Assert.False(suspended!.IsConfirmed);
+
+        // 3. Reset Password
+        var pwdReset = pm.ResetProjectUserPassword(proj.Id, user.Id, "NewSecretPass456!");
+        Assert.NotNull(pwdReset);
+        Assert.NotEqual(originalHash, pwdReset!.PasswordHash);
+
+        // 4. Delete User
+        var deleted = pm.DeleteProjectUser(proj.Id, user.Id);
+        Assert.True(deleted);
+
+        var usersAfterDelete = pm.GetProjectUsers(proj.Id);
+        Assert.DoesNotContain(usersAfterDelete, u => u.Id == user.Id);
+    }
+}

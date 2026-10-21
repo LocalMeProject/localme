@@ -7,8 +7,9 @@
     "type": "git",
     "url": "https://github.com/LocalMeProject/localme.git"
   },
-  "packageManager": "pnpm@12.11.2",
   "scripts": {
+    "dev": "dotnet run --project apps/server/src/LocalMe.Server.csproj",
+    "start": "dotnet run --project apps/server/src/LocalMe.Server.csproj --configuration Release",
     "nx": "nx",
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",

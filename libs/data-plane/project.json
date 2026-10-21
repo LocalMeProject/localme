@@ -12,14 +12,14 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "dotnet format --verify-no-changes",
+        "command": "dotnet format src/LocalMe.DataPlane.csproj --verify-no-changes",
         "cwd": "libs/data-plane"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "dotnet test ../../tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj",
+        "command": "dotnet test ../../tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj --no-build --filter FullyQualifiedName~DataPlane",
         "cwd": "libs/data-plane"
       }
     },

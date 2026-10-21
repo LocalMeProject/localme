@@ -1,174 +1,335 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Project, CapabilityCode } from './types';
+import { Header } from './components/Header';
+import { Navigation, TabId } from './components/Navigation';
 
-interface Capability {
-  code: string;
-  name: string;
-  description: string;
-  primitives: string[];
-  enabled: boolean;
-}
+// Views
+import { OverviewView } from './views/OverviewView';
+import { DatabaseView } from './views/DatabaseView';
+import { AuthView } from './views/AuthView';
+import { EdgeFunctionsView } from './views/EdgeFunctionsView';
+import { StorageView } from './views/StorageView';
+import { IpgView } from './views/IpgView';
+import { HostingView } from './views/HostingView';
+import { ComplianceView } from './views/ComplianceView';
+import { TelemetryView } from './views/TelemetryView';
+import { SettingsView } from './views/SettingsView';
 
-const INITIAL_CAPABILITIES: Capability[] = [
+// Modals
+import { CreateProjectModal } from './components/modals/CreateProjectModal';
+import { DeployFunctionModal } from './components/modals/DeployFunctionModal';
+import { CreateTableModal } from './components/modals/CreateTableModal';
+import { CreateBucketModal } from './components/modals/CreateBucketModal';
+import { AddUserModal } from './components/modals/AddUserModal';
+import { AddDomainModal } from './components/modals/AddDomainModal';
+import { TopupModal } from './components/modals/TopupModal';
+
+const INITIAL_PROJECTS: Project[] = [
   {
-    code: 'BASE',
-    name: 'Core Project Foundation',
-    description: 'Dynamic subdomain, YARP edge routing, e-Namad compliance responder',
-    primitives: ['DNS_SUBDOMAIN', 'YARP_ROUTE', 'COMPLIANCE_RESPONDER', 'TELEMETRY_METER'],
-    enabled: true,
+    id: 'prj-101',
+    name: 'دیجی‌کالا کلون',
+    slug: 'digikala-clone',
+    description: 'فروشگاه اینترنتی با پرداخت مستقیم شاپرک و احراز هویت پیامکی',
+    region: 'ir-teh-1 (آسیاتک)',
+    status: 'ACTIVE',
+    createdAt: '۱۴۰۳/۰۶/۱۵',
+    walletBalanceIrr: 450_000_000, // 45,000,000 Tomans
+    hasPassword: true,
+    services: {
+      database: { isEnabled: true },
+      auth: { isEnabled: true },
+      storage: { isEnabled: true },
+      functions: { isEnabled: true },
+    },
   },
   {
-    code: 'BAAS_DB',
-    name: 'Relational Database & API',
-    description: 'PostgreSQL 18 schema-per-tenant, Npgsql pool, Dynamic SQL endpoint',
-    primitives: ['PG_TENANT_SCHEMA', 'NPGSQL_POOL', 'DYNAMIC_SQL_ROUTE'],
-    enabled: true,
-  },
-  {
-    code: 'IDAAS',
-    name: 'Authentication (IDaaS)',
-    description: 'Iranian mobile OTP, Jint dispatch hooks, Argon2id, Ed25519 tokens',
-    primitives: ['BAAS_DB', 'REDIS_KV', 'JINT_ISOLATE', 'SECRET_VAULT', 'STATIC_EGRESS_NAT'],
-    enabled: true,
-  },
-  {
-    code: 'FIN_IPG',
-    name: 'Managed IPG & IRR Ledger',
-    description: 'Shaparak / Zarinpal / SEP bank callbacks, Rial double-entry ledger, Deep Links',
-    primitives: ['BAAS_DB', 'COMPUTE_EDGE', 'STATIC_EGRESS_NAT', 'COMPLIANCE_RESPONDER'],
-    enabled: false,
-  },
-  {
-    code: 'STORAGE_BLOB',
-    name: 'Blob & Media Storage',
-    description: 'Multi-adapter storage (Runflare, Arvan, MinIO), TUS resumable uploads, ImageSharp',
-    primitives: ['BAAS_DB', 'BLOB_STORAGE_ADAPTER', 'TUSDOTNET_PROXY', 'IMAGESHARP_PROXY'],
-    enabled: false,
-  },
-  {
-    code: 'HOSTING_WEB',
-    name: 'Frontend Web Hosting',
-    description: 'Immutable content-addressed SPA hosting, automatic e-Namad meta injection',
-    primitives: ['BLOB_STORAGE_ADAPTER', 'YARP_ROUTE', 'EDGE_CACHE', 'LETTUCEENCRYPT_SSL'],
-    enabled: true,
+    id: 'prj-102',
+    name: 'اسنپ تریپ اپ',
+    slug: 'snapp-trip',
+    description: 'سامانه رزرو بلیت و هتل بر بستر شبکه ملی اطلاعات',
+    region: 'ir-teh-2 (زیرساخت)',
+    status: 'ACTIVE',
+    createdAt: '۱۴۰۳/۰۷/۰۱',
+    walletBalanceIrr: 1_200_000_000,
+    hasPassword: false,
+    services: {
+      database: { isEnabled: true },
+      auth: { isEnabled: true },
+      storage: { isEnabled: false },
+      functions: { isEnabled: false },
+    },
   },
 ];
 
 export default function App() {
-  const [capabilities, setCapabilities] = useState(INITIAL_CAPABILITIES);
-  const [walletBalance] = useState<number>(450000000); // 450,000,000 IRR = 45,000,000 Tomans
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [currentProjectId, setCurrentProjectId] = useState<string>('prj-101');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
-  const toggleCapability = (code: string) => {
-    setCapabilities((prev) =>
-      prev.map((c) => (c.code === code ? { ...c, enabled: !c.enabled } : c))
+  // Capability set for current project
+  const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
+    new Set(['BASE', 'BAAS_DB', 'IDAAS', 'COMPUTE_EDGE', 'HOSTING_WEB', 'STORAGE_BLOB'])
+  );
+
+  // Modal open states
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isDeployFunctionOpen, setIsDeployFunctionOpen] = useState(false);
+  const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
+  const [isCreateBucketOpen, setIsCreateBucketOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isAddDomainOpen, setIsAddDomainOpen] = useState(false);
+  const [isTopupOpen, setIsTopupOpen] = useState(false);
+
+  // Toast feedback
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  const currentProject =
+    projects.find((p) => p.id === currentProjectId) || projects[0];
+
+  const handleToggleCapability = (code: CapabilityCode) => {
+    setActiveCapabilities((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+        showToast(`قابلیت ${code} با موفقیت غیرفعال شد.`);
+      } else {
+        next.add(code);
+        showToast(`قابلیت ${code} فعال و ماتریس وابستگی DAG بازآرایی شد.`);
+      }
+      return next;
+    });
+
+    if (code === 'COMPUTE_EDGE') {
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === currentProjectId
+            ? {
+                ...p,
+                services: {
+                  ...p.services,
+                  functions: {
+                    isEnabled: !p.services.functions?.isEnabled,
+                  },
+                },
+              }
+            : p
+        )
+      );
+    }
+  };
+
+  const handleCreateProject = (data: {
+    name: string;
+    slug: string;
+    description: string;
+    region: string;
+    password?: string;
+  }) => {
+    const newPrj: Project = {
+      id: `prj-${Date.now()}`,
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      region: data.region,
+      status: 'ACTIVE',
+      createdAt: 'همین الان',
+      walletBalanceIrr: 100_000_000, // Initial promotional credit 10,000,000 IRR
+      hasPassword: Boolean(data.password),
+      services: {
+        database: { isEnabled: true },
+        auth: { isEnabled: true },
+        storage: { isEnabled: false },
+        functions: { isEnabled: true },
+      },
+    };
+    setProjects((prev) => [newPrj, ...prev]);
+    setCurrentProjectId(newPrj.id);
+    showToast(`پروژه «${data.name}» با موفقیت راه‌اندازی گردید.`);
+  };
+
+  const handleUpdateProject = (updated: Partial<Project>) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === currentProjectId ? { ...p, ...updated } : p))
+    );
+    showToast('تنظیمات پروژه با موفقیت ذخیره گردید.');
+  };
+
+  const handleDeleteProject = () => {
+    if (projects.length <= 1) {
+      showToast('خطا: حذف تنها پروژه فعال مجاز نمی‌باشد.');
+      return;
+    }
+    const remaining = projects.filter((p) => p.id !== currentProjectId);
+    setProjects(remaining);
+    setCurrentProjectId(remaining[0].id);
+    showToast('پروژه با موفقیت حذف گردید.');
+  };
+
+  const handleTopup = (amountIrr: number, gateway: string) => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === currentProjectId
+          ? { ...p, walletBalanceIrr: p.walletBalanceIrr + amountIrr }
+          : p
+      )
+    );
+    showToast(
+      `پرداخت موفق از طریق درگاه ${gateway}. مبلغ ${(amountIrr / 10).toLocaleString('fa-IR')} تومان به کیف پول افزوده شد.`
     );
   };
 
-  const activePrimitives = Array.from(
-    new Set(
-      capabilities
-        .filter((c) => c.enabled)
-        .flatMap((c) => c.primitives)
-    )
-  );
+  const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-zinc-800">
-      {/* Sleek Apple-style Translucent Header */}
-      <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center font-bold text-black text-sm">
-            LM
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight">LocalMe Sovereign Console</h1>
-            <p className="text-xs text-zinc-400">Pure .NET 10 + PostgreSQL 18.1 + Redis 7/8</p>
-          </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col selection:bg-amber-500/20 selection:text-amber-300 font-sans antialiased">
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-amber-500/50 shadow-2xl text-amber-300 text-xs font-medium flex items-center space-x-2 animate-in slide-in-from-bottom-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span>{toastMessage}</span>
         </div>
+      )}
 
-        <div className="flex items-center space-x-4 text-xs font-mono">
-          <div className="px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Static Egress NAT: Whitelisted</span>
-          </div>
-          <div className="px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800">
-            <span>کیف پول ریالی: </span>
-            <span className="text-amber-400 font-bold">{(walletBalance / 10).toLocaleString('fa-IR')} تومان</span>
-          </div>
-        </div>
-      </header>
+      {/* Sovereign Header */}
+      <Header
+        currentProject={currentProject}
+        allProjects={projects}
+        onSelectProject={(p) => setCurrentProjectId(p.id)}
+        onOpenCreateModal={() => setIsCreateProjectOpen(true)}
+        onOpenTopupModal={() => setIsTopupOpen(true)}
+      />
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-10">
-        {/* Project Header Card */}
-        <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex justify-between items-center">
-          <div>
-            <div className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
-              ACTIVE PROJECT
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight">digikala-clone</h2>
-            <p className="text-sm text-zinc-400 mt-1">
-              Static Subdomain: <a href="https://digikala-clone.localme.ir" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">https://digikala-clone.localme.ir</a>
-            </p>
-          </div>
-          <button className="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-medium text-sm transition">
-            Deploy New Build
-          </button>
-        </div>
+      {/* Navigation Tabs */}
+      <Navigation
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        edgeFunctionsEnabled={isEdgeFunctionsEnabled}
+      />
 
-        {/* DAG Matrix Engine Section */}
-        <section className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold tracking-tight">Directed Acyclic Graph (DAG) Matrix</h3>
-            <p className="text-sm text-zinc-400">
-              Toggle capabilities to trigger atomic reference counting and automated primitive provisioning.
-            </p>
-          </div>
+      {/* Main Workspace Body */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+        {activeTab === 'overview' && (
+          <OverviewView
+            project={currentProject}
+            activeCapabilities={activeCapabilities}
+            onToggleCapability={handleToggleCapability}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onDeployBuild={() => setIsDeployFunctionOpen(true)}
+          />
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {capabilities.map((cap) => (
-              <div
-                key={cap.code}
-                onClick={() => toggleCapability(cap.code)}
-                className={`cursor-pointer p-5 rounded-2xl border transition-all duration-200 ${
-                  cap.enabled
-                    ? 'bg-zinc-900/90 border-amber-500/40 shadow-lg shadow-amber-500/5'
-                    : 'bg-zinc-900/20 border-zinc-800/60 opacity-60 hover:opacity-100'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-bold text-amber-400">{cap.code}</span>
-                  <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      cap.enabled ? 'border-amber-500 bg-amber-500' : 'border-zinc-700'
-                    }`}
-                  >
-                    {cap.enabled && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
-                  </div>
-                </div>
-                <h4 className="font-medium text-sm text-zinc-100">{cap.name}</h4>
-                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{cap.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {activeTab === 'database' && (
+          <DatabaseView
+            project={currentProject}
+            onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
+          />
+        )}
 
-        {/* Resolved Infrastructure Primitives Display */}
-        <section className="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-800/80 space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-300">
-            Active Infrastructure Primitives ({activePrimitives.length})
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {activePrimitives.map((p) => (
-              <span
-                key={p}
-                className="px-3 py-1 rounded-lg text-xs font-mono bg-zinc-800 text-zinc-200 border border-zinc-700/60"
-              >
-                {p}
-              </span>
-            ))}
-          </div>
-        </section>
+        {activeTab === 'auth' && (
+          <AuthView
+            project={currentProject}
+            onOpenAddUserModal={() => setIsAddUserOpen(true)}
+          />
+        )}
+
+        {activeTab === 'functions' && (
+          <EdgeFunctionsView
+            project={currentProject}
+            enabled={isEdgeFunctionsEnabled}
+            onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
+            onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+          />
+        )}
+
+        {activeTab === 'storage' && (
+          <StorageView
+            project={currentProject}
+            onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
+          />
+        )}
+
+        {activeTab === 'ipg' && <IpgView project={currentProject} />}
+
+        {activeTab === 'hosting' && (
+          <HostingView
+            project={currentProject}
+            onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+            onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
+          />
+        )}
+
+        {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
+
+        {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
+
+        {activeTab === 'settings' && (
+          <SettingsView
+            project={currentProject}
+            onUpdateProject={handleUpdateProject}
+            onDeleteProject={handleDeleteProject}
+          />
+        )}
       </main>
+
+      {/* Modals */}
+      <CreateProjectModal
+        isOpen={isCreateProjectOpen}
+        onClose={() => setIsCreateProjectOpen(false)}
+        onCreate={handleCreateProject}
+      />
+
+      <DeployFunctionModal
+        isOpen={isDeployFunctionOpen}
+        onClose={() => setIsDeployFunctionOpen(false)}
+        onDeploy={(fn) => {
+          showToast(`تابع لبه «${fn.name}» با موفقیت در هسته Jint مستقر گردید.`);
+        }}
+      />
+
+      <CreateTableModal
+        isOpen={isCreateTableOpen}
+        onClose={() => setIsCreateTableOpen(false)}
+        onCreate={(tbl) => {
+          showToast(`جدول «${tbl.name}» در طرحواره PostgreSQL 18 ایجاد گردید.`);
+        }}
+      />
+
+      <CreateBucketModal
+        isOpen={isCreateBucketOpen}
+        onClose={() => setIsCreateBucketOpen(false)}
+        onCreate={(bkt) => {
+          showToast(`باکت «${bkt.name}» با موفقیت ایجاد گردید.`);
+        }}
+      />
+
+      <AddUserModal
+        isOpen={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+        onAdd={(usr) => {
+          showToast(`کاربر «${usr.fullName}» در سامانه IDaaS ثبت گردید.`);
+        }}
+      />
+
+      <AddDomainModal
+        isOpen={isAddDomainOpen}
+        onClose={() => setIsAddDomainOpen(false)}
+        onAdd={(dom) => {
+          showToast(`دامنه «${dom.domain}» ثبت شد. در حال صدور گواهی Let's Encrypt...`);
+        }}
+      />
+
+      <TopupModal
+        isOpen={isTopupOpen}
+        onClose={() => setIsTopupOpen(false)}
+        onTopup={handleTopup}
+      />
     </div>
   );
 }

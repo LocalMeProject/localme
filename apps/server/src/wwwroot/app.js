@@ -1,15 +1,61 @@
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// =====================================================================
+// Apple-Styled Non-Blocking Toast Notification System
+// =====================================================================
+function showToast(message, type = 'info', duration = 3800) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast-message toast-${type}`;
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ';
+  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-fadeout');
+    setTimeout(() => toast.remove(), 280);
+  }, duration);
+}
+window.showToast = showToast;
+
+// Hard override of window.alert to guarantee zero browser popups platform-wide
+window.alert = function(msg) {
+  showToast(String(msg), 'info');
+};
+
 // LocalMe Developer BaaS Console Core Engine
-let currentUser = null;
-let userProjects = [];
-let activeProjectId = null;
-let activeProject = null;
+var currentUser = null;
+var userProjects = [];
+var activeProjectId = null;
+var activeProject = null;
+window.currentUser = currentUser;
+window.userProjects = userProjects;
+window.activeProjectId = activeProjectId;
+window.activeProject = activeProject;
 
 document.addEventListener('DOMContentLoaded', () => {
   initUserSession();
   initSidebarNav();
+  initMiniProfile();
   initModals();
   initServiceForms();
   initShamsiDatepicker();
+  initProjectPasswordListeners();
+  TabManager.init();
 });
 
 // 1. User Session & Initial Projects Fetch
@@ -18,17 +64,43 @@ async function initUserSession() {
     const res = await fetch('/_baas/v1/users/me');
     if (res.ok) {
       currentUser = await res.json();
+      window.currentUser = currentUser;
       const nameEl = document.getElementById('user-display-name');
       if (nameEl) nameEl.textContent = currentUser.fullName;
 
       const roleBadge = document.getElementById('user-role-badge');
       if (roleBadge) {
-        roleBadge.textContent = currentUser.role === 0 ? 'مدیر ارشد' : currentUser.role === 1 ? 'اپراتور' : 'توسعه‌دهنده';
+        if (currentUser.isProjectScoped) {
+          roleBadge.textContent = 'دسترسی تک‌پروژه';
+          roleBadge.className = 'badge badge-info';
+        } else {
+          roleBadge.textContent = currentUser.role === 0 ? 'مدیر ارشد' : currentUser.role === 1 ? 'اپراتور' : 'توسعه‌دهنده';
+        }
+      }
+
+      // Update Mini-Profile title and label
+      const balanceStr = Shamsi.formatToman(currentUser.walletBalanceIrr);
+      const titleStr = `${currentUser.fullName || 'سینا والی زاده'} | ${balanceStr}`;
+      const labelEl = document.getElementById('mini-profile-label');
+      const triggerEl = document.getElementById('mini-profile-trigger');
+      if (labelEl) labelEl.textContent = titleStr;
+      if (triggerEl) triggerEl.title = titleStr;
+
+      const phoneEl = document.getElementById('mp-user-phone');
+      if (phoneEl && currentUser.phone) phoneEl.textContent = currentUser.phone;
+
+      const emailEl = document.getElementById('mp-user-email');
+      if (emailEl && currentUser.email) emailEl.textContent = currentUser.email;
+
+      // Hide create project button for project-scoped login
+      if (currentUser.isProjectScoped) {
+        const createBtn = document.getElementById('btn-create-proj-modal');
+        if (createBtn) createBtn.style.display = 'none';
       }
 
       // Show Admin portal link if user is Admin or Operator
       const adminLink = document.getElementById('admin-panel-link');
-      if (adminLink && (currentUser.role === 0 || currentUser.role === 1)) {
+      if (adminLink && !currentUser.isProjectScoped && (currentUser.role === 0 || currentUser.role === 1)) {
         adminLink.style.display = 'inline-flex';
       }
 
@@ -42,9 +114,33 @@ async function initUserSession() {
 
 function updateWalletDisplay(balanceIrr) {
   const el = document.getElementById('topbar-wallet-val');
+  const balanceStr = Shamsi.formatToman(balanceIrr);
   if (el) {
-    el.textContent = Shamsi.formatToman(balanceIrr);
+    el.textContent = balanceStr;
   }
+  const labelEl = document.getElementById('mini-profile-label');
+  const triggerEl = document.getElementById('mini-profile-trigger');
+  const name = (currentUser && currentUser.fullName) ? currentUser.fullName : 'سینا والی زاده';
+  const titleStr = `${name} | ${balanceStr}`;
+  if (labelEl) labelEl.textContent = titleStr;
+  if (triggerEl) triggerEl.title = titleStr;
+}
+
+function initMiniProfile() {
+  const wrapper = document.getElementById('mini-profile-wrapper');
+  const trigger = document.getElementById('mini-profile-trigger');
+  if (!wrapper || !trigger) return;
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    wrapper.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      wrapper.classList.remove('open');
+    }
+  });
 }
 
 // 2. Load User Projects & Handle 0-Project Empty State
@@ -57,6 +153,7 @@ async function loadUserProjects(selectIdToActivate = null) {
     const res = await fetch('/_baas/v1/projects');
     if (res.ok) {
       userProjects = await res.json();
+      window.userProjects = userProjects;
 
       if (!userProjects || userProjects.length === 0) {
         if (switcher) switcher.innerHTML = '<option value="">هیچ پروژه‌ای وجود ندارد</option>';
@@ -73,14 +170,28 @@ async function loadUserProjects(selectIdToActivate = null) {
 
       if (switcher) {
         switcher.innerHTML = userProjects.map(p => `
-          <option value="${p.id}">${p.name} (${p.slug})</option>
+          <option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.slug)})</option>
         `).join('');
 
-        const targetId = selectIdToActivate || userProjects[0].id;
-        switcher.value = targetId;
-        activateProject(targetId);
+        // Find initial target project from URL or requested ID
+        const route = Router.parsePath();
+        let targetProj = null;
+        if (selectIdToActivate) {
+          targetProj = userProjects.find(p => p.id === selectIdToActivate);
+        } else if (route.slug) {
+          targetProj = userProjects.find(p => p.slug === route.slug);
+        }
+        if (!targetProj) {
+          targetProj = userProjects[0];
+        }
 
-        switcher.onchange = () => activateProject(switcher.value);
+        switcher.value = targetProj.id;
+        activateProject(targetProj.id, false);
+        Router.handleRoute(true);
+
+        switcher.onchange = () => {
+          activateProject(switcher.value, true);
+        };
       }
     }
   } catch (err) {
@@ -88,9 +199,11 @@ async function loadUserProjects(selectIdToActivate = null) {
   }
 }
 
-async function activateProject(projectId) {
+async function activateProject(projectId, updateRoute = true) {
   activeProjectId = projectId;
   activeProject = userProjects.find(p => p.id === projectId);
+  window.activeProjectId = activeProjectId;
+  window.activeProject = activeProject;
   if (!activeProject) return;
 
   setText('bc-project-name', activeProject.name);
@@ -123,586 +236,141 @@ async function activateProject(projectId) {
 
   // Render per-service pages and overview cards
   renderAllServices();
+  if (typeof renderOverviewServices === 'function') renderOverviewServices();
 
-  // Load project sub-resources
-  loadProjectTables();
-  loadProjectUsers();
-  loadProjectBuckets();
-  loadProjectFunctions();
-  loadUsageData();
+  // If updateRoute requested, update URL with active project's slug
+  if (updateRoute) {
+    const url = Router.buildUrl(activeProject.slug, Router.currentModule, Router.currentSubview);
+    if (window.location.pathname !== url) {
+      window.history.pushState({ slug: activeProject.slug, module: Router.currentModule, subview: Router.currentSubview }, '', url);
+    }
+  }
+
+  // Router trigger data load for current active view
+  Router.triggerLoader(Router.currentModule, Router.currentSubview, null);
 }
 
-// 3. Sidebar Navigation
+// 3. Multi-Level Unified Sidebar Navigation (Click-based)
 function initSidebarNav() {
-  const links = document.querySelectorAll('.sidebar-link');
-  const views = document.querySelectorAll('.tab-view');
-  const bcViewName = document.getElementById('bc-view-name');
+  const railItems = document.querySelectorAll('.rail-item');
+  const flyoutLinks = document.querySelectorAll('.flyout-link');
+  const viewLevel1 = document.getElementById('sidebar-view-level1');
+  const viewLevel2 = document.getElementById('sidebar-view-level2');
+  const backBtnTop = document.getElementById('sidebar-back-btn-top');
+  const backBtnBottom = document.getElementById('sidebar-back-btn-bottom');
 
-  links.forEach(link => {
+  function showLevel1() {
+    if (viewLevel1) viewLevel1.classList.add('active');
+    if (viewLevel2) viewLevel2.classList.remove('active');
+  }
+
+  function showLevel2(mod) {
+    if (viewLevel1) viewLevel1.classList.remove('active');
+    if (viewLevel2) viewLevel2.classList.add('active');
+
+    // Update active state on rail items
+    railItems.forEach(item => {
+      if (item.dataset.module === mod) item.classList.add('active');
+      else item.classList.remove('active');
+    });
+
+    // Update flyout title
+    const headerTitle = document.getElementById('flyout-current-title');
+    const modMeta = MODULE_TITLES[mod] || MODULE_TITLES['overview'];
+    if (headerTitle && modMeta) {
+      headerTitle.innerHTML = `<span>${modMeta.title}</span>`;
+    }
+
+    // Show matching flyout group
+    document.querySelectorAll('.flyout-group').forEach(grp => {
+      if (grp.dataset.module === mod) grp.classList.add('active');
+      else grp.classList.remove('active');
+    });
+  }
+
+  // 1. Level 1 Rail Items: Gated navigation per requirements
+  railItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const mod = item.dataset.module;
+      if (mod === 'services') {
+        showLevel1();
+        Router.navigate('services', 'list');
+        return;
+      }
+      if (mod === 'overview') {
+        showLevel1();
+        Router.navigate('overview', 'overview');
+        return;
+      }
+      const srvKey = MODULE_TO_SERVICE[mod];
+      if (srvKey) {
+        if (!isServiceEnabled(mod)) {
+          showLevel1();
+          Router.navigate('service', srvKey);
+          showToast(`سرویس ${MODULE_TITLES[mod]?.title || mod} در این پروژه غیرفعال است.`, 'warning');
+        } else {
+          showLevel2(mod);
+          Router.navigate(mod, 'dashboard');
+        }
+        return;
+      }
+      showLevel2(mod);
+      const defaultSub = ROUTE_VIEW_MAP[mod] ? Object.keys(ROUTE_VIEW_MAP[mod])[0] : 'default';
+      Router.navigate(mod, defaultSub);
+    });
+  });
+
+  // 2. Back buttons (Top on desktop, Bottom on mobile)
+  if (backBtnTop) {
+    backBtnTop.addEventListener('click', (e) => {
+      e.preventDefault();
+      showLevel1();
+    });
+  }
+  if (backBtnBottom) {
+    backBtnBottom.addEventListener('click', (e) => {
+      e.preventDefault();
+      showLevel1();
+    });
+  }
+
+  // 3. Level 2 Flyout Links: Click navigates to subview and loads page view
+  flyoutLinks.forEach(link => {
     link.addEventListener('click', () => {
-      const targetView = link.dataset.view;
-
-      links.forEach(l => l.classList.remove('active'));
-      views.forEach(v => v.classList.remove('active'));
-
-      link.classList.add('active');
-      const targetEl = document.getElementById(targetView);
-      if (targetEl) targetEl.classList.add('active');
-
-      if (bcViewName) bcViewName.textContent = link.innerText.trim();
+      const mod = link.dataset.module;
+      const sub = link.dataset.subview;
+      Router.navigate(mod, sub);
     });
+  });
+
+  // Listen to popstate for browser Back / Forward buttons
+  window.addEventListener('popstate', () => {
+    Router.handleRoute(false);
   });
 }
 
-function navigateToView(viewId) {
-  const links = document.querySelectorAll('.sidebar-link');
-  const views = document.querySelectorAll('.tab-view');
-  const bcViewName = document.getElementById('bc-view-name');
-
-  links.forEach(l => {
-    if (l.dataset.view === viewId) {
-      l.classList.add('active');
-      if (bcViewName) bcViewName.textContent = l.innerText.trim();
-    } else {
-      l.classList.remove('active');
-    }
-  });
-
-  views.forEach(v => {
-    if (v.id === viewId) {
-      v.classList.add('active');
-    } else {
-      v.classList.remove('active');
-    }
-  });
-}
-
-// 4. Usage & Metering (with Shamsi Datepicker Popover)
-async function loadUsageData(startDateIso = null, endDateIso = null) {
-  if (!activeProjectId) return;
-
-  try {
-    let url = `/_baas/v1/${activeProjectId}/billing/usage`;
-    if (startDateIso && endDateIso) {
-      url += `?start=${encodeURIComponent(startDateIso)}&end=${encodeURIComponent(endDateIso)}`;
-    }
-
-    const res = await fetch(url);
-    if (res.ok) {
-      const summary = await res.json();
-      setText('usage-val-db', Shamsi.toPersianDigits(summary.totalDbQueries));
-      setText('usage-val-sms', Shamsi.toPersianDigits(summary.totalSmsSent));
-      setText('usage-val-compute', `${Shamsi.toPersianDigits(summary.totalComputeMs)} ms`);
-      setText('usage-val-cost', `${Shamsi.toPersianDigits(summary.formattedCostToman)} تومان`);
-
-      setText('ov-val-queries', Shamsi.toPersianDigits(summary.totalDbQueries));
-      setText('ov-val-sms', Shamsi.toPersianDigits(summary.totalSmsSent));
-      setText('ov-val-cost', `${Shamsi.toPersianDigits(summary.formattedCostToman)} تومان`);
-
-      const tbody = document.getElementById('usage-events-tbody');
-      if (tbody && summary.recentEvents) {
-        tbody.innerHTML = summary.recentEvents.map(e => `
-          <tr>
-            <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;">${e.resourceType}</td>
-            <td style="font-family: var(--font-mono);">${Shamsi.toPersianDigits(e.units)}</td>
-            <td style="font-family: var(--font-mono); font-size: 11.5px;">${Shamsi.toPersianDigits(e.costIrr.toLocaleString())}</td>
-            <td style="font-weight: 700; color: var(--brand-dark);">${Shamsi.toPersianDigits(Math.floor(e.costIrr / 10).toLocaleString())} تومان</td>
-            <td style="font-size: 11.5px;">${Shamsi.formatDate(e.recordedAtUtc)}</td>
-          </tr>
-        `).join('');
-      }
-    }
-  } catch (err) {
-    console.warn('Usage fetch error:', err);
+async function loadUserProfileView() {
+  if (!currentUser) return;
+  setText('prof-full-name-val', currentUser.fullName || 'سینا والی زاده');
+  setText('prof-phone-val', currentUser.phone || '۰۹۱۲۰۰۰۰۰۰۰');
+  setText('prof-email-val', currentUser.email || 'sina@localme.ir');
+  setText('prof-wallet-val', Shamsi.formatToman(currentUser.walletBalanceIrr));
+  const roleEl = document.getElementById('prof-role-badge');
+  if (roleEl) {
+    roleEl.textContent = currentUser.role === 0 ? 'مدیر ارشد پلتفرم' : currentUser.role === 1 ? 'اپراتور سیستم' : 'توسعه‌دهنده (طرح پایه)';
+    roleEl.className = currentUser.role === 0 ? 'badge badge-active' : 'badge badge-info';
   }
 }
 
-function initShamsiDatepicker() {
-  const triggerBtn = document.getElementById('btn-shamsi-dp-trigger');
-  const popoverBox = document.getElementById('shamsi-dp-popover-box');
-  const filterText = document.getElementById('dp-filter-text');
+// Global Exports
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.copyFieldValue = copyFieldValue;
+window.setText = setText;
+window.setVal = setVal;
+window.escapeHtml = escapeHtml;
+window.loadUserProfileView = loadUserProfileView;
+window.activateProject = activateProject;
+window.loadUserProjects = loadUserProjects;
 
-  if (!triggerBtn || !popoverBox) return;
-
-  const dp = new ShamsiDatepicker(popoverBox, (selectedDate, isRange, rangeStart, rangeEnd) => {
-    if (isRange && rangeStart && rangeEnd) {
-      filterText.textContent = `فیلتر: ${rangeStart.jy}/${rangeStart.jm}/${rangeStart.jd} تا ${rangeEnd.jy}/${rangeEnd.jm}/${rangeEnd.jd}`;
-      popoverBox.style.display = 'none';
-      loadUsageData();
-    } else {
-      filterText.textContent = `فیلتر: ${selectedDate.jy}/${selectedDate.jm}/${selectedDate.jd}`;
-      popoverBox.style.display = 'none';
-      loadUsageData();
-    }
-  });
-
-  triggerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isHidden = popoverBox.style.display === 'none';
-    popoverBox.style.display = isHidden ? 'block' : 'none';
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!popoverBox.contains(e.target) && e.target !== triggerBtn) {
-      popoverBox.style.display = 'none';
-    }
-  });
-}
-
-// 5. Project CRUD & Modals
-function initModals() {
-  const openCreateBtns = [
-    document.getElementById('btn-create-proj-modal'),
-    document.getElementById('btn-create-first-proj')
-  ];
-
-  openCreateBtns.forEach(btn => {
-    if (btn) btn.addEventListener('click', () => openModal('modal-create-proj'));
-  });
-
-  const formCreate = document.getElementById('form-create-new-project');
-  if (formCreate) {
-    formCreate.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('new-proj-name').value.trim();
-      const slug = document.getElementById('new-proj-slug').value.trim();
-      const desc = document.getElementById('new-proj-desc').value.trim();
-
-      try {
-        const res = await fetch('/_baas/v1/projects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, slug, description: desc })
-        });
-
-        if (res.ok) {
-          const newProj = await res.json();
-          closeModal('modal-create-proj');
-          formCreate.reset();
-          alert('پروژه جدید با موفقیت ایجاد شد.');
-          await loadUserProjects(newProj.id);
-        } else {
-          alert('خطا در ایجاد پروژه.');
-        }
-      } catch {
-        alert('خطای شبکه.');
-      }
-    });
-  }
-
-  const formUpdate = document.getElementById('form-update-project');
-  if (formUpdate) {
-    formUpdate.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId) return;
-
-      const name = document.getElementById('set-proj-name').value.trim();
-      const slug = document.getElementById('set-proj-slug').value.trim();
-      const desc = document.getElementById('set-proj-desc').value.trim();
-
-      try {
-        const res = await fetch(`/_baas/v1/projects/${activeProjectId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, slug, description: desc })
-        });
-
-        if (res.ok) {
-          alert('مشخصات پروژه با موفقیت ذخیره شد.');
-          await loadUserProjects(activeProjectId);
-        } else {
-          alert('خطا در به‌روزرسانی پروژه.');
-        }
-      } catch {
-        alert('خطای شبکه.');
-      }
-    });
-  }
-
-  const btnDelete = document.getElementById('btn-delete-project');
-  if (btnDelete) {
-    btnDelete.addEventListener('click', async () => {
-      if (!activeProjectId) return;
-
-      if (!confirm(`آیا مطمئن هستید که می‌خواهید پروژه "${activeProject.name}" را برای همیشه حذف کنید؟`)) {
-        return;
-      }
-
-      try {
-        const res = await fetch(`/_baas/v1/projects/${activeProjectId}`, {
-          method: 'DELETE'
-        });
-
-        if (res.ok) {
-          alert('پروژه با موفقیت حذف گردید.');
-          await loadUserProjects();
-        } else {
-          alert('خطا در حذف پروژه.');
-        }
-      } catch {
-        alert('خطای شبکه.');
-      }
-    });
-  }
-
-  const topupBtn = document.getElementById('btn-open-topup');
-  if (topupBtn) {
-    topupBtn.addEventListener('click', () => openModal('modal-topup'));
-  }
-
-  const formTopup = document.getElementById('form-topup');
-  if (formTopup) {
-    formTopup.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const gateway = document.getElementById('topup-gateway').value;
-      const amountToman = parseInt(document.getElementById('topup-amount-toman').value, 10);
-      const amountIrr = amountToman * 10;
-
-      try {
-        const res = await fetch('/_baas/v1/pay/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amountIrr,
-            customerPhone: currentUser.phone,
-            gateway,
-            callbackUrl: window.location.href
-          })
-        });
-
-        if (res.ok) {
-          const initRes = await res.json();
-          const vRes = await fetch('/_baas/v1/pay/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              authority: initRes.authority,
-              trackingCode: initRes.trackingCode,
-              customerPhone: currentUser.phone
-            })
-          });
-
-          if (vRes.ok) {
-            const vData = await vRes.json();
-            alert(`پرداخت الکترونیک موفق شاپرک.\nشماره پیگیری: ${vData.shaparakRefId}\nموجودی جدید: ${Shamsi.toPersianDigits(Math.floor(vData.newWalletBalanceIrr / 10).toLocaleString())} تومان`);
-            updateWalletDisplay(vData.newWalletBalanceIrr);
-            closeModal('modal-topup');
-          }
-        }
-      } catch {
-        alert('خطا در برقراری ارتباط با درگاه پرداخت.');
-      }
-    });
-  }
-
-  // Deploy Function Modal & Form
-  const btnDeployModal = document.getElementById('btn-modal-deploy-func');
-  if (btnDeployModal) {
-    btnDeployModal.addEventListener('click', () => openModal('modal-deploy-func'));
-  }
-
-  const formDeployFunc = document.getElementById('form-deploy-func');
-  if (formDeployFunc) {
-    formDeployFunc.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId) {
-        alert('لطفاً ابتدا یک پروژه انتخاب نمایید.');
-        return;
-      }
-
-      const name = document.getElementById('deploy-func-name').value.trim();
-      const slug = document.getElementById('deploy-func-slug').value.trim();
-      const script = document.getElementById('deploy-func-script').value;
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/functions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, slug, script })
-        });
-
-        if (res.ok) {
-          const deployed = await res.json();
-          closeModal('modal-deploy-func');
-          formDeployFunc.reset();
-          alert(`تابع "${deployed.name}" با موفقیت در لبه شبکه مستقر گردید.`);
-          await loadProjectFunctions();
-          selectTestFunc(deployed.slug);
-        } else {
-          alert('خطا در استقرار تابع.');
-        }
-      } catch (err) {
-        alert('خطای ارتباط با سرور: ' + err.message);
-      }
-    });
-  }
-
-  // Add Project User Modal & Form
-  const btnAddUserModal = document.getElementById('btn-modal-add-user');
-  if (btnAddUserModal) {
-    btnAddUserModal.addEventListener('click', () => openModal('modal-add-user'));
-  }
-
-  const formAddUser = document.getElementById('form-add-project-user');
-  if (formAddUser) {
-    formAddUser.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId) return;
-
-      const provider = document.getElementById('new-user-provider').value;
-      const identifier = document.getElementById('new-user-identifier').value.trim();
-      const fullName = document.getElementById('new-user-name').value.trim();
-
-      const isPhone = identifier.startsWith('+') || /^\d+$/.test(identifier);
-      const payload = {
-        provider,
-        phone: isPhone ? identifier : null,
-        email: !isPhone ? identifier : null,
-        full_name: fullName
-      };
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/auth/users`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          closeModal('modal-add-user');
-          formAddUser.reset();
-          alert('کاربر جدید با موفقیت در پروژه ثبت گردید.');
-          await loadProjectUsers();
-        } else {
-          alert('خطا در ثبت کاربر.');
-        }
-      } catch {
-        alert('خطای ارتباط با سرور.');
-      }
-    });
-  }
-
-  // Create Storage Bucket Modal & Form
-  const btnCreateBucketModal = document.getElementById('btn-modal-create-bucket');
-  if (btnCreateBucketModal) {
-    btnCreateBucketModal.addEventListener('click', () => openModal('modal-create-bucket'));
-  }
-
-  const formCreateBucket = document.getElementById('form-create-bucket');
-  if (formCreateBucket) {
-    formCreateBucket.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId) return;
-
-      const name = document.getElementById('new-bucket-name').value.trim();
-      const isPublic = document.getElementById('new-bucket-public').value === 'true';
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/storage/buckets`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, is_public: isPublic })
-        });
-
-        if (res.ok) {
-          closeModal('modal-create-bucket');
-          formCreateBucket.reset();
-          alert(`باکت "${name}" با موفقیت ایجاد گردید.`);
-          await loadProjectBuckets();
-        } else {
-          alert('خطا در ایجاد باکت.');
-        }
-      } catch {
-        alert('خطای ارتباط با سرور.');
-      }
-    });
-  }
-
-  // Create Database Table Modal & Form
-  const btnCreateTableModal = document.getElementById('btn-modal-create-table');
-  if (btnCreateTableModal) {
-    btnCreateTableModal.addEventListener('click', () => openModal('modal-create-table'));
-  }
-
-  const formCreateTable = document.getElementById('form-create-table');
-  if (formCreateTable) {
-    formCreateTable.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId) return;
-
-      const name = document.getElementById('new-table-name').value.trim();
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/db/tables`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-
-        if (res.ok) {
-          closeModal('modal-create-table');
-          formCreateTable.reset();
-          alert(`جدول "${name}" با موفقیت ایجاد شد.`);
-          await loadProjectTables();
-        } else {
-          alert('خطا: جدول با این نام از قبل وجود دارد.');
-        }
-      } catch {
-        alert('خطای ارتباط با سرور.');
-      }
-    });
-  }
-
-  const formInsert = document.getElementById('form-insert-db-row');
-  if (formInsert) {
-    formInsert.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!activeProjectId || !currentDbTable) return;
-
-      const title = document.getElementById('db-input-title').value.trim();
-      const category = document.getElementById('db-input-category').value.trim();
-      const price = parseInt(document.getElementById('db-input-price').value, 10);
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/db/${currentDbTable}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, category, price, created_at: new Date().toISOString() })
-        });
-
-        if (res.ok) {
-          document.getElementById('db-input-title').value = '';
-          loadTableData(currentDbTable);
-          loadUsageData();
-        }
-      } catch (err) {
-        console.warn('Row insert error:', err);
-      }
-    });
-  }
-
-  const refreshDbBtn = document.getElementById('btn-refresh-db');
-  if (refreshDbBtn) {
-    refreshDbBtn.addEventListener('click', () => {
-      if (currentDbTable) loadTableData(currentDbTable);
-    });
-  }
-
-  // Interactive Edge Function Test Runner
-  const btnExecFunc = document.getElementById('btn-exec-func-test');
-  if (btnExecFunc) {
-    btnExecFunc.addEventListener('click', async () => {
-      if (!activeProjectId) {
-        alert('لطفاً ابتدا یک پروژه انتخاب کنید.');
-        return;
-      }
-      if (!currentFuncSlug) {
-        alert('هیچ تابعی انتخاب نشده است. لطفاً ابتدا از جدول توابع، یک تابع را انتخاب نمایید.');
-        return;
-      }
-
-      const outEl = document.getElementById('func-test-output');
-      const logsEl = document.getElementById('func-test-logs');
-      const latencyBadge = document.getElementById('func-test-latency');
-      const statusBadge = document.getElementById('func-test-status');
-
-      let bodyObj = {};
-      try {
-        const inputVal = document.getElementById('func-test-input').value.trim();
-        bodyObj = inputVal ? JSON.parse(inputVal) : {};
-      } catch {
-        alert('قالب ورودی JSON معتبر نمی‌باشد. لطفاً فرمت صحیح JSON وارد کنید.');
-        return;
-      }
-
-      if (outEl) outEl.textContent = '// در حال پردازش در محیط ایزوله سرورلس (Jint)...';
-      if (logsEl) logsEl.textContent = '// در حال دریافت خروجی‌های لاگ...';
-      if (statusBadge) {
-        statusBadge.style.display = 'inline-block';
-        statusBadge.textContent = 'در حال اجرا';
-        statusBadge.className = 'badge badge-info';
-      }
-
-      try {
-        const res = await fetch(`/_baas/v1/${activeProjectId}/functions/${currentFuncSlug}/invoke`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyObj)
-        });
-
-        if (res.ok) {
-          const result = await res.json();
-          if (outEl) {
-            outEl.textContent = result.output !== null && result.output !== undefined
-              ? (typeof result.output === 'object' ? JSON.stringify(result.output, null, 2) : String(result.output))
-              : (result.error ? `// خطا: ${result.error}` : '// تابع بدون خروجی اجرا شد.');
-          }
-
-          if (logsEl) {
-            logsEl.textContent = result.logs && result.logs.length > 0
-              ? result.logs.join('\n')
-              : '// کنسول بدون لاگ.';
-          }
-
-          if (latencyBadge) {
-            latencyBadge.style.display = 'inline-block';
-            latencyBadge.textContent = `زمان: ${Shamsi.toPersianDigits(result.executionTimeMs || 0)} ms`;
-          }
-
-          if (statusBadge) {
-            statusBadge.style.display = 'inline-block';
-            statusBadge.textContent = result.success ? 'اجرای موفق' : 'خطای منطقی تابع';
-            statusBadge.className = result.success ? 'badge badge-active' : 'badge badge-paused';
-          }
-
-          loadUsageData();
-        } else {
-          if (outEl) outEl.textContent = `// خطای سرور با کد وضعیت: ${res.status}`;
-          if (statusBadge) {
-            statusBadge.style.display = 'inline-block';
-            statusBadge.textContent = `خطای ${res.status}`;
-            statusBadge.className = 'badge badge-paused';
-          }
-        }
-      } catch (err) {
-        if (outEl) outEl.textContent = `// خطای ارتباط شبکه: ${err.message}`;
-        if (statusBadge) {
-          statusBadge.style.display = 'inline-block';
-          statusBadge.textContent = 'خطای ارتباط';
-          statusBadge.className = 'badge badge-paused';
-        }
-      }
-    });
-  }
-}
-
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
-}
-
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
-}
-
-function copyFieldValue(inputId) {
-  const el = document.getElementById(inputId);
-  if (el) {
-    navigator.clipboard.writeText(el.value).then(() => {
-      alert('کلید دسترسی با موفقیت در کلیپ‌بورد کپی شد.');
-    }).catch(() => {
-      prompt('کلید دسترسی:', el.value);
-    });
-  }
-}
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
-function setVal(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val;
-}

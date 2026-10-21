@@ -98,11 +98,11 @@ public class DataPlaneIntegrationTests
     {
         var handler = new DynamicSqlHandler();
 
-        // 1. Seed products exist
+        // 1. Clean initial state
         var initialProducts = handler.QueryTable("products");
-        Assert.True(initialProducts.Count >= 3);
+        Assert.Empty(initialProducts);
 
-        // 2. Insert new record
+        // 2. Insert new records
         var newRecord = new JsonObject
         {
             ["title"] = "تبلت آیپد پرو M4",
@@ -153,4 +153,24 @@ public class DataPlaneIntegrationTests
         Assert.False(timeoutResult.Success);
         Assert.NotNull(timeoutResult.Error);
     }
+
+    [Fact]
+    public void ConnectionStringNormalizer_ConvertsUriToAdoNetSuccessfully()
+    {
+        var uri = "postgresql://postgres:jsF68GOoGS5inojpHmRa@remote-respina-free.runflare.com:31725/sina-infwqq_db";
+        var normalized = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizePostgresConnectionString(uri);
+
+        Assert.Contains("Host=remote-respina-free.runflare.com", normalized);
+        Assert.Contains("Port=31725", normalized);
+        Assert.Contains("Username=postgres", normalized);
+        Assert.Contains("Password=jsF68GOoGS5inojpHmRa", normalized);
+        Assert.Contains("Database=sina-infwqq_db", normalized);
+
+        var redisUri = "redis://default:qB8MfBnIQHw8i5vxmzWw@remote-respina-free.runflare.com:32567/0";
+        var normalizedRedis = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizeRedisConnectionString(redisUri);
+        Assert.Contains("remote-respina-free.runflare.com:32567", normalizedRedis);
+        Assert.Contains("password=qB8MfBnIQHw8i5vxmzWw", normalizedRedis);
+        Assert.Contains("defaultDatabase=0", normalizedRedis);
+    }
 }
+

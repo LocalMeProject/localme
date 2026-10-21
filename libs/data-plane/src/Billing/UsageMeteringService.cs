@@ -9,7 +9,10 @@ public sealed record UsageEvent(
     string MetricType,
     long Quantity,
     long CostIrr,
-    DateTimeOffset TimestampUtc
+    DateTimeOffset TimestampUtc,
+    string? ResourceType = null,
+    long? Units = null,
+    DateTimeOffset? RecordedAtUtc = null
 );
 
 public sealed record ProjectUsageSummary(
@@ -21,7 +24,8 @@ public sealed record ProjectUsageSummary(
     long TotalEgressBytes,
     long TotalCostIrr,
     string FormattedTotalCostToman,
-    IReadOnlyList<UsageEvent> RecentEvents
+    IReadOnlyList<UsageEvent> RecentEvents,
+    string? FormattedCostToman = null
 );
 
 /// <summary>
@@ -46,14 +50,6 @@ public sealed class UsageMeteringService
     {
         _pricing = pricing;
         _ipg = ipg;
-
-        // Seed initial demo project usages for immediate visual analytics
-        RecordUsage("proj_snappfood_01", "+989121112233", "db_query", 145_000);
-        RecordUsage("proj_snappfood_01", "+989121112233", "sms_otp", 820);
-        RecordUsage("proj_snappfood_01", "+989121112233", "compute_ms", 32_500);
-
-        RecordUsage("proj_digistore_02", "+989121112233", "db_query", 210_000);
-        RecordUsage("proj_digistore_02", "+989121112233", "sms_otp", 1_400);
     }
 
     public long RecordUsage(string projectId, string ownerPhone, string metricType, long quantity)
@@ -98,14 +94,22 @@ public sealed class UsageMeteringService
         if (costIrr > 0)
         {
             _projectTotalCostIrr.AddOrUpdate(projectId, costIrr, (_, current) => current + costIrr);
+            if (!string.IsNullOrWhiteSpace(ownerPhone))
+            {
+                _ipg.DeductWalletBalance(ownerPhone, costIrr, $"هزینه مصرف سرویس ({metricType}) برای پروژه {projectId}");
+            }
         }
 
+        var now = DateTimeOffset.UtcNow;
         var evt = new UsageEvent(
             ProjectId: projectId,
             MetricType: metricType,
             Quantity: quantity,
             CostIrr: costIrr,
-            TimestampUtc: DateTimeOffset.UtcNow
+            TimestampUtc: now,
+            ResourceType: metricType,
+            Units: quantity,
+            RecordedAtUtc: now
         );
 
         var bag = _projectEvents.GetOrAdd(projectId, _ => new ConcurrentBag<UsageEvent>());
@@ -128,6 +132,7 @@ public sealed class UsageMeteringService
             : [];
 
         var rial = new RialAmount(totalCost);
+        var formattedToman = rial.ToTomanString();
         return new ProjectUsageSummary(
             ProjectId: projectId,
             TotalDbQueries: dbQ,
@@ -136,8 +141,9 @@ public sealed class UsageMeteringService
             TotalComputeMs: compute,
             TotalEgressBytes: egress,
             TotalCostIrr: totalCost,
-            FormattedTotalCostToman: rial.ToTomanString(),
-            RecentEvents: events
+            FormattedTotalCostToman: formattedToman,
+            RecentEvents: events,
+            FormattedCostToman: formattedToman
         );
     }
 }
