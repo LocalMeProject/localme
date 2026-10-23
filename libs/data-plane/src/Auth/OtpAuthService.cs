@@ -112,17 +112,114 @@ public sealed class OtpAuthService
         return (true, "OTP verified successfully.", tokens);
     }
 
-    public static AuthTokenResponse GenerateSessionToken(string userId, string role = "authenticated")
+    private static readonly byte[] JwtSecret = Encoding.UTF8.GetBytes(
+        Environment.GetEnvironmentVariable("LOCALME_JWT_SECRET") ?? "localme-secure-platform-jwt-secret-key-384b!"
+    );
+
+    private static string Base64UrlEncode(byte[] bytes) =>
+        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static byte[]? Base64UrlDecode(string input)
     {
-        var accessToken = $"ey.localme.{Convert.ToBase64String(Encoding.UTF8.GetBytes(userId + ":" + role + ":" + DateTimeOffset.UtcNow.ToUnixTimeSeconds()))}";
+        try
+        {
+            var output = input.Replace('-', '+').Replace('_', '/');
+            switch (output.Length % 4)
+            {
+                case 2: output += "=="; break;
+                case 3: output += "="; break;
+            }
+            return Convert.FromBase64String(output);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static AuthTokenResponse GenerateSessionToken(string userId, string role = "authenticated", int expiresInSeconds = 86400, string? scopedProjectId = null)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var exp = now + expiresInSeconds;
+
+        var headerJson = """{"alg":"HS256","typ":"JWT"}""";
+        var payloadJson = string.IsNullOrEmpty(scopedProjectId)
+            ? $$"""{"sub":"{{userId}}","role":"{{role}}","iat":{{now}},"exp":{{exp}}}"""
+            : $$"""{"sub":"{{userId}}","role":"{{role}}","prj":"{{scopedProjectId}}","iat":{{now}},"exp":{{exp}}}""";
+
+        var headerB64 = Base64UrlEncode(Encoding.UTF8.GetBytes(headerJson));
+        var payloadB64 = Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson));
+        var unsignedToken = $"{headerB64}.{payloadB64}";
+
+        using var hmac = new HMACSHA256(JwtSecret);
+        var signature = hmac.ComputeHash(Encoding.UTF8.GetBytes(unsignedToken));
+        var signatureB64 = Base64UrlEncode(signature);
+
+        var accessToken = $"ey.localme.{unsignedToken}.{signatureB64}";
         var refreshToken = $"rt_{Guid.NewGuid():N}";
 
         return new AuthTokenResponse(
             AccessToken: accessToken,
             RefreshToken: refreshToken,
             TokenType: "Bearer",
-            ExpiresInSeconds: 900,
+            ExpiresInSeconds: expiresInSeconds,
             UserId: userId,
             Role: role);
+    }
+
+    public static (bool Valid, string? UserId, string? Role) ValidateToken(string token)
+    {
+        var (valid, userId, role, _) = ValidateTokenWithScope(token);
+        return (valid, userId, role);
+    }
+
+    public static (bool Valid, string? UserId, string? Role, string? ScopedProjectId) ValidateTokenWithScope(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return (false, null, null, null);
+
+        if (token.StartsWith("ey.localme.", StringComparison.Ordinal))
+        {
+            token = token["ey.localme.".Length..];
+        }
+
+        var parts = token.Split('.');
+        if (parts.Length != 3) return (false, null, null, null);
+
+        var unsignedToken = $"{parts[0]}.{parts[1]}";
+        using var hmac = new HMACSHA256(JwtSecret);
+        var expectedSig = hmac.ComputeHash(Encoding.UTF8.GetBytes(unsignedToken));
+
+        var actualSig = Base64UrlDecode(parts[2]);
+        if (actualSig == null || !CryptographicOperations.FixedTimeEquals(expectedSig, actualSig))
+        {
+            return (false, null, null, null);
+        }
+
+        var payloadBytes = Base64UrlDecode(parts[1]);
+        if (payloadBytes == null) return (false, null, null, null);
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(payloadBytes);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("exp", out var expProp))
+            {
+                var exp = expProp.GetInt64();
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+                {
+                    return (false, null, null, null); // Expired
+                }
+            }
+
+            var userId = root.TryGetProperty("sub", out var subProp) ? subProp.GetString() : null;
+            var role = root.TryGetProperty("role", out var roleProp) ? roleProp.GetString() : "authenticated";
+            var prj = root.TryGetProperty("prj", out var prjProp) ? prjProp.GetString() : null;
+
+            return (!string.IsNullOrEmpty(userId), userId, role, prj);
+        }
+        catch
+        {
+            return (false, null, null, null);
+        }
     }
 }

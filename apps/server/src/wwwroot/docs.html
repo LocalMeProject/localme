@@ -7,15 +7,15 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     .code-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; padding: 0 8px; }
-    .code-tab-btn { background: transparent; border: none; color: #94a3b8; font-family: var(--font-mono); font-size: 11.5px; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 120ms ease; }
+    .code-tab-btn { background: transparent; border: none; color: #94a3b8; font-family: var(--font-persian); font-size: 13.5px; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 120ms ease; }
     .code-tab-btn:hover { color: #f8fafc; }
     .code-tab-btn.active { color: #10b981; border-bottom-color: #10b981; font-weight: 700; }
     .code-pane { display: none; }
     .code-pane.active { display: block; }
-    .badge-method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-persian); font-size: 13px; font-weight: 700; text-transform: uppercase; }
     .method-get { background: #dbeafe; color: #1e40af; }
     .method-post { background: #dcfce7; color: #15803d; }
     .method-put { background: #fef9c3; color: #854d0e; }
@@ -31,7 +31,7 @@
         <span class="brand-badge">LM</span>
         <span class="brand-title">لوکال‌می</span>
       </a>
-      <span style="font-size: 12px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
         مستندات جامع فنی توسعه‌دهندگان
       </span>
     </div>
@@ -39,10 +39,10 @@
     <!-- Search & Navigation Links -->
     <div class="topbar-utils">
       <div style="position: relative; width: 220px;">
-        <input type="text" id="docs-search-input" class="input-field" placeholder="جستجو در مستندات..." style="font-size: 12px; padding: 5px 10px;" oninput="filterDocs(this.value)" />
+        <input type="text" id="docs-search-input" class="input-field" placeholder="جستجو در مستندات..." style="font-size: 13px; padding: 5px 10px;" oninput="filterDocs(this.value)" />
       </div>
-      <a href="/panel" class="btn-primary" style="font-size: 11.5px; padding: 5px 12px;">کنسول توسعه‌دهندگان</a>
-      <a href="/auth" class="btn-secondary" style="font-size: 11.5px; padding: 5px 12px;">ورود</a>
+      <a href="/panel" class="btn-primary" style="font-size: 13px; padding: 5px 12px;">کنسول توسعه‌دهندگان</a>
+      <a href="/auth" class="btn-secondary" style="font-size: 13px; padding: 5px 12px;">ورود</a>
     </div>
   </header>
 
@@ -52,9 +52,11 @@
     <!-- Sticky Sidebar -->
     <aside class="docs-sidebar">
       <div class="docs-nav-group">
-        <div class="docs-nav-title">مفاهیم پایه</div>
+        <div class="docs-nav-title">مفاهیم پایه و راه‌اندازی</div>
         <a href="#section-intro" class="docs-nav-link active">معرفی و معماری پلتفرم</a>
         <a href="#section-auth-keys" class="docs-nav-link">احراز هویت و ساختار کلیدها</a>
+        <a href="#section-panel-auth" class="docs-nav-link">ورود به پنل و دسترسی تک‌پروژه</a>
+        <a href="#section-dev-scripts" class="docs-nav-link">اسکریپت‌های اجرا و استقرار (CLI)</a>
         <a href="#section-network" class="docs-nav-link">زیرساخت شبکه و اتصال شاپرک</a>
       </div>
 
@@ -67,9 +69,22 @@
       </div>
 
       <div class="docs-nav-group">
-        <div class="docs-nav-title">مالی و صورتحساب</div>
+        <div class="docs-nav-title">مالی و درگاه پرداخت شتاب</div>
         <a href="#section-billing" class="docs-nav-link">سیستم محاسبه مصرف و کیف پول</a>
         <a href="#section-ipg" class="docs-nav-link">شارژ آنلاین با درگاه شاپرک</a>
+        <a href="#section-mock-ipg" class="docs-nav-link">شبیه‌ساز درگاه شاپرک و تست شتاب</a>
+      </div>
+
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">سرویس‌های موبایل و استریم زنده</div>
+        <a href="#section-mobile-realtime" class="docs-nav-link">وب‌سوکت دوطرفه (Realtime WebSockets)</a>
+        <a href="#section-mobile-push" class="docs-nav-link">سامانه اعلان‌ها (Push Notifications)</a>
+        <a href="#section-mobile-iap" class="docs-nav-link">خریدهای درون‌برنامه‌ای (Bazaar & Myket IAP)</a>
+      </div>
+
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">امکانات پیشرفته و استودیوها</div>
+        <a href="#section-studios" class="docs-nav-link">ویرایشگر SQL، هاستینگ و انطباق</a>
       </div>
 
       <div class="docs-nav-group">
@@ -93,6 +108,9 @@
         <ul>
           <li><strong>ایزولاسیون بر پایه اسکیما (Schema-per-Project Isolation)</strong>: هر پروژه دارای یک اسکیمای کاملاً مجزا در پایگاه داده PostgreSQL است. داده‌های مستاجران مختلف تحت هیچ شرایطی با یکدیگر تداخل نداشته و از بالاترین سطح امنیت و پرفورمنس برخوردارند.</li>
           <li><strong>کلیدهای تفکیک‌شده به ازای هر سرویس (Per-Service Scoped Keys)</strong>: برخلاف سیستم‌های قدیمی که از یک کلید عمومی سراسری استفاده می‌کردند، لوکال‌می برای هر سرویس یک کلید مستقل با ساختار <code>lm_[service]_[project]_[id]</code> صادر می‌کند. در صورت افشای کلید یک سرویس، سایر سرویس‌ها ایمن می‌مانند.</li>
+          <li><strong>ناوبری مدرن کلیکی سایدبار (Unified Click-based Navigation)</strong>: سایدبار کنسول به صورت یکپارچه و دومرحله‌ای طراحی شده است. کلیک بر روی منوی سطح یک بدون تغییر صفحه، منوی سطح دو را به همراه دکمه بازگشت (در بالا برای دسکتاپ و در پایین برای موبایل) نمایش می‌دهد تا تجربه کاربری کامپکت و ارگونومیکی بدون هاورهای تصادفی فراهم گردد.</li>
+          <li><strong>مینی‌پروفایل نوار بالا و نمایش موجودی لحظه‌ای</strong>: نوار بالای کنسول اطلاعات حساب و موجودی زنده کیف پول (مثلاً <code>سینا والی زاده | ۱,۰۰۰,۰۰۰ تومان</code>) را همواره در دسترس قرار داده و با کلیک، پاپ‌اور پروفایل، نشان نقش کاربری و پنجره‌های شارژ شتاب را در اختیار قرار می‌دهد.</li>
+          <li><strong>راه‌اندازی تمیز بدون دیتای دمو (Clean Initial Boot)</strong>: سامانه هنگام اجرا فقط ۳ کاربر پیش‌فرض پلتفرم را برای ورود با نقش‌های مختلف آماده دارد و هیچ پروژه، جدول یا رکورد نمایشی و فیک را از پیش تولید نمی‌کند.</li>
           <li><strong>محاسبه مصرف دقیق و اعتباری (Pay-As-You-Go Ledger)</strong>: مصرف منابع (تعداد کوئری‌ها، پیامک‌ها، حجم فایل‌ها و زمان پردازش توابع) با دقت میلی‌ثانیه‌ای و ریالی در یک دفترکل دوبل حسابداری ثبت و از کیف پول کسر می‌گردد.</li>
         </ul>
 
@@ -153,6 +171,102 @@ lm_storage_proj_xxxxxxxx_xxxxxxxxxxxx
 
 // ۴. توابع سرورلس لبه شبکه
 lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
+        </div>
+      </section>
+
+      <!-- 2.1 PANEL AUTH & PROJECT-SCOPED ACCESS -->
+      <section id="section-panel-auth" class="docs-section">
+        <h1>ورود به پنل کاربری، رمز عبور و دسترسی اختصاصی تک‌پروژه</h1>
+        <p>
+          کنسول لوکال‌می (<code>/panel</code> و <code>/auth</code>) سه متد احراز هویت مستقل را متناسب با نیازهای توسعه‌دهندگان، تیم‌ها و کارفرما ارائه می‌کند:
+        </p>
+
+        <h2>۱. احراز هویت پیامکی (SMS OTP - روش پیش‌فرض)</h2>
+        <p>
+          روش پیش‌فرض و توصیه شده برای توسعه‌دهندگان ایرانی. ارسال کد ۶ رقمی امن از طریق سرشماره‌های اختصاصی خدماتی:
+        </p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/auth/otp/request</code>
+        </div>
+        <p>تایید و دریافت توکن نشست:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/auth/otp/verify</code>
+        </div>
+
+        <h2>۲. ورود با نام‌کاربری و کلمه عبور اصلی (Platform Credentials)</h2>
+        <p>
+          دسترسی جامع و نامحدود به تمامی پروژه‌های تحت مالکیت کاربر در پنل لوکال‌می. شما می‌توانید با استفاده از <strong>نام کاربری</strong>، <strong>ایمیل</strong>، یا <strong>شماره تلفن همراه</strong> به همراه کلمه عبور وارد شوید.
+        </p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/auth/login</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "username": "sina", // یا ایمیل یا شماره موبایل
+  "password": "developer123456"
+}</code></pre>
+        </div>
+
+        <h2>۳. ورود اختصاصی تک‌پروژه با رمز مجزا (Project-Scoped Access)</h2>
+        <p>
+          در مواقعی که می‌خواهید دسترسی پنل یک پروژه خاص را در اختیار فریلنسر، همکار یا کارفرما قرار دهید بدون اینکه به سایر پروژه‌ها، کیف پول یا اطلاعات کلی حساب کاربری شما دسترسی داشته باشد، می‌توانید در تب «تنظیمات پروژه» یک <strong>رمز عبور اختصاصی</strong> برای پروژه تعیین کنید.
+        </p>
+        <p>کاربر با داشتن <code>Project Slug</code> و رمز پروژه، مستقیماً وارد محیط ایزوله همان پروژه می‌شود:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/auth/project-login</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "projectSlug": "my-online-shop",
+  "password": "ProjectSecretPass2026!"
+}</code></pre>
+        </div>
+
+        <h3>مدیریت رمز پروژه از طریق وب‌سرویس REST</h3>
+        <p>تنظیم یا تغییر رمز عبور اختصاصی پروژه:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/projects/{projectId}/password</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "password": "NewProjectSecretPass"
+}</code></pre>
+        </div>
+        <p>حذف رمز عبور اختصاصی پروژه (غیرفعال‌سازی ورود مستقیم):</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-delete">DELETE</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/projects/{projectId}/password</code>
+        </div>
+      </section>
+
+      <!-- 2.2 CLI & DEV SCRIPTS -->
+      <section id="section-dev-scripts" class="docs-section">
+        <h1>دستورات CLI و راه‌اندازی سریع پروژه (Scripts)</h1>
+        <p>
+          جهت سهولت توسعه و استقرار محلی و پروداکشن، اسکریپت‌های زیر در <code>package.json</code> تعبیه شده‌اند:
+        </p>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>ترمینال / CLI</span><span>BASH</span></div>
+          <pre><code># راه‌اندازی سرور در محیط توسعه (Dev Mode)
+pnpm dev
+# معادل دستور: dotnet run --project apps/server/src/LocalMe.Server.csproj
+
+# ساخت نسخه پایانی و اجرای پروداکشن (Release Mode)
+pnpm start
+# معادل دستور: dotnet run --project apps/server/src/LocalMe.Server.csproj --configuration Release
+
+# اجرای کلیه تست‌های واحد و یکپارچگی (.NET 10)
+pnpm test
+# اجرای ساخت کامل مونوریپو
+pnpm build</code></pre>
         </div>
       </section>
 
@@ -406,6 +520,320 @@ lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
         </p>
       </section>
 
+      <!-- 8.1 SHETAB IPG & MOCK GATEWAY -->
+      <section id="section-mock-ipg" class="docs-section">
+        <h1>درگاه پرداخت شتاب و شبیه‌ساز کارت شاپرک</h1>
+        <p>
+          لوکال‌می مجهز به موتور اختصاصی تراکنش‌های شبکه شاپرک و درگاه‌های پرداخت اینترنتی (IPG) است که با PSPهای معتبر کشور (به‌پرداخت ملت، سامان‌کیش SEP، زرین‌پال و سداد) کاملاً یکپارچه شده است. همچنین جهت تست کامل چرخه تراکنش در محیط توسعه محلی بدون نیاز به کارت بانکی واقعی، یک <strong>شبیه‌ساز معتبر شاپرک</strong> ارائه شده است.
+        </p>
+
+        <h2>۱. ایجاد تراکنش پرداخت شتاب (Initiate Payment)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/pay/initiate</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "amountIrr": 5000000,
+  "customerPhone": "+989121112233",
+  "callbackUrl": "https://myapp.ir/payment/callback",
+  "description": "خرید بسته اشتراک حرفه‌ای"
+}</code></pre>
+        </div>
+        <p>پاسخ وب‌سرویس حاوی <code>authorityToken</code> و <code>paymentUrl</code> جهت هدایت کاربر به درگاه (یا شبیه‌ساز محلی <code>/_baas/v1/pay/mock-gateway?authority=...</code>) است.</p>
+
+        <h2>۲. شبیه‌ساز درگاه شاپرک (Mock Gateway Simulator)</h2>
+        <p>
+          آدرس <code>GET /_baas/v1/pay/mock-gateway?authority={token}</code> رابط کاربری استاندارد و کاملی از صفحه پرداخت اینترنتی شاپرک را شبیه‌سازی می‌کند که شامل ورود شماره کارت ۱۶ رقمی (با فوکوس خودکار ۴تایی)، رمز پویا، CVV2، تاریخ انقضا و دکمه‌های پرداخت و انصراف است.
+        </p>
+
+        <h2>۳. تایید نهایی تراکنش (Payment Verification)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/pay/verify</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "authorityToken": "pay_auth_...",
+  "traceNo": "TRC-89201"
+}</code></pre>
+        </div>
+
+        <h2>۴. پیکربندی حساب‌های پذیرندگی شاپرک (IPG Merchant Configuration)</h2>
+        <p>
+          لوکال‌می فیلدهای ۱ به ۱ و معتبر مستندات رسمی PSPهای شتاب را پشتیبانی و اعتبارسنجی می‌کند:
+        </p>
+        <table class="docs-param-table">
+          <thead>
+            <tr>
+              <th>درگاه بانکی (PSP)</th>
+              <th>پارامترهای فنی الزامی شاپرک</th>
+              <th>پروتکل ارتباطی و ضوابط</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>به‌پرداخت ملت (Mellat)</strong></td>
+              <td><code>mellatTerminalId</code> (عددی), <code>mellatUserName</code>, <code>mellatUserPassword</code>, <code>mellatPayerId</code></td>
+              <td>پروتکل وب‌سرویس SOAP/REST bpPayRequest شاپرک ملت</td>
+            </tr>
+            <tr>
+              <td><strong>سامان‌کیش سپ (SEP)</strong></td>
+              <td><code>sepTerminalId</code> (۸ رقم), <code>sepMerchantId</code>, <code>sepCellNumber</code></td>
+              <td>پروتکل توکنایزیشن درگاه سامان‌کیش با اعتبارسنجی کد پذیرنده</td>
+            </tr>
+            <tr>
+              <td><strong>زرین‌پال (ZarinPal)</strong></td>
+              <td><code>zarinpalMerchantId</code> (UUID استاندارد ۳۶ کاراکتری), <code>zarinpalIsZarinGate</code>, <code>zarinpalSandbox</code></td>
+              <td>وب‌سرویس REST API v4 زرین‌پال با پشتیبانی زرین‌گیت اختصاصی</td>
+            </tr>
+            <tr>
+              <td><strong>سداد بانک ملی (Sadad)</strong></td>
+              <td><code>sadadMerchantId</code>, <code>sadadTerminalId</code>, <code>sadadTerminalKey</code> (کلید متقارن Base64)</td>
+              <td>پروتکل رمزنگاری متقارن شاپرک سداد بانک ملی ایران</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>۵. مسیریابی کلاینت و پیوندهای عمیق (Deep Linking & Client Router)</h2>
+        <p>
+          کنسول توسعه‌دهنده به عنوان یک پروژه یکپارچه ASP.NET Core بدون نیاز به دو استقرار مجزا (Next.js + Backend) کامپایل و مستقر می‌گردد. تمامی مسیرها بر روی سرور به کنترلر پنل متصل بوده و کلاینت با استاندارد HTML5 History API آدرس‌ها را مدیریت می‌کند:
+        </p>
+        <ul>
+          <li><code>/panel/{projectSlug}/overview/metrics</code>: پیشخوان و سلامت زنده پروژه</li>
+          <li><code>/panel/{projectSlug}/db/tables</code>: جداول داده و رکوردهای PostgREST</li>
+          <li><code>/panel/{projectSlug}/db/sqleditor</code>: ویرایشگر تعاملی SQL</li>
+          <li><code>/panel/{projectSlug}/auth/users</code>: کاربران احراز هویت شده</li>
+          <li><code>/panel/{projectSlug}/ipg/config</code>: استودیوی درگاه پرداخت شتاب</li>
+          <li><code>/panel/{projectSlug}/telemetry/live</code>: پخش زنده لاگ‌های سرور</li>
+        </ul>
+        <p>با رفرش صفحه یا کپی کردن آدرس‌ها، کاربر دقیقا در همان پروژه و ماژول باقی مانده و حالت صفحه حفظ می‌شود.</p>
+
+        <h2>۶. ذخیره‌سازی ابری پایدار بر زیرساخت ملی (Remote Persistence)</h2>
+        <p>
+          اطلاعات کنترل‌پلیین، کاربران، پروژه‌ها و تراکنش‌ها بر روی کلاستر اختصاصی PostgreSQL (پایگاه داده <code>sina-infwqq_db</code>) و کش توزیع‌شده Redis ثبت شده و با ریستارت یا ری‌لود سرور هیچ داده‌ای از دست نخواهد رفت. پروژه‌های جدید کاملا خام و بدون داده‌های نمایشی (Clean State) آغاز به کار می‌کنند.
+        </p>
+      </section>
+
+      <!-- 7. MOBILE & REALTIME SUITE -->
+      <!-- 7.1 DUPLEX REALTIME WEBSOCKETS -->
+      <section id="section-mobile-realtime" class="docs-section">
+        <h1>سرویس جریان داده زنده و وب‌سوکت دوطرفه (Duplex Realtime WebSockets)</h1>
+        <p>
+          سرویس Realtime لوکال‌می یک خط لوله اختصاصی با پرفورمنس بسیار بالا بر بستر پروتکل استاندارد <strong>WebSocket</strong> ارائه می‌دهد که امکان پخش آنی تغییرات جداول دیتابیس (INSERT, UPDATE, DELETE)، برودکست رویدادهای سفارشی، سفارشات زنده، چت آنلاین و موقعیت پیک‌ها را بدون نیاز به ارسال درخواست‌های مکرر Polling برای اپلیکیشن‌های کلاینت فراهم می‌کند.
+        </p>
+
+        <h2>۱. آدرس اتصال پروتکل WebSocket</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-get">WS / WSS</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/realtime</code>
+        </div>
+        <p>
+          هنگام اتصال، سرور یک فریم خوش‌آمدگویی حاوی شناسه اختصاصی کانکشن (ConnectionId) صادر می‌کند:
+        </p>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Frame</span><span>SERVER &rarr; CLIENT</span></div>
+          <pre><code>{
+  "eventId": "e_8f21bc90",
+  "projectId": "proj_snappfood",
+  "table": "system",
+  "action": "CONNECTED",
+  "data": {
+    "connectionId": "c_a09b41ef",
+    "status": "active",
+    "message": "Connected to LocalMe Realtime Duplex Stream"
+  },
+  "timestampUtc": "2026-10-18T20:30:00Z"
+}</code></pre>
+        </div>
+
+        <h2>۲. پروتکل پیام‌ها و عضویت در کانال‌ها (Channel Protocol)</h2>
+        <ul>
+          <li>
+            <strong>اشتراک در یک جدول مشخص (Subscribe):</strong>
+            <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; margin-top: 4px;"><code>{"action": "subscribe", "table": "orders"}</code></pre>
+          </li>
+          <li>
+            <strong>لغو عضویت (Unsubscribe):</strong>
+            <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; margin-top: 4px;"><code>{"action": "unsubscribe", "table": "orders"}</code></pre>
+          </li>
+          <li>
+            <strong>برودکست رویداد از سمت کلاینت یا سرور (Broadcast REST API):</strong>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 6px 0;">
+              <span class="badge-method method-post">POST</span>
+              <code>/_baas/v1/{projectId}/realtime/broadcast</code>
+            </div>
+            <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px;"><code>{
+  "table": "orders",
+  "action": "ORDER_DISPATCHED",
+  "data": { "orderId": 4021, "courierPhone": "+989120000002" }
+}</code></pre>
+          </li>
+        </ul>
+
+        <h2>۳. مدیریت چالش‌ها و پایداری در شبکه‌های موبایل ایران (ISP Edge Cases)</h2>
+        <table class="docs-param-table">
+          <thead>
+            <tr>
+              <th>چالش زیرساختی شبکه ایران</th>
+              <th>علت و رفتار در اپراتورها</th>
+              <th>راهکار و معماری لوکال‌می</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>NAT Timeout اپراتورهای موبایل</strong></td>
+              <td>ایرانسل و همراه اول سوکت‌های بدون دیتا را بعد از ۳۰ تا ۶۰ ثانیه به صورت خاموش قطع می‌کنند.</td>
+              <td>ارسال فریم پینگ ضربان قلب <code>{"action":"ping"}</code> هر ۲۵ ثانیه توسط کلاینت به صورت خودکار.</td>
+            </tr>
+            <tr>
+              <td><strong>جابجایی بین شبکه وای‌فای و سلولار</strong></td>
+              <td>آدرس IP کلاینت تغییر کرده و سوکت قدیمی در حالت تعلیق نامشخص (Silent Drop) باقی می‌ماند.</td>
+              <td>شنود رویدادهای Connectivity سیستم‌عامل، بستن سریع سوکت مرده و اتصال مجدد با تاخیر نمایی (Exponential Backoff).</td>
+            </tr>
+            <tr>
+              <td><strong>از دست رفتن اشتراک کانال‌ها</strong></td>
+              <td>پس از برقراری مجدد اتصال، سرور سوکت جدید را فاقد کانال‌های ثبت‌شده قبلی می‌شناسد.</td>
+              <td>نگهداری لیست کانال‌ها در حافظه SDK کلاینت و ارسال مجدد فریم‌های <code>subscribe</code> بلافاصله بعد از رویداد <code>onopen</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>قطعی موقت اینترنت هنگام ارسال</strong></td>
+              <td>کاربر در نقطه کور آنتن قرار می‌گیرد و فریم‌های ارسالی با شکست مواجه می‌شوند.</td>
+              <td>صف‌بندی آفلاین رویدادها (Offline Message Queue) در حافظه کلاینت و تخلیه ترتیبی پس از بازیابی لینک ارتباطی.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 7.2 PUSH NOTIFICATIONS -->
+      <section id="section-mobile-push" class="docs-section">
+        <h1>سامانه اعلان‌های هوشمند موبایل (Push Notifications Engine)</h1>
+        <p>
+          زیرساخت ارسال پوش‌نوتیفیکیشن لوکال‌می با اتصال همزمان به درگاه‌های بین‌المللی (Firebase Cloud Messaging) و سرورهای پوش بومی (Najva, Pushy)، تضمین تحویل ۹۹.۹٪ اعلان‌ها به اپلیکیشن‌های اندروید و iOS حتی در زمان اختلال لینک‌های بین‌الملل را فراهم می‌سازد.
+        </p>
+
+        <h2>۱. ثبت دستگاه موبایل در سامانه (Register Device)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/push/devices/register</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "deviceId": "dev_s23_ultra_88",
+  "platform": "android",
+  "provider": "fcm",
+  "pushToken": "fcm_token_sample_string_...",
+  "userId": "usr_developer_03"
+}</code></pre>
+        </div>
+
+        <h2>۲. ارسال اعلان به کاربران یا گروه‌ها (Send Notification)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/push/send</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "title": "سفارش شما تایید شد!",
+  "body": "رستوران آماده‌سازی غذای شما را آغاز کرد.",
+  "targetUserIds": ["usr_developer_03"],
+  "targetPlatforms": ["android", "ios"],
+  "data": {
+    "orderId": "ord_9901",
+    "deepLink": "snappfood://orders/ord_9901"
+  }
+}</code></pre>
+        </div>
+
+        <h2>۳. نکات کلیدی و حالات مرزی (Edge Cases)</h2>
+        <ul>
+          <li><strong>اعلان‌های پس‌زمینه خاموش (Silent Data Push):</strong> با ارسال فیلد <code>data</code> بدون <code>title</code>، اپلیکیشن به صورت نامرئی در پس‌زمینه بیدار شده و عملیات همگام‌سازی کش را انجام می‌دهد.</li>
+          <li><strong>چرخش توکن (Token Rotation):</strong> کلاینت‌ها با ثبت لیسنر <code>onNewToken</code>، در صورت ابطال توکن قدیمی، توکن جدید را به سامانه ارسال کرده و رکورد قبلی اوررایت می‌شود.</li>
+          <li><strong>پشتیبانی از چند ارائه‌دهنده (Failover):</strong> در صورت تاخیر یا مسدودی سرورهای FCM، لوکال‌می به صورت خودکار پِی‌لود را به درگاه دوم منتقل می‌کند.</li>
+        </ul>
+      </section>
+
+      <!-- 7.3 IN-APP PURCHASES -->
+      <section id="section-mobile-iap" class="docs-section">
+        <h1>اعتبارسنجی خریدهای درون‌برنامه‌ای بازار و مایکت (Mobile IAP)</h1>
+        <p>
+          جهت جلوگیری از کرک شدن اپلیکیشن‌ها و پرداخت‌های جعلی (Fake In-App Purchases)، اعتبارسنجی توکن خرید حتماً باید در سمت سرور انجام شود. موتور IAP لوکال‌می اتصال مستقیم امن با API توسعه‌دهندگان <strong>کافه‌بازار (Cafe Bazaar)</strong> و <strong>مایکت (Myket)</strong> برقرار کرده و توکن‌ها را اعتبارسنجی می‌کند.
+        </p>
+
+        <h2>۱. تایید خرید کافه‌بازار (Verify Cafe Bazaar Purchase)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/iap/verify/bazaar</code>
+        </div>
+        <div class="docs-code-card">
+          <div class="docs-code-header"><span>JSON Payload</span><span>REQUEST</span></div>
+          <pre><code>{
+  "packageName": "ir.myapp.android",
+  "productId": "coins_pack_100",
+  "purchaseToken": "bazaar_token_random_hash_...",
+  "priceIrr": 2000000
+}</code></pre>
+        </div>
+
+        <h2>۲. تایید خرید مایکت (Verify Myket Purchase)</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/iap/verify/myket</code>
+        </div>
+
+        <h2>۳. مکانیزم‌های دفاعی و مدیریت حالت‌های بحرانی (Security Guardrails)</h2>
+        <ul>
+          <li><strong>دفاع در برابر Replay Attack:</strong> هر <code>purchaseToken</code> پس از یک‌بار تایید در دیتابیس ثبت شده و درخواست‌های مجدد با همان توکن رد می‌شوند.</li>
+          <li><strong>حفظ اتمیسیته مالی:</strong> به ازای هر تراکنش تاییدشده، یک رکورد در جدول <code>iap_purchases</code> ثبت و کیف پول کاربر یا کالای دیجیتال او به طور خودکار بروزرسانی می‌شود.</li>
+        </ul>
+      </section>
+
+      <!-- 8.2 ADVANCED STUDIOS (SQL, HOSTING, COMPLIANCE, LOGS) -->
+      <section id="section-studios" class="docs-section">
+        <h1>استودیوهای پیشرفته توسعه‌دهندگان (Developer Studios)</h1>
+        <p>کنسول لوکال‌می علاوه بر سرویس‌های هسته، مجموعه‌ای از ابزارهای بومی پیشرفته را در اختیار توسعه‌دهندگان قرار می‌دهد:</p>
+
+        <h2>۱. ویرایشگر تعاملی SQL و طراح ساختار جدول</h2>
+        <p>امکان اجرای مستقیم دستورات <code>SELECT</code>, <code>INSERT</code>, <code>CREATE TABLE</code> بر روی اسکیمای ایزوله پروژه با زمان‌سنجی میلی‌ثانیه‌ای:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-post">POST</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/sql/execute</code>
+        </div>
+        <p>استعلام متادیتای ساختاری و کلیدهای اصلی هر جدول:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-get">GET</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/sql/schema/{table}</code>
+        </div>
+
+        <h2>۲. استقرار میزبانی وب و دامنه‌های اختصاصی (Web Hosting)</h2>
+        <p>مدیریت نسخه‌های استقرار Git، شاخه‌ها و اتصال دامنه‌های اختصاصی با صدور خودکار گواهی امنیتی SSL و نماد ملی:</p>
+        <ul>
+          <li><code>GET /_baas/v1/{projectId}/hosting/deployments</code>: تاریخچه نسخه‌های مستقر شده.</li>
+          <li><code>POST /_baas/v1/{projectId}/hosting/domains</code>: اتصال دامنه اینترنتی به پروژه.</li>
+          <li><code>POST /_baas/v1/{projectId}/hosting/domains/{domain}/verify</code>: استعلام صحت رکوردهای DNS دامنه.</li>
+        </ul>
+
+        <h2>۳. مرکز انطباق و الزامات رگولاتوری ایران (Compliance Hub)</h2>
+        <p>پیکربندی خودکار و بی‌درنگ توکن‌های نماد اعتماد الکترونیکی (اینماد)، سامانه ساماندهی، پیوندهای عمیق اندروید و اپل:</p>
+        <ul>
+          <li><code>GET/PUT /_baas/v1/{projectId}/compliance</code>: دریافت و تنظیم کدهای اینماد و ساماندهی.</li>
+          <li><code>/.well-known/assetlinks.json</code>: احراز هویت خودکار Android App Links.</li>
+          <li><code>/.well-known/apple-app-site-association</code>: احراز هویت خودکار Apple Universal Links.</li>
+          <li><code>/enamad.txt</code> و <code>/samandehi.txt</code>: تایید مالکیت دامنه برای مراجع قانونی.</li>
+        </ul>
+
+        <h2>۴. تله‌متری زنده و لاگ‌های بازرسی (Live Logs)</h2>
+        <p>فیلتر و پایش بلادرنگ رویدادها، خطاهای اپلیکیشن، درخواست‌های دیتابیس و تراکنش‌ها بر اساس سطح اهمیت (INFO, WARN, ERROR) و شناسه ردگیری Trace ID:</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span class="badge-method method-get">GET</span>
+          <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/logs?service=database&amp;level=INFO</code>
+        </div>
+      </section>
+
       <!-- 9. CODE EXAMPLES IN 4 LANGUAGES -->
       <section id="section-code-examples" class="docs-section">
         <h1>نمونه کدهای جامع و کتابخانه‌ها (Code Examples)</h1>
@@ -536,23 +964,23 @@ import 'package:http/http.dart' as http;
 
 class LocalMeService {
   final String projectId;
-  final Map<String, String> keys;
+  final Map&lt;String, String&gt; keys;
   final String baseUrl = 'https://api.localme.ir/_baas/v1';
 
   LocalMeService({required this.projectId, required this.keys});
 
   // ۱. دریافت رکوردهای جدول دیتابیس
-  Future<List<dynamic>> getTableRecords(String table) async {
+  Future&lt;List&lt;dynamic&gt;&gt; getTableRecords(String table) async {
     final uri = Uri.parse('$baseUrl/$projectId/db/$table');
     final res = await http.get(uri, headers: {'x-api-key': keys['database'] ?? ''});
     if (res.statusCode == 200) {
-      return jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
+      return jsonDecode(utf8.decode(res.bodyBytes)) as List&lt;dynamic&gt;;
     }
     throw Exception('خطا در دریافت اطلاعات: ${res.statusCode}');
   }
 
   // ۲. ارسال درخواست کد تایید پیامک
-  Future<bool> requestOtp(String phone) async {
+  Future&lt;bool&gt; requestOtp(String phone) async {
     final uri = Uri.parse('$baseUrl/$projectId/auth/otp/request');
     final res = await http.post(
       uri,
@@ -563,16 +991,17 @@ class LocalMeService {
   }
 
   // ۳. فراخوانی تابع لبه
-  Future<Map<String, dynamic>> invokeFunction(String slug, Map<String, dynamic> context) async {
+  Future&lt;Map&lt;String, dynamic&gt;&gt; invokeFunction(String slug, Map&lt;String, dynamic&gt; context) async {
     final uri = Uri.parse('$baseUrl/$projectId/functions/$slug/invoke');
     final res = await http.post(
       uri,
       headers: {'x-api-key': keys['functions'] ?? '', 'Content-Type': 'application/json'},
       body: jsonEncode(context),
     );
-    return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    return jsonDecode(utf8.decode(res.bodyBytes)) as Map&lt;String, dynamic&gt;;
   }
 }</code></pre>
+
           </div>
         </div>
       </section>

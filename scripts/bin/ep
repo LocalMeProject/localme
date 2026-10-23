@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Unified Enterprise-Product CLI Entrypoint
+set -euo pipefail
+
+TARGET_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${TARGET_PATH}")/.." && pwd)"
+export PYTHONPATH="${SCRIPT_DIR}:${PYTHONPATH:-}"
+
+exec python3 "${SCRIPT_DIR}/ep.py" "$@"

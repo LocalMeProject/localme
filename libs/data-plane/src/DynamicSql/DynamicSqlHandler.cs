@@ -15,49 +15,7 @@ public sealed class DynamicSqlHandler
 
     public DynamicSqlHandler()
     {
-        // Seed initial tables for immediate local demonstration
-        _tenantTables["products"] =
-        [
-            new JsonObject
-            {
-                ["id"] = Guid.NewGuid().ToString(),
-                ["title"] = "گوشی موبایل اپل مدل iPhone 16 Pro Max",
-                ["price_irr"] = 980_000_000,
-                ["stock"] = 14,
-                ["category"] = "Electronics",
-                ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
-            },
-            new JsonObject
-            {
-                ["id"] = Guid.NewGuid().ToString(),
-                ["title"] = "لپ‌تاپ اپل مدل MacBook Pro 16 M4 Max",
-                ["price_irr"] = 1_850_000_000,
-                ["stock"] = 5,
-                ["category"] = "Computers",
-                ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
-            },
-            new JsonObject
-            {
-                ["id"] = Guid.NewGuid().ToString(),
-                ["title"] = "هدفون بی‌سیم AirPods Pro 2",
-                ["price_irr"] = 145_000_000,
-                ["stock"] = 42,
-                ["category"] = "Audio",
-                ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
-            }
-        ];
-
-        _tenantTables["orders"] =
-        [
-            new JsonObject
-            {
-                ["id"] = Guid.NewGuid().ToString(),
-                ["customer_phone"] = "+989121112233",
-                ["total_irr"] = 980_000_000,
-                ["status"] = "COMPLETED",
-                ["created_at"] = DateTimeOffset.UtcNow.AddHours(-2).ToString("O")
-            }
-        ];
+        // Clean initial state without pre-seeded mock records for production readiness
     }
 
     public JsonArray QueryTable(string table, int limit = 50, string? filterCol = null, string? filterVal = null)

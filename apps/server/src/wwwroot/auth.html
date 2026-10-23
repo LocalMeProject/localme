@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body style="display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main);">
 
@@ -17,75 +17,239 @@
         <span class="brand-badge">LM</span>
         <span class="brand-title">لوکال‌می</span>
       </a>
+    </div>
     <div style="display: flex; gap: 8px;">
-      <a href="/docs" class="btn-secondary" style="font-size: 12px;">مستندات فنی</a>
-      <a href="/" class="btn-secondary" style="font-size: 12px;">بازگشت به صفحه اصلی</a>
+      <a href="/docs" class="btn-secondary" style="font-size: 13px;">مستندات فنی</a>
+      <a href="/" class="btn-secondary" style="font-size: 13px;">بازگشت به صفحه اصلی</a>
     </div>
   </header>
 
+
   <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
-    <div class="card" style="width: 100%; max-width: 440px; margin-bottom: 0;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">ورود به حساب کاربری</h2>
-        <p style="font-size: 13px; color: var(--text-muted);">شماره موبایل خود را جهت دریافت کد تایید وارد نمایید</p>
+    <div class="card" style="width: 100%; max-width: 460px; margin-bottom: 0;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">ورود به سامانه لوکال‌می</h2>
+        <p id="auth-subtitle" style="font-size: 13px; color: var(--text-muted);">روش احراز هویت مورد نظر خود را انتخاب نمایید</p>
       </div>
 
-      <!-- Quick Role Switcher for Testing -->
-      <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 20px;">
-        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">انتخاب سریع حساب کاربری جهت ورود:</div>
-        <div style="display: grid; gap: 6px;">
-          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_developer_03', '/panel')">
-            <span>توسعه‌دهنده (سینا والی پور)</span>
-            <span class="badge badge-active">پنل کلاینت</span>
-          </button>
-          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_admin_01', '/admin')">
-            <span>مدیر ارشد (SuperAdmin)</span>
-            <span class="badge badge-paused">دسترسی کامل</span>
-          </button>
-          <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 12px; padding: 6px 12px;" onclick="fastLogin('usr_operator_02', '/admin')">
-            <span>اپراتور پشتیبانی (Operator)</span>
-            <span class="badge badge-info">سطح میانی</span>
-          </button>
-        </div>
-      </div>
-
-      <div style="position: relative; text-align: center; margin: 18px 0;">
-        <span style="background: #ffffff; padding: 0 10px; font-size: 11.5px; color: var(--text-light); position: relative; z-index: 1;">یا ورود با پیامک</span>
-        <div style="position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid var(--border-color);"></div>
-      </div>
-
-      <!-- Mobile OTP Form -->
-      <form id="otp-form">
-        <div style="margin-bottom: 14px;">
-          <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شماره موبایل</label>
-          <input type="text" id="phone-input" class="input-field input-mono" value="+989121112233" required />
-        </div>
-
-        <div id="otp-code-group" style="display: none; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label style="font-size: 12px; font-weight: 600;">کد تایید ۶ رقمی</label>
-            <span id="countdown-label" style="font-size: 11px; color: var(--brand-dark);">۱۲۰ ثانیه</span>
-          </div>
-          <input type="text" id="code-input" class="input-field input-mono" placeholder="123456" maxlength="6" />
-          <div id="test-code-hint" style="font-size: 11.5px; color: var(--brand-dark); margin-top: 6px; font-family: var(--font-mono);"></div>
-        </div>
-
-        <button type="submit" id="btn-submit-auth" class="btn-primary" style="width: 100%; padding: 10px;">
-          دریافت کد تایید پیامکی
+      <!-- Auth Mode Selector Tabs -->
+      <div style="display: flex; background: var(--bg-subtle); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <button type="button" id="tab-btn-otp" class="btn-primary" style="flex: 1; font-size: 13px; padding: 6px 4px; border-radius: 4px; justify-content: center;" onclick="switchAuthTab('otp')">
+          پیامک تایید (پیش‌فرض)
         </button>
-      </form>
+        <button type="button" id="tab-btn-userpass" class="btn-secondary" style="flex: 1; font-size: 13px; padding: 6px 4px; border-radius: 4px; justify-content: center;" onclick="switchAuthTab('userpass')">
+          نام کاربری و رمز
+        </button>
+        <button type="button" id="tab-btn-projpass" class="btn-secondary" style="flex: 1; font-size: 13px; padding: 6px 4px; border-radius: 4px; justify-content: center;" onclick="switchAuthTab('projpass')">
+          رمز اختصاصی پروژه
+        </button>
+      </div>
+
+      <!-- TAB 1: Mobile OTP Form (Default) -->
+      <div id="pane-otp">
+        <!-- Quick Role Switcher for Testing -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">ورود سریع با پیامک تایید:</div>
+          <div style="display: grid; gap: 6px;">
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989121112233', '/panel')">
+              <span>توسعه‌دهنده (سینا والی زاده)</span>
+              <span class="badge badge-active">پنل کلاینت</span>
+            </button>
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989120000001', '/admin')">
+              <span>مدیر ارشد (SuperAdmin)</span>
+              <span class="badge badge-paused">دسترسی کامل</span>
+            </button>
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989120000002', '/admin')">
+              <span>اپراتور پشتیبانی (Operator)</span>
+              <span class="badge badge-info">سطح میانی</span>
+            </button>
+          </div>
+        </div>
+
+        <form id="otp-form">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره موبایل</label>
+            <input type="text" id="phone-input" class="input-field" value="+989121112233" required />
+          </div>
+
+          <div id="otp-code-group" style="display: none; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="font-size: 13px; font-weight: 600;">کد تایید ۶ رقمی</label>
+              <span id="countdown-label" style="font-size: 13px; color: var(--brand-dark);">۱۲۰ ثانیه</span>
+            </div>
+            <input type="text" id="code-input" class="input-field" placeholder="123456" maxlength="6" />
+            <div id="test-code-hint" style="font-size: 13px; color: var(--brand-dark); margin-top: 6px; font-family: var(--font-persian);"></div>
+          </div>
+
+          <button type="submit" id="btn-submit-auth" class="btn-primary" style="width: 100%; padding: 10px;">
+            دریافت کد تایید پیامکی
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 2: Username & Password Form -->
+      <div id="pane-userpass" style="display: none;">
+        <!-- Quick Fill for Credentials -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">انتخاب سریع حساب کاربری (تست):</div>
+          <div style="display: grid; gap: 6px;">
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('sina', 'developer123456')">
+              <span>توسعه‌دهنده (sina)</span>
+              <span class="badge badge-active">developer123456</span>
+            </button>
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('admin', 'admin123456')">
+              <span>مدیر ارشد (admin)</span>
+              <span class="badge badge-paused">admin123456</span>
+            </button>
+            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('operator', 'operator123456')">
+              <span>اپراتور (operator)</span>
+              <span class="badge badge-info">operator123456</span>
+            </button>
+          </div>
+        </div>
+
+        <form id="form-userpass">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام کاربری، ایمیل یا شماره موبایل</label>
+            <input type="text" id="login-identifier" class="input-field" placeholder="sina یا sina@example.com" value="sina" required />
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلمه عبور</label>
+            <input type="password" id="login-password" class="input-field" placeholder="••••••••" value="developer123456" required />
+          </div>
+
+          <div id="userpass-error-hint" style="display: none; font-size: 13px; color: var(--color-danger); margin-bottom: 12px; padding: 8px 12px; background: #fee2e2; border-radius: 4px;"></div>
+
+          <button type="submit" id="btn-submit-userpass" class="btn-primary" style="width: 100%; padding: 10px;">
+            ورود به پنل کاربری
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 3: Project-Scoped Credentials Form -->
+      <div id="pane-projpass" style="display: none;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; font-size: 13px; color: #166534; line-height: 1.5;">
+          <strong>دسترسی اختصاصی تک‌پروژه:</strong> با وارد کردن اسلاگ پروژه و رمز عبور اختصاصی آن، مستقیماً وارد محیط همان پروژه می‌شوید و دسترسی به حساب اصلی و سایر پروژه‌ها نخواهید داشت.
+        </div>
+
+        <form id="form-projpass">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه یا اسلاگ پروژه (Project Slug / ID)</label>
+            <input type="text" id="login-proj-slug" class="input-field" placeholder="مثال: my-store یا proj_a1b2c3d4" required />
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">رمز عبور اختصاصی پروژه</label>
+            <input type="password" id="login-proj-password" class="input-field" placeholder="رمز تعیین‌شده توسط مالک پروژه" required />
+          </div>
+
+          <div id="projpass-error-hint" style="display: none; font-size: 13px; color: var(--color-danger); margin-bottom: 12px; padding: 8px 12px; background: #fee2e2; border-radius: 4px;"></div>
+
+          <button type="submit" id="btn-submit-projpass" class="btn-primary" style="width: 100%; padding: 10px;">
+            ورود اختصاصی به محیط پروژه
+          </button>
+        </form>
+      </div>
+
     </div>
   </main>
 
   <script>
-    async function fastLogin(userId, redirectPath) {
+    function showToast(message, type = 'info', duration = 3800) {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast-message toast-${type}`;
+      const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ';
+      toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-fadeout');
+        setTimeout(() => toast.remove(), 280);
+      }, duration);
+    }
+    window.showToast = showToast;
+    window.alert = function(msg) { showToast(String(msg), 'info'); };
+
+    // Tab Switching
+    function switchAuthTab(tab) {
+      const tabOtp = document.getElementById('tab-btn-otp');
+      const tabUserpass = document.getElementById('tab-btn-userpass');
+      const tabProjpass = document.getElementById('tab-btn-projpass');
+      const paneOtp = document.getElementById('pane-otp');
+      const paneUserpass = document.getElementById('pane-userpass');
+      const paneProjpass = document.getElementById('pane-projpass');
+      const subtitle = document.getElementById('auth-subtitle');
+
+      tabOtp.className = 'btn-secondary';
+      tabUserpass.className = 'btn-secondary';
+      tabProjpass.className = 'btn-secondary';
+      paneOtp.style.display = 'none';
+      paneUserpass.style.display = 'none';
+      paneProjpass.style.display = 'none';
+
+      if (tab === 'otp') {
+        tabOtp.className = 'btn-primary';
+        paneOtp.style.display = 'block';
+        subtitle.textContent = 'شماره موبایل خود را جهت دریافت کد تایید پیامکی وارد نمایید';
+      } else if (tab === 'userpass') {
+        tabUserpass.className = 'btn-primary';
+        paneUserpass.style.display = 'block';
+        subtitle.textContent = 'نام کاربری و کلمه عبور حساب کاربری خود را وارد فرمایید';
+      } else if (tab === 'projpass') {
+        tabProjpass.className = 'btn-primary';
+        paneProjpass.style.display = 'block';
+        subtitle.textContent = 'شناسه و رمز اختصاصی پروژه را وارد نمایید';
+      }
+    }
+
+    function fillUserPass(username, password) {
+      document.getElementById('login-identifier').value = username;
+      document.getElementById('login-password').value = password;
+    }
+
+    // 1. OTP Login Implementation
+    async function quickOtpLogin(phone, redirectPath) {
+      phoneInput.value = phone;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'در حال ورود...';
       try {
-        const res = await fetch(`/_baas/v1/users/switch/${userId}`, { method: 'POST' });
-        if (res.ok) {
-          window.location.href = redirectPath;
+        const res = await fetch('/_baas/v1/auth/otp/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Phone: phone, Channel: 'sms' })
+        });
+        const data = await res.json();
+        if (data.success && data.codeForTesting) {
+          codeInput.value = data.codeForTesting;
+          codeGroup.style.display = 'block';
+          otpSent = true;
+          const vRes = await fetch('/_baas/v1/auth/otp/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Phone: phone, Code: data.codeForTesting })
+          });
+          const vData = await vRes.json();
+          if (vData.success) {
+            if (vData.tokens?.accessToken) {
+              localStorage.setItem('localme_token', vData.tokens.accessToken);
+            }
+            window.location.href = redirectPath;
+            return;
+          }
         }
+        showToast(data.message || 'خطا در ارسال پیامک ورود.', 'error');
       } catch {
-        alert('خطا در ورود به حساب.');
+        showToast('خطای ارتباط با سرور.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'دریافت کد تایید پیامکی';
       }
     }
 
@@ -120,10 +284,10 @@
               testHint.textContent = `کد پیامک‌شده تستی: ${data.codeForTesting}`;
             }
           } else {
-            alert(data.message || 'خطا در ارسال پیامک');
+            showToast(data.message || 'خطا در ارسال پیامک', 'error');
           }
         } catch {
-          alert('خطای ارتباط با سرور.');
+          showToast('خطای ارتباط با سرور.', 'error');
         } finally {
           submitBtn.disabled = false;
         }
@@ -139,15 +303,106 @@
           });
           const data = await res.json();
           if (data.success) {
-            window.location.href = '/panel';
+            if (data.tokens?.accessToken) {
+              localStorage.setItem('localme_token', data.tokens.accessToken);
+            }
+            if (data.user?.role === 0 || data.user?.role === 1 || data.user?.role === 'Admin' || data.user?.role === 'Operator') {
+              window.location.href = '/admin';
+            } else {
+              window.location.href = '/panel';
+            }
           } else {
-            alert(data.message || 'کد نامعتبر است');
+            showToast(data.message || 'کد نامعتبر است', 'error');
           }
         } catch {
-          alert('خطای تایید.');
+          showToast('خطای تایید.', 'error');
         } finally {
           submitBtn.disabled = false;
         }
+      }
+    });
+
+    // 2. Username & Password Login Implementation
+    const formUserpass = document.getElementById('form-userpass');
+    const userpassError = document.getElementById('userpass-error-hint');
+    const btnSubmitUserpass = document.getElementById('btn-submit-userpass');
+
+    formUserpass.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      userpassError.style.display = 'none';
+      btnSubmitUserpass.disabled = true;
+      btnSubmitUserpass.textContent = 'در حال احراز هویت...';
+
+      const username = document.getElementById('login-identifier').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch('/_baas/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          if (data.tokens?.accessToken) {
+            localStorage.setItem('localme_token', data.tokens.accessToken);
+          }
+          if (data.user?.role === 0 || data.user?.role === 1 || data.user?.role === 'Admin' || data.user?.role === 'Operator') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/panel';
+          }
+        } else {
+          userpassError.textContent = data.error || data.message || 'نام کاربری یا کلمه عبور نادرست است.';
+          userpassError.style.display = 'block';
+        }
+      } catch (err) {
+        userpassError.textContent = 'خطای ارتباط با سرور رخ داد.';
+        userpassError.style.display = 'block';
+      } finally {
+        btnSubmitUserpass.disabled = false;
+        btnSubmitUserpass.textContent = 'ورود به پنل کاربری';
+      }
+    });
+
+    // 3. Project Scoped Login Implementation
+    const formProjpass = document.getElementById('form-projpass');
+    const projpassError = document.getElementById('projpass-error-hint');
+    const btnSubmitProjpass = document.getElementById('btn-submit-projpass');
+
+    formProjpass.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      projpassError.style.display = 'none';
+      btnSubmitProjpass.disabled = true;
+      btnSubmitProjpass.textContent = 'در حال بررسی دسترسی...';
+
+      const projectSlug = document.getElementById('login-proj-slug').value.trim();
+      const password = document.getElementById('login-proj-password').value;
+
+      try {
+        const res = await fetch('/_baas/v1/auth/project-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectSlug, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          if (data.tokens?.accessToken) {
+            localStorage.setItem('localme_token', data.tokens.accessToken);
+          }
+          window.location.href = '/panel';
+        } else {
+          projpassError.textContent = data.error || data.message || 'شناسه یا رمز عبور اختصاصی پروژه نادرست است.';
+          projpassError.style.display = 'block';
+        }
+      } catch (err) {
+        projpassError.textContent = 'خطای ارتباط با سرور رخ داد.';
+        projpassError.style.display = 'block';
+      } finally {
+        btnSubmitProjpass.disabled = false;
+        btnSubmitProjpass.textContent = 'ورود اختصاصی به محیط پروژه';
       }
     });
   </script>

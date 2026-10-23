@@ -16,5 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\libs\core-domain\src\LocalMe.Core.csproj" />
     <ProjectReference Include="..\..\libs\data-plane\src\LocalMe.DataPlane.csproj" />
+    <ProjectReference Include="..\..\libs\infrastructure\src\LocalMe.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
+

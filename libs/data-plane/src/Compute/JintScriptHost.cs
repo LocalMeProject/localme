@@ -57,12 +57,13 @@ public sealed class JintScriptHost
                 error = new Action<object?>(msg => logs.Add($"[ERROR] {msg}"))
             });
 
-            // Inject request context
+            // Inject request context safely via JSON parser (no raw string interpolation)
             if (!string.IsNullOrWhiteSpace(request.InputJson))
             {
                 try
                 {
-                    engine.Execute($"const context = {request.InputJson};");
+                    engine.SetValue("__rawInputJson", request.InputJson);
+                    engine.Execute("const context = JSON.parse(__rawInputJson);");
                 }
                 catch
                 {

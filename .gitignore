@@ -1,5 +1,7 @@
 # .NET build artifacts
 bin/
+!scripts/bin/
+!scripts/bin/**
 obj/
 *.user
 *.suo
@@ -41,3 +43,15 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Agent Coordination & Telemetry
+.agents/
+
+# Local runtime storage
+.localme-storage/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+

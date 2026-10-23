@@ -1,3 +1,37 @@
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function showToast(message, type = 'info', duration = 3800) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast-message toast-${type}`;
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ';
+  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-fadeout');
+    setTimeout(() => toast.remove(), 280);
+  }, duration);
+}
+window.showToast = showToast;
+window.alert = function(msg) {
+  showToast(String(msg), 'info');
+};
+
 // LocalMe SuperAdmin & Operator Console Engine
 let adminUser = null;
 let cachedUsers = {};
@@ -81,35 +115,75 @@ function initAdminNav() {
     pricingForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (adminUser.role !== 0) {
-        alert('تنها مدیر ارشد سامانه مجاز به تغییر تعرفه‌ها می‌باشد.');
+        showToast('تنها مدیر ارشد سامانه مجاز به تغییر تعرفه‌ها می‌باشد.', 'warning');
         return;
       }
 
       const payload = {
-        DbQueryPer1kIrr: parseInt(document.getElementById('adm-p-db').value, 10),
-        SmsPerMessageIrr: parseInt(document.getElementById('adm-p-sms').value, 10),
-        StorageGbMonthIrr: parseInt(document.getElementById('adm-p-storage').value, 10),
-        ComputePer100msIrr: parseInt(document.getElementById('adm-p-compute').value, 10),
-        MinWalletTopupIrr: parseInt(document.getElementById('adm-p-min-topup').value, 10),
-        InitialFreeCreditIrr: parseInt(document.getElementById('adm-p-free-credit').value, 10),
-        MaintenanceMode: document.getElementById('adm-p-maint').checked
+        DbQueryPer1kIrr: parseInt(document.getElementById('adm-p-db')?.value, 10) || 100,
+        SmsPerMessageIrr: parseInt(document.getElementById('adm-p-sms')?.value, 10) || 800,
+        StorageGbMonthIrr: parseInt(document.getElementById('adm-p-storage')?.value, 10) || 500,
+        ComputePer100msIrr: parseInt(document.getElementById('adm-p-compute')?.value, 10) || 10,
+        EgressGbIrr: parseInt(document.getElementById('adm-p-egress')?.value, 10) || 2000,
+        MinWalletTopupIrr: parseInt(document.getElementById('adm-p-min-topup')?.value, 10) || 100000,
+        InitialFreeCreditIrr: parseInt(document.getElementById('adm-p-free-credit')?.value, 10) || 5000000,
+
+        MaxProjectsPerDeveloperTier: parseInt(document.getElementById('adm-cfg-max-projects')?.value, 10) || 1,
+        MaxTeamMembersPerDeveloperTier: parseInt(document.getElementById('adm-cfg-max-members')?.value, 10) || 1,
+        DefaultStorageQuotaMb: parseInt(document.getElementById('adm-cfg-storage-quota')?.value, 10) || 1024,
+        DefaultMaxFileSizeMb: parseInt(document.getElementById('adm-cfg-max-filesize')?.value, 10) || 50,
+        DefaultFunctionsMemoryMb: parseInt(document.getElementById('adm-cfg-func-memory')?.value, 10) || 16,
+        DefaultFunctionsTimeoutMs: parseInt(document.getElementById('adm-cfg-func-timeout')?.value, 10) || 5000,
+        DefaultDbMaxConnections: parseInt(document.getElementById('adm-cfg-db-conn')?.value, 10) || 20,
+
+        SmsDefaultProvider: document.getElementById('adm-sms-provider')?.value || 'kavenegar',
+        SmsDefaultApiKey: document.getElementById('adm-sms-key')?.value?.trim() || '',
+        SmsDefaultSenderNumber: document.getElementById('adm-sms-sender')?.value?.trim() || '3000777',
+        SmsDefaultPatternCode: document.getElementById('adm-sms-pattern')?.value?.trim() || 'localme-verify',
+        SmsDefaultOtpLength: parseInt(document.getElementById('adm-sms-otp-len')?.value, 10) || 6,
+        SmsDefaultOtpExpirySeconds: parseInt(document.getElementById('adm-sms-otp-ttl')?.value, 10) || 120,
+
+        IpgDefaultPsp: document.getElementById('adm-ipg-psp')?.value || 'zarinpal',
+        IpgDefaultMerchantId: document.getElementById('adm-ipg-merchant')?.value?.trim() || '',
+        IpgCallbackBaseUrl: document.getElementById('adm-ipg-callback')?.value?.trim() || '',
+        ShaparakWageIrr: parseInt(document.getElementById('adm-ipg-wage')?.value, 10) || 1200,
+
+        JwtSecret: document.getElementById('adm-sec-jwt-secret')?.value?.trim() || '',
+        JwtExpiryHours: parseInt(document.getElementById('adm-sec-jwt-hours')?.value, 10) || 72,
+        RefreshTokenExpiryDays: parseInt(document.getElementById('adm-sec-refresh-days')?.value, 10) || 30,
+        MaxLoginFailedAttempts: parseInt(document.getElementById('adm-sec-max-retries')?.value, 10) || 5,
+        LockoutDurationMinutes: parseInt(document.getElementById('adm-sec-lockout-mins')?.value, 10) || 15,
+        CorsAllowedOrigins: document.getElementById('adm-sec-cors')?.value?.trim() || '*',
+
+        PlatformName: document.getElementById('adm-infra-name')?.value?.trim() || 'لوکال‌می (LocalMe)',
+        DefaultRegion: document.getElementById('adm-infra-region')?.value?.trim() || 'ir-thr-milad1',
+        SovereignEgressNat: document.getElementById('adm-infra-nat')?.value?.trim() || '',
+
+        MaintenanceMode: !!document.getElementById('adm-p-maint')?.checked,
+        MaintenanceMessage: document.getElementById('adm-cfg-maint-msg')?.value?.trim() || '',
+        SystemBroadcastMessage: document.getElementById('adm-cfg-broadcast-msg')?.value?.trim() || '',
+
+        PlatformLogLevel: document.getElementById('adm-log-level')?.value || 'Information',
+        LoggingGranularity: document.getElementById('adm-log-granularity')?.value || 'Standard',
+        IsPlatformLoggingActive: !!document.getElementById('adm-log-platform-active')?.checked,
+        ConsoleLoggingEnabled: !!document.getElementById('adm-log-console-enabled')?.checked
       };
 
       try {
-        const res = await fetch('/_baas/v1/admin/pricing', {
+        const res = await fetch('/_baas/v1/admin/config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          alert('تعرفه‌ها و متغیرهای عملیاتی با موفقیت به‌روزرسانی و در سامانه اعمال شدند.');
+          showToast('تنظیمات کلان سامانه و متغیرهای عملیاتی با موفقیت به‌روزرسانی و در سامانه اعمال شدند.', 'success');
           loadAdminPricing();
           loadAdminStats();
         } else {
-          alert('خطا در به‌روزرسانی تعرفه‌ها.');
+          showToast('خطا در به‌روزرسانی تنظیمات کلان سامانه.', 'error');
         }
-      } catch {
-        alert('خطای شبکه.');
+      } catch (err) {
+        showToast('خطای شبکه در ارتباط با سرور: ' + (err?.message || ''), 'error');
       }
     });
   }
@@ -133,14 +207,14 @@ function initModalForms() {
         });
         if (res.ok) {
           document.getElementById('modal-ticket-reply-msg').value = '';
-          alert('پاسخ با موفقیت ارسال شد و وضعیت تیکت به‌روزرسانی گردید.');
+          showToast('پاسخ با موفقیت ارسال شد و وضعیت تیکت به‌روزرسانی گردید.', 'success');
           await loadAdminStats();
           openTicketModal(ticketId);
         } else {
-          alert('خطا در ارسال پاسخ تیکت.');
+          showToast('خطا در ارسال پاسخ تیکت.', 'error');
         }
       } catch {
-        alert('خطای ارتباط با سرور.');
+        showToast('خطای ارتباط با سرور.', 'error');
       }
     });
   }
@@ -151,7 +225,7 @@ function initModalForms() {
     creditForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (adminUser.role !== 0) {
-        alert('تنها مدیر ارشد سامانه مجاز به تنظیم اعتبار کیف پول است.');
+        showToast('تنها مدیر ارشد سامانه مجاز به تنظیم اعتبار کیف پول است.', 'warning');
         return;
       }
       const userId = document.getElementById('modal-user-id').textContent;
@@ -168,14 +242,14 @@ function initModalForms() {
           const data = await res.json();
           cachedUsers[userId] = data.user;
           document.getElementById('modal-user-credit-toman').value = '';
-          alert(`اعتبار کیف پول کاربر به میزان ${Shamsi.toPersianDigits(amountToman.toLocaleString())} تومان افزایش یافت.`);
+          showToast(`اعتبار کیف پول کاربر به میزان ${Shamsi.toPersianDigits(amountToman.toLocaleString())} تومان افزایش یافت.`, 'success');
           openUserModal(userId);
           loadAdminUsers();
         } else {
-          alert('خطا در اعمال تغییر اعتبار.');
+          showToast('خطا در اعمال تغییر اعتبار.', 'error');
         }
       } catch {
-        alert('خطای ارتباط با سرور.');
+        showToast('خطای ارتباط با سرور.', 'error');
       }
     });
   }
@@ -185,7 +259,7 @@ function initModalForms() {
   if (saveRoleBtn) {
     saveRoleBtn.addEventListener('click', async () => {
       if (adminUser.role !== 0) {
-        alert('تنها مدیر ارشد سامانه مجاز به تغییر نقش‌ها می‌باشد.');
+        showToast('تنها مدیر ارشد سامانه مجاز به تغییر نقش‌ها می‌باشد.', 'warning');
         return;
       }
       const userId = document.getElementById('modal-user-id').textContent;
@@ -200,7 +274,7 @@ function initModalForms() {
   if (toggleUserBtn) {
     toggleUserBtn.addEventListener('click', async () => {
       if (adminUser.role !== 0) {
-        alert('تنها مدیر ارشد سامانه مجاز به تغییر وضعیت حساب است.');
+        showToast('تنها مدیر ارشد سامانه مجاز به تغییر وضعیت حساب است.', 'warning');
         return;
       }
       const userId = document.getElementById('modal-user-id').textContent;
@@ -217,12 +291,12 @@ function initModalForms() {
         if (res.ok) {
           const data = await res.json();
           cachedUsers[userId] = data.user;
-          alert(`حساب کاربری با موفقیت ${newStatus ? 'فعال' : 'مسدود'} گردید.`);
+          showToast(`حساب کاربری با موفقیت ${newStatus ? 'فعال' : 'مسدود'} گردید.`, 'success');
           openUserModal(userId);
           loadAdminUsers();
         }
       } catch {
-        alert('خطا در تغییر وضعیت حساب کاربر.');
+        showToast('خطا در تغییر وضعیت حساب کاربر.', 'error');
       }
     });
   }
@@ -244,12 +318,12 @@ function initModalForms() {
         });
         if (res.ok) {
           p.status = newStatus;
-          alert(`وضعیت پروژه با موفقیت به "${newStatus === 'Active' ? 'فعال' : 'معلق'}" تغییر یافت.`);
+          showToast(`وضعیت پروژه با موفقیت به "${newStatus === 'Active' ? 'فعال' : 'معلق'}" تغییر یافت.`, 'success');
           openProjectModal(projId);
           loadAdminProjects();
         }
       } catch {
-        alert('خطا در تغییر وضعیت پروژه.');
+        showToast('خطا در تغییر وضعیت پروژه.', 'error');
       }
     });
   }
@@ -274,14 +348,14 @@ async function loadAdminUsers() {
         const statusBadge = u.isActive ? 'badge-active' : 'badge-danger';
 
         return `
-          <tr class="table-row-clickable" onclick="openUserModal('${u.id}')" title="برای مشاهده جزئیات کلیک کنید">
-            <td style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-info);">${u.id}</td>
-            <td style="font-weight: 700;">${u.fullName}</td>
-            <td style="font-family: var(--font-mono);">${u.phone}</td>
-            <td style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">${u.email}</td>
+          <tr class="table-row-clickable" onclick="openUserModal('${escapeHtml(u.id)}')" title="برای مشاهده جزئیات کلیک کنید">
+            <td style="font-family: var(--font-persian); font-size: 13px; color: var(--color-info);">${escapeHtml(u.id)}</td>
+            <td style="font-weight: 700;">${escapeHtml(u.fullName)}</td>
+            <td style="font-family: var(--font-persian);">${escapeHtml(u.phone)}</td>
+            <td style="font-family: var(--font-persian); font-size: 13px; color: var(--text-muted);">${escapeHtml(u.email)}</td>
             <td><span class="badge ${roleBadgeClass}">${roleLabel}</span></td>
             <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
-            <td style="font-size: 11.5px;">${Shamsi.formatDate(u.createdAtUtc)}</td>
+            <td style="font-size: 13px;">${escapeHtml(Shamsi.formatDate(u.createdAtUtc))}</td>
           </tr>
         `;
       }).join('');
@@ -339,9 +413,9 @@ async function openUserModal(userId) {
         } else {
           projsTbody.innerHTML = projs.map(p => `
             <tr>
-              <td style="font-family: var(--font-mono); font-size: 11px;">${p.id}</td>
-              <td style="font-weight: 600;">${p.name}</td>
-              <td style="font-family: var(--font-mono); font-size: 11px;">${p.region}</td>
+              <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(p.id)}</td>
+              <td style="font-weight: 600;">${escapeHtml(p.name)}</td>
+              <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(p.region)}</td>
               <td><span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-paused'}">${p.status === 'Active' ? 'فعال' : 'معلق'}</span></td>
             </tr>
           `).join('');
@@ -363,11 +437,11 @@ async function changeUserRole(userId, newRole) {
       body: JSON.stringify({ role: newRole })
     });
     if (res.ok) {
-      alert('نقش کاربر با موفقیت تغییر یافت.');
+      showToast('نقش کاربر با موفقیت تغییر یافت.', 'success');
       loadAdminUsers();
     }
   } catch {
-    alert('خطا در تغییر نقش.');
+    showToast('خطا در تغییر نقش.', 'error');
   }
 }
 
@@ -389,13 +463,13 @@ async function loadAdminProjects() {
       }
 
       tbody.innerHTML = projs.map(p => `
-        <tr class="table-row-clickable" onclick="openProjectModal('${p.id}')" title="برای مدیریت و مشاهده جزئیات کلیک کنید">
-          <td style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-info);">${p.id}</td>
-          <td style="font-weight: 700;">${p.name}</td>
-          <td style="font-family: var(--font-mono); font-size: 12px;">${p.slug}</td>
-          <td style="font-family: var(--font-mono);">${p.ownerPhone}</td>
+        <tr class="table-row-clickable" onclick="openProjectModal('${escapeHtml(p.id)}')" title="برای مدیریت و مشاهده جزئیات کلیک کنید">
+          <td style="font-size: 13.5px; color: var(--color-info);">${escapeHtml(p.id)}</td>
+          <td style="font-weight: 700;">${escapeHtml(p.name)}</td>
+          <td style="font-size: 13.5px;">${escapeHtml(p.slug)}</td>
+          <td>${escapeHtml(p.ownerPhone)}</td>
           <td><span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-paused'}">${p.status === 'Active' ? 'فعال' : 'معلق'}</span></td>
-          <td style="font-size: 11.5px;">${Shamsi.formatDate(p.createdAtUtc)}</td>
+          <td style="font-size: 13px;">${escapeHtml(Shamsi.formatDate(p.createdAtUtc))}</td>
         </tr>
       `).join('');
     }
@@ -438,8 +512,8 @@ function openProjectModal(projectId) {
           <td><span class="badge ${isEn ? 'badge-active' : 'badge-paused'}">${isEn ? 'فعال' : 'غیرفعال'}</span></td>
           <td>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <code style="font-family: var(--font-mono); font-size: 11px; background: var(--bg-main); padding: 2px 6px; border: 1px solid var(--border-color); border-radius: 4px;">${apiKey}</code>
-              <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 10px;" onclick="copyApiKey('${apiKey}')">کپی</button>
+              <code style="font-size: 13.5px; background: var(--bg-main); padding: 2px 6px; border: 1px solid var(--border-color); border-radius: 4px;">${apiKey}</code>
+              <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 13px;" onclick="copyApiKey('${apiKey}')">کپی</button>
             </div>
           </td>
         </tr>
@@ -450,23 +524,73 @@ function openProjectModal(projectId) {
   openModal('modal-project');
 }
 
-// 3. Pricing Catalog
+// 3. Platform Master Configuration & System Variables
 async function loadAdminPricing() {
   try {
-    const res = await fetch('/_baas/v1/admin/pricing');
+    const res = await fetch('/_baas/v1/admin/config');
     if (res.ok) {
-      const p = await res.json();
-      setVal('adm-p-db', p.dbQueryPer1kIrr);
-      setVal('adm-p-sms', p.smsPerMessageIrr);
-      setVal('adm-p-storage', p.storageGbMonthIrr);
-      setVal('adm-p-compute', p.computePer100msIrr);
-      setVal('adm-p-min-topup', p.minWalletTopupIrr);
-      setVal('adm-p-free-credit', p.initialFreeCreditIrr);
+      const c = await res.json();
+      // Category 1: Financial & Resource Pricing
+      setVal('adm-p-db', c.dbQueryPer1kIrr);
+      setVal('adm-p-sms', c.smsPerMessageIrr);
+      setVal('adm-p-storage', c.storageGbMonthIrr);
+      setVal('adm-p-compute', c.computePer100msIrr);
+      setVal('adm-p-egress', c.egressGbIrr);
+      setVal('adm-p-min-topup', c.minWalletTopupIrr);
+      setVal('adm-p-free-credit', c.initialFreeCreditIrr);
+
+      // Category 2: Tier Limits & Resource Envelopes
+      setVal('adm-cfg-max-projects', c.maxProjectsPerDeveloperTier);
+      setVal('adm-cfg-max-members', c.maxTeamMembersPerDeveloperTier);
+      setVal('adm-cfg-storage-quota', c.defaultStorageQuotaMb);
+      setVal('adm-cfg-max-filesize', c.defaultMaxFileSizeMb);
+      setVal('adm-cfg-func-memory', c.defaultFunctionsMemoryMb);
+      setVal('adm-cfg-func-timeout', c.defaultFunctionsTimeoutMs);
+      setVal('adm-cfg-db-conn', c.defaultDbMaxConnections);
+
+      // Category 3: SMS Gateway Defaults
+      setVal('adm-sms-provider', c.smsDefaultProvider || 'kavenegar');
+      setVal('adm-sms-key', c.smsDefaultApiKey || '');
+      setVal('adm-sms-sender', c.smsDefaultSenderNumber || '3000777');
+      setVal('adm-sms-pattern', c.smsDefaultPatternCode || 'localme-verify');
+      setVal('adm-sms-otp-len', c.smsDefaultOtpLength || 6);
+      setVal('adm-sms-otp-ttl', c.smsDefaultOtpExpirySeconds || 120);
+
+      // Category 4: Shetab IPG Defaults
+      setVal('adm-ipg-psp', c.ipgDefaultPsp || 'zarinpal');
+      setVal('adm-ipg-merchant', c.ipgDefaultMerchantId || '');
+      setVal('adm-ipg-callback', c.ipgCallbackBaseUrl || '');
+      setVal('adm-ipg-wage', c.shaparakWageIrr || 1200);
+
+      // Category 5: Security & JWT
+      setVal('adm-sec-jwt-secret', c.jwtSecret || '');
+      setVal('adm-sec-jwt-hours', c.jwtExpiryHours || 72);
+      setVal('adm-sec-refresh-days', c.refreshTokenExpiryDays || 30);
+      setVal('adm-sec-max-retries', c.maxLoginFailedAttempts || 5);
+      setVal('adm-sec-lockout-mins', c.lockoutDurationMinutes || 15);
+      setVal('adm-sec-cors', c.corsAllowedOrigins || '*');
+
+      // Category 6: Sovereign Infrastructure
+      setVal('adm-infra-name', c.platformName || 'لوکال‌می (LocalMe)');
+      setVal('adm-infra-region', c.defaultRegion || 'ir-thr-milad1');
+      setVal('adm-infra-nat', c.sovereignEgressNat || '2.180.12.94 (Static Domestic NAT Active)');
+
+      // Category 7: Maintenance Mode & Broadcast
       const maint = document.getElementById('adm-p-maint');
-      if (maint) maint.checked = p.maintenanceMode;
+      if (maint) maint.checked = !!c.maintenanceMode;
+      setVal('adm-cfg-maint-msg', c.maintenanceMessage || '');
+      setVal('adm-cfg-broadcast-msg', c.systemBroadcastMessage || '');
+
+      // Category 8: Logging Controls
+      setVal('adm-log-level', c.platformLogLevel || 'Information');
+      setVal('adm-log-granularity', c.loggingGranularity || 'Standard');
+      const logPlat = document.getElementById('adm-log-platform-active');
+      if (logPlat) logPlat.checked = c.isPlatformLoggingActive !== false;
+      const logConsole = document.getElementById('adm-log-console-enabled');
+      if (logConsole) logConsole.checked = c.consoleLoggingEnabled !== false;
     }
   } catch (err) {
-    console.warn('Pricing load error:', err);
+    console.warn('Config load error:', err);
   }
 }
 
@@ -490,16 +614,17 @@ async function loadAdminStats() {
         tbody.innerHTML = stats.recentTickets.map(t => {
           const statusBadge = t.status === 'Resolved' ? 'badge-active' : t.status === 'Investigating' ? 'badge-info' : t.status === 'Closed' ? 'badge-paused' : 'badge-paused';
           const statusLabel = t.status === 'Resolved' ? 'حل شده' : t.status === 'Investigating' ? 'در حال بررسی' : t.status === 'Closed' ? 'بسته شده' : 'باز';
+          const snippet = t.message.length > 50 ? t.message.substring(0, 50) + '...' : t.message;
 
           return `
-            <tr class="table-row-clickable" onclick="openTicketModal('${t.id}')" title="برای مشاهده و پاسخ به تیکت کلیک کنید">
-              <td style="font-family: var(--font-mono); font-size: 11.5px;">${t.id}</td>
-              <td style="font-family: var(--font-mono); font-weight: 600;">${t.customerPhone}</td>
-              <td style="font-weight: 700;">${t.subject}</td>
-              <td style="font-size: 12px; color: var(--text-muted);">${t.message.length > 50 ? t.message.substring(0, 50) + '...' : t.message}</td>
+            <tr class="table-row-clickable" onclick="openTicketModal('${escapeHtml(t.id)}')" title="برای مشاهده و پاسخ به تیکت کلیک کنید">
+              <td style="font-size: 13.5px;">${escapeHtml(t.id)}</td>
+              <td style="font-weight: 600;">${escapeHtml(t.customerPhone)}</td>
+              <td style="font-weight: 700;">${escapeHtml(t.subject)}</td>
+              <td style="font-size: 13px; color: var(--text-muted);">${escapeHtml(snippet)}</td>
               <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
               <td>
-                <button type="button" class="btn-secondary" style="font-size: 11px; padding: 2px 8px;">
+                <button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;">
                   مشاهده و پاسخ
                 </button>
               </td>
@@ -539,10 +664,10 @@ function openTicketModal(ticketId) {
     let threadHtml = `
       <div class="thread-msg thread-msg-customer">
         <div class="thread-meta">
-          <span style="font-weight: 700; color: var(--text-main);">کاربر / توسعه‌دهنده (${t.customerPhone})</span>
-          <span>${Shamsi.formatDate(t.createdAtUtc)}</span>
+          <span style="font-weight: 700; color: var(--text-main);">کاربر / توسعه‌دهنده (${escapeHtml(t.customerPhone)})</span>
+          <span>${escapeHtml(Shamsi.formatDate(t.createdAtUtc))}</span>
         </div>
-        <div>${t.message}</div>
+        <div>${escapeHtml(t.message)}</div>
       </div>
     `;
 
@@ -553,11 +678,11 @@ function openTicketModal(ticketId) {
           <div class="thread-msg ${isStaff ? 'thread-msg-reply' : 'thread-msg-customer'}">
             <div class="thread-meta">
               <span style="font-weight: 700; color: ${isStaff ? 'var(--brand-dark)' : 'var(--text-main)'};">
-                ${r.senderName} (${isStaff ? 'پشتیبانی' : 'کاربر'})
+                ${escapeHtml(r.senderName)} (${isStaff ? 'پشتیبانی' : 'کاربر'})
               </span>
-              <span>${Shamsi.formatDate(r.createdAtUtc)}</span>
+              <span>${escapeHtml(Shamsi.formatDate(r.createdAtUtc))}</span>
             </div>
-            <div>${r.message}</div>
+            <div>${escapeHtml(r.message)}</div>
           </div>
         `;
       });
@@ -581,7 +706,7 @@ function closeModal(id) {
 
 function copyApiKey(key) {
   navigator.clipboard.writeText(key).then(() => {
-    alert('کلید با موفقیت در کلیپ‌بورد کپی شد.');
+    showToast('کلید با موفقیت در کلیپ‌بورد کپی شد.', 'success');
   }).catch(() => {
     prompt('کلید دسترسی:', key);
   });

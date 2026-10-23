@@ -94,8 +94,8 @@
   // 2. Interactive Shamsi Datepicker Popover Component
   class ShamsiDatepicker {
     constructor(containerId, options = {}) {
-      this.container = document.getElementById(containerId);
-      this.onSelect = options.onSelect || (() => {});
+      this.container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+      this.onSelect = typeof options === 'function' ? options : (options && options.onSelect) || (() => {});
       const now = new Date();
       const [jy, jm, jd] = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
       this.currentYear = jy;
@@ -106,45 +106,73 @@
 
     render() {
       if (!this.container) return;
-      const monthDays = (this.currentMonth <= 6) ? 31 : (this.currentMonth <= 11) ? 30 : 29;
+
+      let monthDays = 30;
+      if (this.currentMonth <= 6) {
+        monthDays = 31;
+      } else if (this.currentMonth <= 11) {
+        monthDays = 30;
+      } else {
+        const isLeap = [1, 5, 9, 13, 17, 22, 26, 30].includes(this.currentYear % 33);
+        monthDays = isLeap ? 30 : 29;
+      }
+
+      // Calculate weekday of the 1st of this Shamsi month
+      const [gy, gm, gd] = jalaliToGregorian(this.currentYear, this.currentMonth, 1);
+      const gDate = new Date(gy, gm - 1, gd);
+      // gDate.getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+      // Persian week: Saturday=0, Sunday=1, ..., Friday=6
+      const weekdayOffset = (gDate.getDay() + 1) % 7;
+
+      const emptyCells = Array.from({ length: weekdayOffset }, () => '<span class="shamsi-dp-empty"></span>').join('');
+      const dayCells = Array.from({ length: monthDays }, (_, i) => {
+        const day = i + 1;
+        const isSelected = this.selectedDate.year === this.currentYear &&
+                           this.selectedDate.month === this.currentMonth &&
+                           this.selectedDate.day === day;
+        return `<button type="button" class="shamsi-dp-day ${isSelected ? 'active' : ''}" data-day="${day}">${toPersianDigits(day)}</button>`;
+      }).join('');
       
       this.container.innerHTML = `
         <div class="shamsi-datepicker-card">
           <div class="shamsi-dp-header">
-            <button type="button" class="shamsi-dp-nav-btn" id="shamsi-next-month">« ماه قبل</button>
+            <button type="button" class="shamsi-dp-nav-btn" id="shamsi-prev-month">« ماه قبل</button>
             <div class="shamsi-dp-title">${jalaliMonthNames[this.currentMonth - 1]} ${toPersianDigits(this.currentYear)}</div>
-            <button type="button" class="shamsi-dp-nav-btn" id="shamsi-prev-month">ماه بعد »</button>
+            <button type="button" class="shamsi-dp-nav-btn" id="shamsi-next-month">ماه بعد »</button>
           </div>
           <div class="shamsi-dp-weekdays">
             <span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span>
           </div>
           <div class="shamsi-dp-grid">
-            ${Array.from({ length: monthDays }, (_, i) => {
-              const day = i + 1;
-              const isSelected = this.selectedDate.year === this.currentYear &&
-                                 this.selectedDate.month === this.currentMonth &&
-                                 this.selectedDate.day === day;
-              return `<button type="button" class="shamsi-dp-day ${isSelected ? 'active' : ''}" data-day="${day}">${toPersianDigits(day)}</button>`;
-            }).join('')}
+            ${emptyCells}
+            ${dayCells}
           </div>
           <div class="shamsi-dp-footer">
-            <span style="font-size: 11px; color: #64748b;">تاریخ فیلتر: ${toPersianDigits(this.selectedDate.year)}/${toPersianDigits(this.selectedDate.month)}/${toPersianDigits(this.selectedDate.day)}</span>
-            <button type="button" class="btn-cf-primary" style="padding: 4px 10px; font-size: 11px;" id="shamsi-apply-btn">اعمال فیلتر</button>
+            <span style="font-size: 13px; color: #64748b;">تاریخ فیلتر: ${toPersianDigits(this.selectedDate.year)}/${toPersianDigits(this.selectedDate.month)}/${toPersianDigits(this.selectedDate.day)}</span>
+            <button type="button" class="btn-cf-primary" style="padding: 4px 10px; font-size: 13px;" id="shamsi-apply-btn">اعمال فیلتر</button>
           </div>
         </div>
       `;
 
       this.container.querySelector('#shamsi-prev-month').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (this.currentMonth < 12) this.currentMonth++;
-        else { this.currentMonth = 1; this.currentYear++; }
+        if (this.currentMonth > 1) {
+          this.currentMonth--;
+        } else {
+          this.currentMonth = 12;
+          this.currentYear--;
+        }
         this.render();
       });
 
       this.container.querySelector('#shamsi-next-month').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (this.currentMonth > 1) this.currentMonth--;
-        else { this.currentMonth = 12; this.currentYear--; }
+        if (this.currentMonth < 12) {
+          this.currentMonth++;
+        } else {
+          this.currentMonth = 1;
+          this.currentYear++;
+        }
         this.render();
       });
 
@@ -164,6 +192,7 @@
     }
   }
 
+  global.ShamsiDatepicker = ShamsiDatepicker;
   global.Shamsi = {
     gregorianToJalali,
     jalaliToGregorian,

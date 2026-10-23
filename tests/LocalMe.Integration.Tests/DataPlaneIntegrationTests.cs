@@ -98,11 +98,11 @@ public class DataPlaneIntegrationTests
     {
         var handler = new DynamicSqlHandler();
 
-        // 1. Seed products exist
+        // 1. Clean initial state
         var initialProducts = handler.QueryTable("products");
-        Assert.True(initialProducts.Count >= 3);
+        Assert.Empty(initialProducts);
 
-        // 2. Insert new record
+        // 2. Insert new records
         var newRecord = new JsonObject
         {
             ["title"] = "تبلت آیپد پرو M4",
@@ -153,4 +153,24 @@ public class DataPlaneIntegrationTests
         Assert.False(timeoutResult.Success);
         Assert.NotNull(timeoutResult.Error);
     }
+
+    [Fact]
+    public void ConnectionStringNormalizer_ConvertsUriToAdoNetSuccessfully()
+    {
+        var uri = "postgresql://test_user:SampleTestPassword123@remote.internal.net:31725/test_db";
+        var normalized = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizePostgresConnectionString(uri);
+
+        Assert.Contains("Host=remote.internal.net", normalized);
+        Assert.Contains("Port=31725", normalized);
+        Assert.Contains("Username=test_user", normalized);
+        Assert.Contains("Password=SampleTestPassword123", normalized);
+        Assert.Contains("Database=test_db", normalized);
+
+        var redisUri = "redis://default:SampleRedisSecret123@remote.internal.net:32567/0";
+        var normalizedRedis = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizeRedisConnectionString(redisUri);
+        Assert.Contains("remote.internal.net:32567", normalizedRedis);
+        Assert.Contains("password=SampleRedisSecret123", normalizedRedis);
+        Assert.Contains("defaultDatabase=0", normalizedRedis);
+    }
 }
+

@@ -2,118 +2,13 @@ namespace LocalMe.DataPlane.MultiTenancy;
 
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
-
-public enum UserRole
-{
-    Admin,
-    Operator,
-    Developer
-}
-
-public sealed record PlatformUser(
-    string Id,
-    string FullName,
-    string Phone,
-    string Email,
-    UserRole Role,
-    long WalletBalanceIrr,
-    DateTimeOffset CreatedAtUtc,
-    bool IsActive
-);
-
-public sealed record ServiceApiKey(
-    string Service,
-    string ApiKey,
-    string SecretKey,
-    string Role,
-    DateTimeOffset CreatedAtUtc
-);
-
-public sealed record ServiceConfig(
-    string Service,
-    bool IsEnabled,
-    Dictionary<string, string> Settings,
-    ServiceApiKey ApiKey
-);
-
-public sealed record BaasProject(
-    string Id,
-    string Name,
-    string Slug,
-    string Description,
-    string OwnerId,
-    string OwnerPhone,
-    string Region,
-    string Status, // "Active", "Paused"
-    Dictionary<string, ServiceConfig> Services,
-    DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? UpdatedAtUtc
-);
-
-public sealed record CreateProjectRequest(
-    string Name,
-    string? Slug = null,
-    string? Description = null,
-    string OwnerId = "usr_developer_03",
-    string OwnerPhone = "+989121112233"
-);
-
-public sealed record UpdateProjectRequest(
-    string Name,
-    string? Slug = null,
-    string? Description = null
-);
-
-public sealed record ConfigureServiceRequest(
-    string Service,
-    bool IsEnabled,
-    Dictionary<string, string>? Settings = null
-);
-
-public sealed record ProjectAuthUser(
-    string Id,
-    string? Phone,
-    string? Email,
-    string? FullName,
-    string Provider, // "sms_otp", "password", "oauth_google", "oauth_github"
-    bool IsConfirmed,
-    DateTimeOffset CreatedAtUtc,
-    DateTimeOffset LastSignInUtc
-);
-
-public sealed record ProjectBucket(
-    string Name,
-    bool IsPublic,
-    long ObjectCount,
-    long TotalSizeBytes,
-    DateTimeOffset CreatedAtUtc
-);
-
-public sealed record ProjectStorageFile(
-    string Bucket,
-    string FileName,
-    string ContentType,
-    long SizeBytes,
-    DateTimeOffset UploadedAtUtc,
-    string DownloadUrl
-);
-
-public sealed record ProjectEdgeFunction(
-    string Name,
-    string Slug,
-    string TriggerPath,
-    string Script,
-    DateTimeOffset CreatedAtUtc
-);
 
 /// <summary>
 /// Multi-tenant Project Management Engine.
-/// Provides full CRUD for tenant projects, per-service configuration,
-/// per-user per-project per-service API keys, and multi-tenant isolation.
-/// Initially, developers start with 0 projects until explicitly created.
 /// </summary>
-public sealed class ProjectManagerService
+public sealed partial class ProjectManagerService
 {
     private readonly ConcurrentDictionary<string, PlatformUser> _users = new();
     private readonly ConcurrentDictionary<string, BaasProject> _projects = new();
@@ -122,11 +17,140 @@ public sealed class ProjectManagerService
     private readonly ConcurrentDictionary<string, List<ProjectBucket>> _projectBuckets = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<ProjectStorageFile>>> _projectFiles = new();
     private readonly ConcurrentDictionary<string, List<ProjectEdgeFunction>> _projectFunctions = new();
+    private readonly ConcurrentDictionary<string, List<ProjectDeployment>> _projectDeployments = new();
+    private readonly ConcurrentDictionary<string, List<CustomDomain>> _projectDomains = new();
+    private readonly ConcurrentDictionary<string, List<ProjectCollaborator>> _projectCollaborators = new();
+    private readonly ConcurrentDictionary<string, IpgMerchantConfig> _projectIpgConfigs = new();
+    private readonly ConcurrentDictionary<string, ComplianceConfig> _projectComplianceConfigs = new();
+    private readonly ConcurrentDictionary<string, List<ProjectLogEntry>> _projectLogs = new();
+    private readonly IProjectStore? _store;
 
-    public ProjectManagerService()
+    public ProjectManagerService(IProjectStore? store = null)
     {
+        _store = store;
         SeedUsers();
-        // Notice: Developer usr_developer_03 starts with ZERO projects as required!
+        if (_store != null)
+        {
+            try
+            {
+                LoadFromStoreSync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LocalMe.PM] Warning: Could not initialize from persistent store ({ex.Message}). Continuing with in-memory state.");
+            }
+        }
+    }
+
+    private void LoadFromStoreSync()
+    {
+        if (_store == null) return;
+        try
+        {
+            Task.Run(async () =>
+            {
+                var users = await _store.LoadUsersAsync();
+                if (users.Count == 0)
+                {
+                    foreach (var u in _users.Values)
+                    {
+                        await _store.UpsertUserAsync(u);
+                    }
+                }
+                else
+                {
+                    foreach (var u in users)
+                    {
+                        _users[u.Id] = u;
+                    }
+                }
+
+                var projects = await _store.LoadProjectsAsync();
+                foreach (var p in projects)
+                {
+                    _projects[p.Id] = p;
+                }
+
+                var ipg = await _store.LoadIpgConfigsAsync();
+                foreach (var (pid, cfg) in ipg)
+                {
+                    _projectIpgConfigs[pid] = cfg;
+                }
+
+                var collabs = await _store.LoadCollaboratorsAsync();
+                foreach (var (pid, list) in collabs)
+                {
+                    _projectCollaborators[pid] = list;
+                }
+
+                var compliance = await _store.LoadComplianceConfigsAsync();
+                foreach (var (pid, cfg) in compliance)
+                {
+                    _projectComplianceConfigs[pid] = cfg;
+                }
+
+                var deps = await _store.LoadDeploymentsAsync();
+                foreach (var (pid, list) in deps)
+                {
+                    _projectDeployments[pid] = list;
+                }
+
+                var doms = await _store.LoadDomainsAsync();
+                foreach (var (pid, list) in doms)
+                {
+                    _projectDomains[pid] = list;
+                }
+
+                var bkts = await _store.LoadBucketsAsync();
+                foreach (var (pid, list) in bkts)
+                {
+                    _projectBuckets[pid] = list;
+                }
+
+                var files = await _store.LoadStorageFilesAsync();
+                foreach (var (pid, list) in files)
+                {
+                    var bucketDict = _projectFiles.GetOrAdd(pid, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
+                    foreach (var f in list)
+                    {
+                        var bktList = bucketDict.GetOrAdd(f.Bucket, _ => []);
+                        bktList.Add(f);
+                    }
+                }
+
+                var funcs = await _store.LoadFunctionsAsync();
+                foreach (var (pid, list) in funcs)
+                {
+                    _projectFunctions[pid] = list;
+                }
+
+                var authUsers = await _store.LoadProjectAuthUsersAsync();
+                foreach (var (pid, list) in authUsers)
+                {
+                    _projectUsers[pid] = list;
+                }
+
+                var tables = await _store.LoadTableRecordsAsync();
+                foreach (var (pid, prjTables) in tables)
+                {
+                    var cDict = _projectTables.GetOrAdd(pid, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+                    foreach (var (tbl, rows) in prjTables)
+                    {
+                        cDict[tbl] = rows;
+                    }
+                }
+
+                var logs = await _store.LoadRecentLogsAsync();
+                foreach (var (pid, list) in logs)
+                {
+                    _projectLogs[pid] = list;
+                }
+            }).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.PM] Failed to load data from store: {ex.Message}");
+        }
     }
 
     private void SeedUsers()
@@ -137,9 +161,11 @@ public sealed class ProjectManagerService
             Phone: "+989120000001",
             Email: "admin@localme.ir",
             Role: UserRole.Admin,
-            WalletBalanceIrr: 100_000_000_000,
+            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-6),
-            IsActive: true
+            IsActive: true,
+            Username: "admin",
+            PasswordHash: HashPassword("admin123456")
         );
 
         _users["usr_operator_02"] = new PlatformUser(
@@ -150,28 +176,125 @@ public sealed class ProjectManagerService
             Role: UserRole.Operator,
             WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-3),
-            IsActive: true
+            IsActive: true,
+            Username: "operator",
+            PasswordHash: HashPassword("operator123456")
         );
 
         _users["usr_developer_03"] = new PlatformUser(
             Id: "usr_developer_03",
-            FullName: "سینا والی پور",
+            FullName: "سینا والی زاده",
             Phone: "+989121112233",
             Email: "sina@example.com",
             Role: UserRole.Developer,
-            WalletBalanceIrr: 50_000_000, // 5M Toman
+            WalletBalanceIrr: 10_000_000,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-1),
-            IsActive: true
+            IsActive: true,
+            Username: "sina",
+            PasswordHash: HashPassword("developer123456")
         );
     }
 
-    // 1. User Management
+    // 1. User Management & Credentials
+    public static string HashPassword(string password)
+    {
+        byte[] salt = RandomNumberGenerator.GetBytes(16);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+            System.Text.Encoding.UTF8.GetBytes(password),
+            salt,
+            iterations: 100_000,
+            HashAlgorithmName.SHA256,
+            outputLength: 32);
+        return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+    }
+
+    public static bool VerifyPassword(string password, string? storedHash)
+    {
+        if (string.IsNullOrWhiteSpace(storedHash) || !storedHash.Contains(':', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parts = storedHash.Split(':');
+        if (parts.Length != 2) return false;
+
+        try
+        {
+            byte[] salt = Convert.FromBase64String(parts[0]);
+            byte[] expectedHash = Convert.FromBase64String(parts[1]);
+            byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
+                System.Text.Encoding.UTF8.GetBytes(password),
+                salt,
+                iterations: 100_000,
+                HashAlgorithmName.SHA256,
+                outputLength: 32);
+
+            return CryptographicOperations.FixedTimeEquals(expectedHash, actualHash);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public IReadOnlyList<PlatformUser> GetAllUsers() => _users.Values.OrderByDescending(u => u.CreatedAtUtc).ToList();
 
     public PlatformUser? GetUser(string userId) => _users.TryGetValue(userId, out var u) ? u : null;
 
     public PlatformUser? GetUserByPhone(string phone) =>
         _users.Values.FirstOrDefault(u => u.Phone.Equals(phone.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    public PlatformUser? FindUserByCredential(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+        var clean = identifier.Trim();
+
+        return _users.Values.FirstOrDefault(u =>
+            (u.Username != null && u.Username.Equals(clean, StringComparison.OrdinalIgnoreCase)) ||
+            (u.Email != null && u.Email.Equals(clean, StringComparison.OrdinalIgnoreCase)) ||
+            u.Phone.Equals(clean, StringComparison.OrdinalIgnoreCase) ||
+            NormalizePhone(u.Phone).Equals(NormalizePhone(clean), StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
+    private static string NormalizePhone(string p) =>
+        p.Replace("+98", "0", StringComparison.Ordinal).Replace(" ", "", StringComparison.Ordinal).Replace("-", "", StringComparison.Ordinal);
+
+    public (bool Success, string Message, PlatformUser? User) ValidateUserCredentials(string identifier, string password)
+    {
+        if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
+        {
+            return (false, "نام کاربری و کلمه عبور الزامی است.", null);
+        }
+
+        var user = FindUserByCredential(identifier);
+        if (user == null)
+        {
+            return (false, "کاربری با این مشخصات یافت نشد.", null);
+        }
+
+        if (!user.IsActive)
+        {
+            return (false, "حساب کاربری مسدود یا غیرفعال است.", null);
+        }
+
+        if (string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(password, user.PasswordHash))
+        {
+            return (false, "کلمه عبور وارد شده نادرست است.", null);
+        }
+
+        return (true, "ورود با موفقیت انجام شد.", user);
+    }
+
+    public bool SetUserPassword(string userId, string newPassword)
+    {
+        if (_users.TryGetValue(userId, out var u))
+        {
+            _users[userId] = u with { PasswordHash = HashPassword(newPassword) };
+            return true;
+        }
+        return false;
+    }
 
     public bool UpdateUserRole(string userId, UserRole newRole)
     {
@@ -213,11 +336,12 @@ public sealed class ProjectManagerService
             Id: $"usr_{Guid.NewGuid():N}"[..12],
             FullName: fullName,
             Phone: phone.Trim(),
-            Email: email ?? $"{phone.Trim().Replace("+", "")}@localme.ir",
+            Email: email ?? $"{phone.Trim().Replace("+", "", StringComparison.Ordinal)}@localme.ir",
             Role: UserRole.Developer,
             WalletBalanceIrr: 5_000_000, // 500k Toman initial credit
             CreatedAtUtc: DateTimeOffset.UtcNow,
-            IsActive: true
+            IsActive: true,
+            Username: phone.Trim().Replace("+", "", StringComparison.Ordinal)
         );
         _users[user.Id] = user;
         return user;
@@ -233,6 +357,67 @@ public sealed class ProjectManagerService
     public BaasProject? GetProject(string projectId) =>
         _projects.TryGetValue(projectId, out var p) ? p : null;
 
+    public BaasProject? GetProjectBySlug(string slug) =>
+        _projects.Values.FirstOrDefault(p =>
+            p.Slug.Equals(slug.Trim(), StringComparison.OrdinalIgnoreCase) ||
+            p.Id.Equals(slug.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    public bool SetProjectPassword(string projectId, string password)
+    {
+        if (_projects.TryGetValue(projectId, out var p))
+        {
+            _projects[projectId] = p with
+            {
+                PasswordHash = HashPassword(password),
+                HasPassword = true,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            return true;
+        }
+        return false;
+    }
+
+    public bool RemoveProjectPassword(string projectId)
+    {
+        if (_projects.TryGetValue(projectId, out var p))
+        {
+            _projects[projectId] = p with
+            {
+                PasswordHash = null,
+                HasPassword = false,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            return true;
+        }
+        return false;
+    }
+
+    public (bool Success, string Message, BaasProject? Project) ValidateProjectCredentials(string slugOrId, string password)
+    {
+        if (string.IsNullOrWhiteSpace(slugOrId) || string.IsNullOrWhiteSpace(password))
+        {
+            return (false, "شناسه یا اسلاگ پروژه و کلمه عبور الزامی است.", null);
+        }
+
+        var project = GetProjectBySlug(slugOrId);
+        if (project == null)
+        {
+            return (false, "پروژه‌ای با این شناسه یا اسلاگ یافت نشد.", null);
+        }
+
+        if (!project.HasPassword || string.IsNullOrEmpty(project.PasswordHash))
+        {
+            return (false, "برای این پروژه رمز عبور اختصاصی تنظیم نشده است. لطفاً از طریق حساب کاربری اصلی اقدام فرمایید.", null);
+        }
+
+        if (!VerifyPassword(password, project.PasswordHash))
+        {
+            return (false, "رمز عبور اختصاصی پروژه نادرست است.", null);
+        }
+
+        return (true, "دسترسی اختصاصی به پروژه تایید شد.", project);
+    }
+
     public BaasProject CreateProject(CreateProjectRequest request)
     {
         var projectId = $"proj_{Guid.NewGuid():N}"[..12];
@@ -247,7 +432,12 @@ public sealed class ProjectManagerService
             ["auth"] = CreateInitialServiceConfig("auth", projectId),
             ["storage"] = CreateInitialServiceConfig("storage", projectId),
             ["functions"] = CreateInitialServiceConfig("functions", projectId),
-            ["sms"] = CreateInitialServiceConfig("sms", projectId)
+            ["sms"] = CreateInitialServiceConfig("sms", projectId),
+            ["ipg"] = CreateInitialServiceConfig("ipg", projectId),
+            ["mobile"] = CreateInitialServiceConfig("mobile", projectId),
+            ["hosting"] = CreateInitialServiceConfig("hosting", projectId),
+            ["compliance"] = CreateInitialServiceConfig("compliance", projectId),
+            ["team"] = CreateInitialServiceConfig("team", projectId)
         };
 
         var project = new BaasProject(
@@ -266,53 +456,84 @@ public sealed class ProjectManagerService
 
         _projects[projectId] = project;
 
-        // 1. Seed default table (products)
-        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        var prodRows = tables.GetOrAdd("products", _ => []);
-        prodRows.Add(new JsonObject
+        // Clean, empty project provisioning - Zero fake/seeded data!
+        _projectTables[projectId] = new ConcurrentDictionary<string, List<JsonObject>>();
+        _projectBuckets[projectId] = [];
+        _projectFiles[projectId] = new ConcurrentDictionary<string, List<ProjectStorageFile>>();
+        _projectFunctions[projectId] = [];
+        _projectUsers[projectId] = [];
+        _projectDeployments[projectId] = [];
+        _projectDomains[projectId] = [];
+
+        // Project Creator / Owner collaborator only
+        var ownerUser = GetUser(request.OwnerId);
+        var ownerName = ownerUser?.FullName ?? "مدیر پروژه";
+        var team = _projectCollaborators.GetOrAdd(projectId, _ => []);
+        var ownerCollab = new ProjectCollaborator(
+            Id: $"collab_{Guid.NewGuid().ToString("N")[..12]}",
+            FullName: ownerName,
+            EmailOrPhone: request.OwnerPhone,
+            Role: "Owner",
+            AddedAtUtc: DateTimeOffset.UtcNow,
+            Status: "Active"
+        );
+        team.Add(ownerCollab);
+
+        // Shetab IPG Merchant config ready for developer setup
+        var ipgConfig = new IpgMerchantConfig(
+            TerminalId: string.Empty,
+            MerchantKey: string.Empty,
+            DefaultPsp: "ZARINPAL",
+            EnforceShetabCardMask: true,
+            IsSandbox: true
+        );
+        _projectIpgConfigs[projectId] = ipgConfig;
+
+        // Compliance Config ready for developer setup
+        var complianceConfig = new ComplianceConfig(
+            EnamadToken: string.Empty,
+            EnamadSymbolCode: string.Empty,
+            SamandehiCode: string.Empty,
+            AndroidPackageName: $"ir.localme.{slug}",
+            AndroidSha256Fingerprint: string.Empty,
+            AppleTeamId: string.Empty,
+            AppleAppBundleId: $"ir.localme.{slug}",
+            UpdatedAtUtc: DateTimeOffset.UtcNow
+        );
+        _projectComplianceConfigs[projectId] = complianceConfig;
+
+        // System initialization log
+        var logs = _projectLogs.GetOrAdd(projectId, _ => []);
+        var initLog = new ProjectLogEntry(
+            Id: $"log_{Guid.NewGuid().ToString("N")[..12]}",
+            Service: "system",
+            Level: "INFO",
+            Message: $"پروژه {project.Name} ({project.Slug}) در منطقه ir-central-tehran با موفقیت ایجاد شد.",
+            TraceId: $"tr_{Guid.NewGuid().ToString("N")[..12]}",
+            TimestampUtc: DateTimeOffset.UtcNow,
+            StatusCode: 200,
+            LatencyMs: 25
+        );
+        logs.Add(initLog);
+
+        if (_store != null)
         {
-            ["id"] = "prod_01",
-            ["title"] = "بسته اشتراک ماهانه",
-            ["category"] = "خدمات",
-            ["price"] = 4900000,
-            ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
-        });
-        prodRows.Add(new JsonObject
-        {
-            ["id"] = "prod_02",
-            ["title"] = "بسته ترافیک ۱۰ گیگابایت",
-            ["category"] = "ترافیک",
-            ["price"] = 1200000,
-            ["created_at"] = DateTimeOffset.UtcNow.ToString("O")
-        });
-
-        // 2. Seed default bucket (assets)
-        var buckets = _projectBuckets.GetOrAdd(projectId, _ => []);
-        buckets.Add(new ProjectBucket("assets", true, 2, 450 * 1024, DateTimeOffset.UtcNow));
-
-        // 3. Seed default Edge Function (fare-calculator)
-        var funcs = _projectFunctions.GetOrAdd(projectId, _ => []);
-        const string defaultFuncScript = "function handler(req) {\n  const km = (req && req.distance_km) ? Number(req.distance_km) : 5;\n  const baseRate = 25000;\n  const totalCostIrr = km * baseRate;\n  console.log('محاسبه کرایه: مسافت=' + km + ' کیلومتر، هزینه کل=' + totalCostIrr + ' ریال');\n  return {\n    status: 'success',\n    distance_km: km,\n    cost_irr: totalCostIrr,\n    cost_toman: Math.floor(totalCostIrr / 10),\n    region: 'ir-central-tehran',\n    timestamp: new Date().toISOString()\n  };\n}\nhandler(context);";
-        funcs.Add(new ProjectEdgeFunction(
-            Name: "محاسبه‌گر کرایه مسافت",
-            Slug: "fare-calculator",
-            TriggerPath: "/functions/fare-calculator",
-            Script: defaultFuncScript,
-            CreatedAtUtc: DateTimeOffset.UtcNow
-        ));
-
-        // 4. Seed default user
-        var users = _projectUsers.GetOrAdd(projectId, _ => []);
-        users.Add(new ProjectAuthUser(
-            Id: "usr_demo_01",
-            Phone: "+989123456789",
-            Email: "demo@example.com",
-            FullName: "علی رضایی",
-            Provider: "sms_otp",
-            IsConfirmed: true,
-            CreatedAtUtc: DateTimeOffset.UtcNow.AddDays(-2),
-            LastSignInUtc: DateTimeOffset.UtcNow
-        ));
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _store.UpsertProjectAsync(project);
+                    await _store.SaveCollaboratorAsync(projectId, ownerCollab);
+                    await _store.SaveIpgConfigAsync(projectId, ipgConfig);
+                    await _store.SaveComplianceConfigAsync(projectId, complianceConfig);
+                    await _store.AppendLogAsync(projectId, initLog);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LocalMe.PM] Error persisting new project {projectId}: {ex.Message}");
+                }
+            });
+        }
 
         return project;
     }
@@ -379,8 +600,11 @@ public sealed class ProjectManagerService
             case "auth":
                 settings["otp_length"] = "6";
                 settings["otp_expiry_seconds"] = "120";
+                settings["enable_password_auth"] = "true";
+                settings["enable_captcha"] = "false";
+                settings["enable_otp_sms"] = "false";
                 settings["sms_provider"] = "kavenegar";
-                settings["sms_api_key"] = "kav_live_sample_key_98a7";
+                settings["sms_api_key"] = "kav_sample_key_98a7";
                 settings["sms_sender_number"] = "3000777";
                 settings["sms_pattern_code"] = "localme-verify";
                 settings["allow_password_auth"] = "true";
@@ -398,6 +622,26 @@ public sealed class ProjectManagerService
                 settings["provider"] = "magfa";
                 settings["sender_number"] = "3000777";
                 break;
+            case "ipg":
+                settings["psp"] = "zarinpal";
+                settings["sandbox"] = "true";
+                break;
+            case "mobile":
+                settings["enable_push"] = "true";
+                settings["enable_iap"] = "true";
+                settings["enable_realtime"] = "true";
+                break;
+            case "hosting":
+                settings["custom_domain_allowed"] = "true";
+                settings["ssl_mode"] = "auto";
+                break;
+            case "compliance":
+                settings["enamad_active"] = "false";
+                settings["samandehi_active"] = "false";
+                break;
+            case "team":
+                settings["max_collaborators"] = "1";
+                break;
         }
 
         return new ServiceConfig(
@@ -406,6 +650,13 @@ public sealed class ProjectManagerService
             Settings: settings,
             ApiKey: key
         );
+    }
+
+    public bool IsServiceEnabled(string projectId, string serviceName)
+    {
+        if (!_projects.TryGetValue(projectId, out var project)) return false;
+        var srv = serviceName.ToLowerInvariant().Trim();
+        return project.Services.TryGetValue(srv, out var cfg) && cfg.IsEnabled;
     }
 
     private static ServiceApiKey GenerateServiceApiKey(string service, string projectId)
@@ -443,6 +694,19 @@ public sealed class ProjectManagerService
             }
         }
 
+        if (!request.IsEnabled)
+        {
+            updatedSettings["disabled_at_utc"] = DateTimeOffset.UtcNow.ToString("O");
+            updatedSettings["retention_until_utc"] = DateTimeOffset.UtcNow.AddDays(10).ToString("O");
+            updatedSettings["retention_policy"] = "10_days_retention";
+        }
+        else
+        {
+            updatedSettings.Remove("disabled_at_utc");
+            updatedSettings.Remove("retention_until_utc");
+            updatedSettings["enabled_at_utc"] = DateTimeOffset.UtcNow.ToString("O");
+        }
+
         var updatedConfig = existingConfig with
         {
             IsEnabled = request.IsEnabled,
@@ -450,7 +714,16 @@ public sealed class ProjectManagerService
         };
 
         project.Services[serviceName] = updatedConfig;
-        _projects[projectId] = project with { UpdatedAtUtc = DateTimeOffset.UtcNow };
+        var updatedProj = project with { UpdatedAtUtc = DateTimeOffset.UtcNow };
+        _projects[projectId] = updatedProj;
+        if (_store != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await _store.UpsertProjectAsync(updatedProj); }
+                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] UpsertProjectAsync on ConfigureService error: {ex.Message}"); }
+            });
+        }
         return updatedConfig;
     }
 
@@ -465,185 +738,17 @@ public sealed class ProjectManagerService
         var updatedConfig = existingConfig with { ApiKey = newKey };
 
         project.Services[serviceName] = updatedConfig;
-        _projects[projectId] = project with { UpdatedAtUtc = DateTimeOffset.UtcNow };
+        var updatedProj = project with { UpdatedAtUtc = DateTimeOffset.UtcNow };
+        _projects[projectId] = updatedProj;
+        if (_store != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await _store.UpsertProjectAsync(updatedProj); }
+                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] UpsertProjectAsync on RegenerateServiceKey error: {ex.Message}"); }
+            });
+        }
         return newKey;
     }
-
-    // 4. Project Scoped Relational Data
-    public JsonArray QueryTable(string projectId, string table, int limit = 50, string? filterCol = null, string? filterVal = null)
-    {
-        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        var rows = tables.GetOrAdd(table.ToLowerInvariant().Trim(), _ => []);
-
-        IEnumerable<JsonObject> query = rows;
-        if (!string.IsNullOrWhiteSpace(filterCol) && !string.IsNullOrWhiteSpace(filterVal))
-        {
-            query = query.Where(r => r[filterCol]?.ToString().Equals(filterVal, StringComparison.OrdinalIgnoreCase) == true);
-        }
-
-        var arr = new JsonArray();
-        foreach (var r in query.Take(limit))
-        {
-            arr.Add(JsonNode.Parse(r.ToJsonString()));
-        }
-        return arr;
-    }
-
-    public JsonObject InsertRow(string projectId, string table, JsonObject payload)
-    {
-        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        var rows = tables.GetOrAdd(table.ToLowerInvariant().Trim(), _ => []);
-
-        if (!payload.ContainsKey("id"))
-        {
-            payload["id"] = $"row_{Guid.NewGuid():N}"[..12];
-        }
-
-        rows.Add(payload);
-        return payload;
-    }
-
-    public IReadOnlyList<string> GetProjectTableNames(string projectId)
-    {
-        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        return tables.Keys.OrderBy(k => k).ToList();
-    }
-
-    public bool CreateTable(string projectId, string tableName)
-    {
-        var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
-        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        if (tables.ContainsKey(cleanName)) return false;
-        tables[cleanName] = [];
-        return true;
-    }
-
-    // 5. Project Users (SMS OTP, Email/Password, OAuth)
-    public IReadOnlyList<ProjectAuthUser> GetProjectUsers(string projectId) =>
-        _projectUsers.TryGetValue(projectId, out var users) ? users : [];
-
-    public ProjectAuthUser AddProjectUser(
-        string projectId,
-        string? phone = null,
-        string? email = null,
-        string? fullName = null,
-        string provider = "sms_otp")
-    {
-        var list = _projectUsers.GetOrAdd(projectId, _ => []);
-        var user = new ProjectAuthUser(
-            Id: $"usr_{Guid.NewGuid():N}"[..10],
-            Phone: string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
-            Email: string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant(),
-            FullName: fullName?.Trim(),
-            Provider: provider,
-            IsConfirmed: true,
-            CreatedAtUtc: DateTimeOffset.UtcNow,
-            LastSignInUtc: DateTimeOffset.UtcNow
-        );
-        list.Insert(0, user);
-        return user;
-    }
-
-    public ProjectAuthUser? FindProjectUser(string projectId, string phoneOrEmail)
-    {
-        if (!_projectUsers.TryGetValue(projectId, out var list)) return null;
-        var query = phoneOrEmail.Trim().ToLowerInvariant();
-        return list.FirstOrDefault(u =>
-            (u.Email != null && u.Email.Equals(query, StringComparison.OrdinalIgnoreCase)) ||
-            (u.Phone != null && u.Phone.Equals(query, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    // 6. Project Buckets & Files
-    public IReadOnlyList<ProjectBucket> GetProjectBuckets(string projectId) =>
-        _projectBuckets.TryGetValue(projectId, out var b) ? b : [];
-
-    public ProjectBucket CreateBucket(string projectId, string name, bool isPublic)
-    {
-        var list = _projectBuckets.GetOrAdd(projectId, _ => []);
-        var cleanName = name.Trim().ToLowerInvariant().Replace(' ', '-');
-        var existing = list.FirstOrDefault(b => b.Name == cleanName);
-        if (existing != null) return existing;
-
-        var bucket = new ProjectBucket(cleanName, isPublic, 0, 0, DateTimeOffset.UtcNow);
-        list.Add(bucket);
-        return bucket;
-    }
-
-    public IReadOnlyList<ProjectStorageFile> GetBucketFiles(string projectId, string bucket)
-    {
-        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
-        return buckets.TryGetValue(bucket.ToLowerInvariant().Trim(), out var files) ? files : [];
-    }
-
-    public ProjectStorageFile UploadBucketFile(string projectId, string bucket, string fileName, string contentType, long sizeBytes)
-    {
-        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
-        var files = buckets.GetOrAdd(bucket.ToLowerInvariant().Trim(), _ => []);
-
-        var cleanName = Path.GetFileName(fileName);
-        var file = new ProjectStorageFile(
-            Bucket: bucket,
-            FileName: cleanName,
-            ContentType: contentType,
-            SizeBytes: sizeBytes,
-            UploadedAtUtc: DateTimeOffset.UtcNow,
-            DownloadUrl: $"/_baas/v1/{projectId}/storage/{bucket}/{cleanName}"
-        );
-        files.Insert(0, file);
-
-        // Update bucket counts
-        if (_projectBuckets.TryGetValue(projectId, out var bucketList))
-        {
-            var idx = bucketList.FindIndex(b => b.Name == bucket);
-            if (idx >= 0)
-            {
-                var cur = bucketList[idx];
-                bucketList[idx] = cur with
-                {
-                    ObjectCount = cur.ObjectCount + 1,
-                    TotalSizeBytes = cur.TotalSizeBytes + sizeBytes
-                };
-            }
-        }
-
-        return file;
-    }
-
-    // 7. Project Functions
-    public IReadOnlyList<ProjectEdgeFunction> GetProjectFunctions(string projectId) =>
-        _projectFunctions.TryGetValue(projectId, out var f) ? f : [];
-
-    public ProjectEdgeFunction DeployFunction(string projectId, string name, string script, string? slug = null)
-    {
-        var list = _projectFunctions.GetOrAdd(projectId, _ => []);
-        var cleanSlug = string.IsNullOrWhiteSpace(slug)
-            ? name.Trim().ToLowerInvariant().Replace(' ', '-')
-            : slug.Trim().ToLowerInvariant().Replace(' ', '-');
-
-        var idx = list.FindIndex(f => f.Slug.Equals(cleanSlug, StringComparison.OrdinalIgnoreCase));
-        var func = new ProjectEdgeFunction(name.Trim(), cleanSlug, $"/functions/{cleanSlug}", script, DateTimeOffset.UtcNow);
-
-        if (idx >= 0)
-        {
-            list[idx] = func;
-        }
-        else
-        {
-            list.Add(func);
-        }
-
-        return func;
-    }
-
-    public bool DeleteFunction(string projectId, string slug)
-    {
-        if (!_projectFunctions.TryGetValue(projectId, out var list)) return false;
-        var idx = list.FindIndex(f => f.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
-        if (idx >= 0)
-        {
-            list.RemoveAt(idx);
-            return true;
-        }
-        return false;
-    }
 }
+

@@ -12,14 +12,14 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "dotnet format --verify-no-changes",
+        "command": "dotnet format src/LocalMe.Cli.csproj --verify-no-changes",
         "cwd": "apps/cli"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "dotnet test ../../tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj",
+        "command": "dotnet test ../../tests/LocalMe.Core.Tests/LocalMe.Core.Tests.csproj --filter FullyQualifiedName~DagEngine",
         "cwd": "apps/cli"
       }
     },

@@ -1,0 +1,236 @@
+import React, { useState } from 'react';
+import { Project, TelemetryLog } from '../types';
+import {
+  Activity,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
+
+interface TelemetryViewProps {
+  project: Project;
+}
+
+const INITIAL_LOGS: TelemetryLog[] = [
+  {
+    id: 'log-101',
+    service: 'functions',
+    level: 'INFO',
+    message: 'Jint function [send-otp-kavenegar] executed successfully (status: 200).',
+    traceId: 'tr_489201a8',
+    statusCode: 200,
+    latencyMs: 6,
+    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۳۰:۰۵',
+  },
+  {
+    id: 'log-102',
+    service: 'database',
+    level: 'INFO',
+    message: 'Dynamic SQL query executed on table [products] (rows: 3).',
+    traceId: 'tr_771829bb',
+    statusCode: 200,
+    latencyMs: 3,
+    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۹:۵۰',
+  },
+  {
+    id: 'log-103',
+    service: 'ipg',
+    level: 'INFO',
+    message: 'Shetab callback verified with ZarinPal PSP (ref: TRK_849201, amount: 450,000,000 IRR).',
+    traceId: 'tr_192837cc',
+    statusCode: 200,
+    latencyMs: 140,
+    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۵:۱۲',
+  },
+  {
+    id: 'log-104',
+    service: 'auth',
+    level: 'WARN',
+    message: 'Rate limit threshold warning: 5 OTP requests dispatched in 60s for 09121112233.',
+    traceId: 'tr_339918dd',
+    statusCode: 429,
+    latencyMs: 12,
+    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۰:۰۱',
+  },
+  {
+    id: 'log-105',
+    service: 'hosting',
+    level: 'INFO',
+    message: 'YARP Edge route matched [https://digikala-clone.localme.ir/] -> cached index.html.',
+    traceId: 'tr_998811ee',
+    statusCode: 200,
+    latencyMs: 1,
+    timestamp: '۱۴۰3/۰۷/۱۶ - ۱۶:۱۸:۴۵',
+  },
+];
+
+export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
+  const [logs, setLogs] = useState<TelemetryLog[]>(INITIAL_LOGS);
+  const [selectedService, setSelectedService] = useState<string>('all');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const filteredLogs = logs.filter((l) => {
+    if (selectedService !== 'all' && l.service !== selectedService) return false;
+    if (selectedLevel !== 'all' && l.level !== selectedLevel) return false;
+    if (searchQuery && !l.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
+  const handleRefresh = () => {
+    const newLog: TelemetryLog = {
+      id: `log-${Date.now()}`,
+      service: 'functions',
+      level: 'INFO',
+      message: `استعلام تلمتری برای پروژه «${project.name}» (${project.slug}) دریافت گردید.`,
+      traceId: `tr_${Math.random().toString(36).slice(2, 10)}`,
+      statusCode: 200,
+      latencyMs: Math.floor(Math.random() * 8) + 2,
+      timestamp: 'هم‌اکنون',
+    };
+    setLogs((prev) => [newLog, ...prev]);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner */}
+      <div className="p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-amber-400" />
+            مرکز تله‌متری و لاگ‌های زنده سرور (Live Telemetry & Traces)
+          </h3>
+          <p className="text-xs text-zinc-400 mt-1">
+            خط لوله تله‌متری غیرمسدودکننده (Non-Blocking System.Threading.Channels) با فلاش دوره‌ای به جدول صورت‌حساب.
+          </p>
+        </div>
+
+        <button
+          onClick={handleRefresh}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition border border-zinc-700"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+          <span>تازه‌سازی لاگ‌ها</span>
+        </button>
+      </div>
+
+      {/* Usage Ledger Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+          <div className="text-[11px] text-zinc-400">کوئری‌های پایگاه داده</div>
+          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۲۴,۱۸۰</div>
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۲ ریال به ازای هر کوئری</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+          <div className="text-[11px] text-zinc-400">پیامک‌های OTP خدماتی</div>
+          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۱,۴۲۰</div>
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۱,۵۰۰ ریال به ازای پیامک</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+          <div className="text-[11px] text-zinc-400">پردازش توابع لبه Jint</div>
+          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۵۳,۶۴۰ ms</div>
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۱ ریال به ازای هر میلی‌ثانیه</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+          <div className="text-[11px] text-zinc-400">فضای ذخیره‌سازی ابری</div>
+          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۵۵.۰ MB</div>
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۵۰ ریال به ازای هر مگابایت</div>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute right-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="جستجو در پیام لاگ‌ها..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60"
+            />
+          </div>
+
+          <select
+            value={selectedService}
+            onChange={(e) => setSelectedService(e.target.value)}
+            className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-300"
+          >
+            <option value="all">همه سرویس‌ها</option>
+            <option value="database">پایگاه داده</option>
+            <option value="functions">توابع لبه</option>
+            <option value="auth">احراز هویت</option>
+            <option value="ipg">درگاه پرداخت</option>
+            <option value="hosting">هاستینگ</option>
+          </select>
+
+          <select
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(e.target.value)}
+            className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-300"
+          >
+            <option value="all">همه سطوح</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+          </select>
+        </div>
+
+        <div className="text-xs text-zinc-400 font-mono">
+          نمایش {filteredLogs.length} از {logs.length} رویداد
+        </div>
+      </div>
+
+      {/* Logs Table */}
+      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs font-mono">
+            <thead>
+              <tr className="border-b border-zinc-800/60 text-zinc-400">
+                <th className="py-2.5 px-3">زمان</th>
+                <th className="py-2.5 px-3">سرویس</th>
+                <th className="py-2.5 px-3">سطح</th>
+                <th className="py-2.5 px-3">وضعیت / کد</th>
+                <th className="py-2.5 px-3">تاخیر</th>
+                <th className="py-2.5 px-3">پیام رویداد</th>
+                <th className="py-2.5 px-3">ردیابی (TraceId)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800/40">
+              {filteredLogs.map((log) => (
+                <tr key={log.id} className="hover:bg-zinc-850/30">
+                  <td className="py-2.5 px-3 text-zinc-500 whitespace-nowrap">{log.timestamp}</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 font-bold uppercase">
+                      {log.service}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        log.level === 'INFO'
+                          ? 'text-emerald-400 bg-emerald-500/10'
+                          : log.level === 'WARN'
+                          ? 'text-amber-400 bg-amber-500/10'
+                          : 'text-red-400 bg-red-500/10'
+                      }`}
+                    >
+                      {log.level}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 text-zinc-300">{log.statusCode || '-'}</td>
+                  <td className="py-2.5 px-3 text-zinc-400">{log.latencyMs ? `${log.latencyMs} ms` : '-'}</td>
+                  <td className="py-2.5 px-3 text-zinc-200">{log.message}</td>
+                  <td className="py-2.5 px-3 text-zinc-500">{log.traceId}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};

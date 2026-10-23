@@ -41,6 +41,14 @@ HEURISTIC_RULES = [
         "content_regex": r"(\.findAll\(\s*\)|\.find\(\{\s*\}\)|SELECT\s+\*\s+FROM\s+[a-zA-Z0-9_]+(?:\s*;|\s*[\"\'`\n]|\s*$))",
     },
     {
+        "dim": 1,
+        "id": "RULE-1.5-MUTABLE-GLOBAL-STATE",
+        "severity": "suggestion",
+        "description": "Mutable global or module-level state detected in request handler or controller; breaks statelessness.",
+        "path_regex": r"(controllers|handlers|api|routes)[\\/].*\.(ts|js|py)$",
+        "content_regex": r"^(?:var|let)\s+(?:sessions?|tokens?|cache|state|users?)\s*=\s*(?:\{|\[)|^(?:sessions?|global_cache|shared_state)\s*=\s*(?:\{|\[)",
+    },
+    {
         "dim": 2,
         "id": "RULE-2.1-ORM-IN-DOMAIN",
         "severity": "blocking",
@@ -57,12 +65,36 @@ HEURISTIC_RULES = [
         "content_regex": r"(retries:\s*Infinity|maxRetries:\s*-1|while\s*\(true\)\s*\{\s*try)",
     },
     {
+        "dim": 3,
+        "id": "RULE-3.7-UNBOUNDED-QUEUE-PREFETCH",
+        "severity": "suggestion",
+        "description": "Queue consumer prefetch or concurrency configured without bounded limit; risk of OOM under backpressure.",
+        "path_regex": r"(consumers|queues|subscribers|workers)[\\/].*\.(ts|js|py|go|cs)$",
+        "content_regex": r"(prefetch:\s*0\b|noAck:\s*true\b|prefetch_count\s*=\s*0\b|Prefetch\(\s*0\s*\))",
+    },
+    {
+        "dim": 3,
+        "id": "RULE-3.8-TRANSACTIONAL-OUTBOX-DUAL-WRITE",
+        "severity": "suggestion",
+        "description": "Direct message bus / event publish inside database repository without transactional outbox pattern.",
+        "path_regex": r"(repositories|adapters[\\/]db|persistence)[\\/].*\.(ts|js|py|go|cs)$",
+        "content_regex": r"(\.publish\(|\.send\(|\.produce\().*\b(event|message|topic|queue)\b",
+    },
+    {
         "dim": 4,
         "id": "RULE-4.1-SQLITE-IN-INTEGRATION",
         "severity": "blocking",
         "description": "Banned in-memory SQL emulator (SQLite/H2) substituting production database in integration tests.",
         "path_regex": r"(?:integration[\\/]|tests?[\\/].*integration|[._-]integration\.).*\.(ts|tsx|js|jsx|go|cs|php|py|rs|dart|java|kt)$",
         "content_regex": r"(:memory:|sqlite3\.connect\(['\"]:memory:['\"]\)|UseSqlite\(|createConnection\(\{.*type:\s*['\"]sqlite['\"])",
+    },
+    {
+        "dim": 4,
+        "id": "RULE-4.3-NON-UTC-TIMESTAMP",
+        "severity": "blocking",
+        "description": "Non-UTC clock or un-timezoned timestamp creation in persistence or domain model; violates Tier 1 UTC convention.",
+        "path_regex": r"(domain|models|entities|persistence|db|repositories)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "content_regex": r"(DateTime\.Now\b|datetime\.now\(\)|datetime\.today\(\)|CURRENT_TIMESTAMP\b|TIMESTAMP\s+WITHOUT\s+TIME\s+ZONE)",
     },
     {
         "dim": 5,
@@ -97,6 +129,14 @@ HEURISTIC_RULES = [
         "content_regex": r"(log|logger|console|_logger)\.(info|debug|warn|warning|error|exception|critical|log|LogInformation|LogWarning|LogError)\([^)]*\b(password|user_password|auth_token|credit_card|secret_key)\b",
     },
     {
+        "dim": 6,
+        "id": "RULE-6.7-TRACE-PROPAGATION",
+        "severity": "suggestion",
+        "description": "Outbound HTTP request detected without traceparent / correlation context header propagation.",
+        "path_regex": r"(clients|gateways|adapters|http)[\\/].*\.(ts|js|py)$",
+        "content_regex": r"(axios\.(get|post|put|delete)\([^,\)]+\)|requests\.(get|post|put|delete)\([^,\)]+\))\s*(?:;|\n|$)",
+    },
+    {
         "dim": 8,
         "id": "RULE-8.1-EMPTY-CATCH",
         "severity": "blocking",
@@ -111,6 +151,14 @@ HEURISTIC_RULES = [
         "description": "Untyped 'any' in production TypeScript; use strict types or unknown.",
         "path_regex": r"(services|apps|libs|packages)[\\/].*src[\\/].*\.(ts|tsx)$",
         "content_regex": r":\s*any\b",
+    },
+    {
+        "dim": 8,
+        "id": "RULE-8.6-NAKED-ENV-IN-DOMAIN",
+        "severity": "blocking",
+        "description": "Direct, unvalidated environment variable access in pure domain layer; violates 12-factor typed configuration.",
+        "path_regex": r"domain[\\/].*\.(ts|tsx|js|jsx|go|cs|php|py|rs|dart|java|kt)$",
+        "content_regex": r"(process\.env\b|os\.environ\b|os\.getenv\b|getenv\(|\$_ENV\b|System\.Environment\.GetEnvironmentVariable)",
     },
     {
         "dim": 10,
@@ -143,6 +191,8 @@ EXCLUDED_DIRS = {
     "fixtures",
     "templates",
     "__pycache__",
+    "bin",
+    "obj",
 }
 
 CODE_EXTENSIONS = {
@@ -210,13 +260,22 @@ def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[
     return findings
 
 
-def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6) -> Tuple[List[Dict], Dict]:
-    if not os.path.exists(target_dir):
+def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6, diff_base: Optional[str] = None) -> Tuple[List[Dict], Dict]:
+    if not os.path.exists(target_dir) and not diff_base:
         raise FileNotFoundError(f"Target path '{target_dir}' does not exist.")
 
     all_findings = []
 
-    if os.path.isfile(target_dir):
+    if diff_base:
+        try:
+            res = subprocess.run(["git", "diff", "--name-only", diff_base], capture_output=True, text=True, check=False, timeout=30)
+            if res.returncode == 0:
+                files_to_scan = [f.strip() for f in res.stdout.splitlines() if f.strip() and os.path.exists(f.strip())]
+            else:
+                files_to_scan = [target_dir] if os.path.isfile(target_dir) else []
+        except Exception:
+            files_to_scan = [target_dir] if os.path.isfile(target_dir) else []
+    elif os.path.isfile(target_dir):
         files_to_scan = [target_dir]
     else:
         files_to_scan = []
@@ -258,12 +317,58 @@ def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6
                         })
                         break
 
+                # Check for operational runbook requirement on services/apps
+                if dir_parts and dir_parts[0] in {"services", "apps"} and len(dir_parts) == 2:
+                    svc_name = dir_parts[1]
+                    if os.path.exists(os.path.join(root, "project.json")):
+                        has_runbook = (
+                            os.path.exists(os.path.join(root, "RUNBOOK.md"))
+                            or os.path.exists(os.path.join(target_dir, "docs", "runbooks", f"{svc_name}.md"))
+                            or os.path.exists(os.path.join(target_dir, "docs", "runbooks", f"{svc_name}.runbook.md"))
+                        )
+                        if not has_runbook:
+                            all_findings.append({
+                                "dim": 9,
+                                "id": "RULE-9.5-OPERATIONAL-RUNBOOK",
+                                "severity": "suggestion",
+                                "description": f"Service '{svc_name}' lacks an operational runbook. Create one using 'templates/RUNBOOK.template.md'.",
+                                "file": os.path.join(rel_dir, "project.json").replace("\\", "/"),
+                                "line": 1,
+                                "snippet": f"Service: {svc_name}",
+                            })
+
             for f in files:
                 files_to_scan.append(os.path.join(root, f))
                 
     for f in sorted(files_to_scan):
         all_findings.extend(scan_file_for_violations(f, max_file_lines=max_file_lines))
-        
+
+    # Integrate ast-grep structural scanning when available
+    try:
+        from scripts.ep_ast import is_ast_grep_available, scan_structural_rules
+    except ImportError:
+        try:
+            from ep_ast import is_ast_grep_available, scan_structural_rules
+        except ImportError:
+            is_ast_grep_available = lambda: False
+            scan_structural_rules = lambda scope: []
+
+    if is_ast_grep_available() and os.path.exists(target_dir):
+        ast_findings = scan_structural_rules(target_dir)
+        seen_violations = set()
+        for f in all_findings:
+            parts = f.get("id", "").split("-")
+            rule_num = parts[1] if len(parts) > 1 else f.get("id", "")
+            seen_violations.add((f.get("file", ""), f.get("line", 0), rule_num))
+
+        for af in ast_findings:
+            parts = af.get("id", "").split("-")
+            rule_num = parts[1] if len(parts) > 1 else af.get("id", "")
+            viol_key = (af.get("file", ""), af.get("line", 0), rule_num)
+            if viol_key not in seen_violations:
+                all_findings.append(af)
+                seen_violations.add(viol_key)
+
     # Tally results
     scorecard = {}
     for dim_num, dim_name in DIMENSIONS:
@@ -293,17 +398,21 @@ def filter_against_baseline(findings: List[Dict], baseline_data: Any) -> Tuple[L
     elif not isinstance(baseline_data, list):
         baseline_data = []
 
+    def norm_id(rid: str) -> str:
+        return rid.replace("-AST-", "-") if isinstance(rid, str) else ""
+
     baseline_fingerprints: Set[str] = {
-        f"{b.get('id')}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data if isinstance(b, dict)
+        f"{norm_id(b.get('id', ''))}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data if isinstance(b, dict)
     }
     
     new_findings = []
     suppressed_count = 0
     
     for f in findings:
-        fp = f"{f.get('id')}:{f.get('file')}:{f.get('line', '')}"
+        fid = norm_id(f.get("id", ""))
+        fp = f"{fid}:{f.get('file')}:{f.get('line', '')}"
         # Fallback loose fingerprint (id + file)
-        fp_loose = f"{f.get('id')}:{f.get('file')}:"
+        fp_loose = f"{fid}:{f.get('file')}:"
         
         if fp in baseline_fingerprints or any(b.startswith(fp_loose) for b in baseline_fingerprints):
             suppressed_count += 1
@@ -400,15 +509,16 @@ def main():
     parser.add_argument("--max-dir-depth", type=int, default=6, help="Maximum allowed directory nesting depth (default: 6)")
     parser.add_argument("--baseline", help="Path to baseline JSON file for ratchet auditing")
     parser.add_argument("--save-baseline", help="Path to save current findings as baseline JSON")
+    parser.add_argument("--diff", help="Audit only modified git diff files against base (e.g. main or HEAD~1)")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
 
-    if not os.path.exists(args.scope):
+    if not os.path.exists(args.scope) and not args.diff:
         print(f"[ERROR] Target scope '{args.scope}' does not exist.", file=sys.stderr)
         sys.exit(1)
 
-    raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth)
+    raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth, diff_base=args.diff)
 
     if args.save_baseline:
         with open(args.save_baseline, "w", encoding="utf-8") as f:

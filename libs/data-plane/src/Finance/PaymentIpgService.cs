@@ -3,28 +3,34 @@ namespace LocalMe.DataPlane.Finance;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using LocalMe.Core.Finance;
+using LocalMe.DataPlane.MultiTenancy;
 
 public sealed record IpgInitiateRequest(
     string Gateway,
     long AmountIrr,
     string CallbackUrl,
-    string Description,
-    string CustomerPhone,
-    string IdempotencyKey
+    string? Description = null,
+    string? CustomerPhone = null,
+    string? IdempotencyKey = null,
+    string? ProjectId = null
 );
 
 public sealed record IpgInitiateResponse(
     bool Success,
     string AuthorityToken,
     string RedirectUrl,
-    string Message
+    string Message,
+    string? Authority = null,
+    string? TrackingCode = null
 );
 
 public sealed record IpgVerifyRequest(
-    string Gateway,
-    string AuthorityToken,
-    string Status,
-    string? TrackingCode = null
+    string? Gateway = null,
+    string? AuthorityToken = null,
+    string? Status = "OK",
+    string? TrackingCode = null,
+    string? Authority = null,
+    string? CustomerPhone = null
 );
 
 public sealed record IpgVerifyResponse(
@@ -32,7 +38,9 @@ public sealed record IpgVerifyResponse(
     long AmountIrr,
     string ReferenceId,
     string Message,
-    string FormattedToman
+    string FormattedToman,
+    string? ShaparakRefId = null,
+    long? NewWalletBalanceIrr = null
 );
 
 public sealed record LedgerEntry(
@@ -63,58 +71,49 @@ public sealed record WalletBalance(
 /// Enforces idempotent gateway initiation, Shaparak-compliant verification,
 /// and mathematically balanced double-entry ledger transactions (BIGINT IRR).
 /// </summary>
+public sealed record StoredPayment(
+    string AuthorityToken,
+    string Gateway,
+    RialAmount Amount,
+    string CustomerPhone,
+    string CallbackUrl,
+    string Description,
+    string IdempotencyKey,
+    DateTimeOffset CreatedAtUtc,
+    bool IsVerified,
+    string? ReferenceId
+);
+
 public sealed class PaymentIpgService
 {
-    private sealed record StoredPayment(
-        string AuthorityToken,
-        string Gateway,
-        RialAmount Amount,
-        string CustomerPhone,
-        string CallbackUrl,
-        string Description,
-        string IdempotencyKey,
-        DateTimeOffset CreatedAtUtc,
-        bool IsVerified,
-        string? ReferenceId
-    );
 
     private readonly ConcurrentDictionary<string, StoredPayment> _payments = new();
     private readonly ConcurrentDictionary<string, IpgInitiateResponse> _idempotentInitiations = new();
     private readonly ConcurrentDictionary<string, long> _walletBalancesIrr = new();
     private readonly ConcurrentDictionary<string, List<LedgerTransaction>> _customerLedgers = new();
 
-    public PaymentIpgService()
+    private readonly ProjectManagerService? _pm;
+
+    public PaymentIpgService(ProjectManagerService? projectManager = null)
     {
-        // Seed default demo wallet for immediate testing
-        const string defaultPhone = "+989121112233";
-        var initialAmount = RialAmount.FromToman(45_000_000); // 45M Toman = 450M IRR
-        _walletBalancesIrr[defaultPhone] = initialAmount.AmountIrr;
-
-        var seedEntries = new List<LedgerEntry>
-        {
-            new("1001", "بانک مرکزی / شاپرک", "Asset", initialAmount.AmountIrr, 0, "موجودی افتتاحیه حساب"),
-            new("2001", $"کیف پول کاربر ({defaultPhone})", "Liability", 0, initialAmount.AmountIrr, "افزایش اعتبار اولیه کیف پول")
-        };
-
-        var seedTx = new LedgerTransaction(
-            TransactionId: $"tx_{Guid.NewGuid():N}",
-            IdempotencyKey: "seed_initial_balance_001",
-            TimestampUtc: DateTimeOffset.UtcNow.AddDays(-1),
-            Entries: seedEntries
-        );
-
-        _customerLedgers[defaultPhone] = [seedTx];
+        _pm = projectManager;
     }
 
     public IpgInitiateResponse InitiatePayment(IpgInitiateRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
-        {
-            return new IpgInitiateResponse(false, string.Empty, string.Empty, "Idempotency key is required.");
-        }
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey)
+            ? $"topup_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{RandomNumberGenerator.GetInt32(1000, 9999)}"
+            : request.IdempotencyKey;
+        var customerPhone = string.IsNullOrWhiteSpace(request.CustomerPhone)
+            ? "+989121112233"
+            : request.CustomerPhone;
+        var description = string.IsNullOrWhiteSpace(request.Description)
+            ? "شارژ حساب کاربری کیف پول"
+            : request.Description;
+        var gateway = string.IsNullOrWhiteSpace(request.Gateway) ? "ZARINPAL" : request.Gateway;
 
         // 1. Check idempotency cache
-        if (_idempotentInitiations.TryGetValue(request.IdempotencyKey, out var existing))
+        if (_idempotentInitiations.TryGetValue(idempotencyKey, out var existing))
         {
             return existing;
         }
@@ -126,16 +125,17 @@ public sealed class PaymentIpgService
 
         // 2. Generate unique authority token
         var authorityToken = $"AU_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{RandomNumberGenerator.GetInt32(1000, 9999)}";
-        var redirectUrl = $"/_baas/v1/pay/mock-gateway?authority={authorityToken}&gateway={Uri.EscapeDataString(request.Gateway)}&amount={request.AmountIrr}";
+        var trackingCode = $"TRK_{RandomNumberGenerator.GetInt32(100000, 999999)}";
+        var redirectUrl = $"/_baas/v1/pay/mock-gateway?authority={authorityToken}&gateway={Uri.EscapeDataString(gateway)}&amount={request.AmountIrr}";
 
         var payment = new StoredPayment(
             AuthorityToken: authorityToken,
-            Gateway: request.Gateway,
+            Gateway: gateway,
             Amount: new RialAmount(request.AmountIrr),
-            CustomerPhone: request.CustomerPhone,
+            CustomerPhone: customerPhone,
             CallbackUrl: request.CallbackUrl,
-            Description: request.Description,
-            IdempotencyKey: request.IdempotencyKey,
+            Description: description,
+            IdempotencyKey: idempotencyKey,
             CreatedAtUtc: DateTimeOffset.UtcNow,
             IsVerified: false,
             ReferenceId: null
@@ -147,33 +147,40 @@ public sealed class PaymentIpgService
             Success: true,
             AuthorityToken: authorityToken,
             RedirectUrl: redirectUrl,
-            Message: "Payment request initiated with Shaparak authority token."
+            Message: "Payment request initiated with Shaparak authority token.",
+            Authority: authorityToken,
+            TrackingCode: trackingCode
         );
 
-        _idempotentInitiations[request.IdempotencyKey] = response;
+        _idempotentInitiations[idempotencyKey] = response;
         return response;
     }
 
     public IpgVerifyResponse VerifyPayment(IpgVerifyRequest request)
     {
-        if (!_payments.TryGetValue(request.AuthorityToken, out var payment))
+        var token = request.AuthorityToken ?? request.Authority ?? string.Empty;
+        if (!_payments.TryGetValue(token, out var payment))
         {
             return new IpgVerifyResponse(false, 0, string.Empty, "Invalid or expired payment authority token.", "0 تومان");
         }
 
         if (payment.IsVerified)
         {
+            var existingBal = _walletBalancesIrr.TryGetValue(payment.CustomerPhone, out var eb) ? eb : payment.Amount.AmountIrr;
             return new IpgVerifyResponse(
                 Success: true,
                 AmountIrr: payment.Amount.AmountIrr,
                 ReferenceId: payment.ReferenceId ?? "ALREADY_VERIFIED",
                 Message: "Payment was previously verified and ledger updated.",
-                FormattedToman: payment.Amount.ToTomanString()
+                FormattedToman: payment.Amount.ToTomanString(),
+                ShaparakRefId: payment.ReferenceId ?? "ALREADY_VERIFIED",
+                NewWalletBalanceIrr: existingBal
             );
         }
 
-        if (!request.Status.Equals("OK", StringComparison.OrdinalIgnoreCase) &&
-            !request.Status.Equals("100", StringComparison.OrdinalIgnoreCase))
+        var status = request.Status ?? "OK";
+        if (!status.Equals("OK", StringComparison.OrdinalIgnoreCase) &&
+            !status.Equals("100", StringComparison.OrdinalIgnoreCase))
         {
             return new IpgVerifyResponse(false, payment.Amount.AmountIrr, string.Empty, "Payment was cancelled or rejected by user/bank.", payment.Amount.ToTomanString());
         }
@@ -217,7 +224,7 @@ public sealed class PaymentIpgService
         );
 
         // 3. Atomically update user balance
-        _walletBalancesIrr.AddOrUpdate(payment.CustomerPhone, payment.Amount.AmountIrr, (_, current) => current + payment.Amount.AmountIrr);
+        var newBal = _walletBalancesIrr.AddOrUpdate(payment.CustomerPhone, payment.Amount.AmountIrr, (_, current) => current + payment.Amount.AmountIrr);
 
         // 4. Record to ledger
         var ledgerList = _customerLedgers.GetOrAdd(payment.CustomerPhone, _ => []);
@@ -227,19 +234,91 @@ public sealed class PaymentIpgService
         }
 
         // Mark verified
-        _payments[request.AuthorityToken] = payment with { IsVerified = true, ReferenceId = refId };
+        _payments[token] = payment with { IsVerified = true, ReferenceId = refId };
+
+        // 5. Synchronize with ProjectManagerService
+        if (_pm != null)
+        {
+            var user = _pm.GetUserByPhone(payment.CustomerPhone);
+            if (user != null)
+            {
+                _pm.AdjustUserWallet(user.Id, payment.Amount.AmountIrr);
+            }
+        }
 
         return new IpgVerifyResponse(
             Success: true,
             AmountIrr: payment.Amount.AmountIrr,
             ReferenceId: refId,
             Message: "Payment successfully verified by Shaparak gateway. Wallet credited.",
-            FormattedToman: payment.Amount.ToTomanString()
+            FormattedToman: payment.Amount.ToTomanString(),
+            ShaparakRefId: refId,
+            NewWalletBalanceIrr: newBal
         );
+    }
+
+    public bool DeductWalletBalance(string customerPhone, long amountIrr, string description)
+    {
+        if (amountIrr <= 0) return true;
+
+        var currentBalance = _walletBalancesIrr.GetOrAdd(customerPhone, _ => 0);
+        var newBalance = Math.Max(0, currentBalance - amountIrr);
+        _walletBalancesIrr[customerPhone] = newBalance;
+
+        var debitEntry = new LedgerEntry(
+            AccountNumber: "2001",
+            AccountName: $"کیف پول کاربر ({customerPhone})",
+            AccountType: "Liability",
+            DebitIrr: amountIrr,
+            CreditIrr: 0,
+            Description: description
+        );
+
+        var creditEntry = new LedgerEntry(
+            AccountNumber: "4001",
+            AccountName: "درآمد کارمزد خدمات زیرساختی پلتفرم (LocalMe)",
+            AccountType: "Revenue",
+            DebitIrr: 0,
+            CreditIrr: amountIrr,
+            Description: description
+        );
+
+        var tx = new LedgerTransaction(
+            TransactionId: $"tx_{Guid.NewGuid():N}",
+            IdempotencyKey: $"deduct_{Guid.NewGuid():N}",
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Entries: [debitEntry, creditEntry]
+        );
+
+        var ledgerList = _customerLedgers.GetOrAdd(customerPhone, _ => []);
+        lock (ledgerList)
+        {
+            ledgerList.Insert(0, tx);
+        }
+
+        if (_pm != null)
+        {
+            var user = _pm.GetUserByPhone(customerPhone);
+            if (user != null)
+            {
+                _pm.AdjustUserWallet(user.Id, -amountIrr);
+            }
+        }
+
+        return true;
     }
 
     public WalletBalance GetWalletBalance(string customerPhone)
     {
+        if (_pm != null)
+        {
+            var user = _pm.GetUserByPhone(customerPhone);
+            if (user != null)
+            {
+                _walletBalancesIrr[customerPhone] = user.WalletBalanceIrr;
+            }
+        }
+
         var balanceIrr = _walletBalancesIrr.GetOrAdd(customerPhone, _ => 0);
         var transactions = _customerLedgers.TryGetValue(customerPhone, out var txList)
             ? txList.AsReadOnly()
@@ -252,5 +331,23 @@ public sealed class PaymentIpgService
             FormattedToman: rial.ToTomanString(),
             RecentTransactions: transactions
         );
+    }
+
+    public StoredPayment? GetPayment(string authorityToken)
+    {
+        return _payments.TryGetValue(authorityToken, out var payment) ? payment : null;
+    }
+
+    public IReadOnlyList<StoredPayment> GetAllPayments()
+    {
+        return _payments.Values.OrderByDescending(p => p.CreatedAtUtc).ToList();
+    }
+
+    public IReadOnlyList<StoredPayment> GetCustomerPayments(string customerPhone)
+    {
+        return _payments.Values
+            .Where(p => p.CustomerPhone.Equals(customerPhone, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToList();
     }
 }

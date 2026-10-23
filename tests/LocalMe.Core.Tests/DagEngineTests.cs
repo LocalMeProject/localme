@@ -52,7 +52,7 @@ public sealed class DagEngineTests
     public void ProjectPrimitive_RefCount_Decrements_To_Zero_Signals_Deprovisioning()
     {
         var prim = new ProjectPrimitive(Guid.NewGuid(), PrimitiveCode.REDIS_KV, refCount: 2);
-        
+
         Assert.False(prim.DecrementRef());
         Assert.Equal(1, prim.RefCount);
 

@@ -28,6 +28,8 @@ EXCLUDED_DIRS = {
     "vendor",
     "templates",
     "__pycache__",
+    "bin",
+    "obj",
 }
 
 
