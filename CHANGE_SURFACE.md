@@ -164,6 +164,7 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/web-console/src/components/modals/AddDomainModal.tsx`: Added Escape key listener and ARIA dialog semantics.
   - `libs/contracts/schemas/openapi.json`: Comprehensive OpenAPI 3.1 contract catalog covering all BaaS routes.
   - `libs/client-sdk/src/index.ts`: Route-aligned TypeScript client SDK.
+  - `libs/client-sdk/src/types.ts`: TypeScript contracts and data transfer interface definitions.
   - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Sourced connection strings from `LOCALME_POSTGRES_URL`/`LOCALME_REDIS_URL` and seeded baseline platform users.
   - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.Entities.cs`: Enforced explicit UTC `DateTimeKind.Utc` on timestamp readers.
   - `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Cleaned trailing whitespace to satisfy dotnet format.
