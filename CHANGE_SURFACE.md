@@ -168,6 +168,69 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.Entities.cs`: Enforced explicit UTC `DateTimeKind.Utc` on timestamp readers.
   - `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Cleaned trailing whitespace to satisfy dotnet format.
   - `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`: Cleansed synthetic connection strings.
+- **Monorepo Declarations & Configuration Contracts**:
+  - `package.json`
+  - `apps/cli/project.json`
+  - `apps/server/project.json`
+  - `apps/server/src/Dashboard/DashboardRenderer.cs`
+  - `apps/server/src/Diagnostics/PlatformLogBuffer.cs`
+  - `apps/server/src/Routes/AuthHelper.cs`
+  - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`
+  - `apps/server/src/Routes/MockGatewayRenderer.cs`
+  - `apps/server/src/appsettings.json`
+  - `apps/server/src/wwwroot/admin-logs.js`
+  - `apps/server/src/wwwroot/admin.js`
+  - `apps/server/src/wwwroot/app-modals.js`
+  - `apps/server/src/wwwroot/app-settings.js`
+  - `apps/server/src/wwwroot/app.js`
+  - `apps/server/src/wwwroot/docs.html`
+  - `apps/server/src/wwwroot/index.html`
+  - `apps/server/src/wwwroot/services-auth.js`
+  - `apps/server/src/wwwroot/services-compute.js`
+  - `apps/server/src/wwwroot/services-dashboards.js`
+  - `apps/server/src/wwwroot/services-db.js`
+  - `apps/server/src/wwwroot/services-infra.js`
+  - `apps/server/src/wwwroot/services-ipg.js`
+  - `apps/server/src/wwwroot/services-manager.js`
+  - `apps/server/src/wwwroot/shamsi.js`
+  - `apps/server/src/wwwroot/styles.css`
+  - `apps/web-console/postcss.config.js`
+  - `apps/web-console/src/components/Header.tsx`
+  - `apps/web-console/src/dagEngine.ts`
+  - `apps/web-console/src/types.ts`
+  - `apps/web-console/src/views/ComplianceView.tsx`
+  - `apps/web-console/src/views/DatabaseView.tsx`
+  - `apps/web-console/src/views/EdgeFunctionsView.tsx`
+  - `apps/web-console/src/views/HostingView.tsx`
+  - `apps/web-console/src/views/SettingsView.tsx`
+  - `apps/web-console/src/views/StorageView.tsx`
+  - `apps/web-console/src/views/TelemetryView.tsx`
+  - `apps/web-console/tailwind.config.js`
+  - `apps/web-console/vite.config.ts`
+  - `libs/core-domain/project.json`
+  - `libs/data-plane/project.json`
+  - `libs/data-plane/src/Admin/SuperadminService.cs`
+  - `libs/data-plane/src/Billing/UsageMeteringService.cs`
+  - `libs/data-plane/src/Compute/JintScriptHost.cs`
+  - `libs/data-plane/src/DynamicSql/DynamicSqlHandler.cs`
+  - `libs/data-plane/src/MultiTenancy/IProjectStore.cs`
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerModels.cs`
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Auth.cs`
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Modules.cs`
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Tables.cs`
+  - `libs/data-plane/src/Storage/Adapters/LocalDiskAdapter.cs`
+  - `libs/infrastructure/project.json`
+  - `libs/infrastructure/src/LocalMe.Infrastructure.csproj`
+  - `libs/infrastructure/src/Migrations/002_TenantSchema.sql`
+  - `libs/infrastructure/src/Storage/DatabaseInitializer.cs`
+- **Test Projects & Integration Suites**:
+  - `tests/LocalMe.Core.Tests/DagEngineTests.cs`
+  - `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`
+  - `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`
+  - `tests/LocalMe.Integration.Tests/DomainAndStorageTests.cs`
+  - `tests/LocalMe.Integration.Tests/MobileBaasTests.cs`
+  - `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`
+  - `tests/LocalMe.Integration.Tests/ProjectTableManagementTests.cs`
 
 ## 4. Test Surface
 ### Unit & Domain Tests
@@ -176,8 +239,11 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
 
 ### Integration & Data-Plane Tests
 - `tests/LocalMe.Integration.Tests/DataPlaneIntegrationTests.cs`: OTP auth, payment idempotency, double-entry ledger, dynamic tables, and Jint execution timeout governor.
-- `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Multi-tenant project provisioning, per-service API keys, project CRUD, usage metering, Shetab IPG transactions, hosting deployments, SQL execution, table schema reflection, collaborator RBAC, compliance hubs, live telemetry log streaming, username/password authentication, and project-scoped credential isolation.
+- `tests/LocalMe.Integration.Tests/DomainAndStorageTests.cs`: Pure domain entities and persistence storage contracts.
+- `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`: Integration test project file.
 - `tests/LocalMe.Integration.Tests/MobileBaasTests.cs`: Realtime WebSocket broadcast, ping/pong frames, Push notification registration, and Cafe Bazaar / Myket IAP verification.
+- `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Multi-tenant project provisioning, per-service API keys, project CRUD, usage metering, Shetab IPG transactions, hosting deployments, SQL execution, table schema reflection, collaborator RBAC, compliance hubs, live telemetry log streaming, username/password authentication, and project-scoped credential isolation.
+- `tests/LocalMe.Integration.Tests/ProjectTableManagementTests.cs`: Dynamic table DDL and record management under PostgreSQL schema partitioning.
 
 ### Failure & Resilience Tests
 - Jint script execution timeout (5s) and memory ceiling (16MB) validation.
