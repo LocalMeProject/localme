@@ -9,16 +9,16 @@ async function loadProjectUsers() {
     if (res.ok) {
       const users = await res.json();
       if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">کاربری در این پروژه ثبت‌نام نکرده است. برای ایجاد کاربر روی «+ ثبت و تست کاربر» کلیک کنید.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">کاربری در این پروژه ثبت نام نکرده است. برای ایجاد کاربر روی «+ ثبت و تست کاربر» کلیک کنید.</td></tr>';
         return;
       }
 
       tbody.innerHTML = users.map(u => {
         const identifier = u.username ? `${u.username} (${u.phone || u.email || 'بدون تماس'})` : (u.phone || u.email || '-');
         const providerName = u.provider === 'sms_otp' ? 'پیامک OTP' :
-                             u.provider === 'password' ? 'نام‌کاربری و رمز عبور' :
+                             u.provider === 'password' ? 'نام کاربری و رمز عبور' :
                              u.provider === 'oauth_google' ? 'گوگل (Google)' :
-                             u.provider === 'oauth_github' ? 'گیت‌هاب (GitHub)' : (u.provider || 'سیستمی');
+                             u.provider === 'oauth_github' ? 'گیت هاب (GitHub)' : (u.provider || 'سیستمی');
 
         const isConfirmed = u.isConfirmed !== false;
         return `
@@ -32,7 +32,7 @@ async function loadProjectUsers() {
             <td>
               <div style="display: flex; gap: 4px;">
                 <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 2px 8px;" onclick="toggleUserStatus('${escapeHtml(u.id)}', ${!isConfirmed})" title="تغییر وضعیت فعال/معلق">
-                  ${isConfirmed ? 'تعلیق' : 'فعال‌سازی'}
+                  ${isConfirmed ? 'تعلیق' : 'فعال سازی'}
                 </button>
                 <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 2px 8px;" onclick="openResetPasswordModal('${escapeHtml(u.id)}', '${escapeHtml(identifier)}')" title="تغییر یا بازنشانی کلمه عبور">
                   رمز عبور
@@ -60,7 +60,7 @@ async function toggleUserStatus(userId, newStatus) {
       body: JSON.stringify({ is_confirmed: newStatus })
     });
     if (res.ok) {
-      showToast('وضعیت کاربر به‌روزرسانی شد.', 'success');
+      showToast('وضعیت کاربر به روزرسانی شد.', 'success');
       await loadProjectUsers();
     } else {
       showToast('خطا در تغییر وضعیت کاربر.', 'error');
@@ -140,7 +140,7 @@ async function loadSmsLogs() {
   const totalEl = document.getElementById('sms-total-count');
   if (!tbody) return;
   if (!activeProjectId) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">ابتدا پروژه‌ای را انتخاب فرمایید.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">ابتدا پروژه ای را انتخاب فرمایید.</td></tr>';
     if (totalEl) totalEl.textContent = '۰';
     return;
   }
@@ -149,7 +149,7 @@ async function loadSmsLogs() {
     if (res.ok) {
       const logs = await res.json();
       if (!logs || logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">هیچ پیامک OTP ثبت یا ارسال نشده است. لاگ‌های ارسال زنده پیامک در اینجا نمایش داده خواهند شد.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">هیچ پیامک OTP ثبت یا ارسال نشده است. لاگ های ارسال زنده پیامک در اینجا نمایش داده خواهند شد.</td></tr>';
         if (totalEl) totalEl.textContent = '۰';
         return;
       }
@@ -160,8 +160,8 @@ async function loadSmsLogs() {
           <tr>
             <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(l.traceId || ('sms_' + (l.id || Math.random().toString(36).substring(2, 8))))}</td>
             <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(recipient)}</td>
-            <td style="font-size: 13.5px;">الگوی احراز هویت پیامکی (کاوه‌نگار)</td>
-            <td><span class="badge badge-active">کاوه‌نگار (خط خدماتی)</span></td>
+            <td style="font-size: 13.5px;">الگوی احراز هویت پیامکی (کاوه نگار)</td>
+            <td><span class="badge badge-active">کاوه نگار (خط خدماتی)</span></td>
             <td><span class="badge badge-active">تحویل موفق</span></td>
             <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(l.timestampUtc))}</td>
           </tr>
@@ -198,7 +198,7 @@ async function saveAuthPolicies(e) {
     jwt_expiry_hours: document.getElementById('policy-jwt-hours')?.value || existingCfg.jwt_expiry_hours || '72'
   };
   await saveServiceConfig('auth', true, settings);
-  showToast('سیاست‌های امنیتی احراز هویت با موفقیت ذخیره گردید.', 'success');
+  showToast('سیاست های امنیتی احراز هویت با موفقیت ذخیره گردید.', 'success');
 }
 
 // 11.4 Storage File Explorer & ACL Policies

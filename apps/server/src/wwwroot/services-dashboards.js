@@ -51,8 +51,8 @@
       <div class="card" style="margin-bottom: 20px;">
         <div class="card-header">
           <div>
-            <div class="card-title">ابزارها و قابلیت‌های اختصاصی سرویس</div>
-            <div class="card-desc">دسترسی سریع به زیربخش‌ها و قابلیت‌های این سرویس ابری</div>
+            <div class="card-title">ابزارها و قابلیت های اختصاصی سرویس</div>
+            <div class="card-desc">دسترسی سریع به زیربخش ها و قابلیت های این سرویس ابری</div>
           </div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
@@ -94,7 +94,7 @@
         const userCount = (window.cachedProjectUsers || []).length;
         return `
           <div class="metric-cell">
-            <div class="metric-cell-label">کل کاربران ثبت‌نام شده</div>
+            <div class="metric-cell-label">کل کاربران ثبت نام شده</div>
             <div class="metric-cell-val">${Shamsi.toPersianDigits(userCount)}</div>
             <div class="metric-cell-sub">کاربران احرازشده اپلیکیشن</div>
           </div>
@@ -118,9 +118,9 @@
         const bCount = (window.cachedProjectBuckets || []).length;
         return `
           <div class="metric-cell">
-            <div class="metric-cell-label">تعداد باکت‌های ابری</div>
+            <div class="metric-cell-label">تعداد باکت های ابری</div>
             <div class="metric-cell-val">${Shamsi.toPersianDigits(bCount)}</div>
-            <div class="metric-cell-sub">باکت‌های رسانه و فایل</div>
+            <div class="metric-cell-sub">باکت های رسانه و فایل</div>
           </div>
           <div class="metric-cell">
             <div class="metric-cell-label">سقف حجم فایل آپلود</div>
@@ -159,14 +159,14 @@
           <div class="metric-cell">
             <div class="metric-cell-label">سقف زمان اجرا (Timeout)</div>
             <div class="metric-cell-val">${Shamsi.toPersianDigits(s['timeout_seconds'] || '5000')} ms</div>
-            <div class="metric-cell-sub">جلوگیری از حلقه بی‌نهایت</div>
+            <div class="metric-cell-sub">جلوگیری از حلقه بی نهایت</div>
           </div>
         `;
       case 'ipg':
         return `
           <div class="metric-cell">
             <div class="metric-cell-label">درگاه شاپرک متصل</div>
-            <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">${escapeHtml((s['psp'] || 'زرین‌پال').toUpperCase())}</div>
+            <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">${escapeHtml((s['psp'] || 'زرین پال').toUpperCase())}</div>
             <div class="metric-cell-sub">اتصال به شبکه شتاب</div>
           </div>
           <div class="metric-cell">
@@ -175,14 +175,14 @@
             <div class="metric-cell-sub">سازگار با الزامات شاپرک</div>
           </div>
           <div class="metric-cell">
-            <div class="metric-cell-label">شبیه‌ساز پرداخت آنلاین</div>
+            <div class="metric-cell-label">شبیه ساز پرداخت آنلاین</div>
             <div class="metric-cell-val" style="color: #0369a1; font-size: 16px; font-weight: 700;">فعال (حالت آزمایشی)</div>
-            <div class="metric-cell-sub">شبیه‌سازی کارت و رمز دوم</div>
+            <div class="metric-cell-sub">شبیه سازی کارت و رمز دوم</div>
           </div>
           <div class="metric-cell">
             <div class="metric-cell-label">تسویه حساب شتابی</div>
             <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">شاپرک پایا / ساتنا</div>
-            <div class="metric-cell-sub">چرخه‌های تسویه منظم</div>
+            <div class="metric-cell-sub">چرخه های تسویه منظم</div>
           </div>
         `;
       case 'mobile':
@@ -198,21 +198,21 @@
             <div class="metric-cell-sub">بدون مصرف باتری گوشی</div>
           </div>
           <div class="metric-cell">
-            <div class="metric-cell-label">خرید کافه‌بازار و مایکت</div>
+            <div class="metric-cell-label">خرید کافه بازار و مایکت</div>
             <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">اعتبارسنجی IAB</div>
             <div class="metric-cell-sub">جلوگیری از کلاهبرداری و جعل</div>
           </div>
           <div class="metric-cell">
             <div class="metric-cell-label">پشتیبانی پلتفرم</div>
             <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">Android / iOS</div>
-            <div class="metric-cell-sub">فلاتر، ری‌اکت نیتیو، کاتلین</div>
+            <div class="metric-cell-sub">فلاتر، ری اکت نیتیو، کاتلین</div>
           </div>
         `;
       case 'hosting':
         return `
           <div class="metric-cell">
             <div class="metric-cell-label">دامنه متصل</div>
-            <div class="metric-cell-val" style="font-size: 15px; font-weight: 700;">${escapeHtml(s['custom_domain'] || 'دامنه پیش‌فرض لوکال‌می')}</div>
+            <div class="metric-cell-val" style="font-size: 15px; font-weight: 700;">${escapeHtml(s['custom_domain'] || 'دامنه پیش فرض لوکال می')}</div>
             <div class="metric-cell-sub">مسیریابی هوشمند لبه</div>
           </div>
           <div class="metric-cell">
@@ -228,7 +228,7 @@
           <div class="metric-cell">
             <div class="metric-cell-label">ترافیک ماهانه مجاز</div>
             <div class="metric-cell-val">${Shamsi.toPersianDigits(s['max_bandwidth_gb'] || '100')} GB</div>
-            <div class="metric-cell-sub">شبکه ملی اطلاعات (نیم‌بها)</div>
+            <div class="metric-cell-sub">شبکه ملی اطلاعات (نیم بها)</div>
           </div>
         `;
       case 'compliance':
@@ -240,11 +240,11 @@
           </div>
           <div class="metric-cell">
             <div class="metric-cell-label">ستاد ساماندهی</div>
-            <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">پایگاه داده ثبت‌شده</div>
+            <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">پایگاه داده ثبت شده</div>
             <div class="metric-cell-sub">احراز مالکیت دامنه</div>
           </div>
           <div class="metric-cell">
-            <div class="metric-cell-label">دیپ‌لینک اپلیکیشن موبایل</div>
+            <div class="metric-cell-label">دیپ لینک اپلیکیشن موبایل</div>
             <div class="metric-cell-val" style="color: #059669; font-size: 16px; font-weight: 700;">فعال و تاییدشده</div>
             <div class="metric-cell-sub">بازگشت از درگاه به اپلیکیشن</div>
           </div>
@@ -266,25 +266,25 @@
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('db', 'tables')">
             <div>
               <strong style="font-size: 13.5px; display: block;">جداول و رکوردهای داده</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">مشاهده، فیلتر و درج مستقیم داده‌ها</span>
+              <span style="font-size: 12px; color: var(--text-muted);">مشاهده، فیلتر و درج مستقیم داده ها</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('db', 'sqleditor')">
             <div>
               <strong style="font-size: 13.5px; display: block;">ویرایشگر تعاملی SQL</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">اجرای مستقیم کوئری‌های خام PostgreSQL</span>
+              <span style="font-size: 12px; color: var(--text-muted);">اجرای مستقیم کوئری های خام PostgreSQL</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('db', 'schema')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">ساختار اسکیمای پایگاه‌داده</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">مشاهده فیلدها و انواع داده‌ای جداول</span>
+              <strong style="font-size: 13.5px; display: block;">ساختار اسکیمای پایگاه داده</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">مشاهده فیلدها و انواع داده ای جداول</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('db', 'backups')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">پشتیبان‌گیری و بازیابی</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">ایجاد اسنپ‌شات و بکاپ از داده‌های پروژه</span>
+              <strong style="font-size: 13.5px; display: block;">پشتیبان گیری و بازیابی</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">ایجاد اسنپ شات و بکاپ از داده های پروژه</span>
             </div>
           </button>
         `;
@@ -293,19 +293,19 @@
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('auth', 'users')">
             <div>
               <strong style="font-size: 13.5px; display: block;">مدیریت کاربران اپلیکیشن</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">افزودن، غیرفعال‌سازی و تغییر کلمه عبور</span>
+              <span style="font-size: 12px; color: var(--text-muted);">افزودن، غیرفعال سازی و تغییر کلمه عبور</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('auth', 'sms-logs')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">گزارش پیامک‌های ارسالی</strong>
+              <strong style="font-size: 13.5px; display: block;">گزارش پیامک های ارسالی</strong>
               <span style="font-size: 12px; color: var(--text-muted);">تحلیل وضعیت تحویل کدهای OTP</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('auth', 'policies')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">سیاست‌های امنیتی و نشست‌ها</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">تنظیمات JWT، زمان انقضا و روش‌های ورود</span>
+              <strong style="font-size: 13.5px; display: block;">سیاست های امنیتی و نشست ها</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">تنظیمات JWT، زمان انقضا و روش های ورود</span>
             </div>
           </button>
         `;
@@ -313,13 +313,13 @@
         return `
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('storage', 'buckets')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">باکت‌های ذخیره‌سازی ابری</strong>
+              <strong style="font-size: 13.5px; display: block;">باکت های ذخیره سازی ابری</strong>
               <span style="font-size: 12px; color: var(--text-muted);">ایجاد باکت عمومی/خصوصی جدید</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('storage', 'explorer')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">کاوشگر فایل‌ها و مدیا</strong>
+              <strong style="font-size: 13.5px; display: block;">کاوشگر فایل ها و مدیا</strong>
               <span style="font-size: 12px; color: var(--text-muted);">آپلود، دانلود و مدیریت تصاویر و مستندات</span>
             </div>
           </button>
@@ -341,13 +341,13 @@
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('functions', 'traces')">
             <div>
               <strong style="font-size: 13.5px; display: block;">مانیتورینگ زمان اجرا و حافظه</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">بررسی لاگ‌های خروجی و مدت زمان اجرا</span>
+              <span style="font-size: 12px; color: var(--text-muted);">بررسی لاگ های خروجی و مدت زمان اجرا</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('functions', 'env')">
             <div>
               <strong style="font-size: 13.5px; display: block;">متغیرهای محیطی و اسرار</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">کلیدهای وب‌هوک و مقادیر محرمانه توابع</span>
+              <span style="font-size: 12px; color: var(--text-muted);">کلیدهای وب هوک و مقادیر محرمانه توابع</span>
             </div>
           </button>
         `;
@@ -361,19 +361,19 @@
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('ipg', 'ledger')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">دفترکل تراکنش‌ها و اسناد</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">تراکنش‌های موفق، ناموفق و کد پیگیری شتاب</span>
+              <strong style="font-size: 13.5px; display: block;">دفترکل تراکنش ها و اسناد</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">تراکنش های موفق، ناموفق و کد پیگیری شتاب</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('ipg', 'simulator')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">شبیه‌ساز پرداخت شاپرک</strong>
+              <strong style="font-size: 13.5px; display: block;">شبیه ساز پرداخت شاپرک</strong>
               <span style="font-size: 12px; color: var(--text-muted);">تست پرداخت موفق و ناموفق بدون تراکنش واقعی</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('ipg', 'reports')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">گزارش‌های تحلیلی و مالی</strong>
+              <strong style="font-size: 13.5px; display: block;">گزارش های تحلیلی و مالی</strong>
               <span style="font-size: 12px; color: var(--text-muted);">نمودارهای فروش روزانه، ماهانه و کارمزد</span>
             </div>
           </button>
@@ -383,19 +383,19 @@
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('mobile', 'push')">
             <div>
               <strong style="font-size: 13.5px; display: block;">سامانه اعلان (Push Notification)</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">ارسال پیام‌های متنی و تصویردار به گوشی کاربران</span>
+              <span style="font-size: 12px; color: var(--text-muted);">ارسال پیام های متنی و تصویردار به گوشی کاربران</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('mobile', 'iap')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">خرید درون‌برنامه‌ای بازار و مایکت</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">اعتبارسنجی سروری رسیدهای کافه‌بازار و مایکت</span>
+              <strong style="font-size: 13.5px; display: block;">خرید درون برنامه ای بازار و مایکت</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">اعتبارسنجی سروری رسیدهای کافه بازار و مایکت</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('mobile', 'realtime')">
             <div>
               <strong style="font-size: 13.5px; display: block;">جریان داده زنده (Realtime Stream)</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">کانکشن وب‌سوکت دوطرفه برای تغییرات جداول</span>
+              <span style="font-size: 12px; color: var(--text-muted);">کانکشن وب سوکت دوطرفه برای تغییرات جداول</span>
             </div>
           </button>
         `;
@@ -403,13 +403,13 @@
         return `
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('hosting', 'deployments')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">استقرارها و نسخه‌ها</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">مشاهده نسخه‌های فعال و تاریخچه بیلدها</span>
+              <strong style="font-size: 13.5px; display: block;">استقرارها و نسخه ها</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">مشاهده نسخه های فعال و تاریخچه بیلدها</span>
             </div>
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('hosting', 'domains')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">دامنه‌ها و گواهی SSL</strong>
+              <strong style="font-size: 13.5px; display: block;">دامنه ها و گواهی SSL</strong>
               <span style="font-size: 12px; color: var(--text-muted);">اتصال دامنه جدید و اعتبارسنجی DNS</span>
             </div>
           </button>
@@ -424,8 +424,8 @@
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('compliance', 'deeplinks')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">دیپ‌لینک اپلیکیشن موبایل</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">پیکربندی بازگشت خودکار تراکنش‌ها به اپ</span>
+              <strong style="font-size: 13.5px; display: block;">دیپ لینک اپلیکیشن موبایل</strong>
+              <span style="font-size: 12px; color: var(--text-muted);">پیکربندی بازگشت خودکار تراکنش ها به اپ</span>
             </div>
           </button>
         `;

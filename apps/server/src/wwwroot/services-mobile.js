@@ -86,7 +86,7 @@ async function savePushConfig(e) {
       body: JSON.stringify(body)
     });
     if (res.ok) {
-      showToast('تنظیمات درگاه‌های پوش ذخیره شد', 'success');
+      showToast('تنظیمات درگاه های پوش ذخیره شد', 'success');
     }
   } catch {
     showToast('خطا در ذخیره تنظیمات پوش', 'error');
@@ -136,12 +136,12 @@ async function loadIapPurchases() {
       const tbody = document.getElementById('mobile-iap-purchases-tbody');
       if (tbody) {
         if (!data.purchases || data.purchases.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">تراکنش خرید درون‌برنامه‌ای تاییدشده‌ای یافت نشد.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">تراکنش خرید درون برنامه ای تاییدشده ای یافت نشد.</td></tr>`;
         } else {
           tbody.innerHTML = data.purchases.map(p => `
             <tr>
               <td><code>${escapeHtml(p.transactionId)}</code></td>
-              <td><span class="badge ${p.store === 'cafebazaar' ? 'badge-active' : 'badge-neutral'}">${p.store === 'cafebazaar' ? 'کافه‌بازار' : 'مایکت'}</span></td>
+              <td><span class="badge ${p.store === 'cafebazaar' ? 'badge-active' : 'badge-neutral'}">${p.store === 'cafebazaar' ? 'کافه بازار' : 'مایکت'}</span></td>
               <td><code>${escapeHtml(p.productId)}</code></td>
               <td>${escapeHtml(p.userId || '-')}</td>
               <td>${Shamsi.toPersianDigits(Number(p.amountIrr / 10).toLocaleString('fa-IR'))} تومان</td>
@@ -188,7 +188,7 @@ async function verifyTestIapPurchase(e) {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      showToast(data.message || 'خرید درون‌برنامه‌ای تایید و ثبت شد', 'success');
+      showToast(data.message || 'خرید درون برنامه ای تایید و ثبت شد', 'success');
       loadIapPurchases();
     } else {
       showToast(data.message || 'اعتبارسنجی خرید ناموفق بود', 'error');
@@ -280,7 +280,7 @@ function toggleRealtimeWsConnect() {
         btnToggle.textContent = 'قطع اتصال';
         btnToggle.className = 'btn-danger';
       }
-      appendRealtimeLog('CONNECTED', 'اتصال وب‌سوکت با موفقیت برقرار شد.');
+      appendRealtimeLog('CONNECTED', 'اتصال وب سوکت با موفقیت برقرار شد.');
 
       if (realtimeWsPingTimer) clearInterval(realtimeWsPingTimer);
       realtimeWsPingTimer = setInterval(() => {
@@ -310,7 +310,7 @@ function toggleRealtimeWsConnect() {
         statusBadge.className = 'badge badge-paused';
       }
       if (btnToggle) {
-        btnToggle.textContent = 'اتصال به وب‌سوکت';
+        btnToggle.textContent = 'اتصال به وب سوکت';
         btnToggle.className = 'btn-primary';
       }
       if (realtimeWsPingTimer) {
@@ -332,7 +332,7 @@ function subscribeRealtimeWs() {
     return;
   }
   if (!realtimeWs || realtimeWs.readyState !== WebSocket.OPEN) {
-    showToast('ابتدا اتصال وب‌سوکت را برقرار کنید', 'warning');
+    showToast('ابتدا اتصال وب سوکت را برقرار کنید', 'warning');
     return;
   }
 

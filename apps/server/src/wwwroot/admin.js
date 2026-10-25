@@ -115,7 +115,7 @@ function initAdminNav() {
     pricingForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (adminUser.role !== 0) {
-        showToast('تنها مدیر ارشد سامانه مجاز به تغییر تعرفه‌ها می‌باشد.', 'warning');
+        showToast('تنها مدیر ارشد سامانه مجاز به تغییر تعرفه ها می باشد.', 'warning');
         return;
       }
 
@@ -155,7 +155,7 @@ function initAdminNav() {
         LockoutDurationMinutes: parseInt(document.getElementById('adm-sec-lockout-mins')?.value, 10) || 15,
         CorsAllowedOrigins: document.getElementById('adm-sec-cors')?.value?.trim() || '*',
 
-        PlatformName: document.getElementById('adm-infra-name')?.value?.trim() || 'لوکال‌می (LocalMe)',
+        PlatformName: document.getElementById('adm-infra-name')?.value?.trim() || 'لوکال می (LocalMe)',
         DefaultRegion: document.getElementById('adm-infra-region')?.value?.trim() || 'ir-thr-milad1',
         SovereignEgressNat: document.getElementById('adm-infra-nat')?.value?.trim() || '',
 
@@ -176,11 +176,11 @@ function initAdminNav() {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          showToast('تنظیمات کلان سامانه و متغیرهای عملیاتی با موفقیت به‌روزرسانی و در سامانه اعمال شدند.', 'success');
+          showToast('تنظیمات کلان سامانه و متغیرهای عملیاتی با موفقیت به روزرسانی و در سامانه اعمال شدند.', 'success');
           loadAdminPricing();
           loadAdminStats();
         } else {
-          showToast('خطا در به‌روزرسانی تنظیمات کلان سامانه.', 'error');
+          showToast('خطا در به روزرسانی تنظیمات کلان سامانه.', 'error');
         }
       } catch (err) {
         showToast('خطای شبکه در ارتباط با سرور: ' + (err?.message || ''), 'error');
@@ -207,7 +207,7 @@ function initModalForms() {
         });
         if (res.ok) {
           document.getElementById('modal-ticket-reply-msg').value = '';
-          showToast('پاسخ با موفقیت ارسال شد و وضعیت تیکت به‌روزرسانی گردید.', 'success');
+          showToast('پاسخ با موفقیت ارسال شد و وضعیت تیکت به روزرسانی گردید.', 'success');
           await loadAdminStats();
           openTicketModal(ticketId);
         } else {
@@ -259,7 +259,7 @@ function initModalForms() {
   if (saveRoleBtn) {
     saveRoleBtn.addEventListener('click', async () => {
       if (adminUser.role !== 0) {
-        showToast('تنها مدیر ارشد سامانه مجاز به تغییر نقش‌ها می‌باشد.', 'warning');
+        showToast('تنها مدیر ارشد سامانه مجاز به تغییر نقش ها می باشد.', 'warning');
         return;
       }
       const userId = document.getElementById('modal-user-id').textContent;
@@ -342,7 +342,7 @@ async function loadAdminUsers() {
       users.forEach(u => cachedUsers[u.id] = u);
 
       tbody.innerHTML = users.map(u => {
-        const roleLabel = u.role === 0 ? 'مدیر ارشد' : u.role === 1 ? 'اپراتور' : 'توسعه‌دهنده';
+        const roleLabel = u.role === 0 ? 'مدیر ارشد' : u.role === 1 ? 'اپراتور' : 'توسعه دهنده';
         const roleBadgeClass = u.role === 0 ? 'badge-paused' : u.role === 1 ? 'badge-info' : 'badge-active';
         const statusLabel = u.isActive ? 'فعال' : 'مسدود';
         const statusBadge = u.isActive ? 'badge-active' : 'badge-danger';
@@ -403,13 +403,13 @@ async function openUserModal(userId) {
   // Load user projects
   const projsTbody = document.getElementById('modal-user-projects-tbody');
   if (projsTbody) {
-    projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">در حال دریافت پروژه‌ها...</td></tr>';
+    projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">در حال دریافت پروژه ها...</td></tr>';
     try {
       const res = await fetch(`/_baas/v1/users/${userId}/projects`);
       if (res.ok) {
         const projs = await res.json();
         if (projs.length === 0) {
-          projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">کاربر تاکنون پروژه‌ای ایجاد نکرده است.</td></tr>';
+          projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">کاربر تاکنون پروژه ای ایجاد نکرده است.</td></tr>';
         } else {
           projsTbody.innerHTML = projs.map(p => `
             <tr>
@@ -422,7 +422,7 @@ async function openUserModal(userId) {
         }
       }
     } catch {
-      projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--color-danger);">خطا در دریافت لیست پروژه‌ها.</td></tr>';
+      projsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--color-danger);">خطا در دریافت لیست پروژه ها.</td></tr>';
     }
   }
 
@@ -458,7 +458,7 @@ async function loadAdminProjects() {
       projs.forEach(p => cachedProjects[p.id] = p);
 
       if (!projs || projs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">هیچ پروژه‌ای تعریف نشده است.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">هیچ پروژه ای تعریف نشده است.</td></tr>';
         return;
       }
 
@@ -495,7 +495,7 @@ function openProjectModal(projectId) {
 
   const toggleBtn = document.getElementById('btn-toggle-proj-status');
   if (toggleBtn) {
-    toggleBtn.textContent = p.status === 'Active' ? 'مسدودسازی موقت پروژه (Suspended)' : 'فعال‌سازی مجدد پروژه (Active)';
+    toggleBtn.textContent = p.status === 'Active' ? 'مسدودسازی موقت پروژه (Suspended)' : 'فعال سازی مجدد پروژه (Active)';
   }
 
   // Populate services and keys
@@ -571,7 +571,7 @@ async function loadAdminPricing() {
       setVal('adm-sec-cors', c.corsAllowedOrigins || '*');
 
       // Category 6: Sovereign Infrastructure
-      setVal('adm-infra-name', c.platformName || 'لوکال‌می (LocalMe)');
+      setVal('adm-infra-name', c.platformName || 'لوکال می (LocalMe)');
       setVal('adm-infra-region', c.defaultRegion || 'ir-thr-milad1');
       setVal('adm-infra-nat', c.sovereignEgressNat || '2.180.12.94 (Static Domestic NAT Active)');
 
@@ -664,7 +664,7 @@ function openTicketModal(ticketId) {
     let threadHtml = `
       <div class="thread-msg thread-msg-customer">
         <div class="thread-meta">
-          <span style="font-weight: 700; color: var(--text-main);">کاربر / توسعه‌دهنده (${escapeHtml(t.customerPhone)})</span>
+          <span style="font-weight: 700; color: var(--text-main);">کاربر / توسعه دهنده (${escapeHtml(t.customerPhone)})</span>
           <span>${escapeHtml(Shamsi.formatDate(t.createdAtUtc))}</span>
         </div>
         <div>${escapeHtml(t.message)}</div>
@@ -706,7 +706,7 @@ function closeModal(id) {
 
 function copyApiKey(key) {
   navigator.clipboard.writeText(key).then(() => {
-    showToast('کلید با موفقیت در کلیپ‌بورد کپی شد.', 'success');
+    showToast('کلید با موفقیت در کلیپ بورد کپی شد.', 'success');
   }).catch(() => {
     prompt('کلید دسترسی:', key);
   });
@@ -714,11 +714,11 @@ function copyApiKey(key) {
 
 function getServicePersianName(srv) {
   switch (srv.toLowerCase()) {
-    case 'database': return 'پایگاه داده رابطه‌ای (PostgreSQL)';
+    case 'database': return 'پایگاه داده رابطه ای (PostgreSQL)';
     case 'auth': return 'احراز هویت پیامکی (SMS OTP)';
-    case 'storage': return 'ذخیره‌سازی ابری فایل (Storage)';
+    case 'storage': return 'ذخیره سازی ابری فایل (Storage)';
     case 'functions': return 'توابع سرورلس لبه (Functions)';
-    case 'sms': return 'سامانه پیام‌رسان (SMS)';
+    case 'sms': return 'سامانه پیام رسان (SMS)';
     default: return srv;
   }
 }

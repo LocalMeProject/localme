@@ -65,7 +65,7 @@ const TabManager = {
       const isActive = tab.id === this.activeTabId;
       return `
         <div class="workspace-tab-item ${isActive ? 'active' : ''}" data-tab-id="${escapeHtml(tab.id)}" onclick="TabManager.activateTab('${escapeHtml(tab.id)}')">
-          ${tab.pinned ? '<span class="workspace-tab-pin" title="پیشخوان پین‌شده">📌</span>' : ''}
+          ${tab.pinned ? '<span class="workspace-tab-pin" title="پیشخوان پین شده">📌</span>' : ''}
           <span class="workspace-tab-title">${escapeHtml(tab.title)}</span>
           ${!tab.pinned ? `<span class="workspace-tab-close" title="بستن زبانه" onclick="event.stopPropagation(); TabManager.closeTab('${escapeHtml(tab.id)}')">&times;</span>` : ''}
         </div>
@@ -146,26 +146,26 @@ const TabManager = {
   getTitle(module, subview) {
     const titles = {
       'overview': { 'overview': 'داشبورد پروژه', 'metrics': 'داشبورد پروژه' },
-      'services': { 'list': 'مرکز مدیریت سرویس‌ها' },
+      'services': { 'list': 'مرکز مدیریت سرویس ها' },
       'service': {
         'database': 'پیکربندی پایگاه داده',
         'auth': 'پیکربندی احراز هویت',
-        'storage': 'پیکربندی ذخیره‌سازی ابری',
+        'storage': 'پیکربندی ذخیره سازی ابری',
         'functions': 'پیکربندی توابع لبه',
         'ipg': 'پیکربندی درگاه پرداخت شاپرک',
         'mobile': 'پیکربندی سرویس موبایل و پوش',
         'hosting': 'پیکربندی میزبانی وب',
         'compliance': 'پیکربندی انطباق و اینماد'
       },
-      'db': { 'dashboard': 'داشبورد دیتابیس', 'tables': 'جداول دیتابیس', 'sqleditor': 'ویرایشگر SQL', 'schema': 'ساختار اسکیما', 'backups': 'پشتیبان‌گیری' },
-      'auth': { 'dashboard': 'داشبورد احراز هویت', 'users': 'کاربران اپلیکیشن', 'sms-logs': 'گزارش پیامک‌ها', 'policies': 'سیاست‌های امنیتی' },
-      'storage': { 'dashboard': 'داشبورد ذخیره‌سازی', 'buckets': 'باکت‌های ابری', 'explorer': 'کاوشگر فایل‌ها', 'policies': 'سطوح دسترسی' },
+      'db': { 'dashboard': 'داشبورد دیتابیس', 'tables': 'جداول دیتابیس', 'sqleditor': 'ویرایشگر SQL', 'schema': 'ساختار اسکیما', 'backups': 'پشتیبان گیری' },
+      'auth': { 'dashboard': 'داشبورد احراز هویت', 'users': 'کاربران اپلیکیشن', 'sms-logs': 'گزارش پیامک ها', 'policies': 'سیاست های امنیتی' },
+      'storage': { 'dashboard': 'داشبورد ذخیره سازی', 'buckets': 'باکت های ابری', 'explorer': 'کاوشگر فایل ها', 'policies': 'سطوح دسترسی' },
       'functions': { 'dashboard': 'داشبورد توابع لبه', 'editor': 'توابع سرورلس', 'traces': 'مانیتورینگ توابع', 'env': 'متغیرهای محیطی' },
-      'ipg': { 'dashboard': 'داشبورد درگاه پرداخت', 'config': 'درگاه پرداخت شاپرک', 'ledger': 'تراکنش‌ها و اسناد', 'simulator': 'شبیه‌ساز پرداخت', 'reports': 'گزارش‌های مالی' },
-      'mobile': { 'dashboard': 'داشبورد سرویس‌های موبایل', 'push': 'سامانه اعلان Push', 'iap': 'خرید بازار و مایکت', 'realtime': 'جریان داده زنده' },
-      'hosting': { 'dashboard': 'داشبورد میزبانی وب', 'deployments': 'استقرارهای وب', 'domains': 'دامنه‌ها و SSL' },
-      'compliance': { 'dashboard': 'داشبورد انطباق', 'tokens': 'مجوزها و اینماد', 'deeplinks': 'دیپ‌لینک اپلیکیشن' },
-      'telemetry': { 'live': 'پخش زنده لاگ‌ها', 'audit': 'لاگ‌های امنیتی', 'usage': 'مصرف منابع' },
+      'ipg': { 'dashboard': 'داشبورد درگاه پرداخت', 'config': 'درگاه پرداخت شاپرک', 'ledger': 'تراکنش ها و اسناد', 'simulator': 'شبیه ساز پرداخت', 'reports': 'گزارش های مالی' },
+      'mobile': { 'dashboard': 'داشبورد سرویس های موبایل', 'push': 'سامانه اعلان Push', 'iap': 'خرید بازار و مایکت', 'realtime': 'جریان داده زنده' },
+      'hosting': { 'dashboard': 'داشبورد میزبانی وب', 'deployments': 'استقرارهای وب', 'domains': 'دامنه ها و SSL' },
+      'compliance': { 'dashboard': 'داشبورد انطباق', 'tokens': 'مجوزها و اینماد', 'deeplinks': 'دیپ لینک اپلیکیشن' },
+      'telemetry': { 'live': 'پخش زنده لاگ ها', 'audit': 'لاگ های امنیتی', 'usage': 'مصرف منابع' },
       'team': { 'members': 'اعضای تیم', 'roles': 'سطوح دسترسی' },
       'profile': { 'general': 'مشخصات حساب' },
       'settings': { 'general': 'تنظیمات پروژه', 'password': 'رمز اختصاصی', 'keys': 'کلیدهای API', 'danger': 'حذف پروژه' }
@@ -179,21 +179,17 @@ function renderBreadcrumbs(project, module, subview) {
   const container = document.getElementById('project-breadcrumbs');
   if (!container) return;
 
-  const projName = project ? escapeHtml(project.name) : 'پروژه‌ای انتخاب نشده';
+  project = project || window.activeProject || (window.userProjects && window.userProjects.find(p => p.id === window.activeProjectId));
+  const projName = project ? escapeHtml(project.name) : 'پروژه انتخاب نشده';
   const modMeta = MODULE_TITLES[module] || MODULE_TITLES['overview'];
   const subTitle = TabManager.getTitle(module, subview);
 
   container.innerHTML = `
     <a class="breadcrumb-link" href="#" onclick="event.preventDefault(); Router.navigate('overview', 'overview');">پلتفرم</a>
     <span class="breadcrumb-separator">/</span>
-    <a class="breadcrumb-link" href="#" onclick="event.preventDefault(); Router.navigate('overview', 'overview');">${projName}</a>
+    <span id="bc-project-name" class="breadcrumb-link" onclick="event.preventDefault(); Router.navigate('overview', 'overview');" style="cursor: pointer;">${projName}</span>
     <span class="breadcrumb-separator">/</span>
     <a class="breadcrumb-link" href="#" onclick="event.preventDefault(); showSidebarLevel2('${module}');">${escapeHtml(modMeta.title)}</a>
-    <span class="breadcrumb-separator">/</span>
-    <span class="breadcrumb-current">${escapeHtml(subTitle)}</span>
-  `;
-}
-window.renderBreadcrumbs = renderBreadcrumbs;
     <span class="breadcrumb-separator">/</span>
     <span class="breadcrumb-current">${escapeHtml(subTitle)}</span>
   `;
@@ -400,18 +396,18 @@ window.VIEW_TO_ROUTE = VIEW_TO_ROUTE;
 
 const MODULE_TITLES = {
   'overview': { icon: '', title: 'داشبورد پروژه' },
-  'services': { icon: '', title: 'مدیریت سرویس‌ها' },
+  'services': { icon: '', title: 'مدیریت سرویس ها' },
   'service': { icon: '', title: 'پیکربندی سرویس' },
-  'db': { icon: '', title: 'پایگاه داده رابطه‌ای' },
+  'db': { icon: '', title: 'پایگاه داده رابطه ای' },
   'auth': { icon: '', title: 'احراز هویت و کاربران' },
-  'storage': { icon: '', title: 'ذخیره‌سازی ابری' },
+  'storage': { icon: '', title: 'ذخیره سازی ابری' },
   'functions': { icon: '', title: 'توابع سرورلس' },
   'ipg': { icon: '', title: 'درگاه پرداخت شاپرک' },
-  'mobile': { icon: '', title: 'سرویس‌های موبایل و پوش' },
+  'mobile': { icon: '', title: 'سرویس های موبایل و پوش' },
   'hosting': { icon: '', title: 'میزبانی وب و استقرار' },
   'compliance': { icon: '', title: 'مجوزها و انطباق قانونی' },
-  'telemetry': { icon: '', title: 'پایش و لاگ‌ها' },
-  'team': { icon: '', title: 'اعضای تیم و دسترسی‌ها' },
+  'telemetry': { icon: '', title: 'پایش و لاگ ها' },
+  'team': { icon: '', title: 'اعضای تیم و دسترسی ها' },
   'profile': { icon: '', title: 'پروفایل و حساب کاربری' },
   'settings': { icon: '', title: 'تنظیمات پروژه' }
 };

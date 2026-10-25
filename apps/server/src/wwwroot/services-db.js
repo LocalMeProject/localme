@@ -71,7 +71,7 @@ async function deleteCurrentTable() {
     showToast('جدولی برای حذف انتخاب نشده است.', 'warning');
     return;
   }
-  if (!confirm(`آیا از حذف کامل جدول «${currentDbTable}» و تمامی داده‌های آن اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`)) {
+  if (!confirm(`آیا از حذف کامل جدول «${currentDbTable}» و تمامی داده های آن اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`)) {
     return;
   }
   try {
@@ -178,7 +178,7 @@ async function loadTableSchema(tableName) {
 
 async function runSqlQuery() {
   if (!activeProjectId) {
-    showToast('پروژه‌ای انتخاب نشده است.', 'warning');
+    showToast('پروژه ای انتخاب نشده است.', 'warning');
     return;
   }
   const editor = document.getElementById('sql-query-input') || document.getElementById('sql-editor-input');
@@ -397,7 +397,7 @@ function loadDbBackups() {
       <td style="font-size: 13.5px;">${escapeHtml(b.size)}</td>
       <td><span class="badge badge-active">${escapeHtml(b.status)}</span></td>
       <td style="font-size: 13.5px;">${escapeHtml(b.date)}</td>
-      <td><button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="showToast('لینک مستقیم امن دانلود اسنپ‌شات صادر گردید.', 'success')">دانلود نسخه</button></td>
+      <td><button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="showToast('لینک مستقیم امن دانلود اسنپ شات صادر گردید.', 'success')">دانلود نسخه</button></td>
     </tr>
   `).join('');
 }
@@ -415,7 +415,7 @@ function triggerManualSnapshot() {
   loadDbBackups();
   const lastTimeEl = document.getElementById('db-backup-last-time');
   if (lastTimeEl) lastTimeEl.textContent = 'لحظاتی پیش';
-  showToast('اسنپ‌شات دستی جدید با موفقیت ایجاد و رمزنگاری شد.', 'success');
+  showToast('اسنپ شات دستی جدید با موفقیت ایجاد و رمزنگاری شد.', 'success');
 }
 
 // 11.3 Auth SMS Analytics & Security Policies

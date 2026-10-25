@@ -20,14 +20,14 @@ function renderAllServices() {
   if (!activeProject) return;
 
   const services = [
-    { key: 'database', title: 'پایگاه داده رابطه‌ای (PostgreSQL REST)', desc: 'اسکیمای مجزا، جداول و دسترسی مستقیم RESTful', view: 'view-db' },
-    { key: 'auth', title: 'احراز هویت جامع کاربران (Auth)', desc: 'ورود پیامکی OTP با خط اختصاصی، کلمه‌عبور، و توکن‌های OAuth', view: 'view-auth' },
-    { key: 'storage', title: 'ذخیره‌سازی ابری چندرسانه‌ای (Blob Storage)', desc: 'باکت‌های ذخیره فایل‌ها و اسناد با صدور آدرس امن', view: 'view-storage' },
+    { key: 'database', title: 'پایگاه داده رابطه ای (PostgreSQL REST)', desc: 'اسکیمای مجزا، جداول و دسترسی مستقیم RESTful', view: 'view-db' },
+    { key: 'auth', title: 'احراز هویت جامع کاربران (Auth)', desc: 'ورود پیامکی OTP با خط اختصاصی، کلمه عبور، و توکن های OAuth', view: 'view-auth' },
+    { key: 'storage', title: 'ذخیره سازی ابری چندرسانه ای (Blob Storage)', desc: 'باکت های ذخیره فایل ها و اسناد با صدور آدرس امن', view: 'view-storage' },
     { key: 'functions', title: 'توابع سرورلس لبه (Edge Functions)', desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله سریع Jint', view: 'view-functions' },
-    { key: 'ipg', title: 'درگاه پرداخت شاپرک (Payment Gateway)', desc: 'تراکنش‌های شتابی آنلاین با کلیه بانک‌های عضو شاپرک', view: 'view-ipg-config' },
-    { key: 'mobile', title: 'سرویس‌های موبایل و پوش (Push & Realtime)', desc: 'اعلان به اپلیکیشن‌های موبایل، خرید کافه‌بازار و مایکت و وب‌سوکت', view: 'view-mobile-push' },
+    { key: 'ipg', title: 'درگاه پرداخت شاپرک (Payment Gateway)', desc: 'تراکنش های شتابی آنلاین با کلیه بانک های عضو شاپرک', view: 'view-ipg-config' },
+    { key: 'mobile', title: 'سرویس های موبایل و پوش (Push & Realtime)', desc: 'اعلان به اپلیکیشن های موبایل، خرید کافه بازار و مایکت و وب سوکت', view: 'view-mobile-push' },
     { key: 'hosting', title: 'میزبانی وب و استقرار ایستا (Hosting)', desc: 'استقرار SPA و اتصال دامنه اختصاصی با SSL خودکار', view: 'view-hosting-deployments' },
-    { key: 'compliance', title: 'مجوزها، اینماد و دیپ‌لینک قانونی', desc: 'تاییدیه نماد الکترونیکی و پیکربندی دیپ‌لینک اپلیکیشن موبایل', view: 'view-compliance-tokens' }
+    { key: 'compliance', title: 'مجوزها، اینماد و دیپ لینک قانونی', desc: 'تاییدیه نماد الکترونیکی و پیکربندی دیپ لینک اپلیکیشن موبایل', view: 'view-compliance-tokens' }
   ];
 
   let activeCount = 0;
@@ -52,7 +52,7 @@ function renderAllServices() {
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button type="button" class="${cfg.isEnabled ? 'btn-danger' : 'btn-primary'}" style="font-size: 12.5px; padding: 4px 12px;" onclick="${cfg.isEnabled ? `disableService('${s.key}')` : `quickEnableService('${s.key}')`}">
-              ${cfg.isEnabled ? 'غیرفعال‌سازی' : '⚡ فعال‌سازی سرویس'}
+              ${cfg.isEnabled ? 'غیرفعال سازی' : '⚡ فعال سازی سرویس'}
             </button>
             <button type="button" class="btn-secondary" style="font-size: 13px; padding: 4px 12px;" onclick="navigateToView('${s.view}')">
               ورود به صفحه سرویس
@@ -252,7 +252,7 @@ function bindServiceForm(formId, serviceKey, isEnabled, getSettingsFn) {
 }
 
 async function disableService(serviceKey) {
-  if (!confirm('آیا از غیرفعال‌سازی موقت این سرویس اطمینان دارید؟ در این مدت امکان فراخوانی API آن وجود نخواهد داشت.')) {
+  if (!confirm('آیا از غیرفعال سازی موقت این سرویس اطمینان دارید؟ در این مدت امکان فراخوانی API آن وجود نخواهد داشت.')) {
     return;
   }
   await saveServiceConfig(serviceKey, false, {});
@@ -353,16 +353,16 @@ function switchQuickstartLang(lang) {
 
   if (lang === 'curl') {
     if (titleEl) titleEl.textContent = 'HTTP REST API (cURL)';
-    codeEl.textContent = `# ۱. ورود با نام‌کاربری و رمز عبور (بدون نیاز به پیامک)
+    codeEl.textContent = `# ۱. ورود با نام کاربری و رمز عبور (بدون نیاز به پیامک)
 curl -X POST ${baseUrl}/_baas/v1/${slug}/auth/login \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${apiKey}" \\
   -d '{"username": "dev_user", "password": "MySecretPassword123"}'
 
-# ۲. دریافت چالش کپچا برای فرم‌های ورود ضد بات
+# ۲. دریافت چالش کپچا برای فرم های ورود ضد بات
 curl -X GET ${baseUrl}/_baas/v1/${slug}/auth/captcha
 
-# ۳. کوئری دیتابیس رابطه‌ای (PostgREST)
+# ۳. کوئری دیتابیس رابطه ای (PostgREST)
 curl -X GET "${baseUrl}/_baas/v1/${slug}/rest/products?limit=10" \\
   -H "x-api-key: ${apiKey}"`;
   } else if (lang === 'node') {
@@ -375,7 +375,7 @@ const localme = createClient({
   endpoint: '${baseUrl}'
 });
 
-// ۱. ورود با نام‌کاربری و کلمه‌عبور (بدون نیاز به پیامک OTP)
+// ۱. ورود با نام کاربری و کلمه عبور (بدون نیاز به پیامک OTP)
 const { user, tokens } = await localme.auth.login({
   username: 'developer_user',
   password: 'Password123'
@@ -383,7 +383,7 @@ const { user, tokens } = await localme.auth.login({
 // احراز هویت با موفقیت انجام شد
 const userId = user.id;
 
-// ۲. پرس‌وجو از جداول داده (PostgREST)
+// ۲. پرس وجو از جداول داده (PostgREST)
 const products = await localme.db.table('products').select('*').limit(10);
 // فهرست محصولات دریافتی: products`;
   } else if (lang === 'python') {
@@ -393,7 +393,7 @@ const products = await localme.db.table('products').select('*').limit(10);
 base_url = "${baseUrl}/_baas/v1/${slug}"
 headers = {"x-api-key": "${apiKey}", "Content-Type": "application/json"}
 
-# ۱. لاگین با نام‌کاربری و رمز عبور
+# ۱. لاگین با نام کاربری و رمز عبور
 res = requests.post(f"{base_url}/auth/login", json={
     "username": "developer_user",
     "password": "Password123"
@@ -420,7 +420,7 @@ final res = await http.post(
 );
 print('Login response: \${res.body}');
 
-// ۲. واکشی داده‌های جدول
+// ۲. واکشی داده های جدول
 final data = await http.get(Uri.parse('$baseUrl/rest/products'), headers: headers);`;
   }
 }
@@ -429,7 +429,7 @@ function copyQuickstartSnippet() {
   const codeEl = document.getElementById('quickstart-code-block');
   if (codeEl) {
     navigator.clipboard.writeText(codeEl.textContent).then(() => {
-      showToast('نمونه کد با موفقیت در کلیپ‌بورد کپی شد.', 'success');
+      showToast('نمونه کد با موفقیت در کلیپ بورد کپی شد.', 'success');
     }).catch(() => {
       prompt('کد جهت کپی:', codeEl.textContent);
     });
@@ -454,7 +454,7 @@ async function loadTeam() {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">عضوی در تیم ثبت نشده است.</td></tr>';
       } else {
         tbody.innerHTML = team.map(m => {
-          const roleLabel = m.role === 'Owner' ? 'مالک' : m.role === 'Developer' ? 'توسعه‌دهنده' : m.role === 'Operator' ? 'اپراتور' : 'حسابدار';
+          const roleLabel = m.role === 'Owner' ? 'مالک' : m.role === 'Developer' ? 'توسعه دهنده' : m.role === 'Operator' ? 'اپراتور' : 'حسابدار';
           return `
             <tr>
               <td style="font-weight: 700; font-size: 14px;">${escapeHtml(m.fullName)}</td>
@@ -546,7 +546,7 @@ async function loadAuditLogs() {
     if (res.ok) {
       const logs = await res.json();
       if (!logs || logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">رویداد ثبت‌شده‌ای در لاگ حسابرسی یافت نشد.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">رویداد ثبت شده ای در لاگ حسابرسی یافت نشد.</td></tr>';
       } else {
         tbody.innerHTML = logs.map(l => `
           <tr>

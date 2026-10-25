@@ -101,15 +101,15 @@
         const countEl = document.getElementById('adm-logs-stat-count');
         if (countEl) countEl.textContent = Shamsi.toPersianDigits(logs.length);
         if (showToasts) {
-          showToast(`فهرست لاگ‌ها به‌روزرسانی گردید (${logs.length} رکورد).`, 'info');
+          showToast(`فهرست لاگ ها به روزرسانی گردید (${logs.length} رکورد).`, 'info');
         }
       } else if (showToasts) {
-        showToast('خطا در دریافت لاگ‌های پلتفرم از سرور.', 'error');
+        showToast('خطا در دریافت لاگ های پلتفرم از سرور.', 'error');
       }
     } catch (err) {
       console.warn('Logs fetch error:', err);
       if (showToasts) {
-        showToast('خطای شبکه در دریافت لاگ‌ها: ' + (err?.message || ''), 'error');
+        showToast('خطای شبکه در دریافت لاگ ها: ' + (err?.message || ''), 'error');
       }
     } finally {
       isFetching = false;
@@ -198,13 +198,13 @@
     try {
       const res = await fetch('/_baas/v1/admin/logs', { method: 'DELETE' });
       if (res.ok) {
-        showToast('تمام لاگ‌های پلتفرم از بافر حافظه با موفقیت پاک‌سازی شدند.', 'success');
+        showToast('تمام لاگ های پلتفرم از بافر حافظه با موفقیت پاک سازی شدند.', 'success');
         fetchAdminLogs(false);
       } else {
-        showToast('خطا در پاک‌سازی لاگ‌ها.', 'error');
+        showToast('خطا در پاک سازی لاگ ها.', 'error');
       }
     } catch (err) {
-      showToast('خطای شبکه در پاک‌سازی لاگ‌ها: ' + (err?.message || ''), 'error');
+      showToast('خطای شبکه در پاک سازی لاگ ها: ' + (err?.message || ''), 'error');
     }
   }
 

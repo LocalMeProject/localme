@@ -15,10 +15,10 @@ function updateProfileModalData(user) {
   const roleEl = document.getElementById('modal-profile-role');
   if (roleEl) {
     if (user.isProjectScoped) {
-      roleEl.textContent = 'دسترسی تک‌پروژه';
+      roleEl.textContent = 'دسترسی تک پروژه';
       roleEl.className = 'badge badge-info';
     } else {
-      roleEl.textContent = user.role === 0 ? 'مدیر ارشد' : user.role === 1 ? 'اپراتور' : 'توسعه‌دهنده';
+      roleEl.textContent = user.role === 0 ? 'مدیر ارشد' : user.role === 1 ? 'اپراتور' : 'توسعه دهنده';
       roleEl.className = 'badge badge-active';
     }
   }
@@ -104,7 +104,7 @@ function initModals() {
           showToast('مشخصات پروژه با موفقیت ذخیره شد.', 'success');
           await loadUserProjects(activeProjectId);
         } else {
-          showToast('خطا در به‌روزرسانی پروژه.', 'error');
+          showToast('خطا در به روزرسانی پروژه.', 'error');
         }
       } catch {
         showToast('خطای شبکه در ارتباط با سرور.', 'error');
@@ -117,7 +117,7 @@ function initModals() {
     btnDelete.addEventListener('click', async () => {
       if (!activeProjectId) return;
 
-      if (!confirm(`آیا مطمئن هستید که می‌خواهید پروژه "${activeProject.name}" را برای همیشه حذف کنید؟`)) {
+      if (!confirm(`آیا مطمئن هستید که می خواهید پروژه "${activeProject.name}" را برای همیشه حذف کنید؟`)) {
         return;
       }
 
@@ -162,7 +162,7 @@ function initModals() {
             gateway,
             callbackUrl: window.location.href,
             idempotencyKey,
-            description: 'شارژ کیف پول توسعه‌دهنده'
+            description: 'شارژ کیف پول توسعه دهنده'
           })
         });
 
@@ -434,7 +434,7 @@ function initModals() {
             gateway: document.getElementById('ipg-default-psp')?.value || 'ZARINPAL',
             callbackUrl: window.location.origin + '/panel',
             idempotencyKey,
-            description: 'تست درگاه پرداخت شتاب پلتفرم لوکال‌می'
+            description: 'تست درگاه پرداخت شتاب پلتفرم لوکال می'
           })
         });
         if (res.ok) {
@@ -677,8 +677,9 @@ function initModals() {
   const filterLvl = document.getElementById('logs-filter-level');
   if (filterLvl) filterLvl.addEventListener('change', () => loadLogs());
 
+  var logsInterval = window.logsInterval = window.logsInterval || null;
   if (!logsInterval) {
-    logsInterval = setInterval(() => {
+    logsInterval = window.logsInterval = setInterval(() => {
       const activeTab = document.querySelector('.tab-view.active');
       const autoRefresh = document.getElementById('logs-auto-refresh');
       if (activeTab && activeTab.id === 'view-logs' && autoRefresh && autoRefresh.checked) {

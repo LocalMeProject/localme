@@ -97,7 +97,7 @@ async function loadIpgStudio() {
                 <td style="font-weight: 700; color: var(--brand-dark); font-size: 14px;">${escapeHtml(tomanStr)}</td>
                 <td style="font-size: 13.5px;">${escapeHtml(t.customerPhone)}</td>
                 <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(t.referenceId || '-')}</td>
-                <td><span class="badge ${t.isVerified ? 'badge-active' : 'badge-paused'}">${t.isVerified ? 'موفق و تسویه‌شده' : 'در انتظار تایید'}</span></td>
+                <td><span class="badge ${t.isVerified ? 'badge-active' : 'badge-paused'}">${t.isVerified ? 'موفق و تسویه شده' : 'در انتظار تایید'}</span></td>
                 <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(t.createdAtUtc))}</td>
               </tr>
             `;
@@ -158,7 +158,7 @@ async function executeSimulatedPayment() {
         gateway: psp,
         callbackUrl: window.location.href,
         idempotencyKey,
-        description: `تراکنش شبیه‌ساز شتاب پروژه ${activeProjectId}`
+        description: `تراکنش شبیه ساز شتاب پروژه ${activeProjectId}`
       })
     });
 
@@ -199,7 +199,7 @@ async function executeSimulatedPayment() {
     amount_rial: amountIrr,
     card_mask: cardNum.substring(0, 7) + '******' + cardNum.substring(cardNum.length - 4),
     settlement: 'PAID_TO_MERCHANT',
-    gateway: psp === 'BEHPARDAKHT' ? 'به‌پرداخت ملت' : psp === 'SEP' ? 'سامان کیش (SEP)' : 'زرین‌پال',
+    gateway: psp === 'BEHPARDAKHT' ? 'به پرداخت ملت' : psp === 'SEP' ? 'سامان کیش (SEP)' : 'زرین پال',
     timestamp: new Date().toISOString()
   };
 
@@ -250,7 +250,7 @@ async function loadIpgLedger() {
               <td style="font-weight: 700; color: var(--brand-dark); font-size: 14px;">${escapeHtml(tomanStr)}</td>
               <td style="font-size: 13.5px;">${escapeHtml(t.customerPhone || '-')}</td>
               <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(t.referenceId || t.rrn || '-')}</td>
-              <td><span class="badge badge-active">موفق و تسویه‌شده</span></td>
+              <td><span class="badge badge-active">موفق و تسویه شده</span></td>
               <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(t.createdAtUtc || new Date().toISOString()))}</td>
             </tr>
           `;
@@ -302,7 +302,7 @@ async function loadIpgReports() {
     const tbody = document.getElementById('ipg-settlement-tbody');
     if (tbody) {
       if (txCount === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز تسویه‌حسابی برای این پروژه انجام نشده است.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز تسویه حسابی برای این پروژه انجام نشده است.</td></tr>';
       } else {
         tbody.innerHTML = `
           <tr>

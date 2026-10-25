@@ -7,7 +7,7 @@
     {
       key: 'database',
       module: 'db',
-      title: 'پایگاه داده رابطه‌ای (PostgreSQL REST)',
+      title: 'پایگاه داده رابطه ای (PostgreSQL REST)',
       desc: 'اسکیمای مجزا و دسترسی مستقیم RESTful با سقف اتصالات مشخص و امنیت سطح ردیف.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
       defaultRoute: 'dashboard',
@@ -17,7 +17,7 @@
       key: 'auth',
       module: 'auth',
       title: 'احراز هویت جامع و کاربران (Auth)',
-      desc: 'ورود پیامکی OTP با خط خدماتی، کلمه عبور ایمن، کپچای خودکار و نشست‌های JWT.',
+      desc: 'ورود پیامکی OTP با خط خدماتی، کلمه عبور ایمن، کپچای خودکار و نشست های JWT.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-auth-dashboard'
@@ -25,8 +25,8 @@
     {
       key: 'storage',
       module: 'storage',
-      title: 'ذخیره‌سازی ابری چندرسانه‌ای (Storage)',
-      desc: 'باکت‌های ذخیره فایل‌ها، تصاویر و اسناد با صدور آدرس امن و کنترل حجم مصرفی.',
+      title: 'ذخیره سازی ابری چندرسانه ای (Storage)',
+      desc: 'باکت های ذخیره فایل ها، تصاویر و اسناد با صدور آدرس امن و کنترل حجم مصرفی.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-storage-dashboard'
@@ -35,7 +35,7 @@
       key: 'functions',
       module: 'functions',
       title: 'توابع سرورلس لبه (Edge Functions)',
-      desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله فوق‌سریع Jint با IP خروجی ایستا.',
+      desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله فوق سریع Jint با IP خروجی ایستا.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-functions-dashboard'
@@ -44,7 +44,7 @@
       key: 'ipg',
       module: 'ipg',
       title: 'درگاه پرداخت شاپرک (Payment Gateway)',
-      desc: 'تراکنش‌های شتابی آنلاین با کلیه بانک‌های عضو شاپرک، تسویه خودکار و شبیه‌ساز تست.',
+      desc: 'تراکنش های شتابی آنلاین با کلیه بانک های عضو شاپرک، تسویه خودکار و شبیه ساز تست.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-ipg-dashboard'
@@ -52,8 +52,8 @@
     {
       key: 'mobile',
       module: 'mobile',
-      title: 'سرویس‌های موبایل، پوش و خرید (Mobile)',
-      desc: 'سامانه اعلان به اپلیکیشن‌های اندروید و iOS، تایید خریدهای بازار و مایکت و وب‌سوکت.',
+      title: 'سرویس های موبایل، پوش و خرید (Mobile)',
+      desc: 'سامانه اعلان به اپلیکیشن های اندروید و iOS، تایید خریدهای بازار و مایکت و وب سوکت.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-mobile-dashboard'
@@ -62,7 +62,7 @@
       key: 'hosting',
       module: 'hosting',
       title: 'میزبانی وب و استقرار ایستا (Hosting)',
-      desc: 'استقرار وب‌اپلیکیشن‌ها و SPA با دامنه اختصاصی و صدور گواهی SSL خودکار.',
+      desc: 'استقرار وب اپلیکیشن ها و SPA با دامنه اختصاصی و صدور گواهی SSL خودکار.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-hosting-dashboard'
@@ -70,8 +70,8 @@
     {
       key: 'compliance',
       module: 'compliance',
-      title: 'انطباق قانونی، اینماد و دیپ‌لینک (Compliance)',
-      desc: 'مدیریت تاییدیه نماد اعتماد الکترونیکی، ساماندهی و نگاشت دیپ‌لینک اپلیکیشن.',
+      title: 'انطباق قانونی، اینماد و دیپ لینک (Compliance)',
+      desc: 'مدیریت تاییدیه نماد اعتماد الکترونیکی، ساماندهی و نگاشت دیپ لینک اپلیکیشن.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
       defaultRoute: 'dashboard',
       dashboardView: 'view-compliance-dashboard'
@@ -106,7 +106,7 @@
       if (active.length === 0) {
         activeContainer.innerHTML = `
           <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-sm); padding: 18px; text-align: center; color: var(--text-muted); font-size: 13.5px;">
-            هیچ سرویسی برای این پروژه هنوز فعال نشده است. از بخش زیر سرویس‌های مورد نیاز خود را فعال نمایید.
+            هیچ سرویسی برای این پروژه هنوز فعال نشده است. از بخش زیر سرویس های مورد نیاز خود را فعال نمایید.
           </div>
         `;
       } else {
@@ -167,7 +167,7 @@
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <button type="button" class="btn-primary" style="font-size: 12.5px; padding: 5px 14px;" onclick="Router.navigate('service', '${s.key}')">
-                  پیکربندی و فعال‌سازی سرویس
+                  پیکربندی و فعال سازی سرویس
                 </button>
               </div>
             </div>
@@ -242,7 +242,7 @@
               </button>
             ` : `
               <button type="button" class="btn-primary" style="font-size: 12.5px; padding: 5px 14px;" onclick="Router.navigate('service', '${s.key}')">
-                فعال‌سازی سرویس
+                فعال سازی سرویس
               </button>
             `}
           </div>
@@ -280,7 +280,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <button type="button" class="btn-secondary" style="font-size: 13px; padding: 6px 12px;" onclick="Router.navigate('services')">
-            ← بازگشت به فهرست سرویس‌ها
+            ← بازگشت به فهرست سرویس ها
           </button>
           <div>
             <h2 style="font-size: 19px; font-weight: 800; color: var(--text-main); margin-bottom: 2px;">پیکربندی اختصاصی: ${escapeHtml(sDef.title)}</h2>
@@ -302,9 +302,9 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <span style="font-size: 24px; color: #059669;">✓</span>
             <div>
-              <strong style="color: #065f46; font-size: 14.5px;">این سرویس هم‌اکنون برای این پروژه فعال است.</strong>
+              <strong style="color: #065f46; font-size: 14.5px;">این سرویس هم اکنون برای این پروژه فعال است.</strong>
               <div style="color: #047857; font-size: 13px; margin-top: 2px;">
-                کلیه فراخوانی‌های RESTful و اندپوینت‌های API این سرویس مجاز بوده و فعالانه در حال پاسخگویی می‌باشند.
+                کلیه فراخوانی های RESTful و اندپوینت های API این سرویس مجاز بوده و فعالانه در حال پاسخگویی می باشند.
               </div>
             </div>
           </div>
@@ -317,7 +317,7 @@
             <div>
               <strong style="color: #92400e; font-size: 14.5px;">این سرویس در حال حاضر برای این پروژه غیرفعال است.</strong>
               <div style="color: #b45309; font-size: 13px; margin-top: 2px;">
-                دسترسی به APIهای این سرویس کاملاً مسدود بوده و با خطای ۴۰۳ (SERVICE_DISABLED) رد می‌شود. داده‌های قبلی تا ${retentionDays} روز محفوظ خواهند بود.
+                دسترسی به APIهای این سرویس کاملاً مسدود بوده و با خطای ۴۰۳ (SERVICE_DISABLED) رد می شود. داده های قبلی تا ${retentionDays} روز محفوظ خواهند بود.
                 ${retentionUntil ? `<strong style="margin-right: 6px;">(مهلت نگهداری تا: ${retentionUntil})</strong>` : ''}
               </div>
             </div>
@@ -331,7 +331,7 @@
         <div class="card-header">
           <div>
             <div class="card-title">کلید اختصاصی دسترسی به سرویس (API Key)</div>
-            <div class="card-desc">از این کلید در هدر Authorization یا X-LocalMe-Key درخواست‌های کلاینت به این سرویس استفاده نمایید.</div>
+            <div class="card-desc">از این کلید در هدر Authorization یا X-LocalMe-Key درخواست های کلاینت به این سرویس استفاده نمایید.</div>
           </div>
           <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 4px 12px;" onclick="regenerateServiceKey('${sDef.key}')">
             صدور مجدد کلید
@@ -364,7 +364,7 @@
               </button>
             ` : `
               <button type="button" class="btn-primary" style="font-size: 13.5px; padding: 7px 24px; background: #059669;" onclick="enableDedicatedService('${sDef.key}')">
-                ⚡ فعال‌سازی این سرویس
+                ⚡ فعال سازی این سرویس
               </button>
             `}
           </div>
@@ -377,15 +377,15 @@
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
             <div>
               <div style="font-size: 14.5px; font-weight: 800; color: #991b1b; display: flex; align-items: center; gap: 8px;">
-                <span>غیرفعال‌سازی سرویس و سیاست نگهداری ۱۰ روزه داده‌ها</span>
+                <span>غیرفعال سازی سرویس و سیاست نگهداری ۱۰ روزه داده ها</span>
               </div>
               <div style="font-size: 13px; color: #7f1d1d; margin-top: 4px; line-height: 1.6; max-width: 680px;">
-                با کلیک بر روی دکمه زیر، دسترسی کلیه کلاینت‌ها و کاربران اپلیکیشن به APIهای این سرویس فوراً مسدود خواهد شد.
-                مطابق استاندارد امنیت ابری لوکال‌می، کلیه رکوردهای دیتابیس، فایل‌ها و تنظیمات پروژه شما به مدت <strong>۱۰ روز کامل</strong> محفوظ مانده و حذف نمی‌شوند تا در صورت نیاز به راحتی قابل بازگشت باشند.
+                با کلیک بر روی دکمه زیر، دسترسی کلیه کلاینت ها و کاربران اپلیکیشن به APIهای این سرویس فوراً مسدود خواهد شد.
+                مطابق استاندارد امنیت ابری لوکال می، کلیه رکوردهای دیتابیس، فایل ها و تنظیمات پروژه شما به مدت <strong>۱۰ روز کامل</strong> محفوظ مانده و حذف نمی شوند تا در صورت نیاز به راحتی قابل بازگشت باشند.
               </div>
             </div>
             <button type="button" class="btn-danger" style="font-size: 13px; padding: 8px 18px;" onclick="disableDedicatedService('${sDef.key}')">
-              غیرفعال‌سازی این سرویس
+              غیرفعال سازی این سرویس
             </button>
           </div>
         </div>
@@ -402,12 +402,12 @@
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">نام اسکیمای اختصاصی PostgreSQL</label>
               <input type="text" id="cfg-field-schema" class="input-field" value="${escapeHtml(settings['schema'] || `public_${window.activeProjectId}`)}" required />
-              <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">فضای نام ایزوله جداول و رکوردهای داده شما در پایگاه‌داده مرکزی.</span>
+              <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">فضای نام ایزوله جداول و رکوردهای داده شما در پایگاه داده مرکزی.</span>
             </div>
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">حداکثر اتصالات همزمان (Max Connections)</label>
               <input type="number" id="cfg-field-max-conn" class="input-field" value="${escapeHtml(settings['max_connections'] || '20')}" required />
-              <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">سقف کانکشن‌های استخر اتصالات اختصاص‌یافته به پروژه.</span>
+              <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">سقف کانکشن های استخر اتصالات اختصاص یافته به پروژه.</span>
             </div>
           </div>
         `;
@@ -415,16 +415,16 @@
         return `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش‌فرض ارسال پیامک OTP</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش فرض ارسال پیامک OTP</label>
               <select id="cfg-field-sms-provider" class="input-field">
                 <option value="kavenegar" ${settings['sms_provider'] === 'kavenegar' ? 'selected' : ''}>کاوانگار (Kavenegar)</option>
-                <option value="melipayamak" ${settings['sms_provider'] === 'melipayamak' ? 'selected' : ''}>ملی‌پیامک (MeliPayamak)</option>
+                <option value="melipayamak" ${settings['sms_provider'] === 'melipayamak' ? 'selected' : ''}>ملی پیامک (MeliPayamak)</option>
                 <option value="magfa" ${settings['sms_provider'] === 'magfa' ? 'selected' : ''}>مگفا (Magfa)</option>
               </select>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کلید وب‌سرویس پیامک (API Key اختصاصی)</label>
-              <input type="text" id="cfg-field-sms-key" class="input-field" value="${escapeHtml(settings['sms_api_key'] || '')}" placeholder="اختیاری - در صورت خالی بودن از درگاه پلتفرم استفاده می‌شود" />
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کلید وب سرویس پیامک (API Key اختصاصی)</label>
+              <input type="text" id="cfg-field-sms-key" class="input-field" value="${escapeHtml(settings['sms_api_key'] || '')}" placeholder="اختیاری - در صورت خالی بودن از درگاه پلتفرم استفاده می شود" />
             </div>
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">شماره خط فرستنده پیامک</label>
@@ -440,7 +440,7 @@
         return `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">سقف فضای ذخیره‌سازی ابری (مگابایت)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">سقف فضای ذخیره سازی ابری (مگابایت)</label>
               <input type="number" id="cfg-field-quota-mb" class="input-field" value="${escapeHtml(settings['quota_mb'] || '1024')}" required />
             </div>
             <div>
@@ -448,11 +448,11 @@
               <input type="number" id="cfg-field-max-file" class="input-field" value="${escapeHtml(settings['max_file_size_mb'] || '50')}" required />
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">دامنه‌های مجاز CORS</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">دامنه های مجاز CORS</label>
               <input type="text" id="cfg-field-cors" class="input-field" value="${escapeHtml(settings['cors'] || '*')}" required />
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">نام باکت عمومی پیش‌فرض</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">نام باکت عمومی پیش فرض</label>
               <input type="text" id="cfg-field-default-bucket" class="input-field" value="${escapeHtml(settings['default_bucket'] || 'assets')}" required />
             </div>
           </div>
@@ -465,7 +465,7 @@
               <input type="number" id="cfg-field-func-mem" class="input-field" value="${escapeHtml(settings['memory_limit_mb'] || '16')}" min="8" max="128" required />
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">حداکثر زمان مجاز اجرای تابع (میلی‌ثانیه)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">حداکثر زمان مجاز اجرای تابع (میلی ثانیه)</label>
               <input type="number" id="cfg-field-func-timeout" class="input-field" value="${escapeHtml(settings['timeout_seconds'] || '5000')}" min="500" max="30000" required />
             </div>
           </div>
@@ -476,8 +476,8 @@
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پرداخت شاپرک فعال</label>
               <select id="cfg-field-ipg-psp" class="input-field">
-                <option value="zarinpal" ${settings['psp'] === 'zarinpal' ? 'selected' : ''}>زرین‌پال (ZarinPal)</option>
-                <option value="behpardakht" ${settings['psp'] === 'behpardakht' ? 'selected' : ''}>به‌پرداخت ملت (Mellat)</option>
+                <option value="zarinpal" ${settings['psp'] === 'zarinpal' ? 'selected' : ''}>زرین پال (ZarinPal)</option>
+                <option value="behpardakht" ${settings['psp'] === 'behpardakht' ? 'selected' : ''}>به پرداخت ملت (Mellat)</option>
                 <option value="sep" ${settings['psp'] === 'sep' ? 'selected' : ''}>سامان کیش - سپ (SEP)</option>
                 <option value="sadad" ${settings['psp'] === 'sadad' ? 'selected' : ''}>سداد بانک ملی (Sadad)</option>
               </select>
@@ -492,7 +492,7 @@
         return `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش‌فرض ارسال پوش نوتیفیکیشن</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش فرض ارسال پوش نوتیفیکیشن</label>
               <select id="cfg-field-mobile-push-provider" class="input-field">
                 <option value="fcm" ${settings['default_provider'] === 'fcm' ? 'selected' : ''}>Firebase Cloud Messaging (FCM)</option>
                 <option value="najva" ${settings['default_provider'] === 'najva' ? 'selected' : ''}>نجوا (Najva Push)</option>
@@ -500,7 +500,7 @@
               </select>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">شناسه کلاینت کافه‌بازار (IAB Client ID)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">شناسه کلاینت کافه بازار (IAB Client ID)</label>
               <input type="text" id="cfg-field-mobile-bazaar-id" class="input-field" value="${escapeHtml(settings['bazaar_client_id'] || '')}" />
             </div>
           </div>
@@ -550,7 +550,7 @@
   };
 
   window.disableDedicatedService = async function(serviceKey) {
-    if (!confirm('آیا از غیرفعال‌سازی این سرویس اطمینان دارید؟ دسترسی کلاینت‌ها به API مسدود شده و داده‌های شما به مدت ۱۰ روز بدون تغییر در سرور نگهداری خواهند شد.')) {
+    if (!confirm('آیا از غیرفعال سازی این سرویس اطمینان دارید؟ دسترسی کلاینت ها به API مسدود شده و داده های شما به مدت ۱۰ روز بدون تغییر در سرور نگهداری خواهند شد.')) {
       return;
     }
     await saveServiceConfig(serviceKey, false, {});

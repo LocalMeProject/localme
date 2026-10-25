@@ -4,7 +4,7 @@ function copyFieldValue(inputId) {
   const el = document.getElementById(inputId);
   if (el) {
     navigator.clipboard.writeText(el.value).then(() => {
-      showToast('کلید دسترسی با موفقیت در کلیپ‌بورد کپی شد.', 'success');
+      showToast('کلید دسترسی با موفقیت در کلیپ بورد کپی شد.', 'success');
     }).catch(() => {
       prompt('کلید دسترسی:', el.value);
     });
@@ -27,7 +27,7 @@ function copyFieldValue(inputId) {
   const el = document.getElementById(inputId);
   if (el) {
     navigator.clipboard.writeText(el.value).then(() => {
-      showToast('کلید دسترسی با موفقیت در کلیپ‌بورد کپی شد.', 'success');
+      showToast('کلید دسترسی با موفقیت در کلیپ بورد کپی شد.', 'success');
     }).catch(() => {
       prompt('کلید دسترسی:', el.value);
     });

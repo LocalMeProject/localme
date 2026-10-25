@@ -71,10 +71,10 @@ async function initUserSession() {
       const roleBadge = document.getElementById('user-role-badge');
       if (roleBadge) {
         if (currentUser.isProjectScoped) {
-          roleBadge.textContent = 'دسترسی تک‌پروژه';
+          roleBadge.textContent = 'دسترسی تک پروژه';
           roleBadge.className = 'badge badge-info';
         } else {
-          roleBadge.textContent = currentUser.role === 0 ? 'مدیر ارشد' : currentUser.role === 1 ? 'اپراتور' : 'توسعه‌دهنده';
+          roleBadge.textContent = currentUser.role === 0 ? 'مدیر ارشد' : currentUser.role === 1 ? 'اپراتور' : 'توسعه دهنده';
         }
       }
 
@@ -156,12 +156,12 @@ async function loadUserProjects(selectIdToActivate = null) {
       window.userProjects = userProjects;
 
       if (!userProjects || userProjects.length === 0) {
-        if (switcher) switcher.innerHTML = '<option value="">هیچ پروژه‌ای وجود ندارد</option>';
+        if (switcher) switcher.innerHTML = '<option value="">هیچ پروژه ای وجود ندارد</option>';
         if (emptyState) emptyState.style.display = 'block';
         if (activeContainer) activeContainer.style.display = 'none';
         activeProjectId = null;
         activeProject = null;
-        setText('bc-project-name', 'پروژه‌ای انتخاب نشده');
+        setText('bc-project-name', 'پروژه ای انتخاب نشده');
         return;
       }
 
@@ -174,7 +174,7 @@ async function loadUserProjects(selectIdToActivate = null) {
         `).join('');
 
         // Find initial target project from URL or requested ID
-        const route = Router.parsePath();
+        const route = (window.Router && typeof window.Router.parsePath === 'function') ? window.Router.parsePath() : { slug: null };
         let targetProj = null;
         if (selectIdToActivate) {
           targetProj = userProjects.find(p => p.id === selectIdToActivate);
@@ -187,7 +187,9 @@ async function loadUserProjects(selectIdToActivate = null) {
 
         switcher.value = targetProj.id;
         activateProject(targetProj.id, false);
-        Router.handleRoute(true);
+        if (window.Router && typeof window.Router.handleRoute === 'function') {
+          Router.handleRoute(true);
+        }
 
         switcher.onchange = () => {
           activateProject(switcher.value, true);
@@ -207,6 +209,9 @@ async function activateProject(projectId, updateRoute = true) {
   if (!activeProject) return;
 
   setText('bc-project-name', activeProject.name);
+  if (typeof renderBreadcrumbs === 'function') {
+    renderBreadcrumbs(activeProject, window.Router?.currentModule || 'overview', window.Router?.currentSubview || 'overview');
+  }
 
   const statusBadge = document.getElementById('proj-status-badge');
   if (statusBadge) {
@@ -358,7 +363,7 @@ async function loadUserProfileView() {
   setText('prof-wallet-val', Shamsi.formatToman(currentUser.walletBalanceIrr));
   const roleEl = document.getElementById('prof-role-badge');
   if (roleEl) {
-    roleEl.textContent = currentUser.role === 0 ? 'مدیر ارشد پلتفرم' : currentUser.role === 1 ? 'اپراتور سیستم' : 'توسعه‌دهنده (طرح پایه)';
+    roleEl.textContent = currentUser.role === 0 ? 'مدیر ارشد پلتفرم' : currentUser.role === 1 ? 'اپراتور سیستم' : 'توسعه دهنده (طرح پایه)';
     roleEl.className = currentUser.role === 0 ? 'badge badge-active' : 'badge badge-info';
   }
 }

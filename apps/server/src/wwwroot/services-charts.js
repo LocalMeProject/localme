@@ -24,7 +24,7 @@ function renderDashboardCharts() {
       <div class="chart-card">
         <div class="chart-card-header">
           <div>
-            <div class="chart-card-title">جریان ترافیک و درخواست‌های ۲۴ ساعت گذشته</div>
+            <div class="chart-card-title">جریان ترافیک و درخواست های ۲۴ ساعت گذشته</div>
             <div class="chart-card-subtitle">توان عملیاتی بر حسب درخواست در دقیقه (Throughput RPM)</div>
           </div>
           <span class="badge badge-active" style="font-weight: 700;">اوکِی ۱,۴۲۰ req/m</span>
@@ -58,7 +58,7 @@ function renderDashboardCharts() {
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">توزیع تاخیر پاسخگویی (Latency Percentiles)</div>
-            <div class="chart-card-subtitle">پایش SLA پلتفرم بر اساس صدک‌های واقعی شتاب و دیتابیس</div>
+            <div class="chart-card-subtitle">پایش SLA پلتفرم بر اساس صدک های واقعی شتاب و دیتابیس</div>
           </div>
           <span class="badge badge-active">SLA ۹۹.۹۸٪</span>
         </div>
@@ -67,7 +67,7 @@ function renderDashboardCharts() {
           <div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
               <span>صدک ۵۰ (میانه پاسخگویی دیتابیس و هسته):</span>
-              <strong style="color: #059669;">۱۲ میلی‌ثانیه (عالی)</strong>
+              <strong style="color: #059669;">۱۲ میلی ثانیه (عالی)</strong>
             </div>
             <div style="background: #e2e8f0; height: 10px; border-radius: 9999px; overflow: hidden;">
               <div style="background: #10b981; width: 14%; height: 100%; border-radius: 9999px;"></div>
@@ -76,8 +76,8 @@ function renderDashboardCharts() {
           <!-- p95 -->
           <div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
-              <span>صدک ۹۵ (توابع لبه و وب‌سرویس‌ها):</span>
-              <strong style="color: #0284c7;">۳۸ میلی‌ثانیه (مطلوب)</strong>
+              <span>صدک ۹۵ (توابع لبه و وب سرویس ها):</span>
+              <strong style="color: #0284c7;">۳۸ میلی ثانیه (مطلوب)</strong>
             </div>
             <div style="background: #e2e8f0; height: 10px; border-radius: 9999px; overflow: hidden;">
               <div style="background: #0284c7; width: 38%; height: 100%; border-radius: 9999px;"></div>
@@ -86,8 +86,8 @@ function renderDashboardCharts() {
           <!-- p99 -->
           <div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
-              <span>صدک ۹۹ (تراکنش‌های شتابی و بارگذاری رسانه):</span>
-              <strong style="color: #d97706;">۹۴ میلی‌ثانیه (زیر آستانه هشدار)</strong>
+              <span>صدک ۹۹ (تراکنش های شتابی و بارگذاری رسانه):</span>
+              <strong style="color: #d97706;">۹۴ میلی ثانیه (زیر آستانه هشدار)</strong>
             </div>
             <div style="background: #e2e8f0; height: 10px; border-radius: 9999px; overflow: hidden;">
               <div style="background: #f59e0b; width: 68%; height: 100%; border-radius: 9999px;"></div>
@@ -103,8 +103,8 @@ function renderDashboardCharts() {
       <div class="chart-card">
         <div class="chart-card-header">
           <div>
-            <div class="chart-card-title">شاخص‌های بار محاسباتی و منابع ابری اختصاصی</div>
-            <div class="chart-card-subtitle">حافظه مقیم PostgreSQL، دیسک NVMe و محیط‌های ایزوله Jint</div>
+            <div class="chart-card-title">شاخص های بار محاسباتی و منابع ابری اختصاصی</div>
+            <div class="chart-card-subtitle">حافظه مقیم PostgreSQL، دیسک NVMe و محیط های ایزوله Jint</div>
           </div>
         </div>
         <div class="gauge-grid">
@@ -135,7 +135,7 @@ function renderDashboardCharts() {
               <path class="gauge-bar" stroke="#8b5cf6" stroke-dasharray="20, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               <text x="18" y="21" font-size="8.5" font-weight="bold" fill="#0f172a" text-anchor="middle" transform="rotate(90 18 18)" font-family="Vazirmatn">۲/۱۰</text>
             </svg>
-            <div class="gauge-label">پردازش‌های لبه</div>
+            <div class="gauge-label">پردازش های لبه</div>
             <div class="gauge-sub">۲ ورکر فعال همزمان</div>
           </div>
         </div>
@@ -146,7 +146,7 @@ function renderDashboardCharts() {
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">وضعیت سلامت زیرساخت ابری ملی (Sovereign Cloud Mesh)</div>
-            <div class="chart-card-subtitle">شبکه توزیع پاپ‌سایت‌های داخلی و درگاه‌های رسمی</div>
+            <div class="chart-card-subtitle">شبکه توزیع پاپ سایت های داخلی و درگاه های رسمی</div>
           </div>
         </div>
         <div class="uptime-grid">
@@ -160,7 +160,7 @@ function renderDashboardCharts() {
           </div>
           <div class="uptime-item">
             <span><span class="uptime-dot"></span>درگاه شاپرک Shetab Ledger</span>
-            <span style="color: #059669; font-weight: 700; font-size: 12px;">زیرساخت زرین‌پال</span>
+            <span style="color: #059669; font-weight: 700; font-size: 12px;">زیرساخت زرین پال</span>
           </div>
           <div class="uptime-item">
             <span><span class="uptime-dot"></span>موتور اسکریپت Jint Edge</span>

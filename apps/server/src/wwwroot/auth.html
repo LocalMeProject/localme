@@ -15,7 +15,7 @@
     <div class="topbar-brand">
       <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
         <span class="brand-badge">LM</span>
-        <span class="brand-title">لوکال‌می</span>
+        <span class="brand-title">لوکال می</span>
       </a>
     </div>
     <div style="display: flex; gap: 8px;">
@@ -28,14 +28,14 @@
   <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
     <div class="card" style="width: 100%; max-width: 460px; margin-bottom: 0;">
       <div style="text-align: center; margin-bottom: 20px;">
-        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">ورود به سامانه لوکال‌می</h2>
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">ورود به سامانه لوکال می</h2>
         <p id="auth-subtitle" style="font-size: 13px; color: var(--text-muted);">روش احراز هویت مورد نظر خود را انتخاب نمایید</p>
       </div>
 
       <!-- Auth Mode Selector Tabs -->
       <div style="display: flex; background: var(--bg-subtle); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
         <button type="button" id="tab-btn-otp" class="btn-primary" style="flex: 1; font-size: 13px; padding: 6px 4px; border-radius: 4px; justify-content: center;" onclick="switchAuthTab('otp')">
-          پیامک تایید (پیش‌فرض)
+          پیامک تایید (پیش فرض)
         </button>
         <button type="button" id="tab-btn-userpass" class="btn-secondary" style="flex: 1; font-size: 13px; padding: 6px 4px; border-radius: 4px; justify-content: center;" onclick="switchAuthTab('userpass')">
           نام کاربری و رمز
@@ -52,7 +52,7 @@
           <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">ورود سریع با پیامک تایید:</div>
           <div style="display: grid; gap: 6px;">
             <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989121112233', '/panel')">
-              <span>توسعه‌دهنده (سینا والی زاده)</span>
+              <span>توسعه دهنده (سینا والی زاده)</span>
               <span class="badge badge-active">پنل کلاینت</span>
             </button>
             <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989120000001', '/admin')">
@@ -94,7 +94,7 @@
           <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">انتخاب سریع حساب کاربری (تست):</div>
           <div style="display: grid; gap: 6px;">
             <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('sina', 'developer123456')">
-              <span>توسعه‌دهنده (sina)</span>
+              <span>توسعه دهنده (sina)</span>
               <span class="badge badge-active">developer123456</span>
             </button>
             <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('admin', 'admin123456')">
@@ -130,7 +130,7 @@
       <!-- TAB 3: Project-Scoped Credentials Form -->
       <div id="pane-projpass" style="display: none;">
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; font-size: 13px; color: #166534; line-height: 1.5;">
-          <strong>دسترسی اختصاصی تک‌پروژه:</strong> با وارد کردن اسلاگ پروژه و رمز عبور اختصاصی آن، مستقیماً وارد محیط همان پروژه می‌شوید و دسترسی به حساب اصلی و سایر پروژه‌ها نخواهید داشت.
+          <strong>دسترسی اختصاصی تک پروژه:</strong> با وارد کردن اسلاگ پروژه و رمز عبور اختصاصی آن، مستقیماً وارد محیط همان پروژه می شوید و دسترسی به حساب اصلی و سایر پروژه ها نخواهید داشت.
         </div>
 
         <form id="form-projpass">
@@ -141,7 +141,7 @@
 
           <div style="margin-bottom: 16px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">رمز عبور اختصاصی پروژه</label>
-            <input type="password" id="login-proj-password" class="input-field" placeholder="رمز تعیین‌شده توسط مالک پروژه" required />
+            <input type="password" id="login-proj-password" class="input-field" placeholder="رمز تعیین شده توسط مالک پروژه" required />
           </div>
 
           <div id="projpass-error-hint" style="display: none; font-size: 13px; color: var(--color-danger); margin-bottom: 12px; padding: 8px 12px; background: #fee2e2; border-radius: 4px;"></div>
@@ -281,7 +281,7 @@
             submitBtn.textContent = 'تایید و ورود به پنل';
             if (data.codeForTesting) {
               codeInput.value = data.codeForTesting;
-              testHint.textContent = `کد پیامک‌شده تستی: ${data.codeForTesting}`;
+              testHint.textContent = `کد پیامک شده تستی: ${data.codeForTesting}`;
             }
           } else {
             showToast(data.message || 'خطا در ارسال پیامک', 'error');

@@ -9,7 +9,7 @@ async function loadProjectBuckets() {
     if (res.ok) {
       const buckets = await res.json();
       if (!buckets || buckets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">باکتی برای ذخیره‌سازی فایل‌ها ایجاد نشده است.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">باکتی برای ذخیره سازی فایل ها ایجاد نشده است.</td></tr>';
         return;
       }
 
@@ -25,7 +25,7 @@ async function loadProjectBuckets() {
             <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(b.createdAtUtc))}</td>
             <td>
               <div style="display: flex; gap: 4px;">
-                <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 2px 8px;" onclick="switchStorageBucket('${escapeHtml(b.name)}')">فایل‌ها</button>
+                <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 2px 8px;" onclick="switchStorageBucket('${escapeHtml(b.name)}')">فایل ها</button>
                 <button type="button" class="btn-danger" style="font-size: 12.5px; padding: 2px 8px;" onclick="deleteStorageBucket('${escapeHtml(b.name)}')">حذف</button>
               </div>
             </td>
@@ -51,7 +51,7 @@ function switchStorageBucket(bucketName) {
 
 async function deleteStorageBucket(bucketName) {
   if (!activeProjectId || !bucketName) return;
-  if (!confirm(`آیا از حذف باکت "${bucketName}" و کلیه فایل‌های درون آن اطمینان دارید؟`)) return;
+  if (!confirm(`آیا از حذف باکت "${bucketName}" و کلیه فایل های درون آن اطمینان دارید؟`)) return;
   try {
     const res = await fetch(`/_baas/v1/${activeProjectId}/storage/buckets/${encodeURIComponent(bucketName)}`, {
       method: 'DELETE'
@@ -156,7 +156,7 @@ async function loadStorageExplorerForBucket(bucketName) {
 function copyFileDownloadLink(relUrl) {
   const fullUrl = window.location.origin + relUrl;
   navigator.clipboard.writeText(fullUrl).then(() => {
-    showToast('آدرس مستقیم امن بارگیری فایل در کلیپ‌بورد کپی شد.', 'success');
+    showToast('آدرس مستقیم امن بارگیری فایل در کلیپ بورد کپی شد.', 'success');
   }).catch(() => {
     prompt('آدرس فایل:', fullUrl);
   });
@@ -218,11 +218,11 @@ async function saveStoragePolicies(e) {
     force_download: document.getElementById('storage-policy-force-download')?.checked || false
   };
   await saveServiceConfig('storage', true, settings);
-  showToast('سیاست‌های ذخیره‌سازی ابری با موفقیت ذخیره شدند.', 'success');
+  showToast('سیاست های ذخیره سازی ابری با موفقیت ذخیره شدند.', 'success');
 }
 
 // 11.5 Edge Functions Traces & Env & Live Testing
-let funcEnvVars = [];
+// (Environment variables managed in services-compute.js)
 
 async function loadHosting() {
   if (!activeProjectId || !activeProject) return;
@@ -241,7 +241,7 @@ async function loadHosting() {
       if (res.ok) {
         const deps = await res.json();
         if (!deps || deps.length === 0) {
-          depTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز نسخه‌ای مستقر نشده است.</td></tr>';
+          depTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز نسخه ای مستقر نشده است.</td></tr>';
         } else {
           depTbody.innerHTML = deps.map(d => `
             <tr>
@@ -252,7 +252,7 @@ async function loadHosting() {
               <td><span class="badge badge-active">${escapeHtml(d.status)}</span></td>
               <td>${Shamsi.toPersianDigits((d.sizeBytes / (1024 * 1024)).toFixed(1))} MB</td>
               <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(d.deployedAtUtc))}</td>
-              <td><a href="${escapeHtml(d.previewUrl)}" target="_blank" class="btn-secondary" style="font-size: 13px; padding: 3px 10px; text-decoration: none;">پیش‌نمایش</a></td>
+              <td><a href="${escapeHtml(d.previewUrl)}" target="_blank" class="btn-secondary" style="font-size: 13px; padding: 3px 10px; text-decoration: none;">پیش نمایش</a></td>
             </tr>
           `).join('');
         }
@@ -378,7 +378,7 @@ async function loadCompliance() {
 }
 
 // 10. Live Logs & Telemetry Stream
-let logsInterval = null;
+var logsInterval = window.logsInterval = window.logsInterval || null;
 
 async function loadComplianceDeeplinks() {
   if (!activeProjectId) return;
@@ -416,10 +416,10 @@ async function saveDeeplinksConfig(e) {
       })
     });
     if (res.ok) {
-      showToast('تنظیمات دیپ‌لینک اپلیکیشن موبایل با موفقیت در فایلهای assetlinks و apple-app-site-association ذخیره گردید.', 'success');
+      showToast('تنظیمات دیپ لینک اپلیکیشن موبایل با موفقیت در فایلهای assetlinks و apple-app-site-association ذخیره گردید.', 'success');
     }
   } catch (err) {
-    showToast('خطا در ذخیره دیپ‌لینک: ' + err.message, 'error');
+    showToast('خطا در ذخیره دیپ لینک: ' + err.message, 'error');
   }
 }
 

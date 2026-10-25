@@ -2,22 +2,22 @@
 var funcEnvVars = window.funcEnvVars = window.funcEnvVars || [];
 
 const SCRIPT_TEMPLATES = {
-  webhook: `// استاندارد مدیریت وب‌هوک ورودی (JSON Webhook Handler)
+  webhook: `// استاندارد مدیریت وب هوک ورودی (JSON Webhook Handler)
 function handler(req) {
   const body = req || {};
-  // پردازش و ذخیره ورودی وب‌هوک
+  // پردازش و ذخیره ورودی وب هوک
   const rawPayload = JSON.stringify(body);
   
   return {
     success: true,
-    message: "وب‌هوک با موفقیت پردازش شد",
+    message: "وب هوک با موفقیت پردازش شد",
     event_id: "evt_" + Math.random().toString(36).substring(2, 9),
     processed_at: new Date().toISOString()
   };
 }
 handler(context);`,
 
-  validator: `// اعتبارسنجی ورودی داده‌های تراکنش و فیلتر کردن مقادیر
+  validator: `// اعتبارسنجی ورودی داده های تراکنش و فیلتر کردن مقادیر
 function handler(req) {
   const data = req || {};
   const errors = [];
@@ -44,7 +44,7 @@ function handler(req) {
 }
 handler(context);`,
 
-  shaparak: `// پردازش کال‌بک درگاه پرداخت شاپرک
+  shaparak: `// پردازش کال بک درگاه پرداخت شاپرک
 function handler(req) {
   const authority = req ? req.authority : "";
   const status = req ? req.status : "";
@@ -64,7 +64,7 @@ function handler(req) {
 }
 handler(context);`,
 
-  sms: `// تریگر هوشمند ارسال پیامک کد تایید و پیام خوش‌آمد
+  sms: `// تریگر هوشمند ارسال پیامک کد تایید و پیام خوش آمد
 function handler(req) {
   const phone = req ? req.phone : "09120000000";
   const code = Math.floor(100000 + Math.random() * 900000);
@@ -80,11 +80,11 @@ function handler(req) {
 }
 handler(context);`,
 
-  transform: `// تغییر و غنی‌سازی ساختار داده (Data Transformation)
+  transform: `// تغییر و غنی سازی ساختار داده (Data Transformation)
 function handler(req) {
   const items = (req && req.items) ? req.items : [
-    { title: "لپ‌تاپ گیمینگ", price: 45000000 },
-    { title: "ماوس بی‌سیم", price: 1200000 }
+    { title: "لپ تاپ گیمینگ", price: 45000000 },
+    { title: "ماوس بی سیم", price: 1200000 }
   ];
   
   const enriched = items.map(function(item) {
@@ -226,7 +226,7 @@ async function saveActiveFunctionScript() {
     });
 
     if (res.ok) {
-      showToast(`اسکریپت "${slug}" با موفقیت به‌روزرسانی و در پروژه ذخیره گردید.`, 'success');
+      showToast(`اسکریپت "${slug}" با موفقیت به روزرسانی و در پروژه ذخیره گردید.`, 'success');
       await loadProjectFunctions();
       openScriptEditor(slug);
     } else {
@@ -388,7 +388,7 @@ async function loadFunctionsTraces() {
     if (res.ok) {
       const logs = await res.json();
       if (!logs || logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">داده تله‌متری جدیدی ثبت نشده است.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">داده تله متری جدیدی ثبت نشده است.</td></tr>';
       } else {
         const metricTotal = document.getElementById('fn-metric-total');
         if (metricTotal) metricTotal.textContent = Shamsi.toPersianDigits(logs.length);

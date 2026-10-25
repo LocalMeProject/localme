@@ -3,92 +3,453 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LocalMe | پلتفرم چندمستاجره توسعه ابری</title>
+  
+  <!-- Primary Meta Tags & SEO -->
+  <title>LocalMe | پلتفرم ابری و بک اند یکپارچه برای توسعه دهندگان موبایل (BaaS ایران)</title>
+  <meta name="title" content="LocalMe | پلتفرم ابری و بک اند یکپارچه برای توسعه دهندگان موبایل (BaaS ایران)" />
+  <meta name="description" content="لوکال می سریع ترین پلتفرم ابری Backend-as-a-Service بومی ایران برای توسعه دهندگان فلاتر، ری اکت نیتیو، کاتلین و سوئیفت. احراز هویت پیامکی، اعتبارسنجی خرید درون برنامه ای کافه بازار و مایکت، اعلان پوش، سوکت زنده و پایگاه داده با تاخیر زیر ۱۰ میلی ثانیه در دیتاسنترهای تهران." />
+  <meta name="keywords" content="بک اند موبایل, BaaS ایران, توسعه اپلیکیشن موبایل, بک اند فلاتر, بک اند ری اکت نیتیو, احراز هویت پیامکی, خرید درون برنامه ای کافه بازار, تایید خرید مایکت, نوتیفیکیشن موبایل, ذخیره سازی ابری ایران, دیتابیس ابری موبایل, لوکال می" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <meta name="author" content="LocalMe Project" />
+  <link rel="canonical" href="https://localme.ir/" />
+
+  <!-- OpenGraph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://localme.ir/" />
+  <meta property="og:title" content="LocalMe | پلتفرم ابری و بک اند یکپارچه برای توسعه دهندگان موبایل" />
+  <meta property="og:description" content="بدون نیاز به سرور و کدنویسی بک اند، اپلیکیشن های موبایل خود را با پایگاه داده، احراز هویت پیامکی، تایید خرید بازار و مایکت، پوش نوتیفیکیشن و وب سوکت زنده در لوکال می راه اندازی کنید." />
+  <meta property="og:image" content="https://localme.ir/favicon.ico" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می (LocalMe)" />
+
+  <!-- Twitter Cards -->
+  <meta property="twitter:card" content="summary" />
+  <meta property="twitter:url" content="https://localme.ir/" />
+  <meta property="twitter:title" content="LocalMe | بستر ابری توسعه سریع اپلیکیشن های موبایل در ایران" />
+  <meta property="twitter:description" content="ارائه سرویس های آماده بک اند ویژه توسعه دهندگان موبایل: ورود پیامکی، تایید خرید درون برنامه ای، نوتیفیکیشن پوش، وب سوکت و ذخیره سازی فایل با سرورهای پرسرعت مستقر در تهران." />
+  <meta property="twitter:image" content="https://localme.ir/favicon.ico" />
+
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Schema.org JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "LocalMe",
+        "operatingSystem": "Android, iOS, Web, Flutter, React Native",
+        "applicationCategory": "DeveloperApplication",
+        "description": "پلتفرم ابری چندمستاجره Backend-as-a-Service بومی ایران برای تسریع توسعه اپلیکیشن های موبایل با خدمات احراز هویت پیامکی، تایید خرید درون برنامه ای کافه بازار و مایکت، پوش نوتیفیکیشن، وب سوکت و پایگاه داده.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "IRR"
+        }
+      },
+      {
+        "@type": "Organization",
+        "name": "لوکال می",
+        "url": "https://localme.ir",
+        "logo": "https://localme.ir/favicon.ico",
+        "sameAs": [
+          "https://github.com/LocalMeProject/localme"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "لوکال می چه کمکی به توسعه دهندگان اپلیکیشن موبایل می کند؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "لوکال می تمام نیازمندی های سمت سرور اپلیکیشن های موبایل شامل پایگاه داده، احراز هویت با پیامک، تایید امن خرید درون برنامه ای بازار و مایکت، پوش نوتیفیکیشن و ذخیره سازی ابری فایل ها را به صورت آماده در اختیار شما می گذارد تا بدون نیاز به مدیریت سرور و کدنویسی بک اند، تنها روی طراحی تجربه کاربری تمرکز کنید."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "آیا اعتبارسنجی خریدهای کافه بازار و مایکت در لوکال می امن است؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "بله، لوکال می دارای موتور تایید مستقیم سرور به سرور با بازار و مایکت است و با ثبت شناسه توکن و جلوگیری از حملات Replay، از پذیرش خریدهای تکراری یا دستکاری شده به طور کامل جلوگیری می نماید."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "وضعیت سرعت و دسترسی سرورهای لوکال می در ایران چگونه است؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "تمامی سرویس ها در مراکز داده امن تهران با اتصال مستقیم به شبکه تبادل ترافیک ملی (IXP) میزبانی می شوند. تاخیر پاسخگویی روی اپراتورهای همراه اول، ایرانسل و رایتل زیر ۱۰ میلی ثانیه است و ترافیک کاربران کاملا نیم بها و پایدار است."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    .mobile-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .metric-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .metric-value {
+      font-size: 26px;
+      font-weight: 900;
+      color: #065f46;
+      margin-bottom: 4px;
+      font-family: var(--font-persian);
+    }
+    .metric-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .metric-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .code-tabs-wrapper {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 40px auto 0 auto;
+      max-width: 900px;
+      text-align: left;
+      direction: ltr;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+    }
+    .code-tab-nav {
+      display: flex;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0 12px;
+    }
+    .code-nav-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      padding: 10px 16px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 140ms ease;
+    }
+    .code-nav-btn.active {
+      color: #34d399;
+      border-bottom-color: #10b981;
+      font-weight: 700;
+    }
+    .code-content-block {
+      display: none;
+      padding: 20px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #e2e8f0;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .code-content-block.active {
+      display: block;
+    }
+    .faq-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
+      text-align: right;
+    }
+    .faq-card h4 {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+    .faq-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.8;
+      margin: 0;
+    }
+  </style>
 </head>
 <body style="background: #ffffff;">
 
-  <!-- Minimal Header -->
+  <!-- Header -->
   <header class="landing-nav">
     <div style="display: flex; align-items: center; gap: 28px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="brand-badge">LM</span>
-        <span class="brand-title">لوکال‌می</span>
+        <span class="brand-title">لوکال می</span>
       </div>
       <nav style="display: flex; gap: 20px; font-size: 13.5px; font-weight: 500;">
-        <a href="#features" style="color: var(--text-muted); text-decoration: none;">سرویس‌ها</a>
-        <a href="#pricing" style="color: var(--text-muted); text-decoration: none;">تعرفه‌ها</a>
+        <a href="#mobile-features" style="color: var(--text-muted); text-decoration: none;">امکانات موبایل</a>
+        <a href="#quick-start-sdk" style="color: var(--text-muted); text-decoration: none;">نمونه کدها</a>
+        <a href="#metrics" style="color: var(--text-muted); text-decoration: none;">کارایی و سرعت</a>
+        <a href="#pricing" style="color: var(--text-muted); text-decoration: none;">تعرفه ها</a>
         <a href="/docs" style="color: var(--brand-dark); font-weight: 700; text-decoration: none;">مستندات فنی</a>
-        <a href="#about" style="color: var(--text-muted); text-decoration: none;">درباره پلتفرم</a>
+        <a href="#faq" style="color: var(--text-muted); text-decoration: none;">سوالات متداول</a>
       </nav>
     </div>
 
     <div style="display: flex; gap: 10px;">
       <a href="/auth" class="btn-secondary">ورود به حساب</a>
-      <a href="/auth" class="btn-primary">شروع ساخت پروژه</a>
+      <a href="/auth" class="btn-primary">شروع ساخت اپلیکیشن</a>
     </div>
   </header>
 
-  <!-- Clean Minimalist Hero -->
-  <section class="landing-hero">
-    <div class="badge badge-active" style="margin-bottom: 16px; font-size: 13px; padding: 4px 12px;">
-      پلتفرم چندمستاجره Backend-as-a-Service
+  <!-- Mobile Hero Section -->
+  <section class="landing-hero" style="padding-top: 50px; padding-bottom: 40px;">
+    <div class="mobile-badge">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      بک اند ابری یکپارچه برای اپلیکیشن های موبایل ایران
     </div>
-    <h1>زیرساخت ابری کامل برای توسعه‌دهندگان نرم‌افزار</h1>
-    <p>
-      لوکال‌می بستر جامع ارائه پایگاه داده رابطه‌ای، احراز هویت پیامکی، ذخیره‌سازی ابری و توابع سرورلس است. تمامی منابع به ازای هر پروژه کاملاً ایزوله شده و هزینه‌ها به صورت اعتباری و متناسب با مصرف واقعی محاسبه می‌گردد.
+    <h1 style="font-size: 34px; font-weight: 900; line-height: 1.4; max-width: 850px; margin: 0 auto 16px auto;">
+      بک اند آماده، امن و فوق سریع برای توسعه دهندگان فلاتر، ری اکت نیتیو، اندروید و iOS
+    </h1>
+    <p style="font-size: 15.5px; color: var(--text-muted); line-height: 1.9; max-width: 780px; margin: 0 auto 30px auto;">
+      دیگر نگران راه اندازی سرور، پیکربندی دیتابیس و کدهای تکراری احراز هویت نباشید. لوکال می تمامی زیرساخت های سمت سرور را به صورت یکپارچه با تاخیر زیر ۱۰ میلی ثانیه در دیتاسنترهای تهران در اختیار اپلیکیشن شما قرار می دهد.
     </p>
-    <div style="display: flex; justify-content: center; gap: 12px;">
-      <a href="/auth" class="btn-primary" style="padding: 12px 28px; font-size: 14px;">ورود به پنل توسعه‌دهندگان</a>
-      <a href="/panel" class="btn-secondary" style="padding: 12px 28px; font-size: 14px;">مشاهده پیش‌نمایش کنسول</a>
+    <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+      <a href="/auth" class="btn-primary" style="padding: 13px 32px; font-size: 14.5px; font-weight: 700;">شروع رایگان و ساخت پروژه</a>
+      <a href="/docs" class="btn-secondary" style="padding: 13px 26px; font-size: 14.5px;">مطالعه مستندات SDK موبایل</a>
+    </div>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 24px; font-size: 13px; color: var(--text-light); flex-wrap: wrap;">
+      <span>✓ اتصال مستقیم به اپراتورهای همراه اول، ایرانسل و رایتل</span>
+      <span>✓ پشتیبانی رسمی از فلاتر و ری اکت نیتیو</span>
+      <span>✓ ترافیک کاملا داخلی و بدون تحریم</span>
     </div>
   </section>
 
-  <!-- Features Grid -->
-  <section id="features" class="landing-feature-grid">
-    <div class="feature-box">
-      <h3>پایگاه داده رابطه‌ای و دسترسی REST</h3>
-      <p>
-        اسکیمای مجزا به ازای هر پروژه بر بستر PostgreSQL با پروتکل مستقیم PostgREST جهت اجرای سریع کوئری‌ها بدون نیاز به نوشتن کدهای پیچیده در بک‌اند.
+  <!-- High-Level Mobile Metrics -->
+  <section id="metrics" style="max-width: 1100px; margin: 20px auto 60px auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px;">
+      <div class="metric-card">
+        <div class="metric-value">زیر ۱۰ میلی ثانیه</div>
+        <div class="metric-title">تاخیر پاسخگویی (Latency)</div>
+        <div class="metric-desc">ارتباط فوق سریع کاربران با دیتاسنترهای مرکزی تهران بدون هرگونه گلوگاه یا افت سرعت.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">۱۰۰٪ بومی</div>
+        <div class="metric-title">ورود پیامکی و پرداخت شتاب</div>
+        <div class="metric-desc">ارسال پیامک با خطوط خدماتی، ثبت نام با شماره همراه و اتصال مستقیم به درگاه های بانکی کشور.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">ضد تقلب Replay</div>
+        <div class="metric-title">تایید خرید بازار و مایکت</div>
+        <div class="metric-desc">اعتبارسنجی سرور به سرور بدون نفوذ کلاینت و جلوگیری قطعی از جعل تراکنش های درون برنامه ای.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">۹۹.۹۵٪</div>
+        <div class="metric-title">پایداری تضمین شده</div>
+        <div class="metric-desc">پایش مداوم منابع، پشتیبان گیری خودکار و ایزولاسیون کامل منابع به ازای هر پروژه.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Code Tabs for Mobile Developers -->
+  <section id="quick-start-sdk" style="background: var(--bg-main); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 60px 20px;">
+    <div style="max-width: 900px; margin: 0 auto; text-align: center;">
+      <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">اتصال به لوکال می در چند خط کد</h2>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+        کتابخانه های آماده کلاینت برای محبوب ترین فریم ورک های توسعه اپلیکیشن موبایل
+      </p>
+
+      <div class="code-tabs-wrapper">
+        <div class="code-tab-nav">
+          <button class="code-nav-btn active" onclick="switchCodeTab('flutter', this)">Flutter (Dart)</button>
+          <button class="code-nav-btn" onclick="switchCodeTab('reactnative', this)">React Native (TS)</button>
+          <button class="code-nav-btn" onclick="switchCodeTab('kotlin', this)">Android (Kotlin)</button>
+          <button class="code-nav-btn" onclick="switchCodeTab('swift', this)">iOS (Swift)</button>
+        </div>
+
+        <div id="tab-flutter" class="code-content-block active">// 1. مقداردهی کلاینت لوکال می در فلاتر
+final client = LocalMeClient(
+  projectId: 'prj_demo_app',
+  apiKey: 'lm_live_key_982348',
+  endpoint: 'https://localme.ir/_baas/v1',
+);
+
+// 2. احراز هویت پیامکی با شماره همراه
+await client.auth.sendOtp(phone: '09121234567');
+final session = await client.auth.verifyOtp(phone: '09121234567', code: '482910');
+
+// 3. اعتبارسنجی سروری خرید درون برنامه ای کافه بازار
+final iapResult = await client.mobile.verifyBazaarPurchase(
+  packageName: 'ir.app.game',
+  purchaseToken: 'bazaar_tok_849204',
+  productId: 'coins_package_100',
+);
+
+if (iapResult.isValid) {
+  print('خرید تایید شد. موجودی سکه های کاربر افزایش یافت.');
+}</div>
+
+        <div id="tab-reactnative" class="code-content-block">// 1. مقداردهی در ری اکت نیتیو
+import { LocalMeClient } from '@localme/sdk';
+
+const client = new LocalMeClient({
+  projectId: 'prj_demo_app',
+  apiKey: 'lm_live_key_982348',
+});
+
+// 2. دریافت رکوردهای دیتابیس بدون نوشتن API
+const { data: products } = await client
+  .table('products')
+  .select('id, title, price_irr')
+  .filter('is_active', 'eq', true)
+  .limit(20);
+
+// 3. اتصال به کانال سوکت زنده برای گفتگوی درون برنامه ای
+const channel = client.realtime.channel('chat_room_general');
+channel.on('message', (payload) => {
+  console.log('پیام جدید دریافت شد:', payload.text);
+});
+await channel.subscribe();</div>
+
+        <div id="tab-kotlin" class="code-content-block">// 1. ثبت نام توکن نوتیفیکیشن در کاتلین
+val localMe = LocalMeClient.Builder()
+    .projectId("prj_demo_app")
+    .apiKey("lm_live_key_982348")
+    .build()
+
+// 2. ثبت شناسه دستگاه جهت ارسال هدفمند پوش نوتیفیکیشن
+CoroutineScope(Dispatchers.IO).launch {
+    localMe.push.registerDevice(
+        platform = "android",
+        deviceToken = deviceFcmToken,
+        tags = listOf("tier_premium", "tehran_users")
+    )
+}
+
+// 3. آپلود تصویر آواتار در باکت ابری
+val uploadResult = localMe.storage.upload(
+    bucket = "avatars",
+    fileName = "user_9482.jpg",
+    fileBytes = imageByteArray
+)</div>
+
+        <div id="tab-swift" class="code-content-block">// 1. اتصال کلاینت در سوئیفت
+let client = LocalMeClient(
+    projectId: "prj_demo_app",
+    apiKey: "lm_live_key_982348"
+)
+
+// 2. تایید پرداخت شتاب و شارژ کیف پول کاربر
+Task {
+    do {
+        let verifyResponse = try await client.finance.verifyPayment(
+            authority: authorityToken,
+            amountIrr: 500_000
+        )
+        print("تراکنش شتاب با موفقیت تایید شد: \(verifyResponse.refId)")
+    } catch {
+        print("خطا در تایید تراکنش بانکی")
+    }
+}</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features for Mobile Teams -->
+  <section id="mobile-features" style="max-width: 1100px; margin: 70px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <h2 style="font-size: 26px; font-weight: 800; margin-bottom: 10px;">امکانات تخصصی سمت سرور برای اپلیکیشن های موبایل</h2>
+      <p style="font-size: 14.5px; color: var(--text-muted); max-width: 650px; margin: 0 auto;">
+        همه ابزارهایی که یک تیم اپلیکیشن موبایل برای رشد سریع و خدمات پایدار به کاربران ایرانی نیاز دارد
       </p>
     </div>
 
-    <div class="feature-box">
-      <h3>احراز هویت پیامکی بومی</h3>
-      <p>
-        مدیریت کامل ثبت‌نام و ورود کاربران اپلیکیشن موبایل با کدهای تصادفی شش‌رقمی و اتصال پایدار به سرشماره‌های اپراتورهای مخابراتی داخل کشور.
-      </p>
-    </div>
+    <div class="landing-feature-grid">
+      <div class="feature-box">
+        <h3>ورود سریع با شماره همراه و پیامک OTP</h3>
+        <p>
+          مدیریت هوشمند ثبت نام و ورود کاربران بدون کلمه عبور با ارسال خودکار کدهای تصادفی شش رقمی، پشتیبانی از خطوط خدماتی داخلی، لایه محافظتی کپچا و مدیریت امن توکن های نشست.
+        </p>
+      </div>
 
-    <div class="feature-box">
-      <h3>ذخیره‌سازی ابری باکت‌محور</h3>
-      <p>
-        ذخیره‌سازی انواع فایل‌ها، تصاویر و اسناد اپلیکیشن با امکان تعریف باکت‌های عمومی یا محرمانه و تولید آدرس‌های دسترسی امن زمان‌دار.
-      </p>
-    </div>
+      <div class="feature-box">
+        <h3>اعتبارسنجی امن خرید بازار و مایکت</h3>
+        <p>
+          تایید مستقیم وضعیت خریدهای درون برنامه ای در ارتباط سرور به سرور با کافه بازار و مایکت. جلوگیری قطعی از رسیدهای دستکاری شده، ثبت وضعیت اشتراک ها و محافظت از درآمدهای ارزی و ریالی اپلیکیشن.
+        </p>
+      </div>
 
-    <div class="feature-box">
-      <h3>توابع سرورلس لبه</h3>
-      <p>
-        اجرای کدهای جاوااسکریپت در محیط ایزوله و شنی مبتنی بر موتور پردازشی سریع با سقف حافظه مشخص و محاسبه دقیق زمان اجرا بر حسب میلی‌ثانیه.
-      </p>
-    </div>
+      <div class="feature-box">
+        <h3>پوش نوتیفیکیشن بومی و هدفمند</h3>
+        <p>
+          سامانه توزیع بلادرنگ اعلان ها به کاربران بدون نیاز به فایربیس گوگل و بدون ایجاد اختلال هنگام نوسانات اینترنت بین الملل. ارسال بر اساس تگ، سیستم عامل، رفتار کاربر و زمان بندی های مشخص.
+        </p>
+      </div>
 
-    <div class="feature-box">
-      <h3>کلیدهای دسترسی تفکیک‌شده</h3>
-      <p>
-        صدور کلیدهای مجزا به ازای هر کاربر، هر پروژه و هر سرویس به منظور کنترل دقیق مجوزهای خواندن، نوشتن و مدیریت سطح دسترسی.
-      </p>
-    </div>
+      <div class="feature-box">
+        <h3>کانال های زنده وب سوکت (Realtime)</h3>
+        <p>
+          ایجاد ارتباط دوطرفه فوق العاده سبک برای گفتگوی زنده، اتاق های بازی، تاکسی های آنلاین و ردیابی سفارشات با کمترین میزان مصرف باتری و پایداری در جابجایی بین شبکه های دیتا و وای فای.
+        </p>
+      </div>
 
-    <div class="feature-box">
-      <h3>تراکنش‌های ریالی و اتصال شاپرک</h3>
-      <p>
-        ثبت تمامی عملیات در قالب دفترکل دوبل ریالی با دقت ۶۴ بیتی و امکان شارژ آنی کیف پول اعتباری از طریق درگاه‌های امن پرداخت الکترونیک.
-      </p>
+      <div class="feature-box">
+        <h3>پایگاه داده سریع با کوئری های مستقیم کلاینت</h3>
+        <p>
+          ساخت آسان جداول داده، افزودن ستون ها و اجرای فیلترهای جستجو، صفحه بندی و ویرایش اطلاعات به صورت مستقیم از طریق SDK بدون نیاز به طراحی مداوم اندپوینت های REST تکراری.
+        </p>
+      </div>
+
+      <div class="feature-box">
+        <h3>ذخیره سازی ابری باکت با CDN داخلی</h3>
+        <p>
+          آپلود امن فایل های چندرسانه ای، اسناد، صداها و تصاویر با تولید خودکار لینک های دانلود مستقیم پرسرعت در بستر شبکه ملی اطلاعات و امکان صدور دسترسی های موقت زمان دار.
+        </p>
+      </div>
+
+      <div class="feature-box">
+        <h3>تراکنش های ریالی و اتصال شاپرک</h3>
+        <p>
+          ثبت تراکنش های مالی در قالب دفترکل دوبل با دقت ۶۴ بیتی ریال، اتصال پایدار به درگاه های زرین پال، به پرداخت ملت، سامان کیش و سداد و شارژ مستقیم کیف پول کاربران اپلیکیشن.
+        </p>
+      </div>
+
+      <div class="feature-box">
+        <h3>توابع بدون سرور لبه (Edge Functions)</h3>
+        <p>
+          اجرای کدهای محاسباتی جاوااسکریپت در محیط ایزوله ابری بدون نیاز به استقرار سرور مجزا برای انجام محاسبات اختصاصی، فیلتر داده ها و یکپارچه سازی با وب هوک های شخص ثالث.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -97,12 +458,12 @@
     <div style="max-width: 900px; margin: 0 auto; text-align: center;">
       <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">تعرفه شفاف بر اساس مصرف واقعی</h2>
       <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 30px;">
-        بدون هزینه اشتراک ماهانه اجباری؛ هزینه‌ها تنها به میزان فراخوانی‌های واقعی از کیف پول اعتباری کسر می‌شود.
+        بدون هزینه اشتراک ماهانه اجباری؛ هزینه ها تنها به میزان فراخوانی های واقعی از کیف پول اعتباری کسر می شود.
       </p>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: right;">
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">کوئری‌های پایگاه داده</div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">کوئری های پایگاه داده</div>
           <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۱۰ تومان</div>
           <div style="font-size: 13px; color: var(--text-light); margin-top: 4px;">به ازای هر ۱,۰۰۰ درخواست</div>
         </div>
@@ -114,7 +475,7 @@
         </div>
 
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">ذخیره‌سازی ابری</div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">ذخیره سازی ابری</div>
           <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۵۰ تومان</div>
           <div style="font-size: 13px; color: var(--text-light); margin-top: 4px;">هر گیگابایت در ماه</div>
         </div>
@@ -122,24 +483,64 @@
         <div class="card" style="margin-bottom: 0;">
           <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">پردازش توابع لبه</div>
           <div style="font-size: 20px; font-weight: 800; color: var(--brand-dark);">۱ تومان</div>
-          <div style="font-size: 13px; color: var(--text-light); margin-top: 4px;">هر ۱۰۰ میلی‌ثانیه زمان اجرا</div>
+          <div style="font-size: 13px; color: var(--text-light); margin-top: 4px;">هر ۱۰۰ میلی ثانیه زمان اجرا</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- About Section -->
-  <section id="about" style="max-width: 900px; margin: 60px auto; padding: 0 20px; text-align: center;">
-    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">درباره پلتفرم ابری لوکال‌می</h2>
-    <p style="font-size: 14px; color: var(--text-muted); line-height: 1.8;">
-      لوکال‌می با هدف رفع وابستگی تیم‌های توسعه نرم‌افزار به ارائه‌دهندگان خارجی و تضمین دسترسی پایدار کاربران داخلی پایه‌گذاری شده است. سرورهای این پلتفرم در مراکز داده مستقر در تهران میزبانی شده و تحت نظارت کامل استانداردهای پرداخت الکترونیک کشور فعالیت می‌کنند.
-    </p>
+  <!-- FAQ Section -->
+  <section id="faq" style="max-width: 850px; margin: 70px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">سوالات متداول توسعه دهندگان</h2>
+      <p style="font-size: 14px; color: var(--text-muted);">پاسخ به پرتکرارترین پرسش های فنی پیرامون سرویس های لوکال می</p>
+    </div>
+
+    <div class="faq-card">
+      <h4>آیا برای شروع به کار با لوکال می نیاز به نوشتن کد سمت سرور داریم؟</h4>
+      <p>خیر، تمامی عملیات پرکاربرد اپلیکیشن های موبایل مانند پایگاه داده، احراز هویت پیامکی، آپلود فایل و تایید خریدهای کافه بازار و مایکت از طریق کدهای آماده SDK کلاینت در دسترس است و نیازی به راه اندازی سرور مجزا یا برنامه نویسی بک اند ندارید.</p>
+    </div>
+
+    <div class="faq-card">
+      <h4>اعتبارسنجی خرید بازار و مایکت چگونه از تقلب جلوگیری می کند؟</h4>
+      <p>لوکال می مستقیما با وب سرویس های رسمی کافه بازار و مایکت در ارتباط است و هر توکن خرید را به طور امن بررسی می کند. در صورت تایید، شناسه رسید ثبت می شود تا از استفاده مجدد (Replay Attack) همان توکن توسط کاربران سودجو به طور قطعی جلوگیری شود.</p>
+    </div>
+
+    <div class="faq-card">
+      <h4>آیا وضعیت تحریم یا قطعی اینترنت بین الملل بر عملکرد اپلیکیشن تاثیر می گذارد؟</h4>
+      <p>خیر، سرورهای لوکال می کاملا در مراکز داده مستقر در تهران میزبانی شده و به طور مستقیم به گیت های مخابراتی همراه اول، ایرانسل و رایتل متصل هستند. در نتیجه تحت هیچ شرایطی مسدود نشده و ترافیک کاربران نیز به صورت نیم بها محاسبه می گردد.</p>
+    </div>
+
+    <div class="faq-card">
+      <h4>چگونه می توانم پروژه اپلیکیشن موبایل خود را به لوکال می متصل کنم؟</h4>
+      <p>کافیست در کنسول لوکال می یک پروژه جدید ایجاد کرده، کلیدهای دسترسی API را دریافت نمایید و کتابخانه SDK متناسب با فریم ورک خود (فلاتر، ری اکت نیتیو، اندروید کاتلین یا سوئیفت) را به پروژه اضافه کنید.</p>
+    </div>
   </section>
 
   <!-- Minimal Footer -->
-  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 24px; text-align: center; font-size: 13px; color: var(--text-muted);">
-    تمامی حقوق محفوظ است • پلتفرم خدمات ابری لوکال‌می (LocalMe BaaS)
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">پلتفرم خدمات ابری لوکال می (LocalMe BaaS)</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات فنی</a>
+        <a href="/panel" style="color: var(--text-muted); text-decoration: none;">کنسول توسعه دهندگان</a>
+        <a href="/auth" style="color: var(--text-muted); text-decoration: none;">ورود به حساب</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
   </footer>
 
+  <script>
+    function switchCodeTab(lang, btn) {
+      document.querySelectorAll('.code-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.code-content-block').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const target = document.getElementById('tab-' + lang);
+      if (target) target.classList.add('active');
+    }
+  </script>
 </body>
 </html>
