@@ -140,21 +140,26 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             }
         }
 
-        // Seed baseline platform users if table is empty
-        await using var userCheckCmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM platform_users;");
-        var userCount = Convert.ToInt64(await userCheckCmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
-        if (userCount == 0)
-        {
-            const string seedSql = @"
-                INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc)
-                VALUES 
-                ('usr_admin_01', 'مدیر ارشد سامانه', '+989120000001', 'admin@localme.ir', 'admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Admin', 0, true, NOW()),
-                ('usr_operator_02', 'اپراتور پشتیبانی', '+989120000002', 'support@localme.ir', 'operator', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Operator', 0, true, NOW()),
-                ('usr_developer_03', 'سینا والی زاده', '+989121112233', 'sina@example.com', 'developer', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Developer', 10000000, true, NOW())
-                ON CONFLICT (id) DO NOTHING;";
-            await using var seedCmd = _dataSource.CreateCommand(seedSql);
-            await seedCmd.ExecuteNonQueryAsync();
-        }
+        // Seed or heal baseline platform users
+        var adminHash = ProjectManagerService.HashPassword("admin123456");
+        var operatorHash = ProjectManagerService.HashPassword("operator123456");
+        var developerHash = ProjectManagerService.HashPassword("developer123456");
+
+        const string seedSql = @"
+            INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc)
+            VALUES 
+            ('usr_admin_01', 'مدیر ارشد سامانه', '+989120000001', 'admin@localme.ir', 'admin', @adminHash, 'Admin', 0, true, NOW()),
+            ('usr_operator_02', 'اپراتور پشتیبانی', '+989120000002', 'support@localme.ir', 'operator', @operatorHash, 'Operator', 0, true, NOW()),
+            ('usr_developer_03', 'سینا والی زاده', '+989121112233', 'sina@example.com', 'sina', @developerHash, 'Developer', 10000000, true, NOW())
+            ON CONFLICT (id) DO UPDATE SET 
+                username = EXCLUDED.username,
+                password_hash = CASE WHEN platform_users.password_hash NOT LIKE '%:%' THEN EXCLUDED.password_hash ELSE platform_users.password_hash END,
+                is_active = true;";
+        await using var seedCmd = _dataSource.CreateCommand(seedSql);
+        seedCmd.Parameters.AddWithValue("adminHash", adminHash);
+        seedCmd.Parameters.AddWithValue("operatorHash", operatorHash);
+        seedCmd.Parameters.AddWithValue("developerHash", developerHash);
+        await seedCmd.ExecuteNonQueryAsync();
     }
 
     // 1. Platform Users

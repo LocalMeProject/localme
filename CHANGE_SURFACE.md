@@ -179,6 +179,7 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`
   - `apps/server/src/Routes/MockGatewayRenderer.cs`
   - `apps/server/src/appsettings.json`
+  - `apps/server/src/wwwroot/favicon.ico`
   - `apps/server/src/wwwroot/admin-logs.js`
   - `apps/server/src/wwwroot/admin.js`
   - `apps/server/src/wwwroot/app-modals.js`

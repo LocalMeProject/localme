@@ -107,4 +107,27 @@ public class DomainAndStorageTests
         Assert.DoesNotContain(projects, p => p.Id == "proj_seed_demo" || p.Name == "پروژه دمو" || p.Slug == "sample-project");
         Assert.True(users.Count >= 3);
     }
+
+    [Fact]
+    public async Task PostgreSqlProjectStore_PlatformUserAuthentication_Succeeds()
+    {
+        var store = new LocalMe.Infrastructure.Storage.PostgreSqlProjectStore();
+        await store.InitializeAsync();
+        var pm = new ProjectManagerService(store);
+
+        var (devRes, devMsg, devUser) = pm.ValidateUserCredentials("sina", "developer123456");
+        Assert.True(devRes, devMsg);
+        Assert.NotNull(devUser);
+
+        var (devAliasRes, _, _) = pm.ValidateUserCredentials("developer", "developer123456");
+        Assert.True(devAliasRes);
+
+        var (adminRes, adminMsg, adminUser) = pm.ValidateUserCredentials("admin", "admin123456");
+        Assert.True(adminRes, adminMsg);
+        Assert.NotNull(adminUser);
+
+        var (operatorRes, opMsg, opUser) = pm.ValidateUserCredentials("operator", "operator123456");
+        Assert.True(operatorRes, opMsg);
+        Assert.NotNull(opUser);
+    }
 }
