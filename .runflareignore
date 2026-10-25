@@ -1,0 +1,23 @@
+# Git & VCS
+.git
+.github
+.nx
+node_modules
+.agents
+.ep
+
+# Storage & temp data
+.localme-storage
+data
+*.log
+*.sqlite
+*.sqlite*
+
+# Test & Docs
+tests
+docs
+
+# Environment files
+.env
+.env.*
+!.env.example

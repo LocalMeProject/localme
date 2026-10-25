@@ -147,6 +147,12 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/server/src/wwwroot/services-charts.js`: Extracted SVG dashboard analytics and charts from `services.js`.
   - `apps/server/src/wwwroot/app-tabs.js`: Extracted workspace keep-alive tabs, routing engine, and breadcrumb system from `app.js`.
   - Enforced strict $\le 800$ line ceilings across 100% of codebase files, eliminated untyped `any` in TypeScript, and resolved all empty catch blocks. Zero blocking defects on 10-Dimension Enterprise Audit.
+- **Production Container Deployment & Runflare Automation**:
+  - `Dockerfile`: Lean multi-architecture production container packaging .NET 10 host, static SPA assets, and healthcheck probe on port 3000.
+  - `.dockerignore`: Docker context isolation rules excluding development tooling, tests, local SQLite, and storage caches.
+  - `.runflareignore`: Runflare package rules ensuring clean, lightweight deployments.
+  - `scripts/deploy-runflare.sh`: Unified pre-building and non-interactive Runflare CLI deployment script with PTY terminal simulation.
+  - `package.json`: Added `deploy:runflare` npm script for one-command deployment.
 - **Milestone 3 Architectural & Structural Hardening**:
   - `apps/server/src/Routes/BaasServiceRoutes.cs`: Formatted whitespace and indentation according to dotnet format.
   - `apps/web-console/index.html`: Set Persian RTL and dark mode (`lang="fa" dir="rtl"`).
