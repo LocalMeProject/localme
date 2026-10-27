@@ -15,10 +15,10 @@ async function loadProjectUsers() {
 
       tbody.innerHTML = users.map(u => {
         const identifier = u.username ? `${u.username} (${u.phone || u.email || 'بدون تماس'})` : (u.phone || u.email || '-');
-        const providerName = u.provider === 'sms_otp' ? 'پیامک OTP' :
+        const providerName = u.provider === 'sms_otp' ? 'پیامک یکبارمصرف' :
                              u.provider === 'password' ? 'نام کاربری و رمز عبور' :
-                             u.provider === 'oauth_google' ? 'گوگل (Google)' :
-                             u.provider === 'oauth_github' ? 'گیت هاب (GitHub)' : (u.provider || 'سیستمی');
+                             u.provider === 'oauth_google' ? 'گوگل' :
+                             u.provider === 'oauth_github' ? 'گیت‌هاب' : (u.provider || 'سیستمی');
 
         const isConfirmed = u.isConfirmed !== false;
         return `

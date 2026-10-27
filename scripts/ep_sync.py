@@ -31,7 +31,7 @@ DEFAULT_WORKSPACE_DIR = resolve_default_workspace_dir()
 
 TRACKED_SUBDIRS = ["scripts", "references", "templates", "tests"]
 TRACKED_ROOT_FILES = ["SKILL.md", "README.md", "package.json", "tsconfig.json"]
-EXCLUDED_PATTERNS = {"__pycache__", ".git", ".ep", ".cache", ".pytest_cache", "bin", "obj"}
+EXCLUDED_PATTERNS = {"__pycache__", ".git", ".ep", ".cache", ".pytest_cache"}
 
 
 def sha256_file(filepath: str) -> str:

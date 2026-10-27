@@ -146,7 +146,7 @@
         <div class="card" style="margin-bottom: 24px;">
           <div class="card-header">
             <div>
-              <div class="card-title">تنظیمات کلان سامانه و متغیرهای عملیاتی پلتفرم (Platform Master Configuration)</div>
+              <div class="card-title">تنظیمات کلان سامانه و متغیرهای عملیاتی پلتفرم</div>
               <div class="card-desc">پیکربندی یکپارچه تعرفه گذاری، سقف های طرح، درگاه پیامک، پرداخت شتاب، امنیت توکن ها و اعلان سراسری.</div>
             </div>
             <span id="pricing-access-badge" class="badge badge-paused">فقط مدیر ارشد</span>
@@ -193,7 +193,7 @@
             <!-- Category 2: Tier Limits & Quotas -->
             <div>
               <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                ۲. سقف ها و محدودیت های طرح توسعه دهنده (Developer Tier Caps)
+                ۲. سقف ها و محدودیت های طرح توسعه دهنده
               </h4>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
                 <div>
@@ -236,9 +236,9 @@
                 <div>
                   <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">سامانه پیامکی پیش فرض</label>
                   <select id="adm-sms-provider" class="input-field">
-                    <option value="kavenegar">کاوه نگار (Kavenegar)</option>
-                    <option value="melipayamak">ملی پیامک (Melipayamak)</option>
-                    <option value="magfa">مگفا (Magfa)</option>
+                    <option value="kavenegar">کاوه‌نگار</option>
+                    <option value="melipayamak">ملی پیامک</option>
+                    <option value="magfa">مگفا</option>
                   </select>
                 </div>
                 <div>
@@ -250,7 +250,7 @@
                   <input type="text" id="adm-sms-sender" class="input-field" placeholder="3000777" />
                 </div>
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کد الگوی وب سرویس تایید (Pattern Code)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کد الگوی وب سرویس تایید</label>
                   <input type="text" id="adm-sms-pattern" class="input-field" placeholder="localme-verify" />
                 </div>
                 <div>
@@ -273,10 +273,10 @@
                 <div>
                   <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">پرداخت یار / PSP پیش فرض</label>
                   <select id="adm-ipg-psp" class="input-field">
-                    <option value="zarinpal">زرین پال (ZarinPal REST v4)</option>
-                    <option value="behpardakht">به پرداخت ملت (Mellat IPG)</option>
-                    <option value="sep">پرداخت الکترونیک سامان (SEP)</option>
-                    <option value="sadad">سداد بانک ملی (Sadad)</option>
+                    <option value="zarinpal">زرین پال</option>
+                    <option value="behpardakht">به پرداخت ملت</option>
+                    <option value="sep">پرداخت الکترونیک سامان</option>
+                    <option value="sadad">سداد بانک ملی</option>
                   </select>
                 </div>
                 <div>
@@ -284,7 +284,7 @@
                   <input type="text" id="adm-ipg-merchant" class="input-field" placeholder="شناسه ترمینال بانکی" />
                 </div>
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس بازگشت تراکنش (Callback URL)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس بازگشت تراکنش</label>
                   <input type="text" id="adm-ipg-callback" class="input-field" style="direction: ltr; font-family: monospace;" />
                 </div>
                 <div>
@@ -301,7 +301,7 @@
               </h4>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
                 <div style="grid-column: span 2;">
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کلید محرمانه امضای JWT (Secret Key)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">کلید محرمانه امضای JWT</label>
                   <input type="text" id="adm-sec-jwt-secret" class="input-field" style="direction: ltr; font-family: monospace;" />
                 </div>
                 <div>
@@ -338,11 +338,11 @@
                   <input type="text" id="adm-infra-name" class="input-field" />
                 </div>
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">منطقه ابری پیش فرض (Region)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">منطقه ابری پیش فرض</label>
                   <input type="text" id="adm-infra-region" class="input-field" style="direction: ltr;" />
                 </div>
                 <div style="grid-column: span 2;">
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس های IP ایستا خروجی شبکه (Sovereign NAT)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">آدرس های IP ایستا خروجی شبکه</label>
                   <input type="text" id="adm-infra-nat" class="input-field" style="direction: ltr; font-family: monospace;" />
                 </div>
               </div>
@@ -356,7 +356,7 @@
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                   <input type="checkbox" id="adm-p-maint" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" />
-                  <strong>فعال سازی حالت تعمیرات سراسری سیستم (Maintenance Mode)</strong>
+                  <strong>فعال سازی حالت تعمیرات سراسری سیستم</strong>
                 </label>
                 <div>
                   <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">متن پیام حالت تعمیرات</label>
@@ -376,7 +376,7 @@
               </h4>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 12px;">
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل سطح لاگ گیری (Log Level)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">حداقل سطح لاگ گیری</label>
                   <select id="adm-log-level" class="input-field">
                     <option value="Trace">Trace (بسیار دقیق و عمیق)</option>
                     <option value="Debug">Debug (اشکال زدایی توسعه)</option>
@@ -387,7 +387,7 @@
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">میزان جزئیات لاگ (Granularity)</label>
+                  <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 3px;">میزان جزئیات لاگ</label>
                   <select id="adm-log-granularity" class="input-field">
                     <option value="Verbose">Verbose (حداکثر جزئیات و پشته خطا)</option>
                     <option value="Standard" selected>Standard (استاندارد عملیاتی)</option>
@@ -398,11 +398,11 @@
               <div style="display: flex; gap: 24px; flex-wrap: wrap;">
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                   <input type="checkbox" id="adm-log-platform-active" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" checked />
-                  <strong>ثبت لاگ های پلتفرم جهت پایش آنلاین مدیران (Platform Logging)</strong>
+                  <strong>ثبت لاگ های پلتفرم جهت پایش آنلاین مدیران</strong>
                 </label>
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                   <input type="checkbox" id="adm-log-console-enabled" style="width: 16px; height: 16px; accent-color: var(--brand-primary);" checked />
-                  <strong>خروجی لاگ زنده در کنسول ترمینال سرور (Console Logging)</strong>
+                  <strong>خروجی لاگ زنده در کنسول ترمینال سرور</strong>
                 </label>
               </div>
             </div>
@@ -410,7 +410,7 @@
             <!-- Submit Button Bar -->
             <div style="padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
               <button type="submit" id="btn-save-admin-pricing" class="btn-primary" style="padding: 10px 24px; font-size: 13.5px; font-weight: 700;">
-                ⚡ ذخیره و اعمال آنی تمام تنظیمات کلان
+                ذخیره و اعمال آنی تمام تنظیمات کلان
               </button>
             </div>
           </form>
@@ -536,7 +536,7 @@
                 <tr>
                   <th style="width: 130px;">زمان</th>
                   <th style="width: 90px;">سطح</th>
-                  <th style="width: 200px;">دسته بندی (Category)</th>
+                  <th style="width: 200px;">دسته بندی</th>
                   <th>پیام لاگ</th>
                 </tr>
               </thead>
@@ -653,9 +653,9 @@
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 13px; font-weight: 600;">نقش دسترسی:</span>
             <select id="modal-user-role-select" class="input-field" style="width: auto; padding: 4px 8px; font-size: 13px;">
-              <option value="Admin">مدیر ارشد (Admin)</option>
-              <option value="Operator">اپراتور (Operator)</option>
-              <option value="Developer">توسعه دهنده (Developer)</option>
+              <option value="Admin">مدیر ارشد</option>
+              <option value="Operator">اپراتور</option>
+              <option value="Developer">توسعه دهنده</option>
             </select>
             <button type="button" id="btn-save-user-role" class="btn-primary" style="padding: 4px 10px; font-size: 13px;">ذخیره نقش</button>
           </div>

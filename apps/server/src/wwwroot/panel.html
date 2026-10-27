@@ -41,25 +41,25 @@
 
       <!-- Mini Profile Popover Trigger -->
       <div class="mini-profile-wrapper" id="mini-profile-wrapper">
-        <button type="button" class="mini-profile-trigger" id="mini-profile-trigger" title="سینا والی زاده | ۱,۰۰۰,۰۰۰ تومان">
-          <span class="mini-profile-avatar">👤</span>
-          <span id="mini-profile-label" class="mini-profile-label">سینا والی زاده | ۱,۰۰۰,۰۰۰ تومان</span>
+        <button type="button" class="mini-profile-trigger" id="mini-profile-trigger" title="حساب کاربری">
+          <span class="mini-profile-avatar" style="display: inline-flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span id="mini-profile-label" class="mini-profile-label">حساب کاربری</span>
           <span class="mini-profile-caret">▾</span>
         </button>
 
         <div class="mini-profile-popover" id="mini-profile-popover">
           <div class="mini-profile-popover-header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-              <strong id="user-display-name" style="font-size: 14.5px; color: var(--text-main);">سینا والی زاده</strong>
+              <strong id="user-display-name" style="font-size: 14.5px; color: var(--text-main);">کاربر</strong>
               <span id="user-role-badge" class="badge badge-active">توسعه دهنده</span>
             </div>
-            <div id="mp-user-phone" style="font-size: 12.5px; color: var(--text-muted); font-family: monospace; direction: ltr; text-align: right;">+989121112233</div>
-            <div id="mp-user-email" style="font-size: 12px; color: var(--text-muted); direction: ltr; text-align: right;">sina@example.com</div>
+            <div id="mp-user-phone" style="font-size: 12.5px; color: var(--text-muted); font-family: monospace; direction: ltr; text-align: right;">-</div>
+            <div id="mp-user-email" style="font-size: 12px; color: var(--text-muted); direction: ltr; text-align: right;">-</div>
           </div>
           <div class="mini-profile-popover-body">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border-radius: 6px; margin-bottom: 6px; border: 1px solid #e2e8f0;">
               <span style="font-size: 12.5px; color: var(--text-muted);">موجودی کیف پول:</span>
-              <strong id="topbar-wallet-val" style="color: var(--brand-dark); font-size: 13.5px;">۱,۰۰۰,۰۰۰ تومان</strong>
+              <strong id="topbar-wallet-val" style="color: var(--brand-dark); font-size: 13.5px;">۰ تومان</strong>
             </div>
             <div style="display: flex; flex-direction: column; gap: 6px;">
               <button type="button" id="btn-open-profile-page" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 13px; padding: 6px 10px;" onclick="Router.navigate('profile', 'general'); document.getElementById('mini-profile-wrapper').classList.remove('open');">
@@ -223,201 +223,201 @@
 
       <!-- Sub-menu groups per module -->
       <div class="flyout-group active" data-module="overview">
-        <button class="flyout-link active" data-module="overview" data-subview="overview">
+        <a class="flyout-link active" data-module="overview" data-subview="overview" href="/panel">
           <span>داشبورد جامع پروژه</span>
-        </button>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="services">
-        <button class="flyout-link active" data-module="services" data-subview="list">
+        <a class="flyout-link active" data-module="services" data-subview="list" href="/panel">
           <span>مرکز مدیریت سرویس ها</span>
-        </button>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="db">
-        <button class="flyout-link active" data-module="db" data-subview="dashboard">
+        <a class="flyout-link active" data-module="db" data-subview="dashboard" href="/panel">
           <span>داشبورد پایگاه داده</span>
-        </button>
-        <button class="flyout-link" data-module="db" data-subview="tables">
-          <span>جداول داده (PostgREST)</span>
-        </button>
-        <button class="flyout-link" data-module="db" data-subview="sqleditor">
+        </a>
+        <a class="flyout-link" data-module="db" data-subview="tables" href="/panel">
+          <span>جداول داده</span>
+        </a>
+        <a class="flyout-link" data-module="db" data-subview="sqleditor" href="/panel">
           <span>ویرایشگر تعاملی SQL</span>
-        </button>
-        <button class="flyout-link" data-module="db" data-subview="schema">
+        </a>
+        <a class="flyout-link" data-module="db" data-subview="schema" href="/panel">
           <span>طراحی و ساختار اسکیمای جداول</span>
-        </button>
-        <button class="flyout-link" data-module="db" data-subview="backups">
+        </a>
+        <a class="flyout-link" data-module="db" data-subview="backups" href="/panel">
           <span>پشتیبان گیری و بازیابی</span>
-        </button>
-        <button class="flyout-link" data-module="db" data-subview="config" onclick="Router.navigate('service', 'database');">
-          <span>⚙ پیکربندی سرویس دیتابیس</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="db" data-subview="config" data-service-target="database" href="/panel">
+          <span>پیکربندی سرویس دیتابیس</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="auth">
-        <button class="flyout-link active" data-module="auth" data-subview="dashboard">
+        <a class="flyout-link active" data-module="auth" data-subview="dashboard" href="/panel">
           <span>داشبورد احراز هویت</span>
-        </button>
-        <button class="flyout-link" data-module="auth" data-subview="users">
+        </a>
+        <a class="flyout-link" data-module="auth" data-subview="users" href="/panel">
           <span>مدیریت کاربران اپلیکیشن</span>
-        </button>
-        <button class="flyout-link" data-module="auth" data-subview="sms-logs">
+        </a>
+        <a class="flyout-link" data-module="auth" data-subview="sms-logs" href="/panel">
           <span>گزارش و تحلیل پیامک ها</span>
-        </button>
-        <button class="flyout-link" data-module="auth" data-subview="policies">
+        </a>
+        <a class="flyout-link" data-module="auth" data-subview="policies" href="/panel">
           <span>سیاست های امنیتی و نشست ها</span>
-        </button>
-        <button class="flyout-link" data-module="auth" data-subview="config" onclick="Router.navigate('service', 'auth');">
-          <span>⚙ پیکربندی سرویس احراز هویت</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="auth" data-subview="config" data-service-target="auth" href="/panel">
+          <span>پیکربندی سرویس احراز هویت</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="storage">
-        <button class="flyout-link active" data-module="storage" data-subview="dashboard">
+        <a class="flyout-link active" data-module="storage" data-subview="dashboard" href="/panel">
           <span>داشبورد ذخیره سازی ابری</span>
-        </button>
-        <button class="flyout-link" data-module="storage" data-subview="buckets">
+        </a>
+        <a class="flyout-link" data-module="storage" data-subview="buckets" href="/panel">
           <span>باکت های ذخیره سازی ابری</span>
-        </button>
-        <button class="flyout-link" data-module="storage" data-subview="explorer">
+        </a>
+        <a class="flyout-link" data-module="storage" data-subview="explorer" href="/panel">
           <span>کاوشگر فایل ها و رسانه ها</span>
-        </button>
-        <button class="flyout-link" data-module="storage" data-subview="policies">
+        </a>
+        <a class="flyout-link" data-module="storage" data-subview="policies" href="/panel">
           <span>سطوح دسترسی و کشینگ CDN</span>
-        </button>
-        <button class="flyout-link" data-module="storage" data-subview="config" onclick="Router.navigate('service', 'storage');">
-          <span>⚙ پیکربندی سرویس ذخیره سازی</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="storage" data-subview="config" data-service-target="storage" href="/panel">
+          <span>پیکربندی سرویس ذخیره سازی</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="functions">
-        <button class="flyout-link active" data-module="functions" data-subview="dashboard">
+        <a class="flyout-link active" data-module="functions" data-subview="dashboard" href="/panel">
           <span>داشبورد توابع سرورلس</span>
-        </button>
-        <button class="flyout-link" data-module="functions" data-subview="editor">
-          <span>توابع سرورلس (Edge Functions)</span>
-        </button>
-        <button class="flyout-link" data-module="functions" data-subview="traces">
+        </a>
+        <a class="flyout-link" data-module="functions" data-subview="editor" href="/panel">
+          <span>توابع سرورلس</span>
+        </a>
+        <a class="flyout-link" data-module="functions" data-subview="traces" href="/panel">
           <span>مانیتورینگ زمان اجرا و حافظه</span>
-        </button>
-        <button class="flyout-link" data-module="functions" data-subview="env">
+        </a>
+        <a class="flyout-link" data-module="functions" data-subview="env" href="/panel">
           <span>متغیرهای محیطی و اسرار</span>
-        </button>
-        <button class="flyout-link" data-module="functions" data-subview="config" onclick="Router.navigate('service', 'functions');">
-          <span>⚙ پیکربندی توابع سرورلس</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="functions" data-subview="config" data-service-target="functions" href="/panel">
+          <span>پیکربندی توابع سرورلس</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="ipg">
-        <button class="flyout-link active" data-module="ipg" data-subview="dashboard">
+        <a class="flyout-link active" data-module="ipg" data-subview="dashboard" href="/panel">
           <span>داشبورد درگاه پرداخت</span>
-        </button>
-        <button class="flyout-link" data-module="ipg" data-subview="config">
+        </a>
+        <a class="flyout-link" data-module="ipg" data-subview="config" href="/panel">
           <span>درگاه پرداخت شاپرک</span>
-        </button>
-        <button class="flyout-link" data-module="ipg" data-subview="ledger">
+        </a>
+        <a class="flyout-link" data-module="ipg" data-subview="ledger" href="/panel">
           <span>تراکنش ها و اسناد حسابداری</span>
-        </button>
-        <button class="flyout-link" data-module="ipg" data-subview="simulator">
+        </a>
+        <a class="flyout-link" data-module="ipg" data-subview="simulator" href="/panel">
           <span>شبیه ساز پرداخت شاپرک</span>
-        </button>
-        <button class="flyout-link" data-module="ipg" data-subview="reports">
+        </a>
+        <a class="flyout-link" data-module="ipg" data-subview="reports" href="/panel">
           <span>گزارش های تحلیلی و مالی</span>
-        </button>
-        <button class="flyout-link" data-module="ipg" data-subview="service-config" onclick="Router.navigate('service', 'ipg');">
-          <span>⚙ پیکربندی درگاه شاپرک</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="ipg" data-subview="service-config" data-service-target="ipg" href="/panel">
+          <span>پیکربندی درگاه شاپرک</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="mobile">
-        <button class="flyout-link active" data-module="mobile" data-subview="dashboard">
+        <a class="flyout-link active" data-module="mobile" data-subview="dashboard" href="/panel">
           <span>داشبورد سرویس های موبایل</span>
-        </button>
-        <button class="flyout-link" data-module="mobile" data-subview="push">
-          <span>سامانه اعلان (Push Notifications)</span>
-        </button>
-        <button class="flyout-link" data-module="mobile" data-subview="iap">
-          <span>خرید درون برنامه ای (بازار و مایکت)</span>
-        </button>
-        <button class="flyout-link" data-module="mobile" data-subview="realtime">
-          <span>جریان داده زنده (WebSockets)</span>
-        </button>
-        <button class="flyout-link" data-module="mobile" data-subview="config" onclick="Router.navigate('service', 'mobile');">
-          <span>⚙ پیکربندی سرویس موبایل</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="mobile" data-subview="push" href="/panel">
+          <span>سامانه اعلان پیامکی و نوتیفیکیشن</span>
+        </a>
+        <a class="flyout-link" data-module="mobile" data-subview="iap" href="/panel">
+          <span>خرید درون برنامه ای</span>
+        </a>
+        <a class="flyout-link" data-module="mobile" data-subview="realtime" href="/panel">
+          <span>جریان داده زنده</span>
+        </a>
+        <a class="flyout-link" data-module="mobile" data-subview="config" data-service-target="mobile" href="/panel">
+          <span>پیکربندی سرویس موبایل</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="hosting">
-        <button class="flyout-link active" data-module="hosting" data-subview="dashboard">
+        <a class="flyout-link active" data-module="hosting" data-subview="dashboard" href="/panel">
           <span>داشبورد میزبانی وب</span>
-        </button>
-        <button class="flyout-link" data-module="hosting" data-subview="deployments">
+        </a>
+        <a class="flyout-link" data-module="hosting" data-subview="deployments" href="/panel">
           <span>استقرارها و نسخه ها</span>
-        </button>
-        <button class="flyout-link" data-module="hosting" data-subview="domains">
+        </a>
+        <a class="flyout-link" data-module="hosting" data-subview="domains" href="/panel">
           <span>دامنه ها و گواهی SSL</span>
-        </button>
-        <button class="flyout-link" data-module="hosting" data-subview="config" onclick="Router.navigate('service', 'hosting');">
-          <span>⚙ پیکربندی میزبانی وب</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="hosting" data-subview="config" data-service-target="hosting" href="/panel">
+          <span>پیکربندی میزبانی وب</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="compliance">
-        <button class="flyout-link active" data-module="compliance" data-subview="dashboard">
+        <a class="flyout-link active" data-module="compliance" data-subview="dashboard" href="/panel">
           <span>داشبورد مجوزها و انطباق</span>
-        </button>
-        <button class="flyout-link" data-module="compliance" data-subview="tokens">
-          <span>نمادهای قانونی (اینماد و ساماندهی)</span>
-        </button>
-        <button class="flyout-link" data-module="compliance" data-subview="deeplinks">
+        </a>
+        <a class="flyout-link" data-module="compliance" data-subview="tokens" href="/panel">
+          <span>نمادهای قانونی</span>
+        </a>
+        <a class="flyout-link" data-module="compliance" data-subview="deeplinks" href="/panel">
           <span>دیپ لینک اپلیکیشن موبایل</span>
-        </button>
-        <button class="flyout-link" data-module="compliance" data-subview="config" onclick="Router.navigate('service', 'compliance');">
-          <span>⚙ پیکربندی مجوزها و انطباق</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="compliance" data-subview="config" data-service-target="compliance" href="/panel">
+          <span>پیکربندی مجوزها و انطباق</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="telemetry">
-        <button class="flyout-link active" data-module="telemetry" data-subview="live">
+        <a class="flyout-link active" data-module="telemetry" data-subview="live" href="/panel">
           <span>پخش زنده لاگ های سرور</span>
-        </button>
-        <button class="flyout-link" data-module="telemetry" data-subview="audit">
-          <span>لاگ های امنیتی (Audit Logs)</span>
-        </button>
-        <button class="flyout-link" data-module="telemetry" data-subview="usage">
+        </a>
+        <a class="flyout-link" data-module="telemetry" data-subview="audit" href="/panel">
+          <span>لاگ های امنیتی</span>
+        </a>
+        <a class="flyout-link" data-module="telemetry" data-subview="usage" href="/panel">
           <span>مصرف منابع و هزینه ها</span>
-        </button>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="team">
-        <button class="flyout-link active" data-module="team" data-subview="members">
+        <a class="flyout-link active" data-module="team" data-subview="members" href="/panel">
           <span>اعضای تیم پروژه</span>
-        </button>
-        <button class="flyout-link" data-module="team" data-subview="roles">
-          <span>سطوح دسترسی (RBAC)</span>
-        </button>
+        </a>
+        <a class="flyout-link" data-module="team" data-subview="roles" href="/panel">
+          <span>سطوح دسترسی</span>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="settings">
-        <button class="flyout-link active" data-module="settings" data-subview="general">
+        <a class="flyout-link active" data-module="settings" data-subview="general" href="/panel">
           <span>تنظیمات عمومی پروژه</span>
-        </button>
-        <button class="flyout-link" data-module="settings" data-subview="password">
+        </a>
+        <a class="flyout-link" data-module="settings" data-subview="password" href="/panel">
           <span>رمز اختصاصی پروژه</span>
-        </button>
-        <button class="flyout-link" data-module="settings" data-subview="keys">
+        </a>
+        <a class="flyout-link" data-module="settings" data-subview="keys" href="/panel">
           <span>کلیدهای دسترسی API</span>
-        </button>
-        <button class="flyout-link" data-module="settings" data-subview="danger">
+        </a>
+        <a class="flyout-link" data-module="settings" data-subview="danger" href="/panel">
           <span>حذف پروژه</span>
-        </button>
+        </a>
       </div>
 
       <div class="flyout-group" data-module="profile">
-        <button class="flyout-link active" data-module="profile" data-subview="general">
+        <a class="flyout-link active" data-module="profile" data-subview="general" href="/panel">
           <span>اطلاعات حساب و امنیت</span>
-        </button>
+        </a>
       </div>
       </div>
 
@@ -432,7 +432,6 @@
   </aside>
     <!-- Main Content Area -->
     <main class="content-main">
-      <div class="workspace-tabs-bar" id="workspace-tabs-bar"></div>
 
       <!-- 1. EMPTY STATE: Shown when developer has 0 projects -->
       <div id="empty-state-view" class="empty-state" style="display: none;">
@@ -469,7 +468,7 @@
           <div id="overview-edge-func-banner" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1px solid #059669; border-radius: var(--radius-sm); padding: 16px 20px; margin-bottom: 20px; display: none; justify-content: space-between; align-items: center; color: #ffffff;">
             <div>
               <div style="font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                <span>سرویس توابع لبه سرورلس (Edge Functions) برای این پروژه فعال نیست</span>
+                <span>سرویس توابع لبه سرورلس برای این پروژه فعال نیست</span>
                 <span class="badge" style="background: #fbbf24; color: #78350f; font-weight: 700;">پیشنهادی</span>
               </div>
               <div style="font-size: 13px; color: #a7f3d0; margin-top: 4px;">
@@ -535,7 +534,7 @@
           <div class="card" style="margin-bottom: 24px;">
             <div class="card-header">
               <div>
-                <div class="card-title">راهنمای سریع اتصال SDK و کلاینت ها (Developer Quickstart)</div>
+                <div class="card-title">راهنمای سریع اتصال SDK و کلاینت ها</div>
                 <div class="card-desc">نمونه کدهای آماده اتصال سریع به LocalMe در زبان های محبوب با احراز هویت خودکار.</div>
               </div>
               <div style="display: flex; gap: 6px;" id="quickstart-lang-tabs">
@@ -576,7 +575,7 @@
 
           <!-- 10-Day Retention Notice Card -->
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 22px; color: #16a34a;">🛡️</span>
+            <span style="display: inline-flex; align-items: center; color: #16a34a;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
             <div>
               <strong style="color: #14532d; font-size: 14px;">تضمین و سیاست حفظ و نگهداری ۱۰ روزه داده ها:</strong>
               <div style="color: #166534; font-size: 13px; margin-top: 2px;">
@@ -612,7 +611,7 @@
           <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <h3 style="font-size: 17px; font-weight: 800;">پایگاه داده رابطه ای (PostgreSQL REST)</h3>
+                <h3 style="font-size: 17px; font-weight: 800;">پایگاه داده رابطه ای</h3>
                 <p style="font-size: 13.5px; color: var(--text-muted); margin-top: 2px;">
                   اسکیمای مجزا و دسترسی مستقیم RESTful مبتنی بر PostgREST با سقف اتصالات مشخص.
                 </p>
@@ -640,7 +639,7 @@
                 <input type="text" id="db-cfg-schema" class="input-field" required />
               </div>
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر اتصالات همزمان (Max Connections)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر اتصالات همزمان</label>
                 <input type="number" id="db-cfg-conn" class="input-field" value="20" required />
               </div>
               <button type="submit" class="btn-primary" style="width: 100%;">فعال سازی سرویس پایگاه داده</button>
@@ -700,7 +699,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">ویرایشگر تعاملی SQL (Interactive Query Studio)</div>
+                <div class="card-title">ویرایشگر تعاملی SQL</div>
                 <div class="card-desc">اجرای کوئری های SQL به صورت زنده بر روی دیتابیس اختصاصی پروژه با تایمر میلی ثانیه و بازرسی نتایج.</div>
               </div>
               <div style="display: flex; gap: 8px;">
@@ -732,7 +731,7 @@
 
           <div class="card">
             <div class="card-header">
-              <div class="card-title">نتایج اجرای دستور (Query Results)</div>
+              <div class="card-title">نتایج اجرای دستور</div>
             </div>
             <div class="table-container">
               <table class="data-table" id="sql-results-table">
@@ -752,7 +751,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">طراحی و ساختار جداول و روابط (DDL Schema Inspector)</div>
+                <div class="card-title">طراحی و ساختار جداول و روابط</div>
                 <div class="card-desc">مشاهده دقیق فیلدها، انواع داده ها، کلیدهای اصلی و وضعیت اجباری بودن ستون ها.</div>
               </div>
               <div style="display: flex; gap: 8px;">
@@ -768,9 +767,9 @@
                 <thead>
                   <tr>
                     <th>نام ستون</th>
-                    <th>نوع داده (Data Type)</th>
+                    <th>نوع داده</th>
                     <th>وضعیت کلید اصلی</th>
-                    <th>تهی پذیری (Nullability)</th>
+                    <th>تهی پذیری</th>
                     <th>مقدار پیش فرض</th>
                   </tr>
                 </thead>
@@ -787,7 +786,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">پشتیبان گیری و بازیابی پایگاه داده (Backup & Recovery)</div>
+                <div class="card-title">پشتیبان گیری و بازیابی پایگاه داده</div>
                 <div class="card-desc">تهیه خودکار و دستی نسخه های پشتیبان روزانه از پایگاه داده پروژه با رمزنگاری پیشرفته ابری.</div>
               </div>
               <button type="button" class="btn-primary" id="btn-create-snapshot" onclick="triggerManualSnapshot()">
@@ -803,17 +802,17 @@
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">آخرین نسخه پشتیبان</div>
-                <div class="metric-cell-val" id="db-backup-last-time" style="font-size: 16px;">امروز، ۰۳:۰۰</div>
+                <div class="metric-cell-val" id="db-backup-last-time" style="font-size: 16px;">-</div>
                 <div class="metric-cell-sub">رمزنگاری شده در فضای ابری</div>
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">دوره نگهداری نسخه ها</div>
                 <div class="metric-cell-val" style="font-size: 18px;">۳۰ روز</div>
-                <div class="metric-cell-sub">قابلیت بازیابی به نقطه زمانی (PITR)</div>
+                <div class="metric-cell-sub">قابلیت بازیابی به نقطه زمانی</div>
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">حجم کل نسخه ها</div>
-                <div class="metric-cell-val" id="db-backup-total-size" style="font-size: 18px;">۴.۸ مگابایت</div>
+                <div class="metric-cell-val" id="db-backup-total-size" style="font-size: 18px;">۰ بایت</div>
                 <div class="metric-cell-sub">فشرده سازی gzip سطح ۹</div>
               </div>
             </div>
@@ -847,7 +846,7 @@
           <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <h3 style="font-size: 17px; font-weight: 800;">احراز هویت جامع کاربران (Auth)</h3>
+                <h3 style="font-size: 17px; font-weight: 800;">احراز هویت جامع کاربران</h3>
                 <p style="font-size: 13.5px; color: var(--text-muted); margin-top: 2px;">
                   ورود پیامکی OTP با خط اختصاصی، نام کاربری و کلمه عبور، و توکن های استاندارد JWT.
                 </p>
@@ -875,23 +874,23 @@
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                   <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="auth-cfg-allow-password" checked />
-                    <span>ورود با نام کاربری/ایمیل و کلمه عبور (Password Auth)</span>
+                    <span>ورود با نام کاربری/ایمیل و کلمه عبور</span>
                   </label>
                   <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="auth-cfg-enable-captcha" />
-                    <span>کد امنیتی کپچا ضد اسپم و بات (Captcha Protection)</span>
+                    <span>کد امنیتی کپچا ضد اسپم و بات</span>
                   </label>
                   <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="auth-cfg-enable-otp" />
-                    <span>احراز هویت پیامکی با کد یکبارمصرف (SMS OTP - اختیاری)</span>
+                    <span>احراز هویت پیامکی با کد یکبارمصرف</span>
                   </label>
                   <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="auth-cfg-allow-oauth" checked />
-                    <span>ورود امن با حساب کاربری گوگل و گیت هاب (OAuth 2.0)</span>
+                    <span>ورود امن با حساب کاربری گوگل و گیت‌هاب</span>
                   </label>
                   <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="auth-cfg-allow-magiclink" />
-                    <span>ورود بدون رمز با لینک جادویی ایمیل (Magic Link)</span>
+                    <span>ورود بدون رمز با لینک جادویی ایمیل</span>
                   </label>
                 </div>
               </div>
@@ -950,7 +949,7 @@
                     </label>
                     <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                       <input type="checkbox" id="auth-active-enable-captcha" />
-                      <span>کد امنیتی کپچا (Captcha)</span>
+                      <span>کد امنیتی کپچا</span>
                     </label>
                     <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                       <input type="checkbox" id="auth-active-enable-otp" onchange="document.getElementById('auth-sms-settings-panel').style.display = this.checked ? 'grid' : 'none'" />
@@ -958,11 +957,11 @@
                     </label>
                     <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                       <input type="checkbox" id="auth-active-allow-oauth" checked />
-                      <span>ورود با گوگل و گیت هاب (OAuth)</span>
+                      <span>ورود با گوگل و گیت هاب</span>
                     </label>
                     <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                       <input type="checkbox" id="auth-active-allow-magiclink" />
-                      <span>لینک جادویی ایمیل (Magic Link)</span>
+                      <span>لینک جادویی ایمیل</span>
                     </label>
                   </div>
                 </div>
@@ -1003,7 +1002,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">تحلیل پیامک های ارسالی OTP و اعتبارسنجی (SMS Delivery Analytics)</div>
+                <div class="card-title">تحلیل پیامک های ارسالی OTP و اعتبارسنجی</div>
                 <div class="card-desc">ردگیری دقیق وضعیت ارسال پیامک های رمز یکبارمصرف، اپراتورهای مخابراتی و زمان تحویل به گوشی کاربر.</div>
               </div>
               <button type="button" class="btn-secondary" onclick="loadSmsLogs()">تازه سازی لاگ ها</button>
@@ -1017,12 +1016,12 @@
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">نرخ تحویل موفق</div>
-                <div class="metric-cell-val" style="color: var(--brand-dark); font-size: 20px;">۹۹.۲ ٪</div>
+                <div class="metric-cell-val" id="sms-delivery-rate" style="color: var(--brand-dark); font-size: 20px;">-</div>
                 <div class="metric-cell-sub">تحویل در کمتر از ۴ ثانیه</div>
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">میانگین زمان تحویل</div>
-                <div class="metric-cell-val" style="font-size: 20px;">۲.۴ ثانیه</div>
+                <div class="metric-cell-val" id="sms-avg-time" style="font-size: 20px;">-</div>
                 <div class="metric-cell-sub">از طریق سوییچ کاوه نگار / مگفا</div>
               </div>
               <div class="metric-cell">
@@ -1057,7 +1056,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">سیاست های امنیتی و انقضای رمز عبور (Auth Security Policies)</div>
+                <div class="card-title">سیاست های امنیتی و انقضای رمز عبور</div>
                 <div class="card-desc">پیکربندی قوانین محدودسازی حملات بروت فورس، مدت زمان انقضای کدهای OTP و عمر نشست های توکن JWT.</div>
               </div>
             </div>
@@ -1094,7 +1093,7 @@
           <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <h3 style="font-size: 17px; font-weight: 800;">ذخیره سازی ابری چندرسانه ای (Blob Storage)</h3>
+                <h3 style="font-size: 17px; font-weight: 800;">ذخیره سازی ابری چندرسانه ای</h3>
                 <p style="font-size: 13.5px; color: var(--text-muted); margin-top: 2px;">
                   باکت های ذخیره فایل ها، تصاویر و اسناد با صدور آدرس مستقیم CDN و سطوح دسترسی امن.
                 </p>
@@ -1127,7 +1126,7 @@
             <div class="card">
               <div class="card-header">
                 <div>
-                  <div class="card-title">باکت های ذخیره سازی داده (Buckets)</div>
+                  <div class="card-title">باکت های ذخیره سازی داده</div>
                   <div class="card-desc">فهرست باکت های ایجاد شده و وضعیت عمومی یا محرمانه بودن آن ها.</div>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -1160,7 +1159,7 @@
                 <button type="button" class="btn-danger" style="font-size: 13px;" onclick="disableService('storage')">غیرفعال سازی سرویس</button>
               </div>
               <form id="form-update-storage-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
-                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف فضا (MB)</label> <input type="number" id="storage-active-quota" class="input-field" required /> </div>
+                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف فضا (مگابایت)</label> <input type="number" id="storage-active-quota" class="input-field" required /> </div>
                 <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">دسترسی CORS</label> <input type="text" id="storage-active-cors" class="input-field" required /> </div>
                 <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
               </form>
@@ -1173,7 +1172,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">کاوشگر فایل ها و رسانه های ابری (Object Storage Explorer)</div>
+                <div class="card-title">کاوشگر فایل ها و رسانه های ابری</div>
                 <div class="card-desc">مشاهده، آپلود مستقیم، دریافت آدرس عمومی و مدیریت فایل ها در باکت های انتخاب شده.</div>
               </div>
               <div style="display: flex; gap: 8px;">
@@ -1200,7 +1199,7 @@
                 <thead>
                   <tr>
                     <th>نام فایل</th>
-                    <th>نوع محتوا (Content-Type)</th>
+                    <th>نوع محتوا</th>
                     <th>اندازه فایل</th>
                     <th>تاریخ آپلود (شمسی)</th>
                     <th>عملیات</th>
@@ -1219,25 +1218,25 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">سطوح دسترسی و تنظیمات کشینگ CDN (Storage ACL & Cache TTL)</div>
+                <div class="card-title">سطوح دسترسی و تنظیمات کشینگ CDN</div>
                 <div class="card-desc">پیکربندی سیاست های دسترسی به فایل ها، زمان ماندگاری کش در لبه CDN ملی و هدرهای امنیتی دانلود.</div>
               </div>
             </div>
 
             <form id="form-storage-policies" style="max-width: 640px;" onsubmit="saveStoragePolicies(event)">
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 4px;">مدت زمان کش فایل های عمومی در مرورگر (Cache-Control Max-Age ثانیه)</label>
+                <label style="font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 4px;">مدت زمان کش فایل های عمومی در مرورگر (به ثانیه)</label>
                 <input type="number" id="storage-policy-cdn-ttl" class="input-field" value="86400" min="0" required />
                 <span style="font-size: 13px; color: var(--text-muted);">پیش فرض: ۸۶۴۰۰ ثانیه (۲۴ ساعت)</span>
               </div>
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر اندازه مجاز فایل آپلودی تک کاربره (MB)</label>
+                <label style="font-size: 13.5px; font-weight: 600; display: block; margin-bottom: 4px;">حداکثر اندازه مجاز فایل آپلودی تک کاربره (مگابایت)</label>
                 <input type="number" id="storage-policy-max-mb" class="input-field" value="50" min="1" max="500" required />
               </div>
               <div style="margin-bottom: 24px;">
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer;">
                   <input type="checkbox" id="storage-policy-force-download" />
-                  <span>اجبار به دانلود فایل ها به عنوان ضمیمه (Content-Disposition: attachment)</span>
+                  <span>اجبار به دانلود فایل ها به عنوان ضمیمه</span>
                 </label>
               </div>
               <button type="submit" class="btn-primary">ذخیره تنظیمات ذخیره سازی</button>
@@ -1254,7 +1253,7 @@
           <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
-                <h3 style="font-size: 17px; font-weight: 800;">توابع سرورلس لبه (Edge Functions)</h3>
+                <h3 style="font-size: 17px; font-weight: 800;">توابع سرورلس لبه</h3>
                 <p style="font-size: 13.5px; color: var(--text-muted); margin-top: 2px;">
                   اجرای کدهای جاوااسکریپت روی موتور ایزوله فوق سریع Jint با دسترسی به وب هوک و تایمرهای زمان بندی شده.
                 </p>
@@ -1278,7 +1277,7 @@
             <p>جهت استقرار کدهای بدون سرور، می توانید سرویس را فوراً فعال کرده یا پارامترهای زیر را تنظیم نمایید.</p>
             <div style="max-width: 480px; margin: 0 auto 16px auto;">
               <button type="button" class="btn-primary" style="width: 100%; font-size: 14px; padding: 10px; font-weight: 700;" onclick="quickEnableService('functions')">
-                ⚡ فعال سازی آنی سرویس توابع لبه (تنظیمات پیش فرض)
+                فعال سازی آنی سرویس توابع لبه (تنظیمات پیش فرض)
               </button>
             </div>
             <form id="form-enable-func" style="max-width: 480px; margin: 0 auto; text-align: right; background: #ffffff; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
@@ -1306,7 +1305,7 @@
                   <thead>
                     <tr>
                       <th>نام تابع</th>
-                      <th>اسلاگ (Slug)</th>
+                      <th>شناسه انگلیسی</th>
                       <th>مسیر فراخوانی API</th>
                       <th>تاریخ ایجاد (شمسی)</th>
                       <th>عملیات</th>
@@ -1332,11 +1331,11 @@
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                   <select id="func-template-select" class="input-field" style="width: auto; font-size: 13px;" onchange="applyScriptTemplate(this.value)">
                     <option value="">قالب آماده اسکریپت...</option>
-                    <option value="webhook">وب هوک استاندارد (JSON Webhook)</option>
-                    <option value="validator">اعتبارسنجی ورودی داده (Validator)</option>
-                    <option value="shaparak">پردازش بازگشت شاپرک (IPG Callback)</option>
-                    <option value="sms">ارسال پیامک با پترن خدماتی (SMS Trigger)</option>
-                    <option value="transform">تبدیل ساختار خروجی (ETL Transform)</option>
+                    <option value="webhook">وب هوک استاندارد</option>
+                    <option value="validator">اعتبارسنجی ورودی داده</option>
+                    <option value="shaparak">پردازش بازگشت شاپرک</option>
+                    <option value="sms">ارسال پیامک با پترن خدماتی</option>
+                    <option value="transform">تبدیل ساختار خروجی</option>
                   </select>
                   <button type="button" class="btn-primary" id="btn-save-func-script" onclick="saveActiveFunctionScript()">
                     ذخیره تغییرات و استقرار
@@ -1351,7 +1350,7 @@
                   <input type="text" id="func-editor-name" class="input-field" placeholder="نام نمایشی تابع..." />
                 </div>
                 <div>
-                  <label style="font-size: 12.5px; font-weight: 700; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
+                  <label style="font-size: 12.5px; font-weight: 700; display: block; margin-bottom: 4px;">شناسه انگلیسی</label>
                   <input type="text" id="func-editor-slug" class="input-field" placeholder="slug" readonly />
                 </div>
                 <div>
@@ -1381,19 +1380,19 @@
               <!-- Unified Test & Execution Runner Pane -->
               <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                  <span style="font-size: 14px; font-weight: 700;">آزمایش و اجرای زنده اسکریپت با داده دلخواه (Live Test Runner):</span>
+                  <span style="font-size: 14px; font-weight: 700;">آزمایش و اجرای زنده اسکریپت با داده دلخواه:</span>
                   <button type="button" id="btn-exec-func-test" class="btn-primary" onclick="executeFunctionTest()">
                     اجرای زنده اسکریپت
                   </button>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                   <div>
-                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">پارامتر ورودی تابع (Input JSON Payload)</label>
+                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">پارامتر ورودی تابع</label>
                     <textarea id="func-test-payload" class="input-field" rows="6" style="resize: vertical; direction: ltr; font-size: 13px;">{ "userId": "1001", "action": "test", "amount": 250000 }</textarea>
                   </div>
                   <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                      <label style="font-size: 12.5px; font-weight: 600;">نتیجه بازگشتی کنسول (Response Inspector)</label>
+                      <label style="font-size: 12.5px; font-weight: 600;">نتیجه بازگشتی کنسول</label>
                       <span id="func-test-latency-badge" class="badge" style="display: none;">-</span>
                     </div>
                     <pre id="func-test-result" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; height: 145px; overflow: auto; font-family: var(--font-persian); font-size: 13px; direction: ltr; text-align: left;">{ "status": "آماده برای تست..." }</pre>
@@ -1408,8 +1407,8 @@
                 <button type="button" class="btn-danger" style="font-size: 13px;" onclick="disableService('functions')">غیرفعال سازی سرویس</button>
               </div>
               <form id="form-update-func-settings" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
-                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف زمان اجرا (ms)</label> <input type="number" id="func-active-timeout" class="input-field" required /> </div>
-                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف حافظه رم (MB)</label> <input type="number" id="func-active-memory" class="input-field" required /> </div>
+                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف زمان اجرا (میلی‌ثانیه)</label> <input type="number" id="func-active-timeout" class="input-field" required /> </div>
+                <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">سقف حافظه رم (مگابایت)</label> <input type="number" id="func-active-memory" class="input-field" required /> </div>
                 <button type="submit" class="btn-secondary">ذخیره تغییرات</button>
               </form>
             </div>
@@ -1421,7 +1420,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">مانیتورینگ زمان اجرا، مصرف رم و تأخیر (Edge Functions Traces)</div>
+                <div class="card-title">مانیتورینگ زمان اجرا، مصرف رم و تأخیر</div>
                 <div class="card-desc">پایش کارایی توابع مستقر شده، تحلیل زمان صرف شده روی موتور Jint و آمار فراخوانی ها.</div>
               </div>
               <button type="button" class="btn-secondary" onclick="loadFunctionsTraces()">تازه سازی آمار</button>
@@ -1435,12 +1434,12 @@
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">میانگین زمان اجرا</div>
-                <div class="metric-cell-val" style="color: var(--brand-dark); font-size: 20px;">۴.۲ ms</div>
+                <div class="metric-cell-val" id="fn-avg-latency" style="color: var(--brand-dark); font-size: 20px;">-</div>
                 <div class="metric-cell-sub">زمان واقعی پردازش CPU</div>
               </div>
               <div class="metric-cell">
                 <div class="metric-cell-label">مصرف پیک حافظه رم</div>
-                <div class="metric-cell-val" style="font-size: 20px;">۶.۸ MB</div>
+                <div class="metric-cell-val" id="fn-peak-mem" style="font-size: 20px;">-</div>
                 <div class="metric-cell-sub">کمتر از سقف ۱۶ مگابایت</div>
               </div>
               <div class="metric-cell">
@@ -1456,7 +1455,7 @@
                   <tr>
                     <th>تابع</th>
                     <th>وضعیت اجرا</th>
-                    <th>مدت زمان (ms)</th>
+                    <th>مدت زمان (میلی‌ثانیه)</th>
                     <th>حافظه مصرفی</th>
                     <th>زمان اجرا (شمسی)</th>
                   </tr>
@@ -1474,24 +1473,24 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">متغیرهای محیطی و کلیدهای محرمانه توابع (Environment Variables & Secrets)</div>
+                <div class="card-title">متغیرهای محیطی و کلیدهای محرمانه توابع</div>
                 <div class="card-desc">کلیدها و متغیرهایی که در کدهای جاوااسکریپت توابع از طریق شیء global env در دسترس هستند.</div>
               </div>
             </div>
 
             <form id="form-add-func-env" style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px; display: grid; grid-template-columns: 1fr 2fr auto auto; gap: 10px; align-items: end;" onsubmit="handleAddFuncEnv(event)">
               <div>
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">نام کلید (Key)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">نام کلید</label>
                 <input type="text" id="func-env-key" class="input-field" placeholder="API_SECRET_KEY" required />
               </div>
               <div>
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">مقدار متغیر (Value)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 3px;">مقدار متغیر</label>
                 <input type="password" id="func-env-val" class="input-field" placeholder="مقدار متغیر محرمانه" required />
               </div>
               <div style="display: flex; align-items: center; padding-bottom: 8px;">
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
                   <input type="checkbox" id="func-env-is-secret" checked />
-                  <span>محرمانه (Masked)</span>
+                  <span>محرمانه</span>
                 </label>
               </div>
               <div>
@@ -1526,7 +1525,7 @@
           <div class="card" style="margin-bottom: 20px;">
             <div class="card-header">
               <div>
-                <div class="card-title">پیکربندی درگاه پرداخت شتاب و پذیرندگان بانکی (IPG Studio)</div>
+                <div class="card-title">پیکربندی درگاه پرداخت شتاب و پذیرندگان بانکی</div>
                 <div class="card-desc">تنظیم مشخصات و مدارک پذیرندگی ۱ به ۱ رسمی درگاه های بانکی شاپرک (سامان کیش، به پرداخت، زرین پال، سداد).</div>
               </div>
               <button type="button" class="btn-secondary" onclick="navigateToView('view-ipg-simulator')">
@@ -1536,38 +1535,40 @@
 
             <form id="form-ipg-config" style="margin-bottom: 24px;">
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13.5px; font-weight: 700; display: block; margin-bottom: 6px;">انتخاب درگاه پیش فرض شاپرک (PSP)</label>
+                <label style="font-size: 13.5px; font-weight: 700; display: block; margin-bottom: 6px;">انتخاب درگاه پیش فرض شاپرک</label>
                 <select id="ipg-default-psp" class="input-field" style="font-weight: 700;">
-                  <option value="ZARINPAL">زرین پال (ZarinPal IPG - درگاه اختصاصی و اشتراکی)</option>
-                  <option value="BEHPARDAKHT">به پرداخت ملت (Mellat IPG - سوییچ مرکزی شاپرک)</option>
-                  <option value="SEP">سامان کیش / سپ (SEP Shaparak - بانک سامان)</option>
-                  <option value="SADAD">پرداخت الکترونیک سداد (Sadad IPG - بانک ملی ایران)</option>
+                  <option value="ZARINPAL">زرین پال</option>
+                  <option value="BEHPARDAKHT">به پرداخت ملت</option>
+                  <option value="SEP">سامان کیش (سپ)</option>
+                  <option value="SADAD">سداد بانک ملی</option>
+                  <option value="IDPAY">آیدی پی</option>
+                  <option value="PAYPING">پی پینگ</option>
                 </select>
               </div>
 
               <!-- 1. Behpardakht Mellat Fields Group -->
               <div id="psp-fields-behpardakht" class="psp-fields-group" style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                  <span class="psp-badge-pill" style="color: #b91c1c; border: 1px solid #fecaca; background: #fef2f2;">درگاه به پرداخت ملت (Mellat)</span>
-                  <span style="font-size: 13px; color: var(--text-muted);">وب سرویس پروتکل شاپرک ملت (bpPayRequest)</span>
+                  <span class="psp-badge-pill" style="color: #b91c1c; border: 1px solid #fecaca; background: #fef2f2;">درگاه به پرداخت ملت</span>
+                  <span style="font-size: 13px; color: var(--text-muted);">وب سرویس پروتکل شاپرک ملت</span>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد پایانه عددی ۷ الی ۸ رقمی (TerminalId)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد پایانه عددی ۷ الی ۸ رقمی</label>
                     <input type="text" id="ipg-mellat-terminal" class="input-field" placeholder="مانند: 1234567" />
                   </div>
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام کاربری وب سرویس (UserName)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام کاربری وب سرویس</label>
                     <input type="text" id="ipg-mellat-username" class="input-field" placeholder="نام کاربری ارائه شده از به پرداخت" />
                   </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلمه عبور وب سرویس (UserPassword)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلمه عبور وب سرویس</label>
                     <input type="password" id="ipg-mellat-password" class="input-field" placeholder="رمز وب سرویس پذیرنده" />
                   </div>
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه پرداخت کننده (PayerId - اختیاری)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه پرداخت کننده (اختیاری)</label>
                     <input type="text" id="ipg-mellat-payerid" class="input-field" placeholder="0" />
                   </div>
                 </div>
@@ -1576,16 +1577,16 @@
               <!-- 2. SEP Saman Kish Fields Group -->
               <div id="psp-fields-sep" class="psp-fields-group" style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                  <span class="psp-badge-pill" style="color: #1d4ed8; border: 1px solid #bfdbfe; background: #eff6ff;">سامان کیش سپ (SEP Shaparak)</span>
+                  <span class="psp-badge-pill" style="color: #1d4ed8; border: 1px solid #bfdbfe; background: #eff6ff;">سامان کیش سپ</span>
                   <span style="font-size: 13px; color: var(--text-muted);">پروتکل توکنایزیشن درگاه سامان کیش</span>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پایانه ۸ رقمی (TerminalId)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پایانه ۸ رقمی</label>
                     <input type="text" id="ipg-sep-terminal" class="input-field" placeholder="مانند: 12345678" />
                   </div>
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پذیرنده / کد مشتری (MerchantId)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پذیرنده / کد مشتری</label>
                     <input type="text" id="ipg-sep-merchant" class="input-field" placeholder="کد پذیرنده اختصاصی" />
                   </div>
                 </div>
@@ -1598,17 +1599,17 @@
               <!-- 3. ZarinPal Fields Group -->
               <div id="psp-fields-zarinpal" class="psp-fields-group" style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                  <span class="psp-badge-pill" style="color: #b45309; border: 1px solid #fde68a; background: #fffbeb;">زرین پال (ZarinPal REST v4)</span>
+                  <span class="psp-badge-pill" style="color: #b45309; border: 1px solid #fde68a; background: #fffbeb;">زرین پال</span>
                   <span style="font-size: 13px; color: var(--text-muted);">پروتکل مدرن REST با مرچنت استاندارد UUID</span>
                 </div>
                 <div style="margin-bottom: 12px;">
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد ۳۶ کاراکتری مرچنت زرین پال (Merchant ID)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد ۳۶ کاراکتری مرچنت زرین پال</label>
                   <input type="text" id="ipg-zarinpal-merchant" class="input-field" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
                 </div>
                 <div>
                   <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                     <input type="checkbox" id="ipg-zarinpal-zaringate" />
-                    <span>فعال سازی حالت مستقیم زرین گیت (ZarinGate)</span>
+                    <span>فعال سازی حالت مستقیم زرین گیت</span>
                   </label>
                 </div>
               </div>
@@ -1616,22 +1617,58 @@
               <!-- 4. Sadad Bank Melli Fields Group -->
               <div id="psp-fields-sadad" class="psp-fields-group" style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                  <span class="psp-badge-pill" style="color: #047857; border: 1px solid #a7f3d0; background: #ecfdf5;">سداد بانک ملی (Sadad IPG)</span>
+                  <span class="psp-badge-pill" style="color: #047857; border: 1px solid #a7f3d0; background: #ecfdf5;">سداد بانک ملی</span>
                   <span style="font-size: 13px; color: var(--text-muted);">وب سرویس پروتکل پرداخت سداد شاپرک</span>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پذیرنده سداد (MerchantId)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پذیرنده سداد</label>
                     <input type="text" id="ipg-sadad-merchant" class="input-field" placeholder="شماره پذیرنده ملی" />
                   </div>
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پایانه سداد (TerminalId)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره پایانه سداد</label>
                     <input type="text" id="ipg-sadad-terminal" class="input-field" placeholder="شماره ترمینال ملی" />
                   </div>
                 </div>
                 <div>
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلید متقارن پذیرنده (TerminalKey - کلید Base64)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلید متقارن پذیرنده سداد</label>
                   <input type="password" id="ipg-sadad-key" class="input-field" placeholder="کلید رمزنگاری ارائه شده توسط بانک ملی" />
+                </div>
+              </div>
+
+              <!-- 5. IDPay Fields Group -->
+              <div id="psp-fields-idpay" class="psp-fields-group" style="display: none; background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <span class="psp-badge-pill" style="color: #4338ca; border: 1px solid #c7d2fe; background: #eef2ff;">آیدی پی</span>
+                  <span style="font-size: 13px; color: var(--text-muted);">درگاه پرداخت اینترنتی آیدی پی</span>
+                </div>
+                <div style="margin-bottom: 12px;">
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلید وب سرویس آیدی پی</label>
+                  <input type="password" id="ipg-idpay-key" class="input-field" placeholder="کلید اختصاصی دریافت شده از پنل آیدی‌پی" />
+                </div>
+                <div>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" id="ipg-idpay-sandbox" />
+                    <span>فعال سازی حالت تستی آیدی پی</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 6. PayPing Fields Group -->
+              <div id="psp-fields-payping" class="psp-fields-group" style="display: none; background: var(--bg-main); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <span class="psp-badge-pill" style="color: #0d9488; border: 1px solid #99f6e4; background: #f0fdfa;">پی پینگ</span>
+                  <span style="font-size: 13px; color: var(--text-muted);">درگاه پرداخت اینترنتی پی پینگ</span>
+                </div>
+                <div style="margin-bottom: 12px;">
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">توکن دسترسی پی پینگ</label>
+                  <input type="password" id="ipg-payping-token" class="input-field" placeholder="توکن احراز هویت پی پینگ" />
+                </div>
+                <div>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" id="ipg-payping-sandbox" />
+                    <span>فعال سازی حالت تستی پی پینگ</span>
+                  </label>
                 </div>
               </div>
 
@@ -1661,8 +1698,8 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">دفتر کل تراکنش های بانکی شاپرک (Double-Entry Ledger)</div>
-                <div class="card-desc">ثبت لحظه ای کلیه تراکنش های ورودی، وضعیت تسویه حسابداری، شناسه پیگیری (RRN) و توکن شاپرک.</div>
+                <div class="card-title">دفتر کل تراکنش های بانکی شاپرک</div>
+                <div class="card-desc">ثبت لحظه ای کلیه تراکنش های ورودی، وضعیت تسویه حسابداری، شماره مرجع و توکن شاپرک.</div>
               </div>
               <div style="display: flex; gap: 8px;">
                 <input type="text" id="ipg-tx-search" class="input-field" placeholder="جستجو بر اساس توکن یا موبایل..." style="width: 220px;" oninput="filterIpgTxList(this.value)" />
@@ -1678,7 +1715,7 @@
                     <th>درگاه پرداخت</th>
                     <th>مبلغ تراکنش (تومان)</th>
                     <th>شماره همراه پرداخت کننده</th>
-                    <th>شماره مرجع (RRN)</th>
+                    <th>شماره مرجع</th>
                     <th>وضعیت تسویه</th>
                     <th>تاریخ ثبت (شمسی)</th>
                   </tr>
@@ -1696,8 +1733,8 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">شبیه ساز پرداخت شتاب شاپرک (Shetab IPG Simulator)</div>
-                <div class="card-desc">آزمایش کامل جریان پرداخت اینترنتی، تولید پویای رمز پویا (OTP)، اعتبارسنجی کارت های بانکی تستی و کالبک تراکنش.</div>
+                <div class="card-title">شبیه ساز پرداخت شتاب شاپرک</div>
+                <div class="card-desc">آزمایش کامل جریان پرداخت اینترنتی، تولید پویای رمز پویا، اعتبارسنجی کارت های بانکی تستی و کالبک تراکنش.</div>
               </div>
             </div>
 
@@ -1711,7 +1748,7 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                   <div>
-                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد امنیتی (CVV2)</label>
+                    <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد امنیتی CVV2</label>
                     <input type="text" id="sim-cvv2" class="input-field" value="382" maxlength="4" />
                   </div>
                   <div>
@@ -1727,7 +1764,7 @@
                   <input type="number" id="sim-amount-toman" class="input-field" value="50000" />
                 </div>
                 <div style="margin-bottom: 16px;">
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">رمز دوم پویا (OTP)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">رمز دوم پویا</label>
                   <div style="display: flex; gap: 8px;">
                     <input type="password" id="sim-otp" class="input-field" value="123456" style="flex: 1;" />
                     <button type="button" class="btn-secondary" style="font-size: 13px; white-space: nowrap;" id="btn-sim-req-otp" onclick="requestSimulatedOtp()">دریافت رمز پویا</button>
@@ -1753,7 +1790,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">گزارش درآمدهای وصول شده و تسویه حساب (Revenue & Settlement Reports)</div>
+                <div class="card-title">گزارش درآمدهای وصول شده و تسویه حساب</div>
                 <div class="card-desc">خلاصه مبالغ وصولی، تحلیل موفقیت پرداخت ها بر حسب درگاه و دوره های تسویه پایا و ساتنا.</div>
               </div>
               <button type="button" class="btn-secondary" onclick="loadIpgReports()">تازه سازی گزارش</button>
@@ -1810,7 +1847,7 @@
           <div class="card" style="margin-bottom: 24px;">
             <div class="card-header">
               <div>
-                <div class="card-title">مرکز مدیریت اعلان های موبایل (Mobile Push Notifications Hub)</div>
+                <div class="card-title">مرکز مدیریت اعلان های موبایل</div>
                 <div class="card-desc">مدیریت دستگاه های متصل، هدایت خودکار پیام به درگاه های داخلی (نجوا/پوشی) در شرایط اختلال شبکه، و ثبت توکن های FCM و APNs.</div>
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
@@ -1855,19 +1892,19 @@
                 <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">ارسال اعلان تستی به موبایل</div>
                 <form onsubmit="sendTestPush(event)">
                   <div style="margin-bottom: 10px;">
-                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">عنوان پیام (Title)</label>
+                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">عنوان پیام</label>
                     <input type="text" id="push-test-title" class="input-field" placeholder="عنوان اعلان..." required />
                   </div>
                   <div style="margin-bottom: 10px;">
-                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">متن پیام (Body)</label>
+                    <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">متن پیام</label>
                     <textarea id="push-test-body" class="input-field" rows="3" placeholder="متن پیام اعلان تستی..." required></textarea>
                   </div>
                   <div style="margin-bottom: 14px;">
                     <label style="font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 4px;">پلتفرم هدف</label>
                     <select id="push-test-platform" class="input-field">
                       <option value="all">همه دستگاه ها (Android, iOS, Web)</option>
-                      <option value="android">فقط اندروید (Android)</option>
-                      <option value="ios">فقط آی او اس (iOS)</option>
+                      <option value="android">فقط اندروید</option>
+                      <option value="ios">فقط آی او اس</option>
                     </select>
                   </div>
                   <button type="submit" class="btn-primary" style="width: 100%; background: #059669;">ارسال زنده اعلان تستی</button>
@@ -1881,7 +1918,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>شناسه دستگاه (Device ID)</th>
+                    <th>شناسه دستگاه</th>
                     <th>سیستم عامل</th>
                     <th>ارائه دهنده</th>
                     <th>شناسه کاربر</th>
@@ -1896,11 +1933,11 @@
             </div>
             <!-- Push Implementation & Edge Cases -->
             <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-              <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 12px;">کدهای نمونه و مدیریت حالت های بحرانی (Push Edge Cases & Code Examples)</div>
+              <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 12px;">کدهای نمونه و مدیریت حالت های بحرانی</div>
               
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
-                  <strong style="color: #0369a1; font-size: 13.5px; display: block; margin-bottom: 6px;">📱 ثبت توکن دستگاه از فلاتر (Flutter Client):</strong>
+                  <strong style="color: #0369a1; font-size: 13.5px; display: block; margin-bottom: 6px;">ثبت توکن دستگاه در فلاتر:</strong>
                   <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; direction: ltr; text-align: left; font-size: 11.5px; line-height: 1.5; overflow-x: auto;">
 await http.post(
   Uri.parse('https://api.localme.ir/_baas/v1/$projectId/push/devices/register'),
@@ -1916,7 +1953,7 @@ await http.post(
                 </div>
 
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
-                  <strong style="color: #047857; font-size: 13.5px; display: block; margin-bottom: 6px;">🚀 ارسال پوش از بک اند سرور (cURL / Backend API):</strong>
+                  <strong style="color: #047857; font-size: 13.5px; display: block; margin-bottom: 6px;">ارسال پوش از بک اند سرور:</strong>
                   <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; direction: ltr; text-align: left; font-size: 11.5px; line-height: 1.5; overflow-x: auto;">
 curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
   -H "Content-Type: application/json" \
@@ -1932,11 +1969,11 @@ curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
 
               <!-- Push Edge Cases Box -->
               <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 14px; font-size: 13px; line-height: 1.7; color: #92400e;">
-                <strong style="display: block; margin-bottom: 6px; font-size: 14px; color: #b45309;">⚠️ نکات کلیدی و Edge Cases سامانه پوش در موبایل ایران:</strong>
+                <strong style="display: block; margin-bottom: 6px; font-size: 14px; color: #b45309;">نکات کلیدی و حالت های بحرانی سامانه پوش در موبایل ایران:</strong>
                 <ul style="margin: 0; padding-right: 18px;">
-                  <li><strong>اپلیکیشن در وضعیت بسته (Terminated / Killed State):</strong> برای اجرای دیپ لینک، فیلد <code>data</code> را در پِی لود قرار دهید و در متد <code>FirebaseMessaging.onBackgroundMessage</code> آن را هندل کنید.</li>
-                  <li><strong>فیلترینگ و قطعی گوگل فایربیس (FCM):</strong> با روشن کردن سوییچ <em>فعال سازی ارائه دهندگان داخلی</em>، در صورت تاخیر تحویل FCM، پلتفرم به طور خودکار پیام را از طریق درگاه مستقیم نجوا یا پوشی ارسال می کند.</li>
-                  <li><strong>انقضای توکن پوش (Token Rotation):</strong> همواره در لیسنر <code>onNewToken</code> اپلیکیشن، توکن جدید را به اندپوینت رجیستری ارسال کنید تا دستگاه های با توکن باطل شده از دیتابیس پاکسازی شوند.</li>
+                  <li><strong>اپلیکیشن در وضعیت بسته:</strong> برای اجرای دیپ لینک، فیلد <code>data</code> را در پِی لود قرار دهید و در متد <code>FirebaseMessaging.onBackgroundMessage</code> آن را هندل کنید.</li>
+                  <li><strong>فیلترینگ و قطعی گوگل فایربیس:</strong> با روشن کردن سوییچ <em>فعال سازی ارائه دهندگان داخلی</em>، در صورت تاخیر تحویل FCM، پلتفرم به طور خودکار پیام را از طریق درگاه مستقیم نجوا یا پوشی ارسال می کند.</li>
+                  <li><strong>انقضای توکن پوش:</strong> همواره در لیسنر <code>onNewToken</code> اپلیکیشن، توکن جدید را به اندپوینت رجیستری ارسال کنید تا دستگاه های با توکن باطل شده از دیتابیس پاکسازی شوند.</li>
                 </ul>
               </div>
             </div>
@@ -1948,7 +1985,7 @@ curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
           <div class="card" style="margin-bottom: 24px;">
             <div class="card-header">
               <div>
-                <div class="card-title">تایید خریدهای درون برنامه ای (In-App Purchases - Cafe Bazaar & Myket)</div>
+                <div class="card-title">تایید خریدهای درون برنامه ای</div>
                 <div class="card-desc">اعتبارسنجی امن توکن های خرید کافه بازار و مایکت در سمت سرور، جلوگیری از حملات Replay Attack، و ثبت تراکنش در دفترکل ریالی.</div>
               </div>
               <button type="button" class="btn-secondary" onclick="loadIapPurchases()">به روزرسانی تراکنش ها</button>
@@ -1961,20 +1998,20 @@ curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
                 <div>
                   <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">مارکت</label>
                   <select id="iap-test-store" class="input-field">
-                    <option value="bazaar">کافه بازار (Cafe Bazaar)</option>
-                    <option value="myket">مایکت (Myket)</option>
+                    <option value="bazaar">کافه بازار</option>
+                    <option value="myket">مایکت</option>
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام بسته (Package Name)</label>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">نام بسته</label>
                   <input type="text" id="iap-test-pkg" class="input-field" value="ir.localme.sampleapp" required />
                 </div>
                 <div>
-                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه محصول (Product SKU)</label>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه محصول</label>
                   <input type="text" id="iap-test-product" class="input-field" value="vip_subscription" required />
                 </div>
                 <div>
-                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توکن خرید (Purchase Token)</label>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">توکن خرید</label>
                   <input type="text" id="iap-test-token" class="input-field" placeholder="توکن تولیدشده توسط مارکت..." required />
                 </div>
                 <button type="submit" class="btn-primary" style="height: 38px;">تایید و ثبت خرید</button>
@@ -1993,7 +2030,7 @@ curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
                     <th>کاربر</th>
                     <th>مبلغ</th>
                     <th>وضعیت مصرف</th>
-                    <th>تاریخ تایید (UTC)</th>
+                    <th>تاریخ تایید</th>
                   </tr>
                 </thead>
                 <tbody id="mobile-iap-purchases-tbody">
@@ -2003,11 +2040,11 @@ curl -X POST https://api.localme.ir/_baas/v1/PROJECT_ID/push/send \
             </div>
             <!-- IAP Implementation & Edge Cases -->
             <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-              <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 12px;">کدهای نمونه و پروتکل اعتبارسنجی سمت سرور (IAP Edge Cases & Validation Flow)</div>
+              <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 12px;">کدهای نمونه و پروتکل اعتبارسنجی سمت سرور</div>
               
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
-                  <strong style="color: #0369a1; font-size: 13.5px; display: block; margin-bottom: 6px;">📱 فلاتر و بازار (Flutter in_app_purchase):</strong>
+                  <strong style="color: #0369a1; font-size: 13.5px; display: block; margin-bottom: 6px;">فلاتر و بازار:</strong>
                   <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; direction: ltr; text-align: left; font-size: 11.5px; line-height: 1.5; overflow-x: auto;">
 // تایید رسید خرید کافه بازار در سرور LocalMe:
 final response = await http.post(
@@ -2023,7 +2060,7 @@ final response = await http.post(
                 </div>
 
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
-                  <strong style="color: #047857; font-size: 13.5px; display: block; margin-bottom: 6px;">🤖 اندروید نیتیو کاتلین (BillingClient / Myket):</strong>
+                  <strong style="color: #047857; font-size: 13.5px; display: block; margin-bottom: 6px;">اندروید نیتیو کاتلین:</strong>
                   <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; direction: ltr; text-align: left; font-size: 11.5px; line-height: 1.5; overflow-x: auto;">
 // ارسال PurchaseToken به سرور بعد از اتمام PurchaseUpdatedListener:
 val requestBody = JSONObject().apply {
@@ -2037,11 +2074,11 @@ val requestBody = JSONObject().apply {
 
               <!-- IAP Edge Cases Box -->
               <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 6px; padding: 14px; font-size: 13px; line-height: 1.7; color: #155e75;">
-                <strong style="display: block; margin-bottom: 6px; font-size: 14px; color: #0e7490;">🛡️ استراتژی های امنیتی خریدهای درون برنامه ای در لوکال می:</strong>
+                <strong style="display: block; margin-bottom: 6px; font-size: 14px; color: #0e7490;">استراتژی های امنیتی خریدهای درون برنامه ای در لوکال می:</strong>
                 <ul style="margin: 0; padding-right: 18px;">
-                  <li><strong>جلوگیری قطعی از حملات Replay Attack:</strong> هر توکن خرید (Purchase Token) تنها یک بار در کل تاریخچه پلتفرم قابل اعتبارسنجی است و تلاش مجدد با خطای <code>TOKEN_ALREADY_CONSUMED</code> رد می شود.</li>
-                  <li><strong>مدیریت کالاهای مصرفی (Consumable) در برابر اشتراک (Subscription):</strong> پس از تایید سرور، کالاهای مصرفی فوراً به عنوان مصرف شده علامت گذاری می شوند تا کاربر بتواند در آینده دوباره خرید انجام دهد.</li>
-                  <li><strong>ثبت خودکار در دفترکل دوبل مالی (Financial Ledger):</strong> به محض تایید موفق رسید از سرور بازار یا مایکت، مبلغ ریالی تراکنش به صورت همزمان به کیف پول یا حساب کاربری شارژ و لاگ حسابداری تولید می شود.</li>
+                  <li><strong>جلوگیری قطعی از حملات Replay Attack:</strong> هر توکن خرید تنها یک بار در کل تاریخچه پلتفرم قابل اعتبارسنجی است و تلاش مجدد با خطای <code>TOKEN_ALREADY_CONSUMED</code> رد می شود.</li>
+                  <li><strong>مدیریت کالاهای مصرفی در برابر اشتراک:</strong> پس از تایید سرور، کالاهای مصرفی فوراً به عنوان مصرف شده علامت گذاری می شوند تا کاربر بتواند در آینده دوباره خرید انجام دهد.</li>
+                  <li><strong>ثبت خودکار در دفترکل دوبل مالی:</strong> به محض تایید موفق رسید از سرور بازار یا مایکت، مبلغ ریالی تراکنش به صورت همزمان به کیف پول یا حساب کاربری شارژ و لاگ حسابداری تولید می شود.</li>
                 </ul>
               </div>
             </div>
@@ -2053,7 +2090,7 @@ val requestBody = JSONObject().apply {
           <div class="card" style="margin-bottom: 24px;">
             <div class="card-header">
               <div>
-                <div class="card-title">جریان داده زنده و ارتباط دوطرفه (Duplex Realtime WebSockets)</div>
+                <div class="card-title">جریان داده زنده و ارتباط دوطرفه</div>
                 <div class="card-desc">سوکت زنده دوطرفه برای دریافت بلادرنگ تغییرات دیتابیس، سفارشات زنده، چت درون برنامه ای و موقعیت رانندگان بدون Polling مکرر.</div>
               </div>
               <span id="ws-status-badge" class="badge badge-paused">ارتباط قطع</span>
@@ -2071,7 +2108,7 @@ val requestBody = JSONObject().apply {
             <!-- Interactive Live Console -->
             <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px; margin-bottom: 24px;">
               <div style="font-size: 14.5px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
-                <span>کنسول تست تعاملی وب سوکت (Live WebSocket Console)</span>
+                <span>کنسول تست تعاملی وب سوکت</span>
                 <button type="button" class="btn-secondary" style="font-size: 11.5px; padding: 3px 8px;" onclick="clearRealtimeWsLogs()">پاکسازی لاگ ها</button>
               </div>
 
@@ -2103,7 +2140,7 @@ val requestBody = JSONObject().apply {
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px; line-height: 1.7; color: #1e293b;">
                 <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dcfce7;">
-                  <strong style="color: #047857; display: block; margin-bottom: 4px;">۱. قطع سوکت در شبکه موبایل (NAT Timeouts)</strong>
+                  <strong style="color: #047857; display: block; margin-bottom: 4px;">۱. قطع سوکت در شبکه موبایل</strong>
                   اپراتورهای موبایل ایران کانکشن های TCP بدون تبادل دیتا را بعد از ۳۰ تا ۶۰ ثانیه قطع می کنند. برای رفع این چالش، کلاینت باید هر ۲۵ ثانیه فریم <code>{"action":"ping"}</code> ارسال کند.
                 </div>
                 <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dcfce7;">
@@ -2115,20 +2152,20 @@ val requestBody = JSONObject().apply {
                   کلاینت SDK همواره اسامی کانال های مشترک شده را در حافظه نگه می دارد تا بلافاصله پس از اتصال مجدد، فریم های <code>subscribe</code> به صورت خودکار Re-send شوند.
                 </div>
                 <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dcfce7;">
-                  <strong style="color: #047857; display: block; margin-bottom: 4px;">۴. صف پیام های آفلاین (Offline Queue)</strong>
+                  <strong style="color: #047857; display: block; margin-bottom: 4px;">۴. صف پیام های آفلاین</strong>
                   در صورتی که وضعیت سوکت <code>OPEN</code> نباشد، رویدادهای ارسالی در صف محلی قرار گرفته و به محض بازگشت ارتباط، به ترتیب FIFO ارسال می شوند.
                 </div>
               </div>
             </div>
 
             <!-- Multi-Platform Production Implementation Snippets -->
-            <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 14px;">پیاده سازی های جامع سازمانی در کلاینت های موبایل (Production Client Implementations)</div>
+            <div style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-bottom: 14px;">پیاده سازی های جامع سازمانی در کلاینت های موبایل</div>
             <div style="display: flex; flex-direction: column; gap: 16px;">
               
               <!-- 1. Flutter Production Client -->
               <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <strong style="font-size: 14px; color: #0284c7;">📱 فلاتر (Flutter / Dart) - کلاینت مقاوم با بازاتصال نمایی، مدیریت چرخه حیات و صف آفلاین:</strong>
+                  <strong style="font-size: 14px; color: #0284c7;">فلاتر و دارت - کلاینت مقاوم با بازاتصال نمایی، مدیریت چرخه حیات و صف آفلاین:</strong>
                   <span class="badge badge-info">Production Ready</span>
                 </div>
                 <pre style="background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; line-height: 1.6; overflow-x: auto;">
@@ -2251,7 +2288,7 @@ class LocalMeRealtimeManager with WidgetsBindingObserver {
               <!-- 2. Android Kotlin Coroutines Flow -->
               <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <strong style="font-size: 14px; color: #10b981;">🤖 اندروید نیتیو (Kotlin / OkHttp / Coroutines Flow) با مدیریت قطع شبکه:</strong>
+                  <strong style="font-size: 14px; color: #10b981;">اندروید نیتیو با مدیریت قطع شبکه:</strong>
                   <span class="badge badge-active">Android Coroutines</span>
                 </div>
                 <pre style="background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; line-height: 1.6; overflow-x: auto;">
@@ -2320,7 +2357,7 @@ class LocalMeRealtimeClient(
               <!-- 3. React Native / TypeScript Custom Hook -->
               <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <strong style="font-size: 14px; color: #6366f1;">🌐 ری اکت نیتیو و وب (React Native / TypeScript Hook) با صف آفلاین:</strong>
+                  <strong style="font-size: 14px; color: #6366f1;">ری اکت نیتیو و وب با صف آفلاین:</strong>
                   <span class="badge badge-info">React Hook</span>
                 </div>
                 <pre style="background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; line-height: 1.6; overflow-x: auto;">
@@ -2395,8 +2432,8 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">نسخه های استقرار وب سایت و اپلیکیشن (Hosting Releases)</div>
-                <div class="card-desc">مدیریت نسخه های مستقر شده روی CDN ملی با توزیع Anycast، قابلیت بازگشت به نسخه های قبل (Rollback) و پیش نمایش.</div>
+                <div class="card-title">نسخه‌های استقرار وب‌سایت و اپلیکیشن</div>
+                <div class="card-desc">مدیریت نسخه‌های مستقر شده روی CDN ملی با توزیع انیکست، قابلیت بازگشت به نسخه‌های قبل و پیش‌نمایش.</div>
               </div>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn-primary" onclick="openModal('modal-create-deployment')">
@@ -2407,7 +2444,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
             </div>
             <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">آدرس زنده پروژه (Anycast CDN):</span>
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">آدرس زنده پروژه:</span>
                 <a id="hosting-live-url" href="#" target="_blank" rel="noreferrer" style="font-size: 13.5px; font-weight: 700; color: var(--brand-dark); text-decoration: none; margin-right: 8px;">در حال بارگذاری...</a>
               </div>
               <span class="badge badge-active">SSL خودکار Let's Encrypt</span>
@@ -2440,7 +2477,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">مدیریت دامنه های اختصاصی و گواهی SSL (Custom Domains & DNS)</div>
+                <div class="card-title">مدیریت دامنه‌های اختصاصی و گواهی امنیتی</div>
                 <div class="card-desc">اتصال دامنه های ir و بین المللی با صدور خودکار گواهی امنیتی رایگان Let's Encrypt و بررسی زنده CNAME.</div>
               </div>
               <div style="display: flex; gap: 8px;">
@@ -2458,7 +2495,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
               </div>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
                 <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-                  <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">رکورد CNAME (برای زیردامنه ها مانند app, api)</div>
+                  <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">رکورد CNAME برای زیردامنه‌ها مانند app و api</div>
                   <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 6px 10px; border-radius: 4px; font-size: 12.5px;">
                     <code>cname.localme.ir</code>
                     <button type="button" class="btn-secondary" style="font-size: 12px; padding: 2px 8px;" onclick="copyFieldValue('cname-val-copy')">کپی</button>
@@ -2466,7 +2503,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
                   </div>
                 </div>
                 <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-                  <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">رکورد A (برای دامنه ریشه Apex بدون www)</div>
+                  <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">رکورد A برای دامنه ریشه بدون www</div>
                   <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 6px 10px; border-radius: 4px; font-size: 12.5px;">
                     <code>185.190.150.12</code>
                     <button type="button" class="btn-secondary" style="font-size: 12px; padding: 2px 8px;" onclick="copyFieldValue('arecord-val-copy')">کپی</button>
@@ -2511,7 +2548,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">مرکز انطباق قانونی و مجوزهای حاکمیتی (Regulatory Compliance Hub)</div>
+                <div class="card-title">مرکز انطباق قانونی و مجوزهای حاکمیتی</div>
                 <div class="card-desc">تسهیل الزامات دریافت نماد اعتماد الکترونیکی (اینماد)، ثبت در ساماندهی و سرو خودکار فایل های تایید دامنه.</div>
               </div>
             </div>
@@ -2519,12 +2556,12 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
             <form id="form-compliance-config" style="margin-bottom: 24px;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">توکن تایید هویت اینماد (e-Namad Verification Token)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">توکن تایید هویت اینماد</label>
                   <input type="text" id="comp-enamad-token" class="input-field" placeholder="مانند: enamad_98471239841" />
                   <span style="font-size: 13px; color: var(--text-muted);">این مقدار در مسیر /enamad.txt به شکل استاندارد ارجاع داده می شود.</span>
                 </div>
                 <div>
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد لوگوی اینماد (HTML Symbol Code)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد لوگوی اینماد</label>
                   <input type="text" id="comp-enamad-symbol" class="input-field" placeholder="کد شناسه نماد اینماد" />
                 </div>
               </div>
@@ -2553,27 +2590,27 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">پیکربندی دیپ لینک اپلیکیشن موبایل (Android Asset Links & Apple Association)</div>
+                <div class="card-title">پیکربندی دیپ لینک اپلیکیشن موبایل</div>
                 <div class="card-desc">اتصال خودکار اپلیکیشن های اندروید و iOS برای باز شدن مستقیم لینک های وب در اپ با استانداردهای گوگل و اپل.</div>
               </div>
             </div>
 
             <form id="form-deeplinks-config" style="max-width: 680px;" onsubmit="saveDeeplinksConfig(event)">
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام پکیج اندروید (Android Package Name)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام پکیج اندروید</label>
                 <input type="text" id="comp-android-pkg" class="input-field" placeholder="com.mycompany.myapp" />
               </div>
               <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">اثر انگشت گواهی امضای اندروید (SHA-256 Fingerprint)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">اثر انگشت گواهی امضای اندروید</label>
                 <input type="text" id="comp-android-sha256" class="input-field" placeholder="AA:BB:CC:DD:...:FF" />
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
                 <div>
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه تیم اپل (Apple Team ID)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه تیم اپل</label>
                   <input type="text" id="comp-apple-team" class="input-field" placeholder="ABCDE12345" />
                 </div>
                 <div>
-                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه باندل اپل (Apple App Bundle ID)</label>
+                  <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه باندل اپل</label>
                   <input type="text" id="comp-apple-bundle" class="input-field" placeholder="com.mycompany.iosapp" />
                 </div>
               </div>
@@ -2600,7 +2637,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">لاگ های زنده و ردگیری امنیتی (Live Telemetry & Logs)</div>
+                <div class="card-title">لاگ‌های زنده و ردگیری امنیتی</div>
                 <div class="card-desc">جریان زنده درخواست ها، اجرای توابع لبه، تراکنش های بانکی و رویدادهای سیستمی.</div>
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
@@ -2617,12 +2654,12 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
             <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
               <select id="logs-filter-service" class="input-field" style="width: auto; min-width: 140px;">
                 <option value="all">همه سرویس ها</option>
-                <option value="hosting">میزبانی (Hosting)</option>
-                <option value="database">پایگاه داده (Database)</option>
-                <option value="auth">احراز هویت (Auth)</option>
-                <option value="storage">ذخیره سازی (Storage)</option>
-                <option value="functions">توابع (Functions)</option>
-                <option value="ipg">درگاه پرداخت (IPG)</option>
+                <option value="hosting">میزبانی</option>
+                <option value="database">پایگاه داده</option>
+                <option value="auth">احراز هویت</option>
+                <option value="storage">ذخیره‌سازی</option>
+                <option value="functions">توابع</option>
+                <option value="ipg">درگاه پرداخت</option>
               </select>
 
               <select id="logs-filter-level" class="input-field" style="width: auto; min-width: 120px;">
@@ -2659,7 +2696,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">لاگ بازرسی امنیتی و تغییرات کاربران (Security Audit Trail)</div>
+                <div class="card-title">لاگ بازرسی امنیتی و تغییرات کاربران</div>
                 <div class="card-desc">ثبت تغییرات پیکربندی، ایجاد و ابطال کلیدهای API، تغییر کلمه عبور پروژه و تغییرات دسترسی همکاران.</div>
               </div>
               <button type="button" class="btn-secondary" onclick="loadAuditLogs()">تازه سازی بازرسی</button>
@@ -2690,7 +2727,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">ریز مصرف منابع و صورتحساب (Resource Metering & Usage)</div>
+                <div class="card-title">ریز مصرف منابع و صورتحساب</div>
                 <div class="card-desc">محاسبه برخط میزان استفاده از زیرساخت ابری، حجم کوئری ها، پردازش توابع و فضای ذخیره سازی.</div>
               </div>
               <div style="display: flex; gap: 8px; align-items: center; position: relative;">
@@ -2755,7 +2792,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">تیم و سطوح دسترسی همکاران (Team Collaborators & RBAC)</div>
+                <div class="card-title">تیم و سطوح دسترسی همکاران</div>
                 <div class="card-desc">مدیریت اعضای تیم توسعه با کنترل دسترسی نقش محور (مالک، توسعه دهنده، اپراتور، حسابدار).</div>
               </div>
               <button type="button" class="btn-primary" onclick="openModal('modal-add-collaborator')">
@@ -2788,7 +2825,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">ماتریس اختیارات و سطوح دسترسی سازمانی (RBAC Matrix)</div>
+                <div class="card-title">ماتریس اختیارات و سطوح دسترسی سازمانی</div>
                 <div class="card-desc">تفکیک شفاف مجوزهای دسترسی به پایگاه داده، درگاه های مالی شتاب، توابع لبه و مدیریت پروژه بر اساس نقش های چهارگانه.</div>
               </div>
             </div>
@@ -2798,10 +2835,10 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
                 <thead>
                   <tr>
                     <th>بخش / قابلیت پلتفرم</th>
-                    <th>مالک (Owner)</th>
-                    <th>توسعه دهنده (Developer)</th>
-                    <th>اپراتور (Operator)</th>
-                    <th>حسابدار (Accountant)</th>
+                    <th>مالک</th>
+                    <th>توسعه دهنده</th>
+                    <th>اپراتور</th>
+                    <th>حسابدار</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2834,7 +2871,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
                     <td><span class="badge badge-paused">فاقد دسترسی</span></td>
                   </tr>
                   <tr>
-                    <td><strong>پیکربندی درگاه پرداخت شتاب (IPG)</strong></td>
+                    <td><strong>پیکربندی درگاه پرداخت شتاب</strong></td>
                     <td><span class="badge badge-active">دسترسی کامل</span></td>
                     <td><span class="badge badge-info">تنظیمات تستی سندباکس</span></td>
                     <td><span class="badge badge-paused">فاقد دسترسی</span></td>
@@ -2868,7 +2905,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
         <section id="view-settings-general" class="tab-view">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">مشخصات عمومی پروژه (General Project Settings)</div>
+              <div class="card-title">مشخصات عمومی پروژه</div>
             </div>
             <form id="form-update-project" style="max-width: 580px;">
               <div style="margin-bottom: 14px;">
@@ -2876,7 +2913,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
                 <input type="text" id="set-proj-name" class="input-field" required />
               </div>
               <div style="margin-bottom: 14px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label>
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی</label>
                 <input type="text" id="set-proj-slug" class="input-field" required />
               </div>
               <div style="margin-bottom: 14px;">
@@ -2897,7 +2934,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card" id="project-password-mgmt-box">
             <div class="card-header">
               <div>
-                <div class="card-title">رمز عبور اختصاصی پروژه (Project-Scoped Access)</div>
+                <div class="card-title">رمز عبور اختصاصی پروژه</div>
                 <div class="card-desc">با تنظیم کلمه عبور اختصاصی برای این پروژه، همکاران می توانند مستقیماً با استفاده از اسلاگ پروژه و این کلمه عبور وارد پنل شوند، بدون نیاز به دسترسی به سایر پروژه های حساب کاربری شما.</div>
               </div>
               <span id="proj-password-status-badge" class="badge">بررسی وضعیت...</span>
@@ -2917,7 +2954,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">کلیدهای اختصاصی سرویس های ۴گانه (Service API Keys)</div>
+                <div class="card-title">کلیدهای اختصاصی سرویس های ۴گانه</div>
                 <div class="card-desc">کلیدهای مجزا و تفکیک شده برای ارتباط کلاینت و سرورهای بک اند با هر کدام از خدمات ابری پروژه.</div>
               </div>
             </div>
@@ -2925,7 +2962,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <div style="background: var(--bg-main); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 13.5px; font-weight: 700;">کلید پایگاه داده (Database API Key):</span>
+                  <span style="font-size: 13.5px; font-weight: 700;">کلید پایگاه داده:</span>
                   <button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="regenerateServiceKey('database')">صدور مجدد کلید</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -2936,7 +2973,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
 
               <div style="background: var(--bg-main); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 13.5px; font-weight: 700;">کلید احراز هویت (Auth API Key):</span>
+                  <span style="font-size: 13.5px; font-weight: 700;">کلید احراز هویت:</span>
                   <button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="regenerateServiceKey('auth')">صدور مجدد کلید</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -2947,7 +2984,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
 
               <div style="background: var(--bg-main); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 13.5px; font-weight: 700;">کلید ذخیره سازی ابری (Storage API Key):</span>
+                  <span style="font-size: 13.5px; font-weight: 700;">کلید ذخیره سازی ابری:</span>
                   <button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="regenerateServiceKey('storage')">صدور مجدد کلید</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -2958,7 +2995,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
 
               <div style="background: var(--bg-main); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 13.5px; font-weight: 700;">کلید توابع لبه (Edge Functions API Key):</span>
+                  <span style="font-size: 13.5px; font-weight: 700;">کلید توابع لبه:</span>
                   <button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="regenerateServiceKey('functions')">صدور مجدد کلید</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
@@ -2975,7 +3012,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card" style="border-color: #fecaca; background: #fff;">
             <div class="card-header" style="border-bottom-color: #fee2e2;">
               <div>
-                <div class="card-title" style="color: var(--color-danger);">حذف دائمی پروژه (Danger Zone)</div>
+                <div class="card-title" style="color: var(--color-danger);">حذف دائمی پروژه</div>
                 <div class="card-desc">عملیات غیرقابل بازگشت: حذف دائمی پایگاه داده، باکت های ذخیره سازی، توابع سرورلس و تمام کاربران این پروژه.</div>
               </div>
             </div>
@@ -2995,7 +3032,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
           <div class="card" style="margin-bottom: 24px;">
             <div class="card-header">
               <div>
-                <div class="card-title">اطلاعات حساب و امنیت کاربر (Developer Profile)</div>
+                <div class="card-title">اطلاعات حساب و امنیت کاربر</div>
                 <div class="card-desc">مشخصات هویتی، سطح دسترسی پلتفرم و اعتبار ریالی کیف پول ابری شما.</div>
               </div>
               <span id="prof-role-badge" class="badge badge-active">توسعه دهنده</span>
@@ -3011,7 +3048,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
               <div class="metric-cell" style="text-align: right;">
                 <div class="metric-cell-label">شماره همراه متصل</div>
                 <div class="metric-cell-val" id="prof-phone-val" style="font-size: 16px; font-family: monospace; direction: ltr; text-align: right;">-</div>
-                <div class="metric-cell-sub">دریافت کننده کدهای یکبار مصرف (SMS OTP)</div>
+                <div class="metric-cell-sub">دریافت کننده کدهای یکبار مصرف پیامکی</div>
               </div>
 
               <div class="metric-cell" style="text-align: right;">
@@ -3056,7 +3093,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
       <div class="modal-body">
         <form id="form-create-new-project">
           <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام پروژه</label> <input type="text" id="new-proj-name" class="input-field" placeholder="مثال: اپلیکیشن فروشگاهی دیجی شاپ" required /> </div>
-          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label> <input type="text" id="new-proj-slug" class="input-field" placeholder="digishop-app" /> </div>
+          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی</label> <input type="text" id="new-proj-slug" class="input-field" placeholder="digishop-app" /> </div>
           <div style="margin-bottom: 16px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">توضیحات اختیاری</label> <textarea id="new-proj-desc" class="input-field" rows="2" placeholder="توضیح کوتاه درباره ماهیت پروژه"></textarea> </div>
           <div style="display: flex; justify-content: flex-end; gap: 8px;">
             <button type="button" class="btn-secondary" onclick="closeModal('modal-create-proj')">انصراف</button> <button type="submit" class="btn-primary">ایجاد پروژه</button>
@@ -3098,32 +3135,32 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
       </div>
       <div class="modal-body">
         <div style="display: flex; align-items: center; gap: 14px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
-          <div style="width: 52px; height: 52px; border-radius: 50%; background: #ecfdf5; border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: #ecfdf5; border: 2px solid #10b981; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-              <strong id="modal-profile-fullname" style="font-size: 16px; color: var(--text-main);">سینا والی زاده</strong>
+              <strong id="modal-profile-fullname" style="font-size: 16px; color: var(--text-main);">کاربر</strong>
               <span id="modal-profile-role" class="badge badge-active">توسعه دهنده</span>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">شناسه کاربر: <code id="modal-profile-id" style="font-size: 12px;">usr_developer_03</code></div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">شناسه کاربر: <code id="modal-profile-id" style="font-size: 12px;">-</code></div>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
           <div style="padding: 10px 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px;">
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">شماره تلفن همراه</div>
-            <div id="modal-profile-phone" style="font-size: 14px; font-weight: 600; font-family: monospace; direction: ltr; text-align: right;">+989121112233</div>
+            <div id="modal-profile-phone" style="font-size: 14px; font-weight: 600; font-family: monospace; direction: ltr; text-align: right;">-</div>
           </div>
           <div style="padding: 10px 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px;">
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">پست الکترونیکی</div>
-            <div id="modal-profile-email" style="font-size: 13.5px; font-weight: 600; direction: ltr; text-align: right;">sina@example.com</div>
+            <div id="modal-profile-email" style="font-size: 13.5px; font-weight: 600; direction: ltr; text-align: right;">-</div>
           </div>
           <div style="padding: 10px 12px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px;">
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">نام کاربری</div>
-            <div id="modal-profile-username" style="font-size: 14px; font-weight: 600; direction: ltr; text-align: right;">sina</div>
+            <div id="modal-profile-username" style="font-size: 14px; font-weight: 600; direction: ltr; text-align: right;">-</div>
           </div>
           <div style="padding: 10px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;">
             <div style="font-size: 12px; color: #166534; margin-bottom: 4px;">موجودی قابل استفاده کیف پول</div>
-            <div id="modal-profile-wallet" style="font-size: 14px; font-weight: 700; color: #047857;">۱,۰۰۰,۰۰۰ تومان</div>
+            <div id="modal-profile-wallet" style="font-size: 14px; font-weight: 700; color: #047857;">۰ تومان</div>
           </div>
         </div>
 
@@ -3144,7 +3181,7 @@ export function useRealtimeTable&lt;T = any&gt;(projectId: string, table: string
         <form id="form-deploy-func">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام تابع</label> <input type="text" id="deploy-func-name" class="input-field" placeholder="مثال: محاسبه تخفیف هوشمند" required /> </div>
-            <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی (Slug)</label> <input type="text" id="deploy-func-slug" class="input-field" placeholder="smart-discount" required /> </div>
+            <div> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه انگلیسی</label> <input type="text" id="deploy-func-slug" class="input-field" placeholder="smart-discount" required /> </div>
           </div>
           <div style="margin-bottom: 16px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کد جاوا اسکریپت تابع</label>
@@ -3178,10 +3215,10 @@ handler(context);</textarea>
           <div style="margin-bottom: 12px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">روش ورود / ارائه دهنده</label>
             <select id="new-user-provider" class="input-field" onchange="toggleAddUserPasswordFields(this.value)">
-              <option value="password">نام کاربری و رمز عبور (Password)</option>
-              <option value="sms_otp">پیامک یکبارمصرف (SMS OTP)</option>
-              <option value="oauth_google">ورود با گوگل (Google OAuth)</option>
-              <option value="oauth_github">ورود با گیت هاب (GitHub OAuth)</option>
+              <option value="password">نام کاربری و رمز عبور</option>
+              <option value="sms_otp">پیامک یکبارمصرف</option>
+              <option value="oauth_google">ورود با گوگل</option>
+              <option value="oauth_github">ورود با گیت‌هاب</option>
             </select>
           </div>
           <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره موبایل یا ایمیل</label> <input type="text" id="new-user-identifier" class="input-field" placeholder="+98912... یا user@gmail.com" required /> </div>
@@ -3231,8 +3268,8 @@ handler(context);</textarea>
           <div style="margin-bottom: 16px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">سطح دسترسی</label>
             <select id="new-bucket-public" class="input-field">
-              <option value="true">عمومی (Public - دسترسی مستقیم URL)</option>
-              <option value="false">محرمانه (Private - آدرس زمان دار امن)</option>
+              <option value="true">عمومی - دسترسی مستقیم آدرس اینترنتی</option>
+              <option value="false">محرمانه - نشانی زمان‌دار امن</option>
             </select>
           </div>
           <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -3262,8 +3299,8 @@ handler(context);</textarea>
       <div class="modal-header"> <h3 style="font-size: 16px; font-weight: 800;">استقرار نسخه جدید وب سایت</h3> <button type="button" class="btn-secondary" style="padding: 2px 8px;" onclick="closeModal('modal-create-deployment')">✕</button> </div>
       <div class="modal-body">
         <form id="form-create-deployment">
-          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شاخه گیت (Branch)</label> <input type="text" id="new-dep-branch" class="input-field" value="main" required /> </div>
-          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه کامیت (Commit SHA)</label> <input type="text" id="new-dep-commit" class="input-field" placeholder="4df78a0 یا اختیاری" /> </div>
+          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شاخه گیت</label> <input type="text" id="new-dep-branch" class="input-field" value="main" required /> </div>
+          <div style="margin-bottom: 12px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه کامیت</label> <input type="text" id="new-dep-commit" class="input-field" placeholder="4df78a0 یا اختیاری" /> </div>
           <div style="margin-bottom: 16px;"> <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">دامنه مقصد استقرار</label> <input type="text" id="new-dep-domain" class="input-field" placeholder="اختیاری (پیش فرض اسلاگ پروژه)" /> </div>
           <div style="display: flex; justify-content: flex-end; gap: 8px;">
             <button type="button" class="btn-secondary" onclick="closeModal('modal-create-deployment')">انصراف</button> <button type="submit" class="btn-primary">شروع استقرار روی CDN ملی</button>
@@ -3310,12 +3347,12 @@ handler(context);</textarea>
             <input type="text" id="new-collab-contact" class="input-field" placeholder="+98912... یا mahsa@gmail.com" required />
           </div>
           <div style="margin-bottom: 16px;">
-            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نقش و سطح دسترسی سازمانی (RBAC)</label>
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نقش و سطح دسترسی سازمانی</label>
             <select id="new-collab-role" class="input-field">
-              <option value="Developer">توسعه دهنده (Developer - دسترسی فنی و API)</option>
-              <option value="Operator">اپراتور (Operator - مدیریت کاربران و پشتیبانی)</option>
-              <option value="Accountant">حسابدار (Accountant - صورتحساب و تراکنش های بانکی)</option>
-              <option value="Owner">مالک مشترک (Owner - دسترسی کامل مدیریتی)</option>
+              <option value="Developer">توسعه دهنده - دسترسی فنی و API</option>
+              <option value="Operator">اپراتور - مدیریت کاربران و پشتیبانی</option>
+              <option value="Accountant">حسابدار - صورتحساب و تراکنش های بانکی</option>
+              <option value="Owner">مالک مشترک - دسترسی کامل مدیریتی</option>
             </select>
           </div>
           <div style="display: flex; justify-content: flex-end; gap: 8px;">

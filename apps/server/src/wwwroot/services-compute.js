@@ -2,7 +2,7 @@
 var funcEnvVars = window.funcEnvVars = window.funcEnvVars || [];
 
 const SCRIPT_TEMPLATES = {
-  webhook: `// استاندارد مدیریت وب هوک ورودی (JSON Webhook Handler)
+  webhook: `// استاندارد مدیریت وب هوک ورودی
 function handler(req) {
   const body = req || {};
   // پردازش و ذخیره ورودی وب هوک
@@ -80,7 +80,7 @@ function handler(req) {
 }
 handler(context);`,
 
-  transform: `// تغییر و غنی سازی ساختار داده (Data Transformation)
+  transform: `// تغییر و غنی سازی ساختار داده
 function handler(req) {
   const items = (req && req.items) ? req.items : [
     { title: "لپ تاپ گیمینگ", price: 45000000 },
@@ -337,7 +337,7 @@ function loadFunctionsEnv() {
       <tr>
         <td style="font-family: var(--font-persian); font-weight: 700;">${escapeHtml(ev.key)}</td>
         <td style="font-family: var(--font-persian); font-size: 13px;">${ev.isSecret ? '••••••••••••••••' : escapeHtml(ev.val)}</td>
-        <td><span class="badge ${ev.isSecret ? 'badge-paused' : 'badge-active'}">${ev.isSecret ? 'کلید محرمانه (Secret)' : 'متغیر عمومی'}</span></td>
+        <td><span class="badge ${ev.isSecret ? 'badge-paused' : 'badge-active'}">${ev.isSecret ? 'کلید محرمانه' : 'متغیر عمومی'}</span></td>
         <td>
           <button type="button" class="btn-danger" style="font-size: 13px; padding: 2px 8px;" onclick="removeFuncEnv('${escapeHtml(ev.key)}')">حذف</button>
         </td>

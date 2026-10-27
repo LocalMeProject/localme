@@ -1,6 +1,8 @@
 namespace LocalMe.DataPlane.Compute;
 
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Jint;
 using Jint.Runtime;
@@ -8,7 +10,8 @@ using Jint.Runtime;
 public sealed record ScriptExecutionRequest(
     string Script,
     string? InputJson = null,
-    int TimeoutSeconds = 5
+    int TimeoutSeconds = 5,
+    IReadOnlyDictionary<string, string>? Env = null
 );
 
 public sealed record ScriptExecutionResult(
@@ -56,6 +59,21 @@ public sealed class JintScriptHost
                 warn = new Action<object?>(msg => logs.Add($"[WARN] {msg}")),
                 error = new Action<object?>(msg => logs.Add($"[ERROR] {msg}"))
             });
+
+            // Inject crypto utilities
+            engine.SetValue("crypto", new
+            {
+                randomUUID = new Func<string>(() => Guid.NewGuid().ToString("D")),
+                sha256 = new Func<string, string>(input =>
+                {
+                    var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input ?? ""));
+                    return Convert.ToHexString(bytes).ToLowerInvariant();
+                })
+            });
+
+            // Inject environment variables
+            var envDict = request.Env != null ? new Dictionary<string, string>(request.Env) : new Dictionary<string, string>();
+            engine.SetValue("process", new { env = envDict });
 
             // Inject request context safely via JSON parser (no raw string interpolation)
             if (!string.IsNullOrWhiteSpace(request.InputJson))

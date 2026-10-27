@@ -45,7 +45,7 @@ echo "--> 1. Verifying staged diff for secrets and credentials..."
 # 2. Change Surface Blast-Radius Gate (if Change Surface or docs/changes present)
 if [ -f "CHANGE_SURFACE.md" ] || [ -d "docs/changes" ]; then
     echo "--> 2. Verifying staged diff against declared Change Surface..."
-    "$PYTHON_EXEC" "$EP_BIN" surface check-diff --strict --staged
+    "$PYTHON_EXEC" "$EP_BIN" surface check-diff --strict
 fi
 
 # 3. Zero-Downtime Expand/Contract Migration Gate

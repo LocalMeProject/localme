@@ -134,7 +134,7 @@ async function loadSqlEditor() {
         } else {
           listEl.innerHTML = tables.map(t => `
             <div style="cursor: pointer; padding: 4px 8px; border-radius: 4px; font-family: var(--font-persian); font-size: 13px; color: var(--brand-dark); background: #ffffff; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;" onclick="insertTableQuery('${escapeHtml(t)}')">
-              <span>🗄️ ${escapeHtml(t)}</span>
+              <span>${escapeHtml(t)}</span>
               <span style="font-size: 11px; color: var(--text-muted);">انتخاب ↵</span>
             </div>
           `).join('');
@@ -368,8 +368,8 @@ async function loadDbSchemaForTable(tableName) {
             <tr>
               <td style="font-family: var(--font-persian); font-weight: 700;">${escapeHtml(colName)}</td>
               <td style="font-family: var(--font-persian); font-size: 13px; color: var(--brand-dark);">${escapeHtml(colType)}</td>
-              <td><span class="badge ${isPk ? 'badge-active' : 'badge-paused'}">${isPk ? 'کلید اصلی (PK)' : 'خیر'}</span></td>
-              <td><span class="badge ${isNull ? 'badge-paused' : 'badge-active'}">${isNull ? 'پذیرش Null' : 'اجباری (NOT NULL)'}</span></td>
+              <td><span class="badge ${isPk ? 'badge-active' : 'badge-paused'}">${isPk ? 'کلید اصلی' : 'خیر'}</span></td>
+              <td><span class="badge ${isNull ? 'badge-paused' : 'badge-active'}">${isNull ? 'پذیرش خالی' : 'اجباری'}</span></td>
               <td style="font-family: var(--font-persian); font-size: 13px; color: var(--text-muted);">${escapeHtml(defVal)}</td>
             </tr>
           `;
@@ -383,42 +383,80 @@ async function loadDbSchemaForTable(tableName) {
 
 let dbBackupsList = [];
 
-function loadDbBackups() {
+async function loadDbBackups() {
   const tbody = document.getElementById('db-backups-tbody');
-  if (!tbody) return;
-  if (!dbBackupsList || dbBackupsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز نسخه پشتیبانی ایجاد نشده است. برای تهیه نسخه فوری دکمه «تهیه نسخه پشتیبان دستی» را انتخاب فرمایید.</td></tr>';
-    return;
+  if (!tbody || !activeProjectId) return;
+
+  try {
+    const res = await fetch(`/_baas/v1/${activeProjectId}/db/snapshots`);
+    if (res.ok) {
+      const snapshots = await res.json();
+      dbBackupsList = snapshots || [];
+      if (dbBackupsList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز نسخه پشتیبان ثبت نشده است. برای تهیه نسخه فوری دکمه «تهیه نسخه پشتیبان دستی» را انتخاب فرمایید.</td></tr>';
+        const lastEl = document.getElementById('db-backup-last-time');
+        if (lastEl) lastEl.textContent = '-';
+        const totalSizeEl = document.getElementById('db-backup-total-size');
+        if (totalSizeEl) totalSizeEl.textContent = '۰ مگابایت';
+        return;
+      }
+
+      let totalBytes = 0;
+      tbody.innerHTML = dbBackupsList.map(b => {
+        const bytes = b.sizeBytes || 0;
+        totalBytes += bytes;
+        const sizeStr = bytes > 1048576 ? `${(bytes / 1048576).toFixed(2)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+        const dateStr = Shamsi.formatDate(b.createdAtUtc);
+        return `
+          <tr>
+            <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(b.id)}</td>
+            <td><span class="badge badge-active">${escapeHtml(b.type)}</span></td>
+            <td style="font-size: 13.5px;">${escapeHtml(sizeStr)}</td>
+            <td><span class="badge badge-active">${escapeHtml(b.status)}</span></td>
+            <td style="font-size: 13.5px;">${escapeHtml(dateStr)}</td>
+            <td><button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="downloadDbSnapshot('${escapeHtml(b.id)}')">دانلود نسخه</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      const lastEl = document.getElementById('db-backup-last-time');
+      if (lastEl && dbBackupsList.length > 0) {
+        lastEl.textContent = Shamsi.formatDate(dbBackupsList[0].createdAtUtc);
+      }
+      const totalSizeEl = document.getElementById('db-backup-total-size');
+      if (totalSizeEl) {
+        totalSizeEl.textContent = `${(totalBytes / 1048576).toFixed(2)} MB`;
+      }
+    }
+  } catch (err) {
+    console.warn('Snapshots load error:', err);
   }
-  tbody.innerHTML = dbBackupsList.map(b => `
-    <tr>
-      <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(b.id)}</td>
-      <td><span class="badge badge-active">${escapeHtml(b.type)}</span></td>
-      <td style="font-size: 13.5px;">${escapeHtml(b.size)}</td>
-      <td><span class="badge badge-active">${escapeHtml(b.status)}</span></td>
-      <td style="font-size: 13.5px;">${escapeHtml(b.date)}</td>
-      <td><button type="button" class="btn-secondary" style="font-size: 13px; padding: 2px 8px;" onclick="showToast('لینک مستقیم امن دانلود اسنپ شات صادر گردید.', 'success')">دانلود نسخه</button></td>
-    </tr>
-  `).join('');
 }
 
-function triggerManualSnapshot() {
-  const id = `snp_manual_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Date.now().toString().slice(-4)}`;
-  const nowShamsi = Shamsi.formatDate(new Date().toISOString());
-  dbBackupsList.unshift({
-    id,
-    type: 'دستی فوری',
-    size: '2.43 MB',
-    status: 'تایید سلامت (Checksum OK)',
-    date: nowShamsi
-  });
-  loadDbBackups();
-  const lastTimeEl = document.getElementById('db-backup-last-time');
-  if (lastTimeEl) lastTimeEl.textContent = 'لحظاتی پیش';
-  showToast('اسنپ شات دستی جدید با موفقیت ایجاد و رمزنگاری شد.', 'success');
+async function triggerManualSnapshot() {
+  if (!activeProjectId) return;
+  try {
+    const res = await fetch(`/_baas/v1/${activeProjectId}/db/snapshots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'دستی فوری' })
+    });
+    if (res.ok) {
+      showToast('اسنپ‌شات دستی جدید با موفقیت ایجاد و ذخیره شد.', 'success');
+      await loadDbBackups();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast('خطا در ایجاد اسنپ‌شات: ' + (err.error || res.statusText), 'error');
+    }
+  } catch (err) {
+    showToast('خطای شبکه در ایجاد اسنپ‌شات: ' + err.message, 'error');
+  }
 }
 
-// 11.3 Auth SMS Analytics & Security Policies
+function downloadDbSnapshot(id) {
+  if (!activeProjectId || !id) return;
+  window.location.href = `/_baas/v1/${activeProjectId}/db/snapshots/${encodeURIComponent(id)}/download`;
+}
 
 // DB Window Attachments
 window.loadTables = loadProjectTables;
@@ -432,6 +470,7 @@ window.loadDbSchema = loadDbSchema;
 window.loadDbSchemaForTable = loadDbSchemaForTable;
 window.loadDbBackups = loadDbBackups;
 window.triggerManualSnapshot = triggerManualSnapshot;
+window.downloadDbSnapshot = downloadDbSnapshot;
 window.deleteCurrentTable = deleteCurrentTable;
 window.deleteTableRow = deleteTableRow;
 window.insertTableQuery = insertTableQuery;

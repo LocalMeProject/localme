@@ -37,110 +37,41 @@ function isServiceEnabled(module) {
 window.isServiceEnabled = isServiceEnabled;
 
 // =====================================================================
-// Workspace Keep-Alive Tab System
+// Workspace Direct Navigation System (Tabs Feature Dropped)
 // =====================================================================
 const TabManager = {
   tabs: [],
   activeTabId: 'overview-overview',
 
   init() {
-    this.tabs = [
-      {
-        id: 'overview-overview',
-        module: 'overview',
-        subview: 'overview',
-        title: 'داشبورد پروژه',
-        pinned: true,
-        controller: new AbortController()
-      }
-    ];
-    this.render();
+    // Tab bar completely removed
   },
 
   render() {
     const container = document.getElementById('workspace-tabs-bar');
-    if (!container) return;
-
-    container.innerHTML = this.tabs.map(tab => {
-      const isActive = tab.id === this.activeTabId;
-      return `
-        <div class="workspace-tab-item ${isActive ? 'active' : ''}" data-tab-id="${escapeHtml(tab.id)}" onclick="TabManager.activateTab('${escapeHtml(tab.id)}')">
-          ${tab.pinned ? '<span class="workspace-tab-pin" title="پیشخوان پین شده">📌</span>' : ''}
-          <span class="workspace-tab-title">${escapeHtml(tab.title)}</span>
-          ${!tab.pinned ? `<span class="workspace-tab-close" title="بستن زبانه" onclick="event.stopPropagation(); TabManager.closeTab('${escapeHtml(tab.id)}')">&times;</span>` : ''}
-        </div>
-      `;
-    }).join('');
+    if (container) container.innerHTML = '';
   },
 
   openTab(module, subview, title = null) {
     const tabId = `${module}-${subview}`;
-    let existing = this.tabs.find(t => t.id === tabId);
-    let isNew = false;
-    if (!existing) {
-      existing = {
+    return {
+      tab: {
         id: tabId,
         module,
         subview,
         title: title || this.getTitle(module, subview),
-        pinned: (module === 'overview' && (subview === 'overview' || !subview)),
-        controller: new AbortController(),
-        loaded: false
-      };
-      this.tabs.push(existing);
-      isNew = true;
-    }
-    this.activeTabId = tabId;
-    this.render();
-    return { tab: existing, isNew };
+        loaded: true
+      },
+      isNew: true
+    };
   },
 
   activateTab(tabId) {
-    const tab = this.tabs.find(t => t.id === tabId);
-    if (!tab) return;
-    this.activeTabId = tabId;
-    this.render();
-    Router.navigate(tab.module, tab.subview, true);
+    // Direct routing handles navigation
   },
 
   closeTab(tabId) {
-    const idx = this.tabs.findIndex(t => t.id === tabId);
-    if (idx === -1) return;
-    const tab = this.tabs[idx];
-    if (tab.pinned) return;
-
-    if (tab.controller) {
-      try {
-        tab.controller.abort('Tab closed');
-      } catch (err) {
-        console.warn('Tab abort error:', err);
-      }
-    }
-
-    // Reset view state and forms when tab is closed so reopening it loads fresh
-    const modMap = ROUTE_VIEW_MAP[tab.module];
-    const viewId = modMap ? (modMap[tab.subview] || modMap['_default']) : null;
-    if (viewId) {
-      const viewEl = document.getElementById(viewId);
-      if (viewEl) {
-        viewEl.querySelectorAll('form').forEach(f => {
-          try {
-            f.reset();
-          } catch (err) {
-            console.warn('Form reset error:', err);
-          }
-        });
-      }
-    }
-
-    this.tabs.splice(idx, 1);
-
-    if (this.activeTabId === tabId) {
-      const nextTab = this.tabs[Math.max(0, idx - 1)] || this.tabs[0];
-      this.activeTabId = nextTab.id;
-      Router.navigate(nextTab.module, nextTab.subview, true);
-    }
-    this.render();
+    // No-op
   },
 
   getTitle(module, subview) {
@@ -532,18 +463,27 @@ const Router = {
       }
     });
 
-    // 6. Update Keep-Alive Tab Bar & Granular Traversal Breadcrumbs
-    const { tab, isNew } = TabManager.openTab(module, targetSub);
+    // 6. Granular Traversal Breadcrumbs & Dynamic Link Hrefs
     renderBreadcrumbs(window.activeProject, module, targetSub);
+
+    const currentSlug = window.activeProject ? window.activeProject.slug : '';
+    if (currentSlug) {
+      document.querySelectorAll('.flyout-link').forEach(link => {
+        const m = link.dataset.module;
+        const s = link.dataset.subview;
+        if (link.dataset.serviceTarget) {
+          link.href = Router.buildUrl(currentSlug, 'service', link.dataset.serviceTarget);
+        } else if (m && s) {
+          link.href = Router.buildUrl(currentSlug, m, s);
+        }
+      });
+    }
 
     // 8. Scroll/focus handling for internal anchor subviews
     this.handleSubViewFocus(module, targetSub);
 
-    // 9. Trigger data loader for the active view only if new, not loaded, or overview/services/service/dashboard
-    if (isNew || !tab.loaded || module === 'overview' || module === 'services' || module === 'service' || targetSub === 'dashboard') {
-      tab.loaded = true;
-      this.triggerLoader(module, targetSub, viewId);
-    }
+    // 9. Trigger data loader for the active view directly
+    this.triggerLoader(module, targetSub, viewId);
   },
 
   handleSubViewFocus(module, subview) {

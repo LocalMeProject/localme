@@ -144,7 +144,18 @@ public sealed record TableColumnSchema(
     string Name,
     string DataType,
     bool IsNullable,
-    bool IsPrimaryKey
+    bool IsPrimaryKey,
+    string? DefaultValue = null
+);
+
+public sealed record DatabaseSnapshot(
+    string Id,
+    string ProjectId,
+    string Type,
+    long SizeBytes,
+    string Status,
+    DateTimeOffset CreatedAtUtc,
+    string DataJson
 );
 
 public sealed record ProjectCollaborator(
@@ -159,7 +170,7 @@ public sealed record ProjectCollaborator(
 public sealed record IpgMerchantConfig(
     string TerminalId,
     string MerchantKey,
-    string DefaultPsp, // "SEP", "BEHPARDAKHT", "ZARINPAL", "SADAD"
+    string DefaultPsp, // "SEP", "BEHPARDAKHT", "ZARINPAL", "SADAD", "IDPAY", "PAYPING"
     bool EnforceShetabCardMask,
     bool IsSandbox,
     string? MellatTerminalId = null,
@@ -174,7 +185,11 @@ public sealed record IpgMerchantConfig(
     bool? ZarinpalSandbox = null,
     string? SadadMerchantId = null,
     string? SadadTerminalId = null,
-    string? SadadTerminalKey = null
+    string? SadadTerminalKey = null,
+    string? IdpayApiKey = null,
+    bool? IdpaySandbox = null,
+    string? PaypingToken = null,
+    bool? PaypingSandbox = null
 );
 
 public sealed record ComplianceConfig(

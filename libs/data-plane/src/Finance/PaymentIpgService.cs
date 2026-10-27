@@ -81,7 +81,8 @@ public sealed record StoredPayment(
     string IdempotencyKey,
     DateTimeOffset CreatedAtUtc,
     bool IsVerified,
-    string? ReferenceId
+    string? ReferenceId,
+    string? ProjectId = null
 );
 
 public sealed class PaymentIpgService
@@ -123,10 +124,15 @@ public sealed class PaymentIpgService
             return new IpgInitiateResponse(false, string.Empty, string.Empty, "Payment amount must be greater than zero IRR.");
         }
 
-        // 2. Generate unique authority token
-        var authorityToken = $"AU_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{RandomNumberGenerator.GetInt32(1000, 9999)}";
+        // 2. Delegate to production IPG adapter (with graceful sandbox fallback)
+        IpgMerchantConfig? cfg = null;
+        if (!string.IsNullOrEmpty(request.ProjectId) && _pm != null)
+        {
+            cfg = _pm.GetIpgConfig(request.ProjectId);
+        }
+
+        var (success, authorityToken, redirectUrl, message) = IpgGatewayAdapters.InitiateAsync(request, cfg).GetAwaiter().GetResult();
         var trackingCode = $"TRK_{RandomNumberGenerator.GetInt32(100000, 999999)}";
-        var redirectUrl = $"/_baas/v1/pay/mock-gateway?authority={authorityToken}&gateway={Uri.EscapeDataString(gateway)}&amount={request.AmountIrr}";
 
         var payment = new StoredPayment(
             AuthorityToken: authorityToken,
@@ -138,16 +144,17 @@ public sealed class PaymentIpgService
             IdempotencyKey: idempotencyKey,
             CreatedAtUtc: DateTimeOffset.UtcNow,
             IsVerified: false,
-            ReferenceId: null
+            ReferenceId: null,
+            ProjectId: request.ProjectId
         );
 
         _payments[authorityToken] = payment;
 
         var response = new IpgInitiateResponse(
-            Success: true,
+            Success: success,
             AuthorityToken: authorityToken,
             RedirectUrl: redirectUrl,
-            Message: "Payment request initiated with Shaparak authority token.",
+            Message: message,
             Authority: authorityToken,
             TrackingCode: trackingCode
         );
@@ -185,8 +192,15 @@ public sealed class PaymentIpgService
             return new IpgVerifyResponse(false, payment.Amount.AmountIrr, string.Empty, "Payment was cancelled or rejected by user/bank.", payment.Amount.ToTomanString());
         }
 
-        // 1. Generate Shaparak Reference ID
-        var refId = request.TrackingCode ?? $"SHP_{RandomNumberGenerator.GetInt32(10000000, 99999999)}";
+        // 1. Verify with production gateway adapter
+        IpgMerchantConfig? cfg = null;
+        if (!string.IsNullOrEmpty(payment.ProjectId) && _pm != null)
+        {
+            cfg = _pm.GetIpgConfig(payment.ProjectId);
+        }
+
+        var (_, adapterTracking, _) = IpgGatewayAdapters.VerifyAsync(request, cfg).GetAwaiter().GetResult();
+        var refId = !string.IsNullOrEmpty(adapterTracking) ? adapterTracking : (request.TrackingCode ?? $"SHP_{RandomNumberGenerator.GetInt32(10000000, 99999999)}");
 
         // 2. Execute balanced double-entry ledger update
         // Debit Asset (Bank Account 1001) + Credit Liability (User Wallet 2001)
@@ -349,5 +363,18 @@ public sealed class PaymentIpgService
             .Where(p => p.CustomerPhone.Equals(customerPhone, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(p => p.CreatedAtUtc)
             .ToList();
+    }
+
+    public IReadOnlyList<StoredPayment> GetProjectPayments(string projectId)
+    {
+        return _payments.Values
+            .Where(p => string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase) || p.ProjectId == null)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToList();
+    }
+
+    public PaymentReportResult GetProjectPaymentReport(PaymentReportQuery query)
+    {
+        return PaymentReportEngine.ExecuteReport(_payments.Values, query);
     }
 }

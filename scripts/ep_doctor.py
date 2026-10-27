@@ -12,7 +12,7 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,9 +21,19 @@ TEMPLATES_DIR = os.path.join(REPO_ROOT, "templates")
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 
-from ep_hooks import find_git_hooks_dir, install_hooks
-from ep_ops import resolve_container_engine
-from ep_runner import discover_projects
+if TYPE_CHECKING:
+    from scripts.ep_hooks import find_git_hooks_dir, install_hooks
+    from scripts.ep_ops import atomic_write, resolve_container_engine
+    from scripts.ep_runner import discover_projects
+else:
+    try:
+        from scripts.ep_hooks import find_git_hooks_dir, install_hooks
+        from scripts.ep_ops import atomic_write, resolve_container_engine
+        from scripts.ep_runner import discover_projects
+    except ImportError:
+        from ep_hooks import find_git_hooks_dir, install_hooks
+        from ep_ops import atomic_write, resolve_container_engine
+        from ep_runner import discover_projects
 
 
 PROFILE_DESCRIPTIONS = {
@@ -78,12 +88,15 @@ def check_vcs_branches(root_dir: str = ".") -> Tuple[bool, str]:
     required = ["main", "test", "stage", "prod"]
     missing = []
     for b in required:
-        res = subprocess.run(["git", "rev-parse", "--verify", b], cwd=root_dir, capture_output=True, text=True, check=False)
-        if res.returncode != 0:
-            # Check origin
-            res_origin = subprocess.run(["git", "rev-parse", "--verify", f"origin/{b}"], cwd=root_dir, capture_output=True, text=True, check=False)
-            if res_origin.returncode != 0:
-                missing.append(b)
+        try:
+            res = subprocess.run(["git", "rev-parse", "--verify", b], cwd=root_dir, capture_output=True, text=True, check=False, timeout=10)
+            if res.returncode != 0:
+                # Check origin
+                res_origin = subprocess.run(["git", "rev-parse", "--verify", f"origin/{b}"], cwd=root_dir, capture_output=True, text=True, check=False, timeout=10)
+                if res_origin.returncode != 0:
+                    missing.append(b)
+        except Exception:
+            missing.append(b)
     if missing:
         return False, f"Missing multi-tier VCS promotion branches: {', '.join(missing)}"
     return True, "Multi-tier VCS topology fully configured (main, test, stage, prod)."
@@ -114,7 +127,7 @@ def check_manifests(root_dir: str = ".") -> Tuple[bool, str]:
     return True, "Root AGENT.md manifest active."
 
 
-def check_container_engine() -> Tuple[bool, str]:
+def check_container_engine(root_dir: str = ".") -> Tuple[bool, str]:
     info = resolve_container_engine()
     engine = info.get("selected") or info.get("engine")
     if engine and engine != "none" and info.get("status") in ("available", "active", "ok", "degraded"):
@@ -214,9 +227,7 @@ Before modifying code:
 - **Run test suite**: `python3 -m unittest discover tests` (or native project test runner)
 """
 
-    with open(target_out, "w", encoding="utf-8") as f:
-        f.write(content.strip() + "\n")
-
+    atomic_write(target_out, content.strip() + "\n")
     return target_out
 
 
@@ -237,10 +248,7 @@ def run_doctor(root_dir: str = ".", heal: bool = False) -> int:
     failed_checks = []
 
     for name, check_fn in checks:
-        if check_fn == check_container_engine:
-            ok, msg = check_fn()
-        else:
-            ok, msg = check_fn(root_dir)
+        ok, msg = check_fn(root_dir)
 
         if ok:
             print(f"  ✅ {name}: {msg}")
@@ -268,12 +276,12 @@ def run_doctor(root_dir: str = ".", heal: bool = False) -> int:
     if any(name == "Multi-Tier VCS Topology" for name, _ in failed_checks):
         print("  [HEAL] Scaffolding multi-tier VCS branches (test, stage, prod)...")
         for b in ["test", "stage", "prod"]:
-            subprocess.run(["git", "branch", b, "main"], cwd=root_dir, capture_output=True, check=False)
+            subprocess.run(["git", "branch", b, "main"], cwd=root_dir, capture_output=True, check=False, timeout=10)
         # Push if remote origin exists
-        res_remote = subprocess.run(["git", "remote"], cwd=root_dir, capture_output=True, text=True, check=False)
+        res_remote = subprocess.run(["git", "remote"], cwd=root_dir, capture_output=True, text=True, check=False, timeout=10)
         if "origin" in res_remote.stdout:
             print("  [HEAL] Publishing multi-tier branches to remote origin...")
-            subprocess.run(["git", "push", "-u", "origin", "test", "stage", "prod"], cwd=root_dir, capture_output=True, check=False)
+            subprocess.run(["git", "push", "-u", "origin", "test", "stage", "prod"], cwd=root_dir, capture_output=True, check=False, timeout=30)
 
     # Heal CODEOWNERS
     if any(name == "CODEOWNERS Configuration" for name, _ in failed_checks):
@@ -281,8 +289,7 @@ def run_doctor(root_dir: str = ".", heal: bool = False) -> int:
         os.makedirs(gh_dir, exist_ok=True)
         co_file = os.path.join(gh_dir, "CODEOWNERS")
         print(f"  [HEAL] Creating deterministic CODEOWNERS at '{co_file}'...")
-        with open(co_file, "w", encoding="utf-8") as f:
-            f.write("# Enterprise Monorepo Code Ownership\n* @core-team\n")
+        atomic_write(co_file, "# Enterprise Monorepo Code Ownership\n* @core-team\n")
 
     # Heal Product Skill
     if any(name == "Tailored Product Skill" for name, _ in failed_checks):
@@ -356,8 +363,7 @@ ep-audit:
   script:
     - python3 scripts/ep.py audit
 """
-            with open(dest_file, "w", encoding="utf-8") as f:
-                f.write(content)
+            atomic_write(dest_file, content)
             print(f"[OK] Stamped GitLab CI workflow to '{dest_file}'.")
             return 0
         else:

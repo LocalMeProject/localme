@@ -1,16 +1,19 @@
 // LocalMe BaaS - Iranian Payment Gateway (IPG) Studio
 
 function switchPspFields(psp) {
+  const norm = (psp || 'ZARINPAL').toUpperCase();
   const groups = {
     'BEHPARDAKHT': document.getElementById('psp-fields-behpardakht'),
     'SEP': document.getElementById('psp-fields-sep'),
     'ZARINPAL': document.getElementById('psp-fields-zarinpal'),
-    'SADAD': document.getElementById('psp-fields-sadad')
+    'SADAD': document.getElementById('psp-fields-sadad'),
+    'IDPAY': document.getElementById('psp-fields-idpay'),
+    'PAYPING': document.getElementById('psp-fields-payping')
   };
   Object.keys(groups).forEach(k => {
     const el = groups[k];
     if (el) {
-      if (k === psp) {
+      if (k === norm) {
         el.classList.add('active');
         el.style.display = 'block';
       } else {
@@ -70,6 +73,16 @@ async function loadIpgStudio() {
       setVal('ipg-sadad-merchant', cfg.sadadMerchantId || '');
       setVal('ipg-sadad-terminal', cfg.sadadTerminalId || '');
       setVal('ipg-sadad-key', cfg.sadadTerminalKey || '');
+
+      // IDPay
+      setVal('ipg-idpay-key', cfg.idpayApiKey || '');
+      const idsbEl = document.getElementById('ipg-idpay-sandbox');
+      if (idsbEl) idsbEl.checked = !!cfg.idpaySandbox;
+
+      // PayPing
+      setVal('ipg-payping-token', cfg.paypingToken || '');
+      const ppsbEl = document.getElementById('ipg-payping-sandbox');
+      if (ppsbEl) ppsbEl.checked = !!cfg.paypingSandbox;
 
       // Show the selected PSP fieldset
       switchPspFields(currentPsp);
@@ -199,7 +212,7 @@ async function executeSimulatedPayment() {
     amount_rial: amountIrr,
     card_mask: cardNum.substring(0, 7) + '******' + cardNum.substring(cardNum.length - 4),
     settlement: 'PAID_TO_MERCHANT',
-    gateway: psp === 'BEHPARDAKHT' ? 'به پرداخت ملت' : psp === 'SEP' ? 'سامان کیش (SEP)' : 'زرین پال',
+    gateway: psp === 'BEHPARDAKHT' ? 'به پرداخت ملت' : psp === 'SEP' ? 'سامان کیش' : 'زرین پال',
     timestamp: new Date().toISOString()
   };
 
@@ -228,20 +241,25 @@ async function executeSimulatedPayment() {
   loadIpgReports();
 }
 
-async function loadIpgLedger() {
+async function loadIpgLedger(searchTerm = '') {
   if (!activeProjectId) return;
   const tbody = document.getElementById('ipg-transactions-tbody');
   if (!tbody) return;
 
   try {
-    const res = await fetch(`/_baas/v1/${activeProjectId}/ipg/transactions`);
+    let url = `/_baas/v1/${activeProjectId}/ipg/reports?pageSize=50`;
+    if (searchTerm) {
+      url += `&query=${encodeURIComponent(searchTerm)}`;
+    }
+    const res = await fetch(url);
     if (res.ok) {
-      const txs = await res.json();
-      if (!txs || txs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">تراکنش شاپرکی ثبت نشده است.</td></tr>';
+      const data = await res.json();
+      const txs = data.items || [];
+      if (txs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">تراکنش شاپرکی یافت نشد.</td></tr>';
       } else {
         tbody.innerHTML = txs.map(t => {
-          const amountIrr = t.amount?.amountIrr || (t.amountToman ? t.amountToman * 10 : 500000);
+          const amountIrr = t.amount?.amountIrr || (t.amountToman ? t.amountToman * 10 : 0);
           const tomanStr = Shamsi.toPersianDigits(Math.floor(amountIrr / 10).toLocaleString()) + ' تومان';
           return `
             <tr>
@@ -250,7 +268,7 @@ async function loadIpgLedger() {
               <td style="font-weight: 700; color: var(--brand-dark); font-size: 14px;">${escapeHtml(tomanStr)}</td>
               <td style="font-size: 13.5px;">${escapeHtml(t.customerPhone || '-')}</td>
               <td style="font-family: var(--font-persian); font-size: 13px;">${escapeHtml(t.referenceId || t.rrn || '-')}</td>
-              <td><span class="badge badge-active">موفق و تسویه شده</span></td>
+              <td><span class="badge ${t.isVerified ? 'badge-active' : 'badge-paused'}">${t.isVerified ? 'موفق و تسویه شده' : 'در انتظار تایید'}</span></td>
               <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(t.createdAtUtc || new Date().toISOString()))}</td>
             </tr>
           `;
@@ -262,57 +280,45 @@ async function loadIpgLedger() {
   }
 }
 
+let ipgSearchDebounce = null;
 function filterIpgTxList(term) {
-  const tbody = document.getElementById('ipg-transactions-tbody');
-  if (!tbody) return;
-  const rows = tbody.getElementsByTagName('tr');
-  const q = (term || '').toLowerCase().trim();
-  for (let r of rows) {
-    if (!q) {
-      r.style.display = '';
-    } else {
-      r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
-    }
-  }
+  clearTimeout(ipgSearchDebounce);
+  ipgSearchDebounce = setTimeout(() => {
+    loadIpgLedger(term);
+  }, 250);
 }
 
 async function loadIpgReports() {
   if (!activeProjectId) return;
   try {
-    const res = await fetch(`/_baas/v1/${activeProjectId}/ipg/transactions`);
-    let txCount = 0;
-    let totalIrr = 0;
+    const res = await fetch(`/_baas/v1/${activeProjectId}/ipg/reports`);
     if (res.ok) {
-      const txs = await res.json();
-      txCount = txs.length;
-      totalIrr = txs.reduce((sum, t) => sum + (t.amount?.amountIrr || (t.amountToman ? t.amountToman * 10 : 0)), 0);
-    }
-    const totalToman = Math.floor(totalIrr / 10);
-    const avgTicket = txCount > 0 ? Math.floor(totalToman / txCount) : 0;
+      const data = await res.json();
+      const s = data.summary || {};
+      const revEl = document.getElementById('ipg-report-total-revenue');
+      if (revEl) revEl.textContent = `${Shamsi.toPersianDigits((s.verifiedVolumeToman || 0).toLocaleString())} تومان`;
+      const rateEl = document.getElementById('ipg-report-success-rate');
+      if (rateEl) rateEl.textContent = (s.totalCount > 0) ? `${Shamsi.toPersianDigits(s.successRatePercent || 0)} ٪` : '-';
+      const countEl = document.getElementById('ipg-report-tx-count');
+      if (countEl) countEl.textContent = Shamsi.toPersianDigits(s.verifiedCount || 0);
+      const avgEl = document.getElementById('ipg-report-avg-ticket');
+      if (avgEl) avgEl.textContent = `${Shamsi.toPersianDigits((s.averageTicketToman || 0).toLocaleString())} تومان`;
 
-    const revEl = document.getElementById('ipg-report-total-revenue');
-    if (revEl) revEl.textContent = `${Shamsi.toPersianDigits(totalToman.toLocaleString())} تومان`;
-    const rateEl = document.getElementById('ipg-report-success-rate');
-    if (rateEl) rateEl.textContent = txCount > 0 ? '۱۰۰ ٪' : '-';
-    const countEl = document.getElementById('ipg-report-tx-count');
-    if (countEl) countEl.textContent = Shamsi.toPersianDigits(txCount);
-    const avgEl = document.getElementById('ipg-report-avg-ticket');
-    if (avgEl) avgEl.textContent = `${Shamsi.toPersianDigits(avgTicket.toLocaleString())} تومان`;
-
-    const tbody = document.getElementById('ipg-settlement-tbody');
-    if (tbody) {
-      if (txCount === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز تسویه حسابی برای این پروژه انجام نشده است.</td></tr>';
-      } else {
-        tbody.innerHTML = `
-          <tr>
-            <td style="font-family: var(--font-persian); font-size: 13px;">SET_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}</td>
-            <td style="font-size: 13.5px;">چرخه پایا شاپرک</td>
-            <td style="font-weight: 700; color: var(--brand-dark);">${Shamsi.toPersianDigits(totalToman.toLocaleString())} تومان</td>
-            <td><span class="badge badge-active">واریز به شبا بانک</span></td>
-            <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(new Date().toISOString()))}</td>
-          </tr>
-        `;
+      const tbody = document.getElementById('ipg-settlement-tbody');
+      if (tbody) {
+        if (!s.verifiedCount || s.verifiedCount === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">هنوز تسویه حسابی برای این پروژه انجام نشده است.</td></tr>';
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td style="font-family: var(--font-persian); font-size: 13px;">SET_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}</td>
+              <td style="font-size: 13.5px;">چرخه پایا شاپرک</td>
+              <td style="font-weight: 700; color: var(--brand-dark);">${Shamsi.toPersianDigits((s.verifiedVolumeToman || 0).toLocaleString())} تومان</td>
+              <td><span class="badge badge-active">واریز به شبا بانک</span></td>
+              <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(new Date().toISOString()))}</td>
+            </tr>
+          `;
+        }
       }
     }
   } catch (err) {

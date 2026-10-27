@@ -17,7 +17,7 @@ public static class MockGatewayRenderer
                 </head>
                 <body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; font-family: 'Vazirmatn', sans-serif;">
                   <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 32px; max-width: 440px; text-align: center; color: #f8fafc;">
-                    <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #f87171; margin-bottom: 12px;">!</div>
                     <h2 style="font-size: 18px; margin-bottom: 8px; color: #f87171;">شناسه پرداخت شاپرک یافت نشد</h2>
                     <p style="font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;">توکن ارجاع بانکی نامعتبر است یا منقضی گردیده است.</p>
                     <a href="/panel" style="display: inline-block; padding: 10px 20px; background: #10b981; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 700;">بازگشت به پنل توسعه‌دهنده</a>
@@ -245,7 +245,7 @@ public static class MockGatewayRenderer
                     <input type="hidden" name="action" id="form-action" value="pay">
 
                     <div class="form-group">
-                      <label class="form-label">شماره کارت بانکی ۱۶ رقمی (شتاب):</label>
+                      <label class="form-label">شماره کارت بانکی ۱۶ رقمی:</label>
                       <div class="card-inputs">
                         <input type="text" class="card-part" maxlength="4" value="۶۰۳۷" required>
                         <input type="text" class="card-part" maxlength="4" value="۹۹۷۵" required>
@@ -256,7 +256,7 @@ public static class MockGatewayRenderer
 
                     <div class="grid-2">
                       <div class="form-group">
-                        <label class="form-label">کد شناسایی دوم (CVV2):</label>
+                        <label class="form-label">کد شناسایی دوم:</label>
                         <input type="password" class="input-field" maxlength="4" value="382" required placeholder="***">
                       </div>
                       <div class="form-group">
@@ -269,7 +269,7 @@ public static class MockGatewayRenderer
                     </div>
 
                     <div class="form-group">
-                      <label class="form-label">رمز دوم پویا (اینترنتی):</label>
+                      <label class="form-label">رمز دوم پویا:</label>
                       <div class="otp-row">
                         <input type="password" class="input-field" id="otp-input" maxlength="8" value="749102" required placeholder="رمز پیامک شده">
                         <button type="button" class="btn-otp" id="btn-request-otp">دریافت رمز پویا</button>

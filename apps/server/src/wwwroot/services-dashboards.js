@@ -36,7 +36,7 @@
           </div>
           <div style="display: flex; gap: 8px;">
             <button type="button" class="btn-secondary" style="font-size: 13px; padding: 5px 14px;" onclick="Router.navigate('service', '${key}')">
-              تنظیمات و پیکربندی سرویس ⚙
+              تنظیمات و پیکربندی سرویس
             </button>
           </div>
         </div>
@@ -82,7 +82,7 @@
           <div class="metric-cell">
             <div class="metric-cell-label">پروتکل دسترسی</div>
             <div class="metric-cell-val" style="font-size: 16px; font-weight: 700;">PostgREST + SQL</div>
-            <div class="metric-cell-sub">امنیت سطح ردیف (RLS)</div>
+            <div class="metric-cell-sub">امنیت سطح ردیف</div>
           </div>
           <div class="metric-cell">
             <div class="metric-cell-label">وضعیت سلامت دیتابیس</div>
@@ -157,7 +157,7 @@
             <div class="metric-cell-sub">محدودکننده مصرف منابع</div>
           </div>
           <div class="metric-cell">
-            <div class="metric-cell-label">سقف زمان اجرا (Timeout)</div>
+            <div class="metric-cell-label">سقف زمان اجرا</div>
             <div class="metric-cell-val">${Shamsi.toPersianDigits(s['timeout_seconds'] || '5000')} ms</div>
             <div class="metric-cell-sub">جلوگیری از حلقه بی نهایت</div>
           </div>
@@ -193,7 +193,7 @@
             <div class="metric-cell-sub">پوش مستقیم ایرانی و خارجی</div>
           </div>
           <div class="metric-cell">
-            <div class="metric-cell-label">جریان داده زنده (WebSocket)</div>
+            <div class="metric-cell-label">جریان داده زنده</div>
             <div class="metric-cell-val" style="color: #059669; font-size: 16px; font-weight: 700;">آماده اتصال</div>
             <div class="metric-cell-sub">بدون مصرف باتری گوشی</div>
           </div>
@@ -251,7 +251,7 @@
           <div class="metric-cell">
             <div class="metric-cell-label">امنیت داده و سرور</div>
             <div class="metric-cell-val" style="color: #059669; font-size: 16px; font-weight: 700;">مرکز داده میلاد تهران</div>
-            <div class="metric-cell-sub">IP ایستا: 2.180.12.94</div>
+            <div class="metric-cell-sub">شبکه حاکمیتی ابر محلی</div>
           </div>
         `;
       default:
@@ -382,7 +382,7 @@
         return `
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('mobile', 'push')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">سامانه اعلان (Push Notification)</strong>
+              <strong style="font-size: 13.5px; display: block;">سامانه اعلان پیامکی و نوتیفیکیشن</strong>
               <span style="font-size: 12px; color: var(--text-muted);">ارسال پیام های متنی و تصویردار به گوشی کاربران</span>
             </div>
           </button>
@@ -394,7 +394,7 @@
           </button>
           <button type="button" class="btn-secondary" style="justify-content: flex-start; padding: 12px 14px; text-align: right;" onclick="Router.navigate('mobile', 'realtime')">
             <div>
-              <strong style="font-size: 13.5px; display: block;">جریان داده زنده (Realtime Stream)</strong>
+              <strong style="font-size: 13.5px; display: block;">جریان داده زنده</strong>
               <span style="font-size: 12px; color: var(--text-muted);">کانکشن وب سوکت دوطرفه برای تغییرات جداول</span>
             </div>
           </button>

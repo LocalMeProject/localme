@@ -7,7 +7,7 @@
     {
       key: 'database',
       module: 'db',
-      title: 'پایگاه داده رابطه ای (PostgreSQL REST)',
+      title: 'پایگاه داده رابطه ای',
       desc: 'اسکیمای مجزا و دسترسی مستقیم RESTful با سقف اتصالات مشخص و امنیت سطح ردیف.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
       defaultRoute: 'dashboard',
@@ -16,7 +16,7 @@
     {
       key: 'auth',
       module: 'auth',
-      title: 'احراز هویت جامع و کاربران (Auth)',
+      title: 'احراز هویت جامع و کاربران',
       desc: 'ورود پیامکی OTP با خط خدماتی، کلمه عبور ایمن، کپچای خودکار و نشست های JWT.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
       defaultRoute: 'dashboard',
@@ -25,7 +25,7 @@
     {
       key: 'storage',
       module: 'storage',
-      title: 'ذخیره سازی ابری چندرسانه ای (Storage)',
+      title: 'ذخیره سازی ابری چندرسانه ای',
       desc: 'باکت های ذخیره فایل ها، تصاویر و اسناد با صدور آدرس امن و کنترل حجم مصرفی.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
       defaultRoute: 'dashboard',
@@ -34,7 +34,7 @@
     {
       key: 'functions',
       module: 'functions',
-      title: 'توابع سرورلس لبه (Edge Functions)',
+      title: 'توابع سرورلس لبه',
       desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله فوق سریع Jint با IP خروجی ایستا.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
       defaultRoute: 'dashboard',
@@ -43,7 +43,7 @@
     {
       key: 'ipg',
       module: 'ipg',
-      title: 'درگاه پرداخت شاپرک (Payment Gateway)',
+      title: 'درگاه پرداخت شاپرک',
       desc: 'تراکنش های شتابی آنلاین با کلیه بانک های عضو شاپرک، تسویه خودکار و شبیه ساز تست.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
       defaultRoute: 'dashboard',
@@ -52,7 +52,7 @@
     {
       key: 'mobile',
       module: 'mobile',
-      title: 'سرویس های موبایل، پوش و خرید (Mobile)',
+      title: 'سرویس های موبایل، پوش و خرید',
       desc: 'سامانه اعلان به اپلیکیشن های اندروید و iOS، تایید خریدهای بازار و مایکت و وب سوکت.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
       defaultRoute: 'dashboard',
@@ -61,7 +61,7 @@
     {
       key: 'hosting',
       module: 'hosting',
-      title: 'میزبانی وب و استقرار ایستا (Hosting)',
+      title: 'میزبانی وب و استقرار ایستا',
       desc: 'استقرار وب اپلیکیشن ها و SPA با دامنه اختصاصی و صدور گواهی SSL خودکار.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
       defaultRoute: 'dashboard',
@@ -70,7 +70,7 @@
     {
       key: 'compliance',
       module: 'compliance',
-      title: 'انطباق قانونی، اینماد و دیپ لینک (Compliance)',
+      title: 'انطباق قانونی، اینماد و دیپ لینک',
       desc: 'مدیریت تاییدیه نماد اعتماد الکترونیکی، ساماندهی و نگاشت دیپ لینک اپلیکیشن.',
       icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
       defaultRoute: 'dashboard',
@@ -313,11 +313,11 @@
       ` : `
         <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: var(--radius-sm); padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 24px; color: #d97706;">⚠</span>
+            <span style="font-size: 20px; font-weight: bold; color: #d97706;">!</span>
             <div>
               <strong style="color: #92400e; font-size: 14.5px;">این سرویس در حال حاضر برای این پروژه غیرفعال است.</strong>
               <div style="color: #b45309; font-size: 13px; margin-top: 2px;">
-                دسترسی به APIهای این سرویس کاملاً مسدود بوده و با خطای ۴۰۳ (SERVICE_DISABLED) رد می شود. داده های قبلی تا ${retentionDays} روز محفوظ خواهند بود.
+                دسترسی به APIهای این سرویس کاملاً مسدود بوده و با خطای ۴۰۳ رد می شود. داده های قبلی تا ${retentionDays} روز محفوظ خواهند بود.
                 ${retentionUntil ? `<strong style="margin-right: 6px;">(مهلت نگهداری تا: ${retentionUntil})</strong>` : ''}
               </div>
             </div>
@@ -330,7 +330,7 @@
       <div class="card" style="margin-bottom: 20px;">
         <div class="card-header">
           <div>
-            <div class="card-title">کلید اختصاصی دسترسی به سرویس (API Key)</div>
+            <div class="card-title">کلید اختصاصی دسترسی به سرویس</div>
             <div class="card-desc">از این کلید در هدر Authorization یا X-LocalMe-Key درخواست های کلاینت به این سرویس استفاده نمایید.</div>
           </div>
           <button type="button" class="btn-secondary" style="font-size: 12.5px; padding: 4px 12px;" onclick="regenerateServiceKey('${sDef.key}')">
@@ -364,7 +364,7 @@
               </button>
             ` : `
               <button type="button" class="btn-primary" style="font-size: 13.5px; padding: 7px 24px; background: #059669;" onclick="enableDedicatedService('${sDef.key}')">
-                ⚡ فعال سازی این سرویس
+                فعال سازی این سرویس
               </button>
             `}
           </div>
@@ -405,7 +405,7 @@
               <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">فضای نام ایزوله جداول و رکوردهای داده شما در پایگاه داده مرکزی.</span>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">حداکثر اتصالات همزمان (Max Connections)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">حداکثر اتصالات همزمان</label>
               <input type="number" id="cfg-field-max-conn" class="input-field" value="${escapeHtml(settings['max_connections'] || '20')}" required />
               <span style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">سقف کانکشن های استخر اتصالات اختصاص یافته به پروژه.</span>
             </div>
@@ -415,15 +415,15 @@
         return `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش فرض ارسال پیامک OTP</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش فرض ارسال پیامک اعتبارسنجی</label>
               <select id="cfg-field-sms-provider" class="input-field">
-                <option value="kavenegar" ${settings['sms_provider'] === 'kavenegar' ? 'selected' : ''}>کاوانگار (Kavenegar)</option>
-                <option value="melipayamak" ${settings['sms_provider'] === 'melipayamak' ? 'selected' : ''}>ملی پیامک (MeliPayamak)</option>
-                <option value="magfa" ${settings['sms_provider'] === 'magfa' ? 'selected' : ''}>مگفا (Magfa)</option>
+                <option value="kavenegar" ${settings['sms_provider'] === 'kavenegar' ? 'selected' : ''}>کاوه نگار</option>
+                <option value="melipayamak" ${settings['sms_provider'] === 'melipayamak' ? 'selected' : ''}>ملی پیامک</option>
+                <option value="magfa" ${settings['sms_provider'] === 'magfa' ? 'selected' : ''}>مگفا</option>
               </select>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کلید وب سرویس پیامک (API Key اختصاصی)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کلید وب سرویس پیامک</label>
               <input type="text" id="cfg-field-sms-key" class="input-field" value="${escapeHtml(settings['sms_api_key'] || '')}" placeholder="اختیاری - در صورت خالی بودن از درگاه پلتفرم استفاده می شود" />
             </div>
             <div>
@@ -431,7 +431,7 @@
               <input type="text" id="cfg-field-sms-num" class="input-field" value="${escapeHtml(settings['sms_sender_number'] || '3000777')}" />
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">طول کد تایید پیامکی (OTP Length)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">طول کد تایید پیامکی</label>
               <input type="number" id="cfg-field-otp-len" class="input-field" value="${escapeHtml(settings['otp_length'] || '6')}" min="4" max="8" />
             </div>
           </div>
@@ -461,7 +461,7 @@
         return `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">سقف حافظه رم تخصیصی به هر تابع (MB)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">سقف حافظه رم تخصیصی به هر تابع (مگابایت)</label>
               <input type="number" id="cfg-field-func-mem" class="input-field" value="${escapeHtml(settings['memory_limit_mb'] || '16')}" min="8" max="128" required />
             </div>
             <div>
@@ -476,14 +476,14 @@
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پرداخت شاپرک فعال</label>
               <select id="cfg-field-ipg-psp" class="input-field">
-                <option value="zarinpal" ${settings['psp'] === 'zarinpal' ? 'selected' : ''}>زرین پال (ZarinPal)</option>
-                <option value="behpardakht" ${settings['psp'] === 'behpardakht' ? 'selected' : ''}>به پرداخت ملت (Mellat)</option>
-                <option value="sep" ${settings['psp'] === 'sep' ? 'selected' : ''}>سامان کیش - سپ (SEP)</option>
-                <option value="sadad" ${settings['psp'] === 'sadad' ? 'selected' : ''}>سداد بانک ملی (Sadad)</option>
+                <option value="zarinpal" ${settings['psp'] === 'zarinpal' ? 'selected' : ''}>زرین پال</option>
+                <option value="behpardakht" ${settings['psp'] === 'behpardakht' ? 'selected' : ''}>به پرداخت ملت</option>
+                <option value="sep" ${settings['psp'] === 'sep' ? 'selected' : ''}>سامان کیش</option>
+                <option value="sadad" ${settings['psp'] === 'sadad' ? 'selected' : ''}>سداد بانک ملی</option>
               </select>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کد پذیرنده / مرچنت آیدی (Merchant ID)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">کد پذیرنده</label>
               <input type="text" id="cfg-field-ipg-merchant" class="input-field" value="${escapeHtml(settings['merchant_id'] || 'test-merchant-localme')}" required />
             </div>
           </div>
@@ -495,12 +495,12 @@
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">درگاه پیش فرض ارسال پوش نوتیفیکیشن</label>
               <select id="cfg-field-mobile-push-provider" class="input-field">
                 <option value="fcm" ${settings['default_provider'] === 'fcm' ? 'selected' : ''}>Firebase Cloud Messaging (FCM)</option>
-                <option value="najva" ${settings['default_provider'] === 'najva' ? 'selected' : ''}>نجوا (Najva Push)</option>
+                <option value="najva" ${settings['default_provider'] === 'najva' ? 'selected' : ''}>نجوا</option>
                 <option value="apns" ${settings['default_provider'] === 'apns' ? 'selected' : ''}>Apple APNs</option>
               </select>
             </div>
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">شناسه کلاینت کافه بازار (IAB Client ID)</label>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">شناسه کلاینت کافه بازار</label>
               <input type="text" id="cfg-field-mobile-bazaar-id" class="input-field" value="${escapeHtml(settings['bazaar_client_id'] || '')}" />
             </div>
           </div>

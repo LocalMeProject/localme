@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 public sealed partial class ProjectManagerService
 {
+    // Realtime notification hook for table mutations
+    public Action<string, string, string, object?>? OnTableEvent { get; set; }
+
     // Project Scoped Relational Data & Dynamic Table Operations
     public JsonArray QueryTable(string projectId, string table, int limit = 50, string? filterCol = null, string? filterVal = null)
     {
@@ -40,6 +43,7 @@ public sealed partial class ProjectManagerService
         }
 
         rows.Add(payload);
+        OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", payload);
         if (_store != null)
         {
             var rowId = payload["id"]?.ToString() ?? Guid.NewGuid().ToString("N");
@@ -72,13 +76,17 @@ public sealed partial class ProjectManagerService
         var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
         var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
         var removed = tables.TryRemove(cleanName, out _);
-        if (removed && _store != null)
+        if (removed)
         {
-            _ = Task.Run(async () =>
+            OnTableEvent?.Invoke(projectId, cleanName, "DROP_TABLE", new { table = cleanName });
+            if (_store != null)
             {
-                try { await _store.DeleteTableAsync(projectId, cleanName); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteTable error: {ex.Message}"); }
-            });
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.DeleteTableAsync(projectId, cleanName); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteTable error: {ex.Message}"); }
+                });
+            }
         }
         return removed;
     }
@@ -97,6 +105,7 @@ public sealed partial class ProjectManagerService
             if (target != null)
             {
                 rows.Remove(target);
+                OnTableEvent?.Invoke(projectId, cleanName, "DELETE", new { id = rowId });
                 if (_store != null)
                 {
                     _ = Task.Run(async () =>

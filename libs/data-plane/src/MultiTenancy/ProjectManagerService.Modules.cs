@@ -360,11 +360,11 @@ public sealed partial class ProjectManagerService
             // Handle CREATE TABLE
             if (lower.StartsWith("create table", StringComparison.OrdinalIgnoreCase))
             {
-                var parts = trimmed.Split([' ', '(', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length >= 3)
+                if (SqlStatementParser.TryParseCreateTable(trimmed, out var tableName, out var parsedCols))
                 {
-                    var tableName = parts[2].Trim('`', '"', ';').ToLowerInvariant();
                     CreateTable(projectId, tableName);
+                    var schemas = _projectTableSchemas.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<TableColumnSchema>>());
+                    schemas[tableName] = parsedCols;
                     sw.Stop();
                     return new SqlExecutionResult(true, ["status"], new JsonArray { new JsonObject { ["status"] = $"جدول {tableName} با موفقیت ایجاد شد." } }, 1, sw.ElapsedMilliseconds);
                 }
@@ -490,8 +490,15 @@ public sealed partial class ProjectManagerService
 
     public IReadOnlyList<TableColumnSchema> GetTableSchema(string projectId, string tableName)
     {
+        var cleanName = tableName.ToLowerInvariant().Trim();
+        var schemas = _projectTableSchemas.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<TableColumnSchema>>());
+        if (schemas.TryGetValue(cleanName, out var definedCols) && definedCols.Count > 0)
+        {
+            return definedCols.ToList();
+        }
+
         var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-        var rows = tables.GetOrAdd(tableName.ToLowerInvariant().Trim(), _ => []);
+        var rows = tables.GetOrAdd(cleanName, _ => []);
 
         var columns = new Dictionary<string, TableColumnSchema>();
         columns["id"] = new TableColumnSchema("id", "uuid", false, true);
@@ -633,5 +640,42 @@ public sealed partial class ProjectManagerService
             list.RemoveAt(list.Count - 1);
         }
         return entry;
+    }
+
+    public BaasProject? FindProjectByHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host)) return null;
+        var cleanHost = host.Split(':')[0].Trim().ToLowerInvariant();
+
+        if (cleanHost.EndsWith(".localme.ir", StringComparison.OrdinalIgnoreCase))
+        {
+            var prefix = cleanHost[..^".localme.ir".Length];
+            if (!string.IsNullOrWhiteSpace(prefix) && prefix != "www" && prefix != "api" && prefix != "app" && prefix != "panel" && prefix != "admin")
+            {
+                var proj = GetProjectBySlug(prefix);
+                if (proj != null) return proj;
+
+                if (prefix.StartsWith("proj_", StringComparison.OrdinalIgnoreCase))
+                {
+                    proj = GetProjectBySlug(prefix[5..]);
+                    if (proj != null) return proj;
+                }
+                if (prefix.StartsWith("prj_", StringComparison.OrdinalIgnoreCase))
+                {
+                    proj = GetProjectBySlug(prefix[4..]);
+                    if (proj != null) return proj;
+                }
+            }
+        }
+
+        foreach (var (projId, domains) in _projectDomains)
+        {
+            if (domains.Any(d => d.Domain.Equals(cleanHost, StringComparison.OrdinalIgnoreCase)))
+            {
+                return GetProject(projId);
+            }
+        }
+
+        return null;
     }
 }

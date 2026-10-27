@@ -419,7 +419,15 @@ public static class BaasServiceRoutes
             var tableName = req.Query["table"].ToString();
             if (string.IsNullOrWhiteSpace(tableName))
             {
-                tableName = "products";
+                var tables = pm.GetProjectTableNames(projectId);
+                if (tables.Count > 0)
+                {
+                    tableName = tables[0];
+                }
+                else
+                {
+                    return Results.Json(Array.Empty<TableColumnSchema>());
+                }
             }
             return Results.Json(pm.GetTableSchema(projectId, tableName));
         });
@@ -467,6 +475,16 @@ public static class BaasServiceRoutes
                     if (string.IsNullOrWhiteSpace(config.SadadTerminalKey))
                         errors.Add("کلید متقارن (Terminal Key) سداد الزامی است.");
                     break;
+
+                case "IDPAY":
+                    if (string.IsNullOrWhiteSpace(config.IdpayApiKey))
+                        errors.Add("کلید اختصاصی API درگاه آیدی‌پی (X-API-KEY) الزامی است.");
+                    break;
+
+                case "PAYPING":
+                    if (string.IsNullOrWhiteSpace(config.PaypingToken))
+                        errors.Add("توکن دسترسی درگاه پی‌پینگ (Bearer Token) الزامی است.");
+                    break;
             }
 
             if (errors.Count > 0)
@@ -481,8 +499,8 @@ public static class BaasServiceRoutes
         app.MapGet("/_baas/v1/{projectId}/ipg/transactions", (string projectId, PaymentIpgService ipg, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "ipg")) return AuthHelper.ServiceDisabled("ipg");
-            var all = ipg.GetAllPayments();
-            return Results.Json(all);
+            var projectTxs = ipg.GetProjectPayments(projectId);
+            return Results.Json(projectTxs);
         });
 
         // Iranian Compliance Hub

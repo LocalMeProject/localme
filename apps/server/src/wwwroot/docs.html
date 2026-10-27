@@ -103,16 +103,16 @@
         <a href="#section-intro" class="docs-nav-link active">معرفی و معماری پلتفرم</a>
         <a href="#section-auth-keys" class="docs-nav-link">احراز هویت و ساختار کلیدها</a>
         <a href="#section-panel-auth" class="docs-nav-link">ورود به پنل و دسترسی تک پروژه</a>
-        <a href="#section-dev-scripts" class="docs-nav-link">اسکریپت های اجرا و استقرار (CLI)</a>
+        <a href="#section-dev-scripts" class="docs-nav-link">اسکریپت های اجرا و استقرار</a>
         <a href="#section-network" class="docs-nav-link">زیرساخت شبکه و اتصال شاپرک</a>
       </div>
 
       <div class="docs-nav-group">
         <div class="docs-nav-title">سرویس های ۴گانه هسته</div>
-        <a href="#section-database" class="docs-nav-link">۱. پایگاه داده رابطه ای (PostgreSQL)</a>
-        <a href="#section-auth-service" class="docs-nav-link">۲. احراز هویت جامع (OTP, رمز، OAuth)</a>
-        <a href="#section-storage" class="docs-nav-link">۳. ذخیره سازی ابری فایل (Storage)</a>
-        <a href="#section-functions" class="docs-nav-link">۴. توابع سرورلس لبه (Edge Functions)</a>
+        <a href="#section-database" class="docs-nav-link">۱. پایگاه داده رابطه ای</a>
+        <a href="#section-auth-service" class="docs-nav-link">۲. احراز هویت جامع</a>
+        <a href="#section-storage" class="docs-nav-link">۳. ذخیره سازی ابری فایل</a>
+        <a href="#section-functions" class="docs-nav-link">۴. توابع سرورلس لبه</a>
       </div>
 
       <div class="docs-nav-group">
@@ -124,9 +124,9 @@
 
       <div class="docs-nav-group">
         <div class="docs-nav-title">سرویس های موبایل و استریم زنده</div>
-        <a href="#section-mobile-realtime" class="docs-nav-link">وب سوکت دوطرفه (Realtime WebSockets)</a>
-        <a href="#section-mobile-push" class="docs-nav-link">سامانه اعلان ها (Push Notifications)</a>
-        <a href="#section-mobile-iap" class="docs-nav-link">خریدهای درون برنامه ای (Bazaar & Myket IAP)</a>
+        <a href="#section-mobile-realtime" class="docs-nav-link">وب سوکت دوطرفه</a>
+        <a href="#section-mobile-push" class="docs-nav-link">سامانه اعلان ها</a>
+        <a href="#section-mobile-iap" class="docs-nav-link">خریدهای درون برنامه ای</a>
       </div>
 
       <div class="docs-nav-group">
@@ -146,19 +146,19 @@
 
       <!-- 1. INTRO -->
       <section id="section-intro" class="docs-section">
-        <h1>معرفی و معماری پلتفرم لوکال می (LocalMe BaaS)</h1>
+        <h1>معرفی و معماری پلتفرم لوکال می</h1>
         <p>
-          پلتفرم <strong>لوکال می</strong> یک زیرساخت جامع <em>Backend-as-a-Service</em> چندمستاجره (Multi-Tenant) بومی است که با هدف ارتقای چشمگیر سرعت توسعه اپلیکیشن های موبایل (Android, iOS) و وب اپلیکیشن ها پیاده سازی شده است. این سامانه توسعه دهندگان را از مدیریت سرورها، کانفیگ پایگاه داده، پیکربندی پیامک، و ستاپ باکت های ذخیره سازی کاملاً بی نیاز می سازد.
+          پلتفرم <strong>لوکال می</strong> یک زیرساخت جامع چندمستاجره بومی است که با هدف ارتقای چشمگیر سرعت توسعه اپلیکیشن های موبایل و وب پیاده سازی شده است. این سامانه توسعه دهندگان را از مدیریت سرورها، کانفیگ پایگاه داده، پیکربندی پیامک، و ستاپ باکت های ذخیره سازی کاملاً بی نیاز می سازد.
         </p>
 
         <h2>اصول کلیدی معماری لوکال می</h2>
         <ul>
-          <li><strong>ایزولاسیون بر پایه اسکیما (Schema-per-Project Isolation)</strong>: هر پروژه دارای یک اسکیمای کاملاً مجزا در پایگاه داده PostgreSQL است. داده های مستاجران مختلف تحت هیچ شرایطی با یکدیگر تداخل نداشته و از بالاترین سطح امنیت و پرفورمنس برخوردارند.</li>
-          <li><strong>کلیدهای تفکیک شده به ازای هر سرویس (Per-Service Scoped Keys)</strong>: برخلاف سیستم های قدیمی که از یک کلید عمومی سراسری استفاده می کردند، لوکال می برای هر سرویس یک کلید مستقل با ساختار <code>lm_[service]_[project]_[id]</code> صادر می کند. در صورت افشای کلید یک سرویس، سایر سرویس ها ایمن می مانند.</li>
-          <li><strong>ناوبری مدرن کلیکی سایدبار (Unified Click-based Navigation)</strong>: سایدبار کنسول به صورت یکپارچه و دومرحله ای طراحی شده است. کلیک بر روی منوی سطح یک بدون تغییر صفحه، منوی سطح دو را به همراه دکمه بازگشت (در بالا برای دسکتاپ و در پایین برای موبایل) نمایش می دهد تا تجربه کاربری کامپکت و ارگونومیکی بدون هاورهای تصادفی فراهم گردد.</li>
-          <li><strong>مینی پروفایل نوار بالا و نمایش موجودی لحظه ای</strong>: نوار بالای کنسول اطلاعات حساب و موجودی زنده کیف پول (مثلاً <code>سینا والی زاده | ۱,۰۰۰,۰۰۰ تومان</code>) را همواره در دسترس قرار داده و با کلیک، پاپ اور پروفایل، نشان نقش کاربری و پنجره های شارژ شتاب را در اختیار قرار می دهد.</li>
-          <li><strong>راه اندازی تمیز بدون دیتای دمو (Clean Initial Boot)</strong>: سامانه هنگام اجرا فقط ۳ کاربر پیش فرض پلتفرم را برای ورود با نقش های مختلف آماده دارد و هیچ پروژه، جدول یا رکورد نمایشی و فیک را از پیش تولید نمی کند.</li>
-          <li><strong>محاسبه مصرف دقیق و اعتباری (Pay-As-You-Go Ledger)</strong>: مصرف منابع (تعداد کوئری ها، پیامک ها، حجم فایل ها و زمان پردازش توابع) با دقت میلی ثانیه ای و ریالی در یک دفترکل دوبل حسابداری ثبت و از کیف پول کسر می گردد.</li>
+          <li><strong>ایزولاسیون بر پایه اسکیما</strong>: هر پروژه دارای یک اسکیمای کاملاً مجزا در پایگاه داده PostgreSQL است. داده های مستاجران مختلف تحت هیچ شرایطی با یکدیگر تداخل نداشته و از بالاترین سطح امنیت و پرفورمنس برخوردارند.</li>
+          <li><strong>کلیدهای تفکیک شده به ازای هر سرویس</strong>: برخلاف سیستم های قدیمی که از یک کلید عمومی سراسری استفاده می کردند، لوکال می برای هر سرویس یک کلید مستقل با ساختار <code>lm_[service]_[project]_[id]</code> صادر می کند. در صورت افشای کلید یک سرویس، سایر سرویس ها ایمن می مانند.</li>
+          <li><strong>ناوبری مدرن کلیکی سایدبار</strong>: سایدبار کنسول به صورت یکپارچه و دومرحله ای طراحی شده است. کلیک بر روی منوی سطح یک بدون تغییر صفحه، منوی سطح دو را به همراه دکمه بازگشت (در بالا برای دسکتاپ و در پایین برای موبایل) نمایش می دهد تا تجربه کاربری کامپکت و ارگونومیکی بدون هاورهای تصادفی فراهم گردد.</li>
+          <li><strong>مینی پروفایل نوار بالا و نمایش موجودی لحظه ای</strong>: نوار بالای کنسول اطلاعات حساب و موجودی زنده کیف پول را همواره در دسترس قرار داده و با کلیک، پاپ اور پروفایل، نشان نقش کاربری و پنجره های شارژ شتاب را در اختیار قرار می دهد.</li>
+          <li><strong>راه اندازی تمیز بدون دیتای دمو</strong>: سامانه هنگام اجرا کاملا تمیز شروع به کار می کند و هیچ پروژه، جدول یا رکورد نمایشی و فیک را از پیش تولید نمی کند.</li>
+          <li><strong>محاسبه مصرف دقیق و اعتباری</strong>: مصرف منابع (تعداد کوئری ها، پیامک ها، حجم فایل ها و زمان پردازش توابع) با دقت میلی ثانیه ای و ریالی در یک دفترکل دوبل حسابداری ثبت و از کیف پول کسر می گردد.</li>
         </ul>
 
         <h2>چرخه کار توسعه دهنده</h2>
@@ -180,7 +180,7 @@
         <table class="docs-param-table">
           <thead>
             <tr>
-              <th>نام هدر (Header)</th>
+              <th>نام هدر</th>
               <th>مقدار الزامی</th>
               <th>توضیحات</th>
             </tr>
@@ -242,7 +242,7 @@ lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/auth/otp/verify</code>
         </div>
 
-        <h2>۲. ورود با نام کاربری و کلمه عبور اصلی (Platform Credentials)</h2>
+        <h2>۲. ورود با نام کاربری و کلمه عبور اصلی</h2>
         <p>
           دسترسی جامع و نامحدود به تمامی پروژه های تحت مالکیت کاربر در پنل لوکال می. شما می توانید با استفاده از <strong>نام کاربری</strong>، <strong>ایمیل</strong>، یا <strong>شماره تلفن همراه</strong> به همراه کلمه عبور وارد شوید.
         </p>
@@ -258,7 +258,7 @@ lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۳. ورود اختصاصی تک پروژه با رمز مجزا (Project-Scoped Access)</h2>
+        <h2>۳. ورود اختصاصی تک پروژه با رمز مجزا</h2>
         <p>
           در مواقعی که می خواهید دسترسی پنل یک پروژه خاص را در اختیار فریلنسر، همکار یا کارفرما قرار دهید بدون اینکه به سایر پروژه ها، کیف پول یا اطلاعات کلی حساب کاربری شما دسترسی داشته باشد، می توانید در تب «تنظیمات پروژه» یک <strong>رمز عبور اختصاصی</strong> برای پروژه تعیین کنید.
         </p>
@@ -296,7 +296,7 @@ lm_functions_proj_xxxxxxxx_xxxxxxxxxxxx</code></pre>
 
       <!-- 2.2 CLI & DEV SCRIPTS -->
       <section id="section-dev-scripts" class="docs-section">
-        <h1>دستورات CLI و راه اندازی سریع پروژه (Scripts)</h1>
+        <h1>دستورات CLI و راه اندازی سریع پروژه</h1>
         <p>
           جهت سهولت توسعه و استقرار محلی و پروداکشن، اسکریپت های زیر در <code>package.json</code> تعبیه شده اند:
         </p>
@@ -378,7 +378,7 @@ pnpm build</code></pre>
           <p>حذف قطعی یک سطر از جدول.</p>
         </div>
 
-        <h2>فیلترها و عملگرهای جستجو (Query Operators)</h2>
+        <h2>فیلترها و عملگرهای جستجو</h2>
         <table class="docs-param-table">
           <thead><tr><th>عملگر</th><th>توضیح</th><th>نمونه استفاده</th></tr></thead>
           <tbody>
@@ -394,7 +394,7 @@ pnpm build</code></pre>
 
       <!-- 5. AUTH SERVICE -->
       <section id="section-auth-service" class="docs-section">
-        <h1>۲. سرویس احراز هویت جامع کاربران (Auth Service)</h1>
+        <h1>۲. سرویس احراز هویت جامع کاربران</h1>
         <p>
           سامانه یکپارچه احراز هویت با پشتیبانی همزمان از <strong>پیامک یکبارمصرف (SMS OTP)</strong>، <strong>نام کاربری و رمز عبور (Credentials)</strong>، و <strong>ورود با شبکه های اجتماعی (OAuth 2.0 گوگل و گیت هاب)</strong>.
         </p>
@@ -403,7 +403,7 @@ pnpm build</code></pre>
           <strong>قوانین رگولاتوری پیامک در ایران:</strong> برای جلوگیری از سوءاستفاده و رعایت الزامات قانونی رگولاتوری مخابرات، ارسال پیامک صرفاً از طریق کلید API و خط اختصاصی ثبت شده خود توسعه دهنده (کاkeptت، ملی پیامک، یا مگفا) که در تنظیمات سرویس احراز هویت ذخیره می شود، انجام می پذیرد.
         </div>
 
-        <h3>الف) احراز هویت پیامکی (SMS OTP)</h3>
+        <h3>الف) احراز هویت پیامکی</h3>
         <p>۱. درخواست ارسال کد تایید یکبارمصرف به شماره کاربر:</p>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
@@ -429,7 +429,7 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h3>ب) ثبت نام و ورود با ایمیل و رمز عبور (Password)</h3>
+        <h3>ب) ثبت نام و ورود با ایمیل و رمز عبور</h3>
         <p>۱. ثبت نام کاربر جدید:</p>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
@@ -478,7 +478,7 @@ pnpm build</code></pre>
 
       <!-- 6. STORAGE -->
       <section id="section-storage" class="docs-section">
-        <h1>۳. سرویس ذخیره سازی ابری فایل (Object Storage)</h1>
+        <h1>۳. سرویس ذخیره سازی ابری فایل</h1>
         <p>
           سامانه نگهداری فایل های چندرسانه ای، کاتالوگ محصولات و اسناد با تفکیک باکت های عمومی (Public) و محرمانه (Private).
         </p>
@@ -487,7 +487,7 @@ pnpm build</code></pre>
         <p>دریافت فهرست باکت های فعال: <code>GET /_baas/v1/{projectId}/storage/buckets</code></p>
         <p>ایجاد باکت جدید: <code>POST /_baas/v1/{projectId}/storage/buckets</code> با بدنه <code>{"name": "assets", "isPublic": true}</code></p>
 
-        <h3>آپلود فایل (Multipart Upload)</h3>
+        <h3>آپلود فایل</h3>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/storage/{bucketName}/upload</code>
@@ -503,7 +503,7 @@ pnpm build</code></pre>
 
       <!-- 7. FUNCTIONS -->
       <section id="section-functions" class="docs-section">
-        <h1>۴. توابع سرورلس لبه شبکه (Serverless Edge Functions)</h1>
+        <h1>۴. توابع سرورلس لبه شبکه</h1>
         <p>
           اجرای کدهای جاوااسکریپت خالص در موتور ایزوله و پرسرعت <strong>Jint</strong>. ایده آل برای منطق تجاری سمت سرور، فرمول های قیمت گذاری، اعتبارسنجی کدملی، نرمال سازی داده ها یا اتصال وب هوک به سرویس های ثالث.
         </p>
@@ -546,7 +546,7 @@ pnpm build</code></pre>
 
       <!-- 8. BILLING & IPG -->
       <section id="section-billing" class="docs-section">
-        <h1>سیستم مالی، کیف پول و محاسبه مصرف (Billing & IPG)</h1>
+        <h1>سیستم مالی، کیف پول و محاسبه مصرف</h1>
         <p>
           لوکال می فاقد اشتراک ماهیانه اجباری است؛ هزینه خدمات صرفاً بر اساس مصرف واقعی از کیف پول اعتباری کسر می شود. کلیه مبالغ و تعرفه ها توسط سوپرادمین از پنل مدیریت قابل تنظیم هستند.
         </p>
@@ -561,7 +561,7 @@ pnpm build</code></pre>
           </tbody>
         </table>
 
-        <h3 id="section-ipg">خطای اتمام موجودی (HTTP 402 Payment Required)</h3>
+        <h3 id="section-ipg">خطای اتمام موجودی</h3>
         <p>
           چنانچه موجودی کیف پول اعتباری به صفر برسد، درخواست های API با خطای <code>402 Payment Required</code> مواجه خواهند شد. با افزایش اعتبار از طریق درگاه های معتبر شاپرک (سامان کیش، زرین پال، به پرداخت ملت) در کنسول، دسترسی بلافاصله احیا می گردد.
         </p>
@@ -574,7 +574,7 @@ pnpm build</code></pre>
           لوکال می مجهز به موتور اختصاصی تراکنش های شبکه شاپرک و درگاه های پرداخت اینترنتی (IPG) است که با PSPهای معتبر کشور (به پرداخت ملت، سامان کیش SEP، زرین پال و سداد) کاملاً یکپارچه شده است. همچنین جهت تست کامل چرخه تراکنش در محیط توسعه محلی بدون نیاز به کارت بانکی واقعی، یک <strong>شبیه ساز معتبر شاپرک</strong> ارائه شده است.
         </p>
 
-        <h2>۱. ایجاد تراکنش پرداخت شتاب (Initiate Payment)</h2>
+        <h2>۱. ایجاد تراکنش پرداخت شتاب</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/pay/initiate</code>
@@ -590,12 +590,12 @@ pnpm build</code></pre>
         </div>
         <p>پاسخ وب سرویس حاوی <code>authorityToken</code> و <code>paymentUrl</code> جهت هدایت کاربر به درگاه (یا شبیه ساز محلی <code>/_baas/v1/pay/mock-gateway?authority=...</code>) است.</p>
 
-        <h2>۲. شبیه ساز درگاه شاپرک (Mock Gateway Simulator)</h2>
+        <h2>۲. شبیه ساز درگاه شاپرک</h2>
         <p>
           آدرس <code>GET /_baas/v1/pay/mock-gateway?authority={token}</code> رابط کاربری استاندارد و کاملی از صفحه پرداخت اینترنتی شاپرک را شبیه سازی می کند که شامل ورود شماره کارت ۱۶ رقمی (با فوکوس خودکار ۴تایی)، رمز پویا، CVV2، تاریخ انقضا و دکمه های پرداخت و انصراف است.
         </p>
 
-        <h2>۳. تایید نهایی تراکنش (Payment Verification)</h2>
+        <h2>۳. تایید نهایی تراکنش</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/pay/verify</code>
@@ -608,43 +608,43 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۴. پیکربندی حساب های پذیرندگی شاپرک (IPG Merchant Configuration)</h2>
+        <h2>۴. پیکربندی حساب های پذیرندگی شاپرک</h2>
         <p>
           لوکال می فیلدهای ۱ به ۱ و معتبر مستندات رسمی PSPهای شتاب را پشتیبانی و اعتبارسنجی می کند:
         </p>
         <table class="docs-param-table">
           <thead>
             <tr>
-              <th>درگاه بانکی (PSP)</th>
+              <th>درگاه بانکی</th>
               <th>پارامترهای فنی الزامی شاپرک</th>
               <th>پروتکل ارتباطی و ضوابط</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>به پرداخت ملت (Mellat)</strong></td>
+              <td><strong>به پرداخت ملت</strong></td>
               <td><code>mellatTerminalId</code> (عددی), <code>mellatUserName</code>, <code>mellatUserPassword</code>, <code>mellatPayerId</code></td>
               <td>پروتکل وب سرویس SOAP/REST bpPayRequest شاپرک ملت</td>
             </tr>
             <tr>
-              <td><strong>سامان کیش سپ (SEP)</strong></td>
+              <td><strong>سامان کیش سپ</strong></td>
               <td><code>sepTerminalId</code> (۸ رقم), <code>sepMerchantId</code>, <code>sepCellNumber</code></td>
               <td>پروتکل توکنایزیشن درگاه سامان کیش با اعتبارسنجی کد پذیرنده</td>
             </tr>
             <tr>
-              <td><strong>زرین پال (ZarinPal)</strong></td>
+              <td><strong>زرین پال</strong></td>
               <td><code>zarinpalMerchantId</code> (UUID استاندارد ۳۶ کاراکتری), <code>zarinpalIsZarinGate</code>, <code>zarinpalSandbox</code></td>
               <td>وب سرویس REST API v4 زرین پال با پشتیبانی زرین گیت اختصاصی</td>
             </tr>
             <tr>
-              <td><strong>سداد بانک ملی (Sadad)</strong></td>
+              <td><strong>سداد بانک ملی</strong></td>
               <td><code>sadadMerchantId</code>, <code>sadadTerminalId</code>, <code>sadadTerminalKey</code> (کلید متقارن Base64)</td>
               <td>پروتکل رمزنگاری متقارن شاپرک سداد بانک ملی ایران</td>
             </tr>
           </tbody>
         </table>
 
-        <h2>۵. مسیریابی کلاینت و پیوندهای عمیق (Deep Linking & Client Router)</h2>
+        <h2>۵. مسیریابی کلاینت و پیوندهای عمیق</h2>
         <p>
           کنسول توسعه دهنده به عنوان یک پروژه یکپارچه ASP.NET Core بدون نیاز به دو استقرار مجزا (Next.js + Backend) کامپایل و مستقر می گردد. تمامی مسیرها بر روی سرور به کنترلر پنل متصل بوده و کلاینت با استاندارد HTML5 History API آدرس ها را مدیریت می کند:
         </p>
@@ -658,7 +658,7 @@ pnpm build</code></pre>
         </ul>
         <p>با رفرش صفحه یا کپی کردن آدرس ها، کاربر دقیقا در همان پروژه و ماژول باقی مانده و حالت صفحه حفظ می شود.</p>
 
-        <h2>۶. ذخیره سازی ابری پایدار بر زیرساخت ملی (Remote Persistence)</h2>
+        <h2>۶. ذخیره سازی ابری پایدار بر زیرساخت ملی</h2>
         <p>
           اطلاعات کنترل پلیین، کاربران، پروژه ها و تراکنش ها بر روی کلاستر اختصاصی PostgreSQL (پایگاه داده <code>sina-infwqq_db</code>) و کش توزیع شده Redis ثبت شده و با ریستارت یا ری لود سرور هیچ داده ای از دست نخواهد رفت. پروژه های جدید کاملا خام و بدون داده های نمایشی (Clean State) آغاز به کار می کنند.
         </p>
@@ -667,7 +667,7 @@ pnpm build</code></pre>
       <!-- 7. MOBILE & REALTIME SUITE -->
       <!-- 7.1 DUPLEX REALTIME WEBSOCKETS -->
       <section id="section-mobile-realtime" class="docs-section">
-        <h1>سرویس جریان داده زنده و وب سوکت دوطرفه (Duplex Realtime WebSockets)</h1>
+        <h1>سرویس جریان داده زنده و وب سوکت دوطرفه</h1>
         <p>
           سرویس Realtime لوکال می یک خط لوله اختصاصی با پرفورمنس بسیار بالا بر بستر پروتکل استاندارد <strong>WebSocket</strong> ارائه می دهد که امکان پخش آنی تغییرات جداول دیتابیس (INSERT, UPDATE, DELETE)، برودکست رویدادهای سفارشی، سفارشات زنده، چت آنلاین و موقعیت پیک ها را بدون نیاز به ارسال درخواست های مکرر Polling برای اپلیکیشن های کلاینت فراهم می کند.
         </p>
@@ -696,18 +696,18 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۲. پروتکل پیام ها و عضویت در کانال ها (Channel Protocol)</h2>
+        <h2>۲. پروتکل پیام ها و عضویت در کانال ها</h2>
         <ul>
           <li>
-            <strong>اشتراک در یک جدول مشخص (Subscribe):</strong>
+            <strong>اشتراک در یک جدول مشخص:</strong>
             <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; margin-top: 4px;"><code>{"action": "subscribe", "table": "orders"}</code></pre>
           </li>
           <li>
-            <strong>لغو عضویت (Unsubscribe):</strong>
+            <strong>لغو عضویت:</strong>
             <pre style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; direction: ltr; text-align: left; font-size: 12px; margin-top: 4px;"><code>{"action": "unsubscribe", "table": "orders"}</code></pre>
           </li>
           <li>
-            <strong>برودکست رویداد از سمت کلاینت یا سرور (Broadcast REST API):</strong>
+            <strong>برودکست رویداد از سمت کلاینت یا سرور:</strong>
             <div style="display: flex; align-items: center; gap: 8px; margin: 6px 0;">
               <span class="badge-method method-post">POST</span>
               <code>/_baas/v1/{projectId}/realtime/broadcast</code>
@@ -720,7 +720,7 @@ pnpm build</code></pre>
           </li>
         </ul>
 
-        <h2>۳. مدیریت چالش ها و پایداری در شبکه های موبایل ایران (ISP Edge Cases)</h2>
+        <h2>۳. مدیریت چالش ها و پایداری در شبکه های موبایل ایران</h2>
         <table class="docs-param-table">
           <thead>
             <tr>
@@ -756,12 +756,12 @@ pnpm build</code></pre>
 
       <!-- 7.2 PUSH NOTIFICATIONS -->
       <section id="section-mobile-push" class="docs-section">
-        <h1>سامانه اعلان های هوشمند موبایل (Push Notifications Engine)</h1>
+        <h1>سامانه اعلان های هوشمند موبایل</h1>
         <p>
           زیرساخت ارسال پوش نوتیفیکیشن لوکال می با اتصال همزمان به درگاه های بین المللی (Firebase Cloud Messaging) و سرورهای پوش بومی (Najva, Pushy)، تضمین تحویل ۹۹.۹٪ اعلان ها به اپلیکیشن های اندروید و iOS حتی در زمان اختلال لینک های بین الملل را فراهم می سازد.
         </p>
 
-        <h2>۱. ثبت دستگاه موبایل در سامانه (Register Device)</h2>
+        <h2>۱. ثبت دستگاه موبایل در سامانه</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/push/devices/register</code>
@@ -777,7 +777,7 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۲. ارسال اعلان به کاربران یا گروه ها (Send Notification)</h2>
+        <h2>۲. ارسال اعلان به کاربران یا گروه ها</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/push/send</code>
@@ -796,7 +796,7 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۳. نکات کلیدی و حالات مرزی (Edge Cases)</h2>
+        <h2>۳. نکات کلیدی و حالات مرزی</h2>
         <ul>
           <li><strong>اعلان های پس زمینه خاموش (Silent Data Push):</strong> با ارسال فیلد <code>data</code> بدون <code>title</code>، اپلیکیشن به صورت نامرئی در پس زمینه بیدار شده و عملیات همگام سازی کش را انجام می دهد.</li>
           <li><strong>چرخش توکن (Token Rotation):</strong> کلاینت ها با ثبت لیسنر <code>onNewToken</code>، در صورت ابطال توکن قدیمی، توکن جدید را به سامانه ارسال کرده و رکورد قبلی اوررایت می شود.</li>
@@ -806,12 +806,12 @@ pnpm build</code></pre>
 
       <!-- 7.3 IN-APP PURCHASES -->
       <section id="section-mobile-iap" class="docs-section">
-        <h1>اعتبارسنجی خریدهای درون برنامه ای بازار و مایکت (Mobile IAP)</h1>
+        <h1>اعتبارسنجی خریدهای درون برنامه ای بازار و مایکت</h1>
         <p>
           جهت جلوگیری از کرک شدن اپلیکیشن ها و پرداخت های جعلی (Fake In-App Purchases)، اعتبارسنجی توکن خرید حتماً باید در سمت سرور انجام شود. موتور IAP لوکال می اتصال مستقیم امن با API توسعه دهندگان <strong>کافه بازار (Cafe Bazaar)</strong> و <strong>مایکت (Myket)</strong> برقرار کرده و توکن ها را اعتبارسنجی می کند.
         </p>
 
-        <h2>۱. تایید خرید کافه بازار (Verify Cafe Bazaar Purchase)</h2>
+        <h2>۱. تایید خرید کافه بازار</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/iap/verify/bazaar</code>
@@ -826,13 +826,13 @@ pnpm build</code></pre>
 }</code></pre>
         </div>
 
-        <h2>۲. تایید خرید مایکت (Verify Myket Purchase)</h2>
+        <h2>۲. تایید خرید مایکت</h2>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-post">POST</span>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/iap/verify/myket</code>
         </div>
 
-        <h2>۳. مکانیزم های دفاعی و مدیریت حالت های بحرانی (Security Guardrails)</h2>
+        <h2>۳. مکانیزم های دفاعی و مدیریت حالت های بحرانی</h2>
         <ul>
           <li><strong>دفاع در برابر Replay Attack:</strong> هر <code>purchaseToken</code> پس از یک بار تایید در دیتابیس ثبت شده و درخواست های مجدد با همان توکن رد می شوند.</li>
           <li><strong>حفظ اتمیسیته مالی:</strong> به ازای هر تراکنش تاییدشده، یک رکورد در جدول <code>iap_purchases</code> ثبت و کیف پول کاربر یا کالای دیجیتال او به طور خودکار بروزرسانی می شود.</li>
@@ -841,7 +841,7 @@ pnpm build</code></pre>
 
       <!-- 8.2 ADVANCED STUDIOS (SQL, HOSTING, COMPLIANCE, LOGS) -->
       <section id="section-studios" class="docs-section">
-        <h1>استودیوهای پیشرفته توسعه دهندگان (Developer Studios)</h1>
+        <h1>استودیوهای پیشرفته توسعه دهندگان</h1>
         <p>کنسول لوکال می علاوه بر سرویس های هسته، مجموعه ای از ابزارهای بومی پیشرفته را در اختیار توسعه دهندگان قرار می دهد:</p>
 
         <h2>۱. ویرایشگر تعاملی SQL و طراح ساختار جدول</h2>
@@ -856,7 +856,7 @@ pnpm build</code></pre>
           <code style="font-size: 13.5px; font-weight: 700;">/_baas/v1/{projectId}/sql/schema/{table}</code>
         </div>
 
-        <h2>۲. استقرار میزبانی وب و دامنه های اختصاصی (Web Hosting)</h2>
+        <h2>۲. استقرار میزبانی وب و دامنه های اختصاصی</h2>
         <p>مدیریت نسخه های استقرار Git، شاخه ها و اتصال دامنه های اختصاصی با صدور خودکار گواهی امنیتی SSL و نماد ملی:</p>
         <ul>
           <li><code>GET /_baas/v1/{projectId}/hosting/deployments</code>: تاریخچه نسخه های مستقر شده.</li>
@@ -864,7 +864,7 @@ pnpm build</code></pre>
           <li><code>POST /_baas/v1/{projectId}/hosting/domains/{domain}/verify</code>: استعلام صحت رکوردهای DNS دامنه.</li>
         </ul>
 
-        <h2>۳. مرکز انطباق و الزامات رگولاتوری ایران (Compliance Hub)</h2>
+        <h2>۳. مرکز انطباق و الزامات رگولاتوری ایران</h2>
         <p>پیکربندی خودکار و بی درنگ توکن های نماد اعتماد الکترونیکی (اینماد)، سامانه ساماندهی، پیوندهای عمیق اندروید و اپل:</p>
         <ul>
           <li><code>GET/PUT /_baas/v1/{projectId}/compliance</code>: دریافت و تنظیم کدهای اینماد و ساماندهی.</li>
@@ -873,7 +873,7 @@ pnpm build</code></pre>
           <li><code>/enamad.txt</code> و <code>/samandehi.txt</code>: تایید مالکیت دامنه برای مراجع قانونی.</li>
         </ul>
 
-        <h2>۴. تله متری زنده و لاگ های بازرسی (Live Logs)</h2>
+        <h2>۴. تله متری زنده و لاگ های بازرسی</h2>
         <p>فیلتر و پایش بلادرنگ رویدادها، خطاهای اپلیکیشن، درخواست های دیتابیس و تراکنش ها بر اساس سطح اهمیت (INFO, WARN, ERROR) و شناسه ردگیری Trace ID:</p>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <span class="badge-method method-get">GET</span>
@@ -883,7 +883,7 @@ pnpm build</code></pre>
 
       <!-- 9. CODE EXAMPLES IN 4 LANGUAGES -->
       <section id="section-code-examples" class="docs-section">
-        <h1>نمونه کدهای جامع و کتابخانه ها (Code Examples)</h1>
+        <h1>نمونه کدهای جامع و کتابخانه ها</h1>
         <p>
           برای سهولت ادغام با اپلیکیشن های موبایل و وب، کدهای نمونه کامل در ۴ محیط cURL، جاوااسکریپت/تایپ اسکریپت، پایتون و دارت/فلاتر ارائه گردیده است.
         </p>

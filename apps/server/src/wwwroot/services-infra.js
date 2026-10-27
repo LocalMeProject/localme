@@ -19,7 +19,7 @@ async function loadProjectBuckets() {
         return `
           <tr>
             <td style="font-family: var(--font-persian); font-weight: 700;">${escapeHtml(b.name)}</td>
-            <td><span class="badge ${b.isPublic ? 'badge-info' : 'badge-paused'}">${b.isPublic ? 'عمومی (Public)' : 'محرمانه (Private)'}</span></td>
+            <td><span class="badge ${b.isPublic ? 'badge-info' : 'badge-paused'}">${b.isPublic ? 'عمومی' : 'محرمانه'}</span></td>
             <td>${Shamsi.toPersianDigits(count)}</td>
             <td style="font-size: 13.5px;">${(bytes / (1024*1024)).toFixed(2)} MB</td>
             <td style="font-size: 13.5px;">${escapeHtml(Shamsi.formatDate(b.createdAtUtc))}</td>

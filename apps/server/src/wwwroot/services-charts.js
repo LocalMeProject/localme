@@ -25,7 +25,7 @@ function renderDashboardCharts() {
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">جریان ترافیک و درخواست های ۲۴ ساعت گذشته</div>
-            <div class="chart-card-subtitle">توان عملیاتی بر حسب درخواست در دقیقه (Throughput RPM)</div>
+            <div class="chart-card-subtitle">توان عملیاتی بر حسب درخواست در دقیقه</div>
           </div>
           <span class="badge badge-active" style="font-weight: 700;">اوکِی ۱,۴۲۰ req/m</span>
         </div>
@@ -57,7 +57,7 @@ function renderDashboardCharts() {
       <div class="chart-card">
         <div class="chart-card-header">
           <div>
-            <div class="chart-card-title">توزیع تاخیر پاسخگویی (Latency Percentiles)</div>
+            <div class="chart-card-title">توزیع تاخیر پاسخگویی</div>
             <div class="chart-card-subtitle">پایش SLA پلتفرم بر اساس صدک های واقعی شتاب و دیتابیس</div>
           </div>
           <span class="badge badge-active">SLA ۹۹.۹۸٪</span>
@@ -145,7 +145,7 @@ function renderDashboardCharts() {
       <div class="chart-card">
         <div class="chart-card-header">
           <div>
-            <div class="chart-card-title">وضعیت سلامت زیرساخت ابری ملی (Sovereign Cloud Mesh)</div>
+            <div class="chart-card-title">وضعیت سلامت زیرساخت ابری ملی</div>
             <div class="chart-card-subtitle">شبکه توزیع پاپ سایت های داخلی و درگاه های رسمی</div>
           </div>
         </div>

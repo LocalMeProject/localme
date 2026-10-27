@@ -23,21 +23,9 @@ for p in [REPO_ROOT, SCRIPTS_DIR]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-try:
-    from ep_adopt import cmd_adopt
-    from ep_ast import cmd_ast
-    from ep_context import cmd_pack
-    from ep_doctor import cmd_ci, cmd_doctor, cmd_skill, run_doctor
-    from ep_hooks import cmd_hooks
-    from ep_ops import cmd_codeowners, cmd_container, cmd_dora, cmd_perf, cmd_slo
-    from ep_runner import cmd_run, cmd_run_many
-    from ep_scaffold import cmd_init, cmd_manifest, cmd_preflight, cmd_worktree
-    from ep_security import cmd_iac, cmd_license, cmd_security
-    from ep_session import cmd_session
-    from ep_stack import STACK_DEFINITIONS, detect_stack
-    from ep_sync import cmd_sync_skill
-    from ep_vcs import BaseGitProvider, GitHubProvider, GitLabProvider, LocalGitProvider, cmd_pr, cmd_vcs, get_git_provider
-except ImportError:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
     from scripts.ep_adopt import cmd_adopt
     from scripts.ep_ast import cmd_ast
     from scripts.ep_context import cmd_pack
@@ -51,6 +39,35 @@ except ImportError:
     from scripts.ep_stack import STACK_DEFINITIONS, detect_stack
     from scripts.ep_sync import cmd_sync_skill
     from scripts.ep_vcs import BaseGitProvider, GitHubProvider, GitLabProvider, LocalGitProvider, cmd_pr, cmd_vcs, get_git_provider
+else:
+    try:
+        from scripts.ep_adopt import cmd_adopt
+        from scripts.ep_ast import cmd_ast
+        from scripts.ep_context import cmd_pack
+        from scripts.ep_doctor import cmd_ci, cmd_doctor, cmd_skill, run_doctor
+        from scripts.ep_hooks import cmd_hooks
+        from scripts.ep_ops import cmd_codeowners, cmd_container, cmd_dora, cmd_perf, cmd_slo
+        from scripts.ep_runner import cmd_run, cmd_run_many
+        from scripts.ep_scaffold import cmd_init, cmd_manifest, cmd_preflight, cmd_worktree
+        from scripts.ep_security import cmd_iac, cmd_license, cmd_security
+        from scripts.ep_session import cmd_session
+        from scripts.ep_stack import STACK_DEFINITIONS, detect_stack
+        from scripts.ep_sync import cmd_sync_skill
+        from scripts.ep_vcs import BaseGitProvider, GitHubProvider, GitLabProvider, LocalGitProvider, cmd_pr, cmd_vcs, get_git_provider
+    except ImportError:
+        from ep_adopt import cmd_adopt
+        from ep_ast import cmd_ast
+        from ep_context import cmd_pack
+        from ep_doctor import cmd_ci, cmd_doctor, cmd_skill, run_doctor
+        from ep_hooks import cmd_hooks
+        from ep_ops import cmd_codeowners, cmd_container, cmd_dora, cmd_perf, cmd_slo
+        from ep_runner import cmd_run, cmd_run_many
+        from ep_scaffold import cmd_init, cmd_manifest, cmd_preflight, cmd_worktree
+        from ep_security import cmd_iac, cmd_license, cmd_security
+        from ep_session import cmd_session
+        from ep_stack import STACK_DEFINITIONS, detect_stack
+        from ep_sync import cmd_sync_skill
+        from ep_vcs import BaseGitProvider, GitHubProvider, GitLabProvider, LocalGitProvider, cmd_pr, cmd_vcs, get_git_provider
 
 
 # ==============================================================================
@@ -93,50 +110,38 @@ def cmd_surface(args: argparse.Namespace) -> int:
         surface_text = code_surface_match.group(0)
         declared_paths = set(re.findall(r"[`']([a-zA-Z0-9_\-./\[\]]+)[`']", surface_text))
 
-        if getattr(args, "staged", False):
-            try:
-                res_staged = subprocess.run(["git", "diff", "--name-only", "--cached"], capture_output=True, text=True, check=False, timeout=30)
-                modified_files = [line.strip() for line in res_staged.stdout.splitlines() if line.strip()]
-            except Exception as e:
-                print(f"[ERROR] Failed to query git staged diff: {e}", file=sys.stderr)
+        try:
+            if "..." in base_branch or base_branch in ("HEAD", "HEAD~1"):
+                diff_cmd = ["git", "diff", "--name-only", base_branch]
+            else:
+                diff_cmd = ["git", "diff", "--name-only", f"{base_branch}...HEAD"]
+            res = subprocess.run(diff_cmd, capture_output=True, text=True, check=False, timeout=30)
+            if res.returncode != 0:
+                print(f"[ERROR] git diff failed on target '{' '.join(diff_cmd)}': {res.stderr.strip()}", file=sys.stderr)
                 return 1
-        else:
-            try:
-                if "..." in base_branch or base_branch in ("HEAD", "HEAD~1"):
-                    diff_cmd = ["git", "diff", "--name-only", base_branch]
-                else:
-                    diff_cmd = ["git", "diff", "--name-only", f"{base_branch}...HEAD"]
-                res = subprocess.run(diff_cmd, capture_output=True, text=True, check=False, timeout=30)
-                if res.returncode != 0:
-                    print(f"[ERROR] git diff failed on target '{' '.join(diff_cmd)}': {res.stderr.strip()}", file=sys.stderr)
-                    return 1
-                modified_files = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-                res_staged = subprocess.run(["git", "diff", "--name-only", "--cached"], capture_output=True, text=True, check=False, timeout=30)
-                modified_files.extend([line.strip() for line in res_staged.stdout.splitlines() if line.strip()])
+            modified_files = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+            res_staged = subprocess.run(["git", "diff", "--name-only", "--cached"], capture_output=True, text=True, check=False, timeout=30)
+            modified_files.extend([line.strip() for line in res_staged.stdout.splitlines() if line.strip()])
 
-                res_status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=False, timeout=30)
-                if res_status.returncode == 0:
-                    for line in res_status.stdout.splitlines():
-                        if len(line) >= 4:
-                            raw_path = line[3:].strip()
-                            if " -> " in raw_path:
-                                raw_path = raw_path.split(" -> ")[1].strip()
-                            modified_files.append(raw_path)
+            res_status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=False, timeout=30)
+            if res_status.returncode == 0:
+                for line in res_status.stdout.splitlines():
+                    if len(line) >= 4:
+                        raw_path = line[3:].strip()
+                        if " -> " in raw_path:
+                            raw_path = raw_path.split(" -> ")[1].strip()
+                        modified_files.append(raw_path)
 
-                modified_files = sorted(list(set(modified_files)))
-            except Exception as e:
-                print(f"[ERROR] Failed to query git status/diff: {e}", file=sys.stderr)
-                return 1
+            modified_files = sorted(list(set(modified_files)))
+        except Exception as e:
+            print(f"[ERROR] Failed to query git status/diff: {e}", file=sys.stderr)
+            return 1
 
         exempt_suffixes = (".md", ".jsonl", ".log", "pnpm-lock.yaml", "Cargo.lock", "package-lock.json")
         out_of_bounds = []
 
         for m_file in modified_files:
-            if (
-                m_file.endswith(exempt_suffixes)
-                or m_file.startswith(("docs/", "scripts/", ".github/", ".agents/"))
-                or m_file in ("CHANGE_SURFACE.md", ".gitignore", "PRODUCT_SKILL.md")
-            ):
+            if m_file.endswith(exempt_suffixes) or m_file.startswith("docs/") or m_file == "CHANGE_SURFACE.md":
                 continue
 
             covered = False
@@ -150,8 +155,8 @@ def cmd_surface(args: argparse.Namespace) -> int:
         if out_of_bounds:
             print("[FAIL] MECHANICAL BLAST-RADIUS VIOLATION!", file=sys.stderr)
             print("The following modified files were NOT declared in the Change Surface:", file=sys.stderr)
-            for f in out_of_bounds:
-                print(f"  ❌ {f}", file=sys.stderr)
+            for oob_file in out_of_bounds:
+                print(f"  ❌ {oob_file}", file=sys.stderr)
             print("\nRemediation: Update '## 3. Code Surface' in your Change Surface or revert out-of-scope edits.", file=sys.stderr)
             return 1
 
@@ -177,7 +182,7 @@ def cmd_surface(args: argparse.Namespace) -> int:
 
         affected = set()
         for root, dirs, files in os.walk("."):
-            dirs[:] = [d for d in dirs if d not in {".git", "node_modules", "dist", "build", "bin", "obj"} and not d.startswith(".")]
+            dirs[:] = [d for d in dirs if d not in {".git", "node_modules", "dist", "build"} and not d.startswith(".")]
             if "project.json" in files:
                 rel_p = os.path.relpath(root, ".").replace("\\", "/")
                 prefix = rel_p.lstrip("./") + "/"
@@ -245,7 +250,7 @@ def cmd_migration(args: argparse.Namespace) -> int:
             pass
     else:
         for root, _, files in os.walk(scan_dir):
-            if any(p in root for p in ["node_modules", ".git", "dist", "build", "bin", "obj"]):
+            if any(p in root for p in ["node_modules", ".git", "dist", "build"]):
                 continue
             for f in files:
                 if f.endswith(".sql"):
@@ -275,9 +280,9 @@ def cmd_migration(args: argparse.Namespace) -> int:
     if violations:
         print("[FAIL] EXPAND/CONTRACT MIGRATION GATE VIOLATION!", file=sys.stderr)
         print("Destructive database operations detected that break rolling zero-downtime deployments:\n", file=sys.stderr)
-        for f, l, desc, match in violations:
-            print(f"  ❌ {f}:{l} -> Found '{match}'", file=sys.stderr)
-            print(f"     Reason: {desc}", file=sys.stderr)
+        for v_file, v_line, v_desc, v_match in violations:
+            print(f"  ❌ {v_file}:{v_line} -> Found '{v_match}'", file=sys.stderr)
+            print(f"     Reason: {v_desc}", file=sys.stderr)
         print("\nRemediation: Follow Expand/Contract phased lifecycle (see references/core-directives.md).", file=sys.stderr)
         print("If this is Phase 5 (Contract cleanup), add an approved ADR comment: '-- adr-ref: docs/adr/NNNN-contract.md'.", file=sys.stderr)
         return 1
@@ -297,7 +302,7 @@ def cmd_graph(args: argparse.Namespace) -> int:
         print("=== EP-OS Architectural Boundary Integrity Check ===")
         violations = []
         for cur_root, dirs, files in os.walk(root_dir):
-            dirs[:] = [d for d in dirs if d not in {"node_modules", ".git", ".nx", "dist", "build", "bin", "obj"} and not d.startswith(".")]
+            dirs[:] = [d for d in dirs if d not in {"node_modules", ".git", ".nx", "dist", "build"} and not d.startswith(".")]
             norm_cur = cur_root.replace("\\", "/")
             is_domain = "/domain" in norm_cur or norm_cur.endswith("/domain")
             for f in files:
@@ -324,7 +329,7 @@ def cmd_graph(args: argparse.Namespace) -> int:
 
     projects = []
     for current_root, dirs, files in os.walk(root_dir):
-        dirs[:] = [d for d in dirs if d not in {"node_modules", ".git", ".nx", "dist", "build", "bin", "obj"} and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if d not in {"node_modules", ".git", ".nx", "dist", "build"} and not d.startswith(".")]
         if "project.json" in files:
             p_file = os.path.join(current_root, "project.json")
             try:
@@ -487,7 +492,7 @@ def main():
     p_surface.add_argument("--output", dest="output", default=None, help="Path to CHANGE_SURFACE markdown file (alias)")
     p_surface.add_argument("--base", default="origin/main", help="Base git branch for diff check")
     p_surface.add_argument("--strict", action="store_true", help="Disallow template placeholders")
-    p_surface.add_argument("--staged", action="store_true", help="Check only staged files in git index")
+    p_surface.add_argument("--staged", action="store_true", help="Check against staged git diff")
     p_surface.add_argument("--scope", default=None, help="Project scope hint")
     p_surface.add_argument("--title", default=None, help="Change Surface title")
 
@@ -518,7 +523,7 @@ def main():
 
     # vcs
     p_vcs = subparsers.add_parser("vcs", help="Multi-Tier VCS operations and topology validation")
-    p_vcs.add_argument("action", choices=["sync-check", "init-branches", "init-topology"], help="VCS action")
+    p_vcs.add_argument("action", choices=["sync-check", "init-branches"], help="VCS action")
     p_vcs.add_argument("--base", default="main", help="Base trunk branch")
     p_vcs.add_argument("--push", action="store_true", default=True, help="Push initialized branches to remote origin")
     p_vcs.add_argument("--no-push", dest="push", action="store_false", help="Do not push to remote origin")
@@ -706,51 +711,26 @@ def main():
         parser.print_help()
         sys.exit(0)
 
-    # Route subcommands
-    if args.subcommand == "surface":
-        sys.exit(cmd_surface(args))
-    elif args.subcommand == "migration":
-        sys.exit(cmd_migration(args))
-    elif args.subcommand == "graph":
-        sys.exit(cmd_graph(args))
-    elif args.subcommand == "init":
-        sys.exit(cmd_init(args))
-    elif args.subcommand == "worktree":
-        sys.exit(cmd_worktree(args))
-    elif args.subcommand == "vcs":
-        sys.exit(cmd_vcs(args))
-    elif args.subcommand == "pr":
-        sys.exit(cmd_pr(args))
-    elif args.subcommand == "session":
-        sys.exit(cmd_session(args))
-    elif args.subcommand == "manifest":
-        sys.exit(cmd_manifest(args))
-    elif args.subcommand == "preflight":
-        sys.exit(cmd_preflight(args))
-    elif args.subcommand == "release":
-        sys.exit(cmd_release(args))
-    elif args.subcommand == "milestone":
-        sys.exit(cmd_milestone(args))
-    elif args.subcommand == "audit":
+    def run_audit(a: argparse.Namespace) -> int:
         cmd = [sys.executable, os.path.join(SCRIPTS_DIR, "audit-runner.py")]
-        if args.scope:
-            cmd.extend(["--scope", args.scope])
-        if args.output:
-            cmd.extend(["--output", args.output])
-        if args.diff:
-            cmd.extend(["--diff", args.diff])
-        baseline_file = getattr(args, "baseline", None)
+        if a.scope:
+            cmd.extend(["--scope", a.scope])
+        if a.output:
+            cmd.extend(["--output", a.output])
+        if a.diff:
+            cmd.extend(["--diff", a.diff])
+        baseline_file = getattr(a, "baseline", None)
         if not baseline_file and os.path.exists(".ep/baseline.json"):
             baseline_file = ".ep/baseline.json"
         if baseline_file:
             cmd.extend(["--baseline", baseline_file])
-        if args.json:
+        if a.json:
             cmd.append("--json")
-        sys.exit(subprocess.run(cmd, timeout=300).returncode)
+        return subprocess.run(cmd, timeout=300).returncode
 
-    elif args.subcommand == "verify":
-        root_dir = getattr(args, "root", ".") or "."
-        if getattr(args, "heal", False):
+    def run_verify(a: argparse.Namespace) -> int:
+        root_dir = getattr(a, "root", ".") or "."
+        if getattr(a, "heal", False):
             run_doctor(root_dir=root_dir, heal=True)
         print("=== 1. Verifying Nx Target Contracts ===")
         nx_res = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "verify-nx-targets.py"), "--root", root_dir], timeout=30).returncode
@@ -767,30 +747,27 @@ def main():
             nc_res = 0
 
         print("\n=== 4. Checking Expand/Contract Database Migrations ===")
-        mig_args = argparse.Namespace(dir=root_dir, diff=False, base="origin/main")
-        mig_res = cmd_migration(mig_args)
+        mig_res = cmd_migration(argparse.Namespace(dir=root_dir, diff=False, base="origin/main"))
 
         print("\n=== 5. Scanning for Hardcoded Secrets ===")
-        sec_args = argparse.Namespace(action="scan", dir=root_dir, staged=False, diff=None)
-        sec_res = cmd_security(sec_args)
+        sec_res = cmd_security(argparse.Namespace(action="scan", dir=root_dir, staged=False, diff=None))
 
         print("\n=== 6. Checking Change Surface Compliance ===")
-        surf_args = argparse.Namespace(action="check-diff", file=None, surface_file=None, output=None, base="origin/main", strict=False)
-        surf_res = cmd_surface(surf_args)
+        surf_res = cmd_surface(argparse.Namespace(action="check-diff", file=None, surface_file=None, output=None, base="origin/main", strict=False))
 
-        all_ok = (nx_res == 0 and agent_res == 0 and nc_res == 0 and mig_res == 0 and sec_res == 0 and surf_res == 0)
-        sys.exit(0 if all_ok else 1)
-
-    elif args.subcommand == "telemetry":
-        print("[OK] Telemetry: Traceparent headers conform to OpenTelemetry schema."); sys.exit(0)
-    elif args.subcommand == "finops":
-        print("[OK] FinOps: Resource quota limits verified across manifests."); sys.exit(0)
-    elif args.subcommand == "policy":
-        print("[OK] Policy: Zero policy violations detected across governance rules."); sys.exit(0)
+        return 0 if (nx_res == 0 and agent_res == 0 and nc_res == 0 and mig_res == 0 and sec_res == 0 and surf_res == 0) else 1
 
     dispatch = {
+        "surface": cmd_surface, "migration": cmd_migration, "graph": cmd_graph,
+        "init": cmd_init, "worktree": cmd_worktree, "vcs": cmd_vcs, "pr": cmd_pr,
+        "session": cmd_session, "manifest": cmd_manifest, "preflight": cmd_preflight,
+        "release": cmd_release, "milestone": cmd_milestone, "audit": run_audit,
+        "verify": run_verify,
         "nc": lambda a: subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "check-nc-items.py"), "--max-age", str(a.max_age)], timeout=30).returncode,
         "hooks": cmd_hooks, "security": cmd_security, "license": cmd_license, "adopt": cmd_adopt,
+        "telemetry": lambda a: (print("[OK] Telemetry: Traceparent headers conform to OpenTelemetry schema."), 0)[1],
+        "finops": lambda a: (print("[OK] FinOps: Resource quota limits verified across manifests."), 0)[1],
+        "policy": lambda a: (print("[OK] Policy: Zero policy violations detected across governance rules."), 0)[1],
         "sync-skill": cmd_sync_skill, "ast": cmd_ast, "run": cmd_run, "run-many": cmd_run_many,
         "iac": cmd_iac, "slo": cmd_slo, "codeowners": cmd_codeowners, "dora": cmd_dora,
         "perf": cmd_perf, "container": cmd_container, "pack": cmd_pack, "context": cmd_pack,

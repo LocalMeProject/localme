@@ -20,13 +20,13 @@ function renderAllServices() {
   if (!activeProject) return;
 
   const services = [
-    { key: 'database', title: 'پایگاه داده رابطه ای (PostgreSQL REST)', desc: 'اسکیمای مجزا، جداول و دسترسی مستقیم RESTful', view: 'view-db' },
-    { key: 'auth', title: 'احراز هویت جامع کاربران (Auth)', desc: 'ورود پیامکی OTP با خط اختصاصی، کلمه عبور، و توکن های OAuth', view: 'view-auth' },
-    { key: 'storage', title: 'ذخیره سازی ابری چندرسانه ای (Blob Storage)', desc: 'باکت های ذخیره فایل ها و اسناد با صدور آدرس امن', view: 'view-storage' },
-    { key: 'functions', title: 'توابع سرورلس لبه (Edge Functions)', desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله سریع Jint', view: 'view-functions' },
-    { key: 'ipg', title: 'درگاه پرداخت شاپرک (Payment Gateway)', desc: 'تراکنش های شتابی آنلاین با کلیه بانک های عضو شاپرک', view: 'view-ipg-config' },
-    { key: 'mobile', title: 'سرویس های موبایل و پوش (Push & Realtime)', desc: 'اعلان به اپلیکیشن های موبایل، خرید کافه بازار و مایکت و وب سوکت', view: 'view-mobile-push' },
-    { key: 'hosting', title: 'میزبانی وب و استقرار ایستا (Hosting)', desc: 'استقرار SPA و اتصال دامنه اختصاصی با SSL خودکار', view: 'view-hosting-deployments' },
+    { key: 'database', title: 'پایگاه داده رابطه ای', desc: 'اسکیمای مجزا، جداول و دسترسی مستقیم RESTful', view: 'view-db' },
+    { key: 'auth', title: 'احراز هویت جامع کاربران', desc: 'ورود پیامکی با خط اختصاصی، کلمه عبور، و توکن های معتبر', view: 'view-auth' },
+    { key: 'storage', title: 'ذخیره سازی ابری چندرسانه ای', desc: 'باکت های ذخیره فایل ها و اسناد با صدور آدرس امن', view: 'view-storage' },
+    { key: 'functions', title: 'توابع سرورلس لبه', desc: 'اجرای کدهای جاوااسکریپت در محیط ایزوله سریع Jint', view: 'view-functions' },
+    { key: 'ipg', title: 'درگاه پرداخت شاپرک', desc: 'تراکنش های شتابی آنلاین با کلیه بانک های عضو شاپرک', view: 'view-ipg-config' },
+    { key: 'mobile', title: 'سرویس های موبایل و پوش', desc: 'اعلان به اپلیکیشن های موبایل، خرید کافه بازار و مایکت و وب سوکت', view: 'view-mobile-push' },
+    { key: 'hosting', title: 'میزبانی وب و استقرار ایستا', desc: 'استقرار SPA و اتصال دامنه اختصاصی با SSL خودکار', view: 'view-hosting-deployments' },
     { key: 'compliance', title: 'مجوزها، اینماد و دیپ لینک قانونی', desc: 'تاییدیه نماد الکترونیکی و پیکربندی دیپ لینک اپلیکیشن موبایل', view: 'view-compliance-tokens' }
   ];
 
@@ -52,7 +52,7 @@ function renderAllServices() {
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button type="button" class="${cfg.isEnabled ? 'btn-danger' : 'btn-primary'}" style="font-size: 12.5px; padding: 4px 12px;" onclick="${cfg.isEnabled ? `disableService('${s.key}')` : `quickEnableService('${s.key}')`}">
-              ${cfg.isEnabled ? 'غیرفعال سازی' : '⚡ فعال سازی سرویس'}
+              ${cfg.isEnabled ? 'غیرفعال سازی' : 'فعال سازی سرویس'}
             </button>
             <button type="button" class="btn-secondary" style="font-size: 13px; padding: 4px 12px;" onclick="navigateToView('${s.view}')">
               ورود به صفحه سرویس
@@ -362,7 +362,7 @@ curl -X POST ${baseUrl}/_baas/v1/${slug}/auth/login \\
 # ۲. دریافت چالش کپچا برای فرم های ورود ضد بات
 curl -X GET ${baseUrl}/_baas/v1/${slug}/auth/captcha
 
-# ۳. کوئری دیتابیس رابطه ای (PostgREST)
+# ۳. پرس‌وجو از دیتابیس رابطه ای
 curl -X GET "${baseUrl}/_baas/v1/${slug}/rest/products?limit=10" \\
   -H "x-api-key: ${apiKey}"`;
   } else if (lang === 'node') {
@@ -375,7 +375,7 @@ const localme = createClient({
   endpoint: '${baseUrl}'
 });
 
-// ۱. ورود با نام کاربری و کلمه عبور (بدون نیاز به پیامک OTP)
+// ۱. ورود با نام کاربری و کلمه عبور (بدون نیاز به پیامک یکبارمصرف)
 const { user, tokens } = await localme.auth.login({
   username: 'developer_user',
   password: 'Password123'
@@ -383,7 +383,7 @@ const { user, tokens } = await localme.auth.login({
 // احراز هویت با موفقیت انجام شد
 const userId = user.id;
 
-// ۲. پرس وجو از جداول داده (PostgREST)
+// ۲. پرس وجو از جداول داده
 const products = await localme.db.table('products').select('*').limit(10);
 // فهرست محصولات دریافتی: products`;
   } else if (lang === 'python') {

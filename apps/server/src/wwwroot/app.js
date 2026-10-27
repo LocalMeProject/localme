@@ -80,7 +80,7 @@ async function initUserSession() {
 
       // Update Mini-Profile title and label
       const balanceStr = Shamsi.formatToman(currentUser.walletBalanceIrr);
-      const titleStr = `${currentUser.fullName || 'سینا والی زاده'} | ${balanceStr}`;
+      const titleStr = `${currentUser.fullName || 'کاربر'} | ${balanceStr}`;
       const labelEl = document.getElementById('mini-profile-label');
       const triggerEl = document.getElementById('mini-profile-trigger');
       if (labelEl) labelEl.textContent = titleStr;
@@ -106,10 +106,54 @@ async function initUserSession() {
 
       updateWalletDisplay(currentUser.walletBalanceIrr);
       await loadUserProjects();
+      checkPaymentCallback();
     }
   } catch (err) {
     console.warn('Session load failed:', err);
   }
+}
+
+function checkPaymentCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const authority = params.get('authority');
+  const status = params.get('status');
+  const trackingCode = params.get('trackingCode');
+
+  if (authority) {
+    if (status === 'OK') {
+      showToast(`پرداخت الکترونیک شاپرک با موفقیت انجام شد. شماره پیگیری: ${trackingCode || authority}`, 'success');
+      if (currentUser && currentUser.phone) {
+        fetch(`/_baas/v1/wallet/${encodeURIComponent(currentUser.phone)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(w => {
+            if (w && typeof w.balanceIrr === 'number') {
+              currentUser.walletBalanceIrr = w.balanceIrr;
+              updateWalletDisplay(w.balanceIrr);
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      showToast('پرداخت توسط کاربر لغو گردید یا با خطا مواجه شد.', 'warning');
+    }
+
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+  }
+}
+
+function updateSidebarLinkHrefs() {
+  if (!activeProject) return;
+  const slug = activeProject.slug || activeProject.id;
+  document.querySelectorAll('.flyout-link').forEach(link => {
+    const mod = link.dataset.module;
+    const sub = link.dataset.subview;
+    if (link.dataset.serviceTarget) {
+      link.href = `/panel/${slug}/service/${link.dataset.serviceTarget}`;
+    } else if (mod && sub) {
+      link.href = `/panel/${slug}/${mod}/${sub}`;
+    }
+  });
 }
 
 function updateWalletDisplay(balanceIrr) {
@@ -120,7 +164,7 @@ function updateWalletDisplay(balanceIrr) {
   }
   const labelEl = document.getElementById('mini-profile-label');
   const triggerEl = document.getElementById('mini-profile-trigger');
-  const name = (currentUser && currentUser.fullName) ? currentUser.fullName : 'سینا والی زاده';
+  const name = (currentUser && currentUser.fullName) ? currentUser.fullName : 'کاربر';
   const titleStr = `${name} | ${balanceStr}`;
   if (labelEl) labelEl.textContent = titleStr;
   if (triggerEl) triggerEl.title = titleStr;
@@ -192,7 +236,16 @@ async function loadUserProjects(selectIdToActivate = null) {
         }
 
         switcher.onchange = () => {
-          activateProject(switcher.value, true);
+          const selectedProj = userProjects.find(p => p.id === switcher.value);
+          if (selectedProj) {
+            const currentRoute = (window.Router && typeof window.Router.parsePath === 'function') ? window.Router.parsePath() : null;
+            const targetMod = (currentRoute && currentRoute.module) ? currentRoute.module : 'overview';
+            const targetSub = (currentRoute && currentRoute.subview) ? currentRoute.subview : null;
+            const targetUrl = window.Router.buildUrl(selectedProj.slug, targetMod, targetSub);
+            window.location.href = targetUrl;
+          } else {
+            window.location.reload();
+          }
         };
       }
     }
@@ -218,6 +271,8 @@ async function activateProject(projectId, updateRoute = true) {
     statusBadge.textContent = activeProject.status === 'Active' ? 'فعال' : 'معلق';
     statusBadge.className = activeProject.status === 'Active' ? 'badge badge-active' : 'badge badge-paused';
   }
+
+  updateSidebarLinkHrefs();
 
   // Populate Overview Tab
   setText('ov-proj-name', activeProject.name);
@@ -342,9 +397,17 @@ function initSidebarNav() {
 
   // 3. Level 2 Flyout Links: Click navigates to subview and loads page view
   flyoutLinks.forEach(link => {
-    link.addEventListener('click', () => {
+    link.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) {
+        return; // Allow native middle click / Ctrl+click to open link in new tab
+      }
+      e.preventDefault();
       const mod = link.dataset.module;
       const sub = link.dataset.subview;
+      if (link.dataset.serviceTarget) {
+        Router.navigate('service', link.dataset.serviceTarget);
+        return;
+      }
       Router.navigate(mod, sub);
     });
   });
@@ -357,9 +420,9 @@ function initSidebarNav() {
 
 async function loadUserProfileView() {
   if (!currentUser) return;
-  setText('prof-full-name-val', currentUser.fullName || 'سینا والی زاده');
-  setText('prof-phone-val', currentUser.phone || '۰۹۱۲۰۰۰۰۰۰۰');
-  setText('prof-email-val', currentUser.email || 'sina@localme.ir');
+  setText('prof-full-name-val', currentUser.fullName || 'کاربر');
+  setText('prof-phone-val', currentUser.phone || '-');
+  setText('prof-email-val', currentUser.email || '-');
   setText('prof-wallet-val', Shamsi.formatToman(currentUser.walletBalanceIrr));
   const roleEl = document.getElementById('prof-role-badge');
   if (roleEl) {

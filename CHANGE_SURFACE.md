@@ -7,6 +7,7 @@ risk_level: "MEDIUM"
 affected_projects:
   - "apps/server"
   - "apps/web-console"
+  - "apps/cli"
   - "libs/core-domain"
   - "libs/data-plane"
   - "libs/infrastructure"
@@ -38,6 +39,11 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
     - `PlatformUser`: `Username` and `PasswordHash` properties with seeded developer, admin, and operator accounts.
     - `ValidateUserCredentials`: Matching username, email, or normalized Iranian mobile phone.
     - `BaasProject`: `PasswordHash` and `HasPassword` properties with project-scoped credential validation (`ValidateProjectCredentials`, `SetProjectPassword`, `RemoveProjectPassword`).
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Users.cs`:
+    - Modularized platform user management, password seeding, PBKDF2 hashing, and credentials verification adhering to 800-line ceiling.
+- **EP-OS Mechanical Tooling & Standard Scaffolding Catalog**:
+  - `scripts/`: Zero-dependency mechanical CLI routing, doctor self-healing, DAG task runner, and 10-dimension audit engine synchronized with EP-OS LTS.
+  - `templates/`: Canonical enterprise templates including operational runbooks, postmortems, chaos engineering, and Prometheus/OTel monitoring.
   - `apps/server/src/Program.cs`:
     - `POST /_baas/v1/auth/login`: Platform user login granting access to all user projects.
     - `POST /_baas/v1/auth/project-login`: Project-scoped login (`projectSlug` + project password) restricting session strictly to that single project.
@@ -84,6 +90,7 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `libs/client-sdk/src/index.ts`: Added `push.registerDevice()`, `push.unregisterDevice()`, `push.send()`, `iap.verifyBazaar()`, `iap.verifyMyket()`, `iap.getPurchases()`, and `realtime.subscribe()` WebSocket duplex event stream.
 - **Automated Integration Test Suite**:
   - `tests/LocalMe.Integration.Tests/MobileBaasTests.cs`: 8 comprehensive tests verifying push device registration, device unregistration, platform-targeted dispatch, provider config persistence, Cafe Bazaar purchase validation, Cafe Bazaar replay attack rejection, Myket purchase validation, and Myket replay rejection. All 48 unit and integration tests passing.
+  - `tests/LocalMe.Integration.Tests/DatabaseParserAndBridgeTests.cs`: Automated tests verifying SQL parser robustness against `CREATE TABLE IF NOT EXISTS`, schema column declaration order preservation, inter-service permission bridge gating, and durable snapshot persistence.
 - **Remote Infrastructure & Platform Persistence**:
   - `libs/infrastructure/src/Migrations/004_PlatformPersistence.sql`: 14 relational tables in dedicated `localme_production` on Runflare (`users`, `projects`, `project_services`, `collaborators`, `ipg_configs`, `compliance_configs`, `deployments`, `domains`, `buckets`, `storage_files`, `functions`, `tables`, `table_records`, `audit_logs`).
   - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Production PostgreSQL store implementing `IProjectStore` with distributed Redis caching (`localme:*` keys, DB index 1). Zero data wipe on server restarts.
@@ -183,6 +190,10 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/server/src/Diagnostics/PlatformLogBuffer.cs`
   - `apps/server/src/Routes/AuthHelper.cs`
   - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`
+  - `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`
+  - `apps/server/src/Routes/BaasHostingWebhookRoutes.cs`
+  - `apps/server/src/Routes/BaasIpgReportRoutes.cs`
+  - `apps/server/src/Routes/BaasServiceRoutes.cs`
   - `apps/server/src/Routes/MockGatewayRenderer.cs`
   - `apps/server/src/appsettings.json`
   - `apps/server/src/wwwroot/favicon.ico`
@@ -190,6 +201,7 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `apps/server/src/wwwroot/admin.js`
   - `apps/server/src/wwwroot/app-modals.js`
   - `apps/server/src/wwwroot/app-settings.js`
+  - `apps/server/src/wwwroot/app-tabs.js`
   - `apps/server/src/wwwroot/app.js`
   - `apps/server/src/wwwroot/docs.html`
   - `apps/server/src/wwwroot/index.html`
@@ -221,16 +233,24 @@ Implement the complete full-stack LocalMe platform inside the single ASP.NET Cor
   - `libs/data-plane/src/Billing/UsageMeteringService.cs`
   - `libs/data-plane/src/Compute/JintScriptHost.cs`
   - `libs/data-plane/src/DynamicSql/DynamicSqlHandler.cs`
+  - `libs/data-plane/src/Finance/IpgGatewayAdapters.cs`
+  - `libs/data-plane/src/Finance/PaymentIpgService.cs`
+  - `libs/data-plane/src/Finance/PaymentReportEngine.cs`
+  - `libs/data-plane/src/MultiTenancy/InternalServiceBridge.cs`
   - `libs/data-plane/src/MultiTenancy/IProjectStore.cs`
   - `libs/data-plane/src/MultiTenancy/ProjectManagerModels.cs`
   - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Auth.cs`
   - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Modules.cs`
+  - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Snapshots.cs`
   - `libs/data-plane/src/MultiTenancy/ProjectManagerService.Tables.cs`
+  - `libs/data-plane/src/MultiTenancy/SqlStatementParser.cs`
   - `libs/data-plane/src/Storage/Adapters/LocalDiskAdapter.cs`
+  - `libs/data-plane/src/Storage/Adapters/RunflareBlobAdapter.cs`
   - `libs/infrastructure/project.json`
   - `libs/infrastructure/src/LocalMe.Infrastructure.csproj`
   - `libs/infrastructure/src/Migrations/002_TenantSchema.sql`
   - `libs/infrastructure/src/Storage/DatabaseInitializer.cs`
+  - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.FinanceAndMobile.cs`
 - **Test Projects & Integration Suites**:
   - `tests/LocalMe.Core.Tests/DagEngineTests.cs`
   - `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`

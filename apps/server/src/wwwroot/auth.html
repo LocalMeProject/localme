@@ -47,29 +47,10 @@
 
       <!-- TAB 1: Mobile OTP Form (Default) -->
       <div id="pane-otp">
-        <!-- Quick Role Switcher for Testing -->
-        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">ورود سریع با پیامک تایید:</div>
-          <div style="display: grid; gap: 6px;">
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989121112233', '/panel')">
-              <span>توسعه دهنده (سینا والی زاده)</span>
-              <span class="badge badge-active">پنل کلاینت</span>
-            </button>
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989120000001', '/admin')">
-              <span>مدیر ارشد (SuperAdmin)</span>
-              <span class="badge badge-paused">دسترسی کامل</span>
-            </button>
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="quickOtpLogin('+989120000002', '/admin')">
-              <span>اپراتور پشتیبانی (Operator)</span>
-              <span class="badge badge-info">سطح میانی</span>
-            </button>
-          </div>
-        </div>
-
         <form id="otp-form">
           <div style="margin-bottom: 14px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شماره موبایل</label>
-            <input type="text" id="phone-input" class="input-field" value="+989121112233" required />
+            <input type="text" id="phone-input" class="input-field" placeholder="۰۹۱۲۰۰۰۰۰۰۰" required />
           </div>
 
           <div id="otp-code-group" style="display: none; margin-bottom: 14px;">
@@ -89,34 +70,15 @@
 
       <!-- TAB 2: Username & Password Form -->
       <div id="pane-userpass" style="display: none;">
-        <!-- Quick Fill for Credentials -->
-        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">انتخاب سریع حساب کاربری (تست):</div>
-          <div style="display: grid; gap: 6px;">
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('sina', 'developer123456')">
-              <span>توسعه دهنده (sina)</span>
-              <span class="badge badge-active">developer123456</span>
-            </button>
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('admin', 'admin123456')">
-              <span>مدیر ارشد (admin)</span>
-              <span class="badge badge-paused">admin123456</span>
-            </button>
-            <button type="button" class="btn-secondary" style="justify-content: space-between; font-size: 13px; padding: 6px 12px;" onclick="fillUserPass('operator', 'operator123456')">
-              <span>اپراتور (operator)</span>
-              <span class="badge badge-info">operator123456</span>
-            </button>
-          </div>
-        </div>
-
         <form id="form-userpass">
           <div style="margin-bottom: 14px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">نام کاربری، ایمیل یا شماره موبایل</label>
-            <input type="text" id="login-identifier" class="input-field" placeholder="sina یا sina@example.com" value="sina" required />
+            <input type="text" id="login-identifier" class="input-field" placeholder="نام کاربری، ایمیل یا شماره موبایل" required />
           </div>
 
           <div style="margin-bottom: 16px;">
             <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">کلمه عبور</label>
-            <input type="password" id="login-password" class="input-field" placeholder="••••••••" value="developer123456" required />
+            <input type="password" id="login-password" class="input-field" placeholder="••••••••" required />
           </div>
 
           <div id="userpass-error-hint" style="display: none; font-size: 13px; color: var(--color-danger); margin-bottom: 12px; padding: 8px 12px; background: #fee2e2; border-radius: 4px;"></div>
@@ -135,7 +97,7 @@
 
         <form id="form-projpass">
           <div style="margin-bottom: 14px;">
-            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه یا اسلاگ پروژه (Project Slug / ID)</label>
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">شناسه یا اسلاگ پروژه</label>
             <input type="text" id="login-proj-slug" class="input-field" placeholder="مثال: my-store یا proj_a1b2c3d4" required />
           </div>
 

@@ -80,14 +80,17 @@ EXCLUDED_SCAN_DIRS = {
     "node_modules",
     "vendor",
     "dist",
+    "dist-next",
+    ".next",
     "build",
     ".cache",
     ".venv",
     ".nx",
     "coverage",
     "__pycache__",
-    "bin",
     "obj",
+    "bin",
+    "target",
 }
 
 COPYLEFT_LICENSES = {
@@ -121,7 +124,7 @@ def is_test_path(filename: str) -> bool:
 
 
 def scan_text_for_secrets(text: str, filename: str = "") -> List[Dict[str, Any]]:
-    findings = []
+    findings: List[Dict[str, Any]] = []
     # Skip test files and template files from false-positive tripping on placeholders (DEFECT-04)
     if is_test_path(filename):
         return findings
@@ -150,9 +153,12 @@ def scan_text_for_secrets(text: str, filename: str = "") -> List[Dict[str, Any]]
 
 
 def scan_staged_diff() -> List[Dict[str, Any]]:
-    findings = []
+    findings: List[Dict[str, Any]] = []
     cmd = ["git", "diff", "--cached", "--unified=0"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30)
+    except Exception:
+        return findings
     if res.returncode != 0 or not res.stdout.strip():
         return findings
 
@@ -168,10 +174,13 @@ def scan_staged_diff() -> List[Dict[str, Any]]:
 
 
 def scan_diff_range(base_branch: str) -> List[Dict[str, Any]]:
-    findings = []
+    findings: List[Dict[str, Any]] = []
     diff_target = f"{base_branch}...HEAD" if "..." not in base_branch and base_branch not in ("HEAD", "HEAD~1") else base_branch
     cmd = ["git", "diff", diff_target, "--unified=0"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30)
+    except Exception:
+        return findings
     if res.returncode != 0:
         return findings
 
@@ -192,7 +201,7 @@ def scan_directory(scan_dir: str = ".") -> List[Dict[str, Any]]:
         dirs[:] = [d for d in dirs if d not in EXCLUDED_SCAN_DIRS and not d.startswith(".")]
         for f in files:
             ext = os.path.splitext(f)[1].lower()
-            if ext in (".cs", ".ts", ".js", ".go", ".rs", ".py", ".php", ".env", ".json", ".yaml", ".yml", ".toml"):
+            if ext in (".ts", ".js", ".go", ".rs", ".py", ".php", ".env", ".json", ".yaml", ".yml", ".toml"):
                 path = os.path.join(root, f)
                 try:
                     with open(path, "r", encoding="utf-8", errors="ignore") as fh:

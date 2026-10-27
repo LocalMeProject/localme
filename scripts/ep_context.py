@@ -24,8 +24,6 @@ EXCLUDED_DIRS = {
     "coverage",
     "__pycache__",
     ".ep",
-    "bin",
-    "obj",
 }
 
 BINARY_EXTENSIONS = {

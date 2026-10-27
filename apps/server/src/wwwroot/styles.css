@@ -252,15 +252,15 @@ body.panel-layout-body .subbar {
 .layout-container {
   display: flex;
   flex-direction: row;
-  min-height: calc(100vh - 100px);
+  min-height: calc(100vh - 110px);
   position: relative;
   overflow-x: hidden;
 }
 
 body.panel-layout-body .layout-container {
   min-height: 0;
-  height: calc(100vh - 100px);
-  max-height: calc(100vh - 100px);
+  height: calc(100vh - 110px);
+  max-height: calc(100vh - 110px);
   flex: 1;
   overflow: hidden;
 }
@@ -279,6 +279,9 @@ body.panel-layout-body .content-main {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 #project-switcher {
@@ -426,7 +429,8 @@ body.panel-layout-body .content-main {
   overflow-x: hidden;
   z-index: 20;
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.02);
-  min-height: calc(100vh - 100px);
+  min-height: calc(100vh - 110px);
+  margin-bottom: 300px;
 }
 
 .sidebar-view {
@@ -434,7 +438,8 @@ body.panel-layout-body .content-main {
   flex-direction: column;
   width: 100%;
   min-height: 100%;
-  padding: 14px 10px;
+  padding: 14px 10px 300px 10px;
+  box-sizing: border-box;
 }
 
 .sidebar-view.active {
@@ -447,7 +452,8 @@ body.panel-layout-body .content-main {
 
 .sidebar-view-level2 {
   background: #ffffff;
-  padding: 14px 12px;
+  padding: 14px 12px 300px 12px;
+  box-sizing: border-box;
 }
 
 .sidebar-back-btn {
@@ -581,6 +587,8 @@ body.panel-layout-body .content-main {
   letter-spacing: normal;
   line-height: 1.4;
   white-space: nowrap;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .flyout-link:hover {
@@ -647,9 +655,11 @@ body.panel-layout-body .content-main {
 
 .content-main {
   flex: 1;
+  width: 100%;
+  max-width: 100%;
   padding: 24px 32px;
-  max-width: 1400px;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 /* White Clean Cards */
@@ -1514,17 +1524,7 @@ a.btn-danger,
    Workspace Keep-Alive Tab Navigation Bar
    ===================================================================== */
 .workspace-tabs-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 16px 0 16px;
-  background: #f1f5f9;
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-  min-height: 40px;
-  user-select: none;
+  display: none !important;
 }
 
 .workspace-tabs-bar::-webkit-scrollbar {

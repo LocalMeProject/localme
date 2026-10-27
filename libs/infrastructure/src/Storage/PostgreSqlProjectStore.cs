@@ -140,6 +140,111 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             }
         }
 
+        // Ensure finance, mobile push & IAP, and billing tables exist
+        const string auxiliaryTablesSql = @"
+            CREATE TABLE IF NOT EXISTS payment_transactions (
+                id VARCHAR(64) PRIMARY KEY,
+                authority_token VARCHAR(128) UNIQUE NOT NULL,
+                gateway VARCHAR(64) NOT NULL,
+                amount_irr BIGINT NOT NULL,
+                customer_phone VARCHAR(32) NOT NULL,
+                callback_url TEXT NOT NULL,
+                description TEXT,
+                idempotency_key VARCHAR(128) NOT NULL,
+                is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+                reference_id VARCHAR(128),
+                project_id VARCHAR(64),
+                created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_pmt_tx_auth ON payment_transactions(authority_token);
+            CREATE INDEX IF NOT EXISTS idx_pmt_tx_phone ON payment_transactions(customer_phone);
+
+            CREATE TABLE IF NOT EXISTS customer_ledgers (
+                id VARCHAR(64) PRIMARY KEY,
+                customer_phone VARCHAR(32) NOT NULL,
+                transaction_id VARCHAR(64) NOT NULL,
+                idempotency_key VARCHAR(128) NOT NULL,
+                entries_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+                timestamp_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_cust_ledgers_ph ON customer_ledgers(customer_phone, timestamp_utc DESC);
+
+            CREATE TABLE IF NOT EXISTS customer_wallets (
+                customer_phone VARCHAR(32) PRIMARY KEY,
+                balance_irr BIGINT NOT NULL DEFAULT 0,
+                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS project_push_devices (
+                device_id VARCHAR(128) NOT NULL,
+                project_id VARCHAR(64) NOT NULL,
+                push_token TEXT NOT NULL,
+                platform VARCHAR(32) NOT NULL,
+                provider VARCHAR(32) NOT NULL,
+                user_id VARCHAR(128),
+                tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+                app_version VARCHAR(64),
+                device_model VARCHAR(128),
+                registered_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (project_id, device_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS project_push_configs (
+                project_id VARCHAR(64) PRIMARY KEY,
+                fcm_server_key TEXT,
+                apns_key_id VARCHAR(64),
+                apns_team_id VARCHAR(64),
+                apns_bundle_id VARCHAR(128),
+                apns_auth_token TEXT,
+                najva_api_token TEXT,
+                pushy_api_key TEXT,
+                enable_domestic_fallback BOOLEAN NOT NULL DEFAULT TRUE,
+                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS project_iap_configs (
+                project_id VARCHAR(64) PRIMARY KEY,
+                bazaar_client_id VARCHAR(128),
+                bazaar_client_secret VARCHAR(256),
+                bazaar_refresh_token TEXT,
+                myket_api_key VARCHAR(256),
+                auto_credit_wallet BOOLEAN NOT NULL DEFAULT TRUE,
+                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS project_iap_records (
+                transaction_id VARCHAR(64) PRIMARY KEY,
+                project_id VARCHAR(64) NOT NULL,
+                store VARCHAR(32) NOT NULL,
+                package_name VARCHAR(256) NOT NULL,
+                product_id VARCHAR(128) NOT NULL,
+                purchase_token TEXT NOT NULL,
+                user_id VARCHAR(128),
+                amount_irr BIGINT NOT NULL,
+                consumption_state VARCHAR(32) NOT NULL,
+                purchase_state VARCHAR(32) NOT NULL,
+                verified_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (project_id, purchase_token)
+            );
+
+            CREATE TABLE IF NOT EXISTS billing_usage_records (
+                id VARCHAR(64) PRIMARY KEY,
+                project_id VARCHAR(64) NOT NULL,
+                metric_type VARCHAR(64) NOT NULL,
+                quantity BIGINT NOT NULL,
+                cost_irr BIGINT NOT NULL,
+                recorded_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );";
+        try
+        {
+            await using var auxCmd = _dataSource.CreateCommand(auxiliaryTablesSql);
+            await auxCmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.Store] Auxiliary table initialization notice: {ex.Message}");
+        }
+
         // Seed or heal baseline platform users
         var adminHash = ProjectManagerService.HashPassword("admin123456");
         var operatorHash = ProjectManagerService.HashPassword("operator123456");

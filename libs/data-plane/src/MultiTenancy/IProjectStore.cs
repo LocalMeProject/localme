@@ -1,6 +1,8 @@
 namespace LocalMe.DataPlane.MultiTenancy;
 
 using System.Text.Json.Nodes;
+using LocalMe.DataPlane.Finance;
+using LocalMe.DataPlane.Mobile;
 
 /// <summary>
 /// Contract for durable PostgreSQL and Redis persistence of the LocalMe multi-tenant BaaS control plane.
@@ -68,6 +70,31 @@ public interface IProjectStore
     // Telemetry & Logs
     Task<Dictionary<string, List<ProjectLogEntry>>> LoadRecentLogsAsync(int limitPerProject = 100);
     Task AppendLogAsync(string projectId, ProjectLogEntry log);
+
+    // Payments & Ledger
+    Task<List<StoredPayment>> LoadPaymentsAsync();
+    Task SavePaymentAsync(StoredPayment payment);
+    Task<Dictionary<string, List<LedgerTransaction>>> LoadLedgersAsync();
+    Task SaveLedgerTransactionAsync(string customerPhone, LedgerTransaction transaction);
+    Task<Dictionary<string, long>> LoadCustomerWalletsAsync();
+    Task SaveCustomerWalletAsync(string customerPhone, long balanceIrr);
+
+    // Mobile Push & IAP
+    Task<Dictionary<string, List<PushDeviceRegistration>>> LoadPushDevicesAsync();
+    Task SavePushDeviceAsync(string projectId, PushDeviceRegistration registration);
+    Task DeletePushDeviceAsync(string projectId, string deviceId);
+
+    Task<Dictionary<string, PushProviderConfig>> LoadPushConfigsAsync();
+    Task SavePushConfigAsync(string projectId, PushProviderConfig config);
+
+    Task<Dictionary<string, MobileIapConfig>> LoadIapConfigsAsync();
+    Task SaveIapConfigAsync(string projectId, MobileIapConfig config);
+
+    Task<Dictionary<string, List<IapVerifiedRecord>>> LoadIapRecordsAsync();
+    Task SaveIapRecordAsync(string projectId, IapVerifiedRecord record);
+
+    // Usage Metering
+    Task RecordUsageRawAsync(string projectId, string metricType, long quantity, long costIrr);
 
     // Maintenance & Clean State Reset
     Task WipeAllProjectDataAsync();

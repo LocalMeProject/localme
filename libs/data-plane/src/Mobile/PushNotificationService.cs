@@ -4,6 +4,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 public record PushDeviceRegistration(
@@ -159,8 +161,7 @@ public class PushNotificationService
                     provider = !string.IsNullOrWhiteSpace(cfg.NajvaApiToken) ? "najva" : "pushy";
                 }
 
-                // Simulate/Execute network dispatch to push provider
-                await Task.Delay(1); // Non-blocking dispatch simulation
+                await DispatchToProviderAsync(provider, cfg, dev, request);
                 dispatched.Add(dev.DeviceId);
             }
             catch (Exception ex)
@@ -186,6 +187,74 @@ public class PushNotificationService
         }
 
         return result;
+    }
+
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+
+    private static async Task DispatchToProviderAsync(string provider, PushProviderConfig cfg, PushDeviceRegistration dev, PushMessageRequest request)
+    {
+        if (provider == "fcm" && !string.IsNullOrWhiteSpace(cfg.FcmServerKey))
+        {
+            var fcmPayload = new
+            {
+                to = dev.PushToken,
+                notification = new { title = request.Title, body = request.Body, sound = request.Sound, badge = request.Badge },
+                data = request.Data
+            };
+            using var msg = new HttpRequestMessage(HttpMethod.Post, "https://fcm.googleapis.com/fcm/send")
+            {
+                Content = JsonContent.Create(fcmPayload)
+            };
+            msg.Headers.TryAddWithoutValidation("Authorization", $"key={cfg.FcmServerKey}");
+            var resp = await _httpClient.SendAsync(msg);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"FCM error ({resp.StatusCode}): {err}");
+            }
+            return;
+        }
+
+        if (provider == "najva" && !string.IsNullOrWhiteSpace(cfg.NajvaApiToken))
+        {
+            var najvaPayload = new
+            {
+                title = request.Title,
+                body = request.Body,
+                subscribers = new[] { dev.PushToken }
+            };
+            using var msg = new HttpRequestMessage(HttpMethod.Post, "https://app.najva.com/notification/api/v1/notifications/")
+            {
+                Content = JsonContent.Create(najvaPayload)
+            };
+            msg.Headers.TryAddWithoutValidation("Authorization", $"Token {cfg.NajvaApiToken}");
+            var resp = await _httpClient.SendAsync(msg);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Najva error ({resp.StatusCode}): {err}");
+            }
+            return;
+        }
+
+        if (provider == "pushy" && !string.IsNullOrWhiteSpace(cfg.PushyApiKey))
+        {
+            var pushyPayload = new
+            {
+                to = dev.PushToken,
+                data = new { title = request.Title, message = request.Body }
+            };
+            var resp = await _httpClient.PostAsJsonAsync($"https://api.pushy.me/push?api_key={cfg.PushyApiKey}", pushyPayload);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Pushy error ({resp.StatusCode}): {err}");
+            }
+            return;
+        }
+
+        // Sandbox / Development fallback simulation
+        await Task.Delay(1);
     }
 
     public IReadOnlyList<PushDispatchResult> GetDispatchHistory(string projectId)

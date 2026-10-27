@@ -4,11 +4,11 @@ function updateProfileModalData(user) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
   };
-  setT('modal-profile-fullname', user.fullName || 'سینا والی زاده');
-  setT('modal-profile-id', user.id || 'usr_developer_03');
-  setT('modal-profile-phone', user.phone || '+989121112233');
-  setT('modal-profile-email', user.email || 'sina@example.com');
-  setT('modal-profile-username', user.username || 'sina');
+  setT('modal-profile-fullname', user.fullName || 'کاربر');
+  setT('modal-profile-id', user.id || '-');
+  setT('modal-profile-phone', user.phone || '-');
+  setT('modal-profile-email', user.email || '-');
+  setT('modal-profile-username', user.username || '-');
   if (typeof Shamsi !== 'undefined') {
     setT('modal-profile-wallet', Shamsi.formatToman(user.walletBalanceIrr));
   }
@@ -153,6 +153,7 @@ function initModals() {
 
       try {
         const idempotencyKey = 'topup_' + Date.now();
+        const callbackUrl = window.location.origin + '/panel?payment=complete';
         const res = await fetch('/_baas/v1/pay/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,7 +161,7 @@ function initModals() {
             amountIrr,
             customerPhone: currentUser.phone,
             gateway,
-            callbackUrl: window.location.href,
+            callbackUrl,
             idempotencyKey,
             description: 'شارژ کیف پول توسعه دهنده'
           })
@@ -168,28 +169,16 @@ function initModals() {
 
         if (res.ok) {
           const initRes = await res.json();
-          const authority = initRes.authorityToken || initRes.authority;
-          const vRes = await fetch('/_baas/v1/pay/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              authority,
-              authorityToken: authority,
-              trackingCode: initRes.trackingCode,
-              customerPhone: currentUser.phone,
-              status: 'OK',
-              gateway
-            })
-          });
-
-          if (vRes.ok) {
-            const vData = await vRes.json();
-            const refId = vData.shaparakRefId || vData.referenceId || vData.trackingCode || 'موفق';
-            const newBal = vData.newWalletBalanceIrr ?? vData.balanceIrr ?? 0;
-            showToast(`پرداخت الکترونیک موفق شاپرک. شماره پیگیری: ${refId} - موجودی جدید: ${Shamsi.toPersianDigits(Math.floor(newBal / 10).toLocaleString())} تومان`, 'success');
-            updateWalletDisplay(newBal);
+          const redirectUrl = initRes.redirectUrl || initRes.paymentUrl;
+          if (redirectUrl) {
             closeModal('modal-topup');
+            showToast('در حال هدایت به درگاه پرداخت شاپرک...', 'info');
+            window.location.href = redirectUrl;
+            return;
           }
+          showToast(initRes.message || 'خطا در هدایت به درگاه', 'error');
+        } else {
+          showToast('خطا در برقراری ارتباط با درگاه پرداخت.', 'error');
         }
       } catch {
         showToast('خطا در برقراری ارتباط با درگاه پرداخت.', 'error');
@@ -476,6 +465,12 @@ function initModals() {
       const sadadTerminalId = document.getElementById('ipg-sadad-terminal')?.value.trim() || null;
       const sadadTerminalKey = document.getElementById('ipg-sadad-key')?.value.trim() || null;
 
+      const idpayApiKey = document.getElementById('ipg-idpay-key')?.value.trim() || null;
+      const idpaySandbox = (document.getElementById('ipg-is-sandbox') || document.getElementById('ipg-idpay-sandbox'))?.checked || false;
+
+      const paypingToken = document.getElementById('ipg-payping-token')?.value.trim() || null;
+      const paypingSandbox = (document.getElementById('ipg-is-sandbox') || document.getElementById('ipg-payping-sandbox'))?.checked || false;
+
       let terminalId = '';
       let merchantKey = '';
       if (defaultPsp === 'BEHPARDAKHT') {
@@ -490,6 +485,12 @@ function initModals() {
       } else if (defaultPsp === 'SADAD') {
         terminalId = sadadTerminalId || '';
         merchantKey = sadadTerminalKey || '';
+      } else if (defaultPsp === 'IDPAY') {
+        terminalId = idpayApiKey || '';
+        merchantKey = idpayApiKey || '';
+      } else if (defaultPsp === 'PAYPING') {
+        terminalId = paypingToken || '';
+        merchantKey = paypingToken || '';
       }
 
       const alertEl = document.getElementById('ipg-validation-alert');
@@ -516,7 +517,11 @@ function initModals() {
         zarinpalSandbox,
         sadadMerchantId,
         sadadTerminalId,
-        sadadTerminalKey
+        sadadTerminalKey,
+        idpayApiKey,
+        idpaySandbox,
+        paypingToken,
+        paypingSandbox
       };
 
       try {
