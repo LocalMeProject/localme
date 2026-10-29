@@ -50,6 +50,10 @@ Implement the complete enterprise transformation of the LocalMe Database Service
 - `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.cs`
 - `apps/server/src/Middleware/GatewayCacheMiddleware.cs`
 - `apps/web-console/src/views/WorkspaceHubView.tsx`
+- `apps/web-console/src/views/database/TableDataGrid.tsx`
+- `apps/web-console/src/views/database/SchemaDesigner.tsx`
+- `apps/web-console/src/views/database/SqlQueryRunner.tsx`
+- `libs/client-sdk/src/query-builder.ts`
 - `tests/LocalMe.Integration.Tests/TenantDatabaseEngineTests.cs`
 
 ### Modified Files

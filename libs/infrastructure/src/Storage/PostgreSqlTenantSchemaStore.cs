@@ -105,7 +105,7 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
 
         var sb = new StringBuilder();
-        sb.Append($@"CREATE TABLE IF NOT EXISTS ""{schema}"".""{cleanTable}"" (");
+        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $@"CREATE TABLE IF NOT EXISTS ""{schema}"".""{cleanTable}"" (");
 
         if (columns == null || columns.Count == 0)
         {

@@ -216,7 +216,7 @@ public static class SqlAstQueryCompiler
             ? "*"
             : string.Join(", ", query.SelectColumns.Select(c => $"\"{c}\""));
 
-        sb.Append($"SELECT {cols} FROM \"{cleanTable}\"");
+        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"SELECT {cols} FROM \"{cleanTable}\"");
 
         if (query.Filters.Count > 0)
         {
@@ -289,12 +289,12 @@ public static class SqlAstQueryCompiler
         if (!string.IsNullOrWhiteSpace(query.OrderByColumn))
         {
             var dir = query.OrderAscending ? "ASC" : "DESC";
-            sb.Append($" ORDER BY \"{query.OrderByColumn}\" {dir}");
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $" ORDER BY \"{query.OrderByColumn}\" {dir}");
         }
 
         var limitParam = $"@limit";
         var offsetParam = $"@offset";
-        sb.Append($" LIMIT {limitParam} OFFSET {offsetParam};");
+        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $" LIMIT {limitParam} OFFSET {offsetParam};");
         parameters[limitParam] = query.Limit;
         parameters[offsetParam] = query.Offset;
 
