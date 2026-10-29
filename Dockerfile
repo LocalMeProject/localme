@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app
 
+# Production release tag
+LABEL build.target="production-20261029"
+
 ENV NODE_ENV=production
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:3000

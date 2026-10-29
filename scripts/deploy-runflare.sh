@@ -54,6 +54,8 @@ env['TERM'] = 'xterm-256color'
 cmd = [
     '${RUNFLARE_BIN}',
     'deploy',
+    '--project-id', '36960',
+    '--item-id', '86246',
     '-y',
     '--force'
 ]
