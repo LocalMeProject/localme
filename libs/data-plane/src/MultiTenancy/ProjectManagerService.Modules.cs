@@ -349,6 +349,12 @@ public sealed partial class ProjectManagerService
     // 9. Interactive SQL Runner & Schema Inspection
     public SqlExecutionResult ExecuteSql(string projectId, string sql)
     {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return TenantDbStore.ExecuteRawSqlAsync(slug, sql).GetAwaiter().GetResult();
+        }
+
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var trimmed = sql.Trim();
         var lower = trimmed.ToLowerInvariant();

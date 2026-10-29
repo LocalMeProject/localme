@@ -1,274 +1,504 @@
-import React, { useState } from 'react';
-import { Project, DatabaseTable, DatabaseColumn } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Project, DatabaseColumn, DatabaseQueryHistoryItem } from '../types';
 import {
   Database,
-  Play,
   Table as TableIcon,
-  Clock,
-  Layers,
+  Plus,
+  RefreshCw,
+  Code2,
+  Columns,
+  ChevronRight,
 } from 'lucide-react';
+
+import { TableDataGrid } from './database/TableDataGrid';
+import { SchemaDesigner } from './database/SchemaDesigner';
+import { SqlQueryRunner } from './database/SqlQueryRunner';
 
 interface DatabaseViewProps {
   project: Project;
   onOpenCreateTableModal: () => void;
 }
 
-const INITIAL_TABLES: DatabaseTable[] = [];
-
-const INITIAL_COLUMNS: Record<string, DatabaseColumn[]> = {};
-
-const INITIAL_DATA_ROWS: Record<string, any[]> = {};
+type StudioTab = 'grid' | 'schema' | 'sql';
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreateTableModal }) => {
-  const [tables] = useState<DatabaseTable[]>(INITIAL_TABLES);
+  const [activeTab, setActiveTab] = useState<StudioTab>('grid');
+  const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string>('');
-  const [sqlQuery, setSqlQuery] = useState<string>('');
-  const [queryResults, setQueryResults] = useState<{ columns: string[]; rows: Record<string, unknown>[]; latencyMs: number } | null>(null);
-  const [isRunningQuery, setIsRunningQuery] = useState(false);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
 
-  const handleRunQuery = () => {
+  // Table Data Grid State
+  const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
+  const [tableColumns, setTableColumns] = useState<string[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [gridError, setGridError] = useState<string | null>(null);
+
+  // Schema Designer State
+  const [schemaColumns, setSchemaColumns] = useState<DatabaseColumn[]>([]);
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
+  const [schemaSuccessMsg, setSchemaSuccessMsg] = useState<string | null>(null);
+
+  // SQL Studio State
+  const [sqlQuery, setSqlQuery] = useState<string>('');
+  const [queryResults, setQueryResults] = useState<{
+    columns: string[];
+    rows: Record<string, unknown>[];
+    latencyMs: number;
+    rowCount: number;
+    error?: string;
+  } | null>(null);
+  const [isRunningQuery, setIsRunningQuery] = useState(false);
+  const [queryHistory, setQueryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
+
+  // Load Tables
+  const fetchTables = useCallback(async () => {
+    setIsLoadingTables(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables`);
+      if (res.ok) {
+        const tableList = (await res.json()) as string[];
+        setTables(tableList);
+        if (tableList.length > 0 && (!activeTable || !tableList.includes(activeTable))) {
+          setActiveTable(tableList[0]);
+        }
+      } else {
+        setTables([]);
+      }
+    } catch {
+      setTables([]);
+    } finally {
+      setIsLoadingTables(false);
+    }
+  }, [project.slug, activeTable]);
+
+  useEffect(() => {
+    fetchTables();
+  }, [fetchTables]);
+
+  // Load Table Data
+  const fetchTableData = useCallback(async (tableName: string) => {
+    if (!tableName) return;
+    setIsLoadingData(true);
+    setGridError(null);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/rest/${tableName}?limit=50`);
+      if (res.ok) {
+        const rows = (await res.json()) as Record<string, unknown>[];
+        setTableRows(rows);
+        if (rows.length > 0) {
+          setTableColumns(Object.keys(rows[0]));
+        } else {
+          const schemaRes = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
+          if (schemaRes.ok) {
+            const schema = (await schemaRes.json()) as Record<string, DatabaseColumn[]>;
+            const cols = (schema[tableName] || []).map((c) => c.name);
+            setTableColumns(cols);
+          } else {
+            setTableColumns(['id']);
+          }
+        }
+      } else {
+        const errText = await res.text();
+        setGridError(`خطا در بازیابی داده‌ها: ${errText || res.statusText}`);
+      }
+    } catch (err) {
+      setGridError(`خطای شبکه: ${String(err)}`);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [project.slug]);
+
+  // Load Table Schema
+  const fetchTableSchema = useCallback(async (tableName: string) => {
+    if (!tableName) return;
+    setIsLoadingSchema(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
+      if (res.ok) {
+        const schema = (await res.json()) as Record<string, DatabaseColumn[]>;
+        setSchemaColumns(schema[tableName] || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingSchema(false);
+    }
+  }, [project.slug]);
+
+  // Sync on activeTable change
+  useEffect(() => {
+    if (activeTable) {
+      fetchTableData(activeTable);
+      fetchTableSchema(activeTable);
+      setSqlQuery(`SELECT * FROM ${activeTable} LIMIT 50;`);
+    }
+  }, [activeTable, fetchTableData, fetchTableSchema]);
+
+  // Run Raw SQL
+  const handleRunQuery = async () => {
+    if (!sqlQuery.trim()) return;
     setIsRunningQuery(true);
     const start = performance.now();
-
-    setTimeout(() => {
-      const rows = INITIAL_DATA_ROWS[activeTable] || [];
-      const columns = rows.length > 0 ? Object.keys(rows[0] || {}) : [];
-      const latency = Math.round(performance.now() - start) + 2;
-
-      setQueryResults({
-        columns,
-        rows,
-        latencyMs: latency,
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/sql`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql: sqlQuery }),
       });
+
+      const latency = Math.round(performance.now() - start);
+
+      if (res.ok) {
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (data.rows || []);
+        const columns = rows.length > 0 ? Object.keys(rows[0]) : (data.columns || []);
+        const count = rows.length;
+
+        setQueryResults({
+          columns,
+          rows,
+          latencyMs: latency,
+          rowCount: count,
+        });
+
+        setQueryHistory((prev) => [
+          {
+            id: String(Date.now()),
+            query: sqlQuery,
+            executedAt: new Date().toLocaleTimeString('fa-IR'),
+            durationMs: latency,
+            rowCount: count,
+            status: 'SUCCESS',
+          },
+          ...prev.slice(0, 19),
+        ]);
+
+        if (/CREATE|ALTER|DROP/i.test(sqlQuery)) {
+          fetchTables();
+        }
+      } else {
+        const errText = await res.text();
+        setQueryResults({
+          columns: [],
+          rows: [],
+          latencyMs: latency,
+          rowCount: 0,
+          error: errText || `Error ${res.status}`,
+        });
+
+        setQueryHistory((prev) => [
+          {
+            id: String(Date.now()),
+            query: sqlQuery,
+            executedAt: new Date().toLocaleTimeString('fa-IR'),
+            durationMs: latency,
+            rowCount: 0,
+            status: 'ERROR',
+            errorMessage: errText,
+          },
+          ...prev.slice(0, 19),
+        ]);
+      }
+    } catch (err) {
+      const latency = Math.round(performance.now() - start);
+      setQueryResults({
+        columns: [],
+        rows: [],
+        latencyMs: latency,
+        rowCount: 0,
+        error: String(err),
+      });
+    } finally {
       setIsRunningQuery(false);
-    }, 100);
+    }
   };
 
+  // Add Column via SQL
+  const handleAddColumn = async (
+    name: string,
+    type: string,
+    nullable: boolean,
+    defaultVal: string
+  ): Promise<boolean> => {
+    const nullClause = nullable ? '' : ' NOT NULL';
+    const defaultClause = defaultVal ? ` DEFAULT ${defaultVal}` : '';
+    const ddl = `ALTER TABLE ${activeTable} ADD COLUMN ${name} ${type}${nullClause}${defaultClause};`;
+
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/sql`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql: ddl }),
+      });
+
+      if (res.ok) {
+        setSchemaSuccessMsg(`ستون ${name} با موفقیت به جدول افزوده شد.`);
+        fetchTableSchema(activeTable);
+        fetchTableData(activeTable);
+        setTimeout(() => setSchemaSuccessMsg(null), 3000);
+        return true;
+      }
+      const err = await res.text();
+      alert(`خطا در افزودن ستون: ${err}`);
+      return false;
+    } catch (err) {
+      alert(`خطا: ${String(err)}`);
+      return false;
+    }
+  };
+
+  // Delete Row
+  const handleDeleteRow = async (rowId: string) => {
+    if (!confirm(`آیا از حذف رکورد با شناسه ${rowId} اطمینان دارید؟`)) return;
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setTableRows((prev) => prev.filter((r) => String(r.id) !== String(rowId)));
+      } else {
+        alert('حذف رکورد با خطا مواجه شد.');
+      }
+    } catch (err) {
+      alert(`خطا در حذف رکورد: ${String(err)}`);
+    }
+  };
+
+  // Insert Row
+  const handleInsertRow = async (jsonText: string): Promise<boolean> => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+
+      if (res.ok) {
+        fetchTableData(activeTable);
+        return true;
+      }
+      const err = await res.text();
+      alert(`خطا در ثبت رکورد: ${err}`);
+      return false;
+    } catch (err) {
+      alert(`فرمت JSON نامعتبر است: ${String(err)}`);
+      return false;
+    }
+  };
+
+  // Quick SQL Snippets
   const handleApplySnippet = (type: string) => {
     switch (type) {
       case 'select':
-        setSqlQuery(`SELECT * FROM ${activeTable} ORDER BY id DESC LIMIT 50;`);
+        setSqlQuery(`SELECT * FROM ${activeTable || 'records'} ORDER BY id DESC LIMIT 50;`);
         break;
       case 'insert':
-        setSqlQuery(`INSERT INTO ${activeTable} (title, price_irr, category) VALUES ('محصول جدید', 25000000, 'سرویس');`);
+        setSqlQuery(`INSERT INTO ${activeTable || 'records'} (title, status, created_at)\nVALUES ('عنوان نمونه', 'ACTIVE', NOW())\nRETURNING *;`);
         break;
-      case 'create':
-        setSqlQuery(`CREATE TABLE IF NOT EXISTS audit_logs (\n  id BIGSERIAL PRIMARY KEY,\n  action VARCHAR(64) NOT NULL,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);`);
+      case 'create_table':
+        setSqlQuery(`CREATE TABLE IF NOT EXISTS user_profiles (\n  id BIGSERIAL PRIMARY KEY,\n  user_id UUID NOT NULL,\n  full_name VARCHAR(128),\n  meta JSONB DEFAULT '{}'::jsonb,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);`);
+        break;
+      case 'index':
+        setSqlQuery(`CREATE INDEX IF NOT EXISTS idx_${activeTable || 'records'}_created_at\nON ${activeTable || 'records'} (created_at DESC);`);
+        break;
+      case 'explain':
+        setSqlQuery(`EXPLAIN ANALYZE\nSELECT * FROM ${activeTable || 'records'} WHERE id > 0;`);
         break;
     }
   };
 
-  const currentColumns = INITIAL_COLUMNS[activeTable] || [];
+  const filteredRows = tableRows.filter((row) => {
+    if (!filterQuery) return true;
+    return Object.values(row).some((val) =>
+      String(val).toLowerCase().includes(filterQuery.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Top Studio Header */}
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-            <Database className="w-5 h-5 text-amber-400" />
-            پایگاه داده رابطه‌ای پروژه (PostgreSQL 18.1 Schema-Per-Tenant)
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1">
-            دسترسی مستقیم RESTful از طریق Dynamic SQL Middleware و اتصالات بهینه‌شده NpgsqlDataSource.
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium tracking-wide bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
+              POSTGRESQL 18.1 ENTERPRISE DBAAS
+            </span>
+            <span className="text-[11px] font-mono text-zinc-400">
+              SCHEMA: prj_{project.slug}
+            </span>
+          </div>
+          <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <Database className="w-5 h-5 text-[#3ECF8E]" />
+            استودیو مدیریت داده‌های رابطه‌ای (Relational Database Studio)
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 max-w-3xl leading-relaxed">
+            محیط داده‌های توزیع‌شده با ایزولاسیون LTR، پشتیبانی PostgREST، اجرای DDL/DML، مدیریت ایندکس‌ها و اتصال کانکشن‌پول Npgsql.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={fetchTables}
+            className="btn-pill-secondary"
+            title="بازخوانی جداول"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
+            <span>بازخوانی</span>
+          </button>
           <button
             onClick={onOpenCreateTableModal}
-            className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition shadow-sm"
+            className="btn-pill-primary"
           >
-            + ساخت جدول جدید
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ ساخت جدول جدید</span>
           </button>
         </div>
       </div>
 
-      {/* Grid: Tables & Schema Inspector */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Table Selector */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="text-xs font-semibold text-zinc-400 flex items-center justify-between px-1">
-            <span>جداول اسکیما ({tables.length})</span>
-            <span className="text-[10px] text-zinc-500 font-mono">public_{project.slug}</span>
-          </div>
+      {/* Main Studio Navigation Tabs */}
+      <div className="flex items-center justify-between border-b border-[#242424] pb-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('grid')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
+              activeTab === 'grid'
+                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
+            }`}
+          >
+            <TableIcon className="w-4 h-4" />
+            <span>مرورگر داده‌ها (Data Grid)</span>
+          </button>
 
-          <div className="space-y-2">
-            {tables.length === 0 ? (
-              <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-zinc-800">
-                هیچ جدولی ایجاد نشده است
-              </div>
-            ) : (
-              tables.map((t) => (
-                <div
-                  key={t.name}
-                  onClick={() => {
-                    setActiveTable(t.name);
-                    setSqlQuery(`SELECT * FROM ${t.name} ORDER BY id DESC LIMIT 50;`);
-                  }}
-                  className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                    activeTable === t.name
-                      ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
-                      : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono text-xs font-bold text-amber-400">{t.name}</span>
-                    <span className="text-[10px] text-zinc-400 font-mono">{t.rowCount.toLocaleString('fa-IR')} رکورد</span>
-                  </div>
-                  <div className="text-[10px] text-zinc-500 font-mono flex items-center justify-between">
-                    <span>حجم: {(t.sizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                    <span>ایجاد: {t.createdAt}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <button
+            onClick={() => setActiveTab('schema')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
+              activeTab === 'schema'
+                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
+            }`}
+          >
+            <Columns className="w-4 h-4" />
+            <span>طراح اسکیما (Schema Designer)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('sql')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
+              activeTab === 'sql'
+                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
+            }`}
+          >
+            <Code2 className="w-4 h-4" />
+            <span>کنسول و اجرای SQL (Query Runner)</span>
+          </button>
         </div>
 
-        {/* Schema Columns Preview */}
-        <div className="lg:col-span-8 p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-3">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-            <span className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-              <TableIcon className="w-4 h-4 text-amber-400" />
-              ساختار فیلدهای جدول: <span className="font-mono text-amber-400">{activeTable || 'بدون جدول'}</span>
-            </span>
-            <span className="text-[11px] text-zinc-400 font-mono">
-              {currentColumns.length} ستون
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
-                <tr className="border-b border-zinc-800/60 text-zinc-400">
-                  <th className="py-2 px-3">نام ستون</th>
-                  <th className="py-2 px-3">نوع داده</th>
-                  <th className="py-2 px-3">کلید اصلی</th>
-                  <th className="py-2 px-3">تهی‌پذیری</th>
-                  <th className="py-2 px-3">پیش‌فرض</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/40">
-                {currentColumns.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-6 text-center text-xs text-zinc-500">
-                      ستونی برای نمایش وجود ندارد
-                    </td>
-                  </tr>
-                ) : (
-                  currentColumns.map((c) => (
-                    <tr key={c.name} className="hover:bg-zinc-850/30">
-                      <td className="py-2 px-3 font-bold text-zinc-200">{c.name}</td>
-                      <td className="py-2 px-3 text-amber-400">{c.dataType}</td>
-                      <td className="py-2 px-3">
-                        {c.isPrimaryKey ? (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
-                            PK
-                          </span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-zinc-400">{c.isNullable ? 'NULL' : 'NOT NULL'}</td>
-                      <td className="py-2 px-3 text-zinc-400">{c.defaultValue || '-'}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Visual SQL Studio */}
-      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-amber-400" />
-            <h4 className="text-xs font-bold text-zinc-200">
-              ویرایشگر تعاملی SQL (Interactive Query Studio)
-            </h4>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handleApplySnippet('select')}
-              className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] text-zinc-300 transition"
+        {/* Current Table Selector Pill */}
+        {tables.length > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-zinc-500 text-[11px]">جدول انتخابی:</span>
+            <select
+              value={activeTable}
+              onChange={(e) => setActiveTable(e.target.value)}
+              className="px-3 py-1.5 rounded-full bg-[#171717] border border-[#242424] text-xs font-mono text-[#3ECF8E] focus:outline-none focus:border-[#3ECF8E]"
             >
-              نمونه SELECT
-            </button>
-            <button
-              onClick={() => handleApplySnippet('insert')}
-              className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] text-zinc-300 transition"
-            >
-              نمونه INSERT
-            </button>
-            <button
-              onClick={() => handleApplySnippet('create')}
-              className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] text-zinc-300 transition"
-            >
-              نمونه CREATE
-            </button>
-          </div>
-        </div>
-
-        <div className="relative">
-          <textarea
-            value={sqlQuery}
-            onChange={(e) => setSqlQuery(e.target.value)}
-            className="w-full h-32 p-3.5 rounded-xl bg-zinc-950 font-mono text-xs text-zinc-200 border border-zinc-800 focus:outline-none focus:border-amber-500/60 resize-y leading-relaxed"
-          />
-          <div className="absolute left-3 bottom-3 flex items-center space-x-3">
-            {queryResults && (
-              <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 bg-zinc-900/90 px-2 py-1 rounded border border-zinc-800">
-                <Clock className="w-3 h-3" />
-                زمان پردازش: {queryResults.latencyMs} ms
-              </span>
-            )}
-            <button
-              onClick={handleRunQuery}
-              disabled={isRunningQuery}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition shadow-sm"
-            >
-              <Play className="w-3.5 h-3.5 fill-black" />
-              <span>{isRunningQuery ? 'در حال اجرا...' : 'اجرای دستور SQL'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Query Results Table */}
-        {queryResults && (
-          <div className="pt-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-zinc-400 mb-2">
-              <span>نتایج اجرای دستور ({queryResults.rows.length} رکورد بازگشتی)</span>
-              <span className="text-[10px] text-zinc-500 font-mono">Dynamic SQL Handler</span>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl border border-zinc-800/80 bg-zinc-950">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400">
-                    {queryResults.columns.map((c) => (
-                      <th key={c} className="py-2.5 px-3 font-semibold">{c}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/40">
-                  {queryResults.rows.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-zinc-850/30 transition">
-                      {queryResults.columns.map((c) => (
-                        <td key={c} className="py-2.5 px-3 text-zinc-300">
-                          {typeof row[c] === 'object' ? JSON.stringify(row[c]) : String(row[c])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              {tables.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
         )}
+      </div>
+
+      {/* Main Studio Viewport */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left: Table Navigator Sidebar */}
+        <div className="lg:col-span-3 space-y-3">
+          <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] space-y-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-zinc-400">
+              <span className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-[#3ECF8E]" />
+                <span>جداول اسکیما ({tables.length})</span>
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">PostgreSQL</span>
+            </div>
+
+            <div className="space-y-1 max-h-[480px] overflow-y-auto">
+              {tables.length === 0 ? (
+                <div className="p-4 text-center text-xs text-zinc-500 rounded-lg border border-dashed border-[#242424] space-y-2">
+                  <p>هیچ جدولی ایجاد نشده است</p>
+                  <button
+                    onClick={onOpenCreateTableModal}
+                    className="text-[11px] text-[#3ECF8E] hover:underline font-medium"
+                  >
+                    + ایجاد اولین جدول
+                  </button>
+                </div>
+              ) : (
+                tables.map((tbl) => (
+                  <button
+                    key={tbl}
+                    onClick={() => setActiveTable(tbl)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition text-left dir-ltr ${
+                      activeTable === tbl
+                        ? 'bg-[#1f1f1f] text-[#3ECF8E] border border-[#3ECF8E]/30 font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-white hover:bg-[#1a1a1a]'
+                    }`}
+                  >
+                    <span className="truncate">{tbl}</span>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Active Tab Workspace */}
+        <div className="lg:col-span-9 space-y-4">
+          {activeTab === 'grid' && (
+            <TableDataGrid
+              activeTable={activeTable}
+              tableColumns={tableColumns}
+              filteredRows={filteredRows}
+              filterQuery={filterQuery}
+              onFilterQueryChange={setFilterQuery}
+              isLoadingData={isLoadingData}
+              gridError={gridError}
+              onRefresh={() => fetchTableData(activeTable)}
+              onDeleteRow={handleDeleteRow}
+              onInsertRow={handleInsertRow}
+            />
+          )}
+
+          {activeTab === 'schema' && (
+            <SchemaDesigner
+              activeTable={activeTable}
+              schemaColumns={schemaColumns}
+              isLoadingSchema={isLoadingSchema}
+              schemaSuccessMsg={schemaSuccessMsg}
+              onAddColumn={handleAddColumn}
+            />
+          )}
+
+          {activeTab === 'sql' && (
+            <SqlQueryRunner
+              sqlQuery={sqlQuery}
+              onSqlQueryChange={setSqlQuery}
+              onRunQuery={handleRunQuery}
+              isRunningQuery={isRunningQuery}
+              queryResults={queryResults}
+              queryHistory={queryHistory}
+              onApplySnippet={handleApplySnippet}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

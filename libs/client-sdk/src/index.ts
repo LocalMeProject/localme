@@ -27,6 +27,8 @@ import type {
   PushMessageRequest,
   IapValidationRequest,
 } from './types';
+export * from './query-builder';
+import { TableQueryBuilder } from './query-builder';
 
 export class LocalMeClient {
   public readonly projectSlug: string;
@@ -160,41 +162,10 @@ export class LocalMeClient {
   }
 
   /**
-   * Relational Database Query Builder (PostgREST style).
+   * PostgREST-style query builder for relational tenant database tables.
    */
-  public from<T = Record<string, unknown>>(table: string) {
-    const baseUrl = this.baseUrl;
-    const projectSlug = this.projectSlug;
-    const headers = this.getHeaders();
-
-    return {
-      async select(): Promise<T[]> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}`, {
-          headers,
-        });
-        if (!res.ok) throw new Error(`Query failed: ${res.status}`);
-        return (await res.json()) as T[];
-      },
-
-      async insert(record: Partial<T>): Promise<T> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(record),
-        });
-        if (!res.ok) throw new Error(`Insert failed: ${res.status}`);
-        return (await res.json()) as T;
-      },
-
-      async delete(rowId: string): Promise<{ success: boolean; rowId: string }> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/db/${table}/rows/${rowId}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-        return (await res.json()) as { success: boolean; rowId: string };
-      },
-    };
+  public from<T = Record<string, unknown>>(table: string): TableQueryBuilder<T> {
+    return new TableQueryBuilder<T>(this.baseUrl, this.projectSlug, table, this.getHeaders());
   }
 
   /**

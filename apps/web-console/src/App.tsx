@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, CheckCircle2 } from 'lucide-react';
 import { Project, CapabilityCode } from './types';
 import { Header } from './components/Header';
 import { Navigation, TabId } from './components/Navigation';
 
-// Views
+// Stage 1 Hub View
+import { WorkspaceHubView } from './views/WorkspaceHubView';
+
+// Stage 2 Studio Views
 import { OverviewView } from './views/OverviewView';
 import { DatabaseView } from './views/DatabaseView';
 import { AuthView } from './views/AuthView';
@@ -25,12 +29,72 @@ import { AddUserModal } from './components/modals/AddUserModal';
 import { AddDomainModal } from './components/modals/AddDomainModal';
 import { TopupModal } from './components/modals/TopupModal';
 
-const INITIAL_PROJECTS: Project[] = [];
+const DEFAULT_PROJECTS: Project[] = [
+  {
+    id: 'prj-digikala-stage',
+    name: 'دیجی‌کالا آزمایشی (Digikala)',
+    slug: 'digikala-stage',
+    description: 'سرویس توزیع‌شده با پایگاه داده رابطه‌ای PostgreSQL 18، ترافیک برون‌مرزی پایدار و احراز هویت پیامکی.',
+    region: 'ir-teh-1 (آسیاتک برج میلاد)',
+    status: 'ACTIVE',
+    createdAt: '2026-10-25T12:00:00Z',
+    walletBalanceIrr: 540000000,
+    hasPassword: true,
+    services: {
+      database: { isEnabled: true },
+      auth: { isEnabled: true },
+      storage: { isEnabled: true },
+      functions: { isEnabled: true },
+    },
+  },
+  {
+    id: 'prj-shaparak-gateway',
+    name: 'سامانه پرداخت شاپرک',
+    slug: 'shaparak-gateway',
+    description: 'درگاه متمرکز پرداخت الکترونیک شتاب و شاپرک با رعایت الزامات شاپرک و رصد تراکنش‌ها.',
+    region: 'ir-teh-2 (زیرساخت امام)',
+    status: 'ACTIVE',
+    createdAt: '2026-10-26T14:30:00Z',
+    walletBalanceIrr: 1200000000,
+    hasPassword: true,
+    services: {
+      database: { isEnabled: true },
+      auth: { isEnabled: true },
+      storage: { isEnabled: false },
+      functions: { isEnabled: true },
+    },
+  },
+];
 
 export default function App() {
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [currentProjectId, setCurrentProjectId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      const saved = localStorage.getItem('localme_projects');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_PROJECTS;
+  });
+
+  const [currentProjectId, setCurrentProjectId] = useState<string>(
+    projects[0]?.id || ''
+  );
+
+  // Parse route: either Stage 1 ('/' or '/hub') or Stage 2 ('/projects/:slug/:tab')
+  const isHubStage = location.pathname === '/' || location.pathname === '/hub';
+  const pathParts = location.pathname.split('/').filter(Boolean);
+
+  let activeTab: TabId = 'database';
+  if (pathParts[0] === 'projects' && pathParts[2]) {
+    activeTab = pathParts[2] as TabId;
+  }
 
   // Capability set for current project
   const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
@@ -56,8 +120,38 @@ export default function App() {
     }, 3500);
   };
 
+  // Keep localStorage in sync
+  useEffect(() => {
+    try {
+      localStorage.setItem('localme_projects', JSON.stringify(projects));
+    } catch {
+      // ignore
+    }
+  }, [projects]);
+
+  // Synchronize route with currentProjectId
+  useEffect(() => {
+    if (pathParts[0] === 'projects' && pathParts[1]) {
+      const match = projects.find((p) => p.slug === pathParts[1]);
+      if (match && match.id !== currentProjectId) {
+        setCurrentProjectId(match.id);
+      }
+    }
+  }, [location.pathname, projects, currentProjectId, pathParts]);
+
   const currentProject =
     projects.find((p) => p.id === currentProjectId) || projects[0];
+
+  const handleSelectProject = (proj: Project) => {
+    setCurrentProjectId(proj.id);
+    navigate(`/projects/${proj.slug}/${activeTab}`);
+  };
+
+  const handleTabChange = (tab: TabId) => {
+    if (currentProject) {
+      navigate(`/projects/${currentProject.slug}/${tab}`);
+    }
+  };
 
   const handleToggleCapability = (code: CapabilityCode) => {
     setActiveCapabilities((prev) => {
@@ -105,18 +199,19 @@ export default function App() {
       description: data.description,
       region: data.region,
       status: 'ACTIVE',
-      createdAt: 'همین الان',
-      walletBalanceIrr: 0,
+      createdAt: new Date().toISOString(),
+      walletBalanceIrr: 100000000,
       hasPassword: Boolean(data.password),
       services: {
         database: { isEnabled: true },
         auth: { isEnabled: true },
-        storage: { isEnabled: false },
+        storage: { isEnabled: true },
         functions: { isEnabled: true },
       },
     };
     setProjects((prev) => [newPrj, ...prev]);
     setCurrentProjectId(newPrj.id);
+    navigate(`/projects/${newPrj.slug}/database`);
     showToast(`پروژه «${data.name}» با موفقیت راه‌اندازی گردید.`);
   };
 
@@ -135,6 +230,7 @@ export default function App() {
     const remaining = projects.filter((p) => p.id !== currentProjectId);
     setProjects(remaining);
     setCurrentProjectId(remaining[0].id);
+    navigate('/');
     showToast('پروژه با موفقیت حذف گردید.');
   };
 
@@ -154,123 +250,137 @@ export default function App() {
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col selection:bg-amber-500/20 selection:text-amber-300 font-sans antialiased">
+    <div className="min-h-screen bg-[#0f0f0f] text-[#ededed] flex flex-col font-sans antialiased selection:bg-[#3ECF8E]/20 selection:text-[#3ECF8E]">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-amber-500/50 shadow-2xl text-amber-300 text-xs font-medium flex items-center space-x-2 animate-in slide-in-from-bottom-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-full bg-[#171717] border border-[#3ECF8E]/40 shadow-2xl text-[#3ECF8E] text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-[#3ECF8E]" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Sovereign Header */}
+      {/* Global Sovereign Header */}
       <Header
         currentProject={currentProject}
         allProjects={projects}
-        onSelectProject={(p) => setCurrentProjectId(p.id)}
+        onSelectProject={handleSelectProject}
         onOpenCreateModal={() => setIsCreateProjectOpen(true)}
         onOpenTopupModal={() => setIsTopupOpen(true)}
       />
 
-      {/* Navigation Tabs */}
-      <Navigation
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
-        edgeFunctionsEnabled={isEdgeFunctionsEnabled}
-      />
+      {/* STAGE 1: USER WORKSPACE HUB */}
+      {isHubStage ? (
+        <main className="flex-1">
+          <WorkspaceHubView
+            projects={projects}
+            onOpenCreateProjectModal={() => setIsCreateProjectOpen(true)}
+            onSelectProject={handleSelectProject}
+          />
+        </main>
+      ) : (
+        /* STAGE 2: PROJECT SERVICE STUDIO */
+        <>
+          {/* Project Studio Navigation Tabs */}
+          <Navigation
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            edgeFunctionsEnabled={isEdgeFunctionsEnabled}
+          />
 
-      {/* Main Workspace Body */}
-      <main
-        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8"
-        role="tabpanel"
-        id={`panel-${activeTab}`}
-        aria-labelledby={`tab-${activeTab}`}
-      >
-        {!currentProject ? (
-          <div className="text-center py-20 px-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 max-w-lg mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 text-amber-400">
-              <Plus className="w-8 h-8" />
-            </div>
-            <h3 className="text-base font-bold text-zinc-100 mb-2">هیچ پروژه‌ای تعریف نشده است</h3>
-            <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
-              جهت آغاز به کار در زیرساخت ابری لوکال‌می و دسترسی به پایگاه‌داده، احراز هویت و توابع، نخستین پروژه خود را راه‌اندازی نمایید.
-            </p>
-            <button
-              onClick={() => setIsCreateProjectOpen(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 text-black font-semibold text-xs hover:opacity-95 transition shadow-lg shadow-amber-500/10"
-            >
-              <Plus className="w-4 h-4" />
-              <span>ساخت اولین پروژه</span>
-            </button>
-          </div>
-        ) : (
-          <>
-            {activeTab === 'overview' && (
-              <OverviewView
-                project={currentProject}
-                activeCapabilities={activeCapabilities}
-                onToggleCapability={handleToggleCapability}
-                onNavigateTab={setActiveTab}
-                onDeployBuild={() => setIsDeployFunctionOpen(true)}
-              />
+          {/* Main Service Viewport */}
+          <main
+            className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8"
+            role="tabpanel"
+            id={`panel-${activeTab}`}
+            aria-labelledby={`tab-${activeTab}`}
+          >
+            {!currentProject ? (
+              <div className="text-center py-20 px-4 rounded-3xl bg-[#171717] border border-[#242424] max-w-lg mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-[#0f0f0f] border border-[#242424] flex items-center justify-center mx-auto mb-4 text-[#3ECF8E]">
+                  <Plus className="w-8 h-8" />
+                </div>
+                <h3 className="text-base font-bold text-white mb-2">هیچ پروژه‌ای تعریف نشده است</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
+                  جهت آغاز به کار در زیرساخت ابری لوکال‌می و دسترسی به پایگاه‌داده، احراز هویت و توابع، نخستین پروژه خود را راه‌اندازی نمایید.
+                </p>
+                <button
+                  onClick={() => setIsCreateProjectOpen(true)}
+                  className="btn-pill-primary"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>ساخت اولین پروژه</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'database' && (
+                  <DatabaseView
+                    project={currentProject}
+                    onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'overview' && (
+                  <OverviewView
+                    project={currentProject}
+                    activeCapabilities={activeCapabilities}
+                    onToggleCapability={handleToggleCapability}
+                    onNavigateTab={handleTabChange}
+                    onDeployBuild={() => setIsDeployFunctionOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'auth' && (
+                  <AuthView
+                    project={currentProject}
+                    onOpenAddUserModal={() => setIsAddUserOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'functions' && (
+                  <EdgeFunctionsView
+                    project={currentProject}
+                    enabled={isEdgeFunctionsEnabled}
+                    onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
+                    onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'storage' && (
+                  <StorageView
+                    project={currentProject}
+                    onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'ipg' && <IpgView project={currentProject} />}
+
+                {activeTab === 'hosting' && (
+                  <HostingView
+                    project={currentProject}
+                    onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+                    onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
+
+                {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
+
+                {activeTab === 'settings' && (
+                  <SettingsView
+                    project={currentProject}
+                    onUpdateProject={handleUpdateProject}
+                    onDeleteProject={handleDeleteProject}
+                  />
+                )}
+              </>
             )}
+          </main>
+        </>
+      )}
 
-            {activeTab === 'database' && (
-              <DatabaseView
-                project={currentProject}
-                onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
-              />
-            )}
-
-            {activeTab === 'auth' && (
-              <AuthView
-                project={currentProject}
-                onOpenAddUserModal={() => setIsAddUserOpen(true)}
-              />
-            )}
-
-            {activeTab === 'functions' && (
-              <EdgeFunctionsView
-                project={currentProject}
-                enabled={isEdgeFunctionsEnabled}
-                onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
-                onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
-              />
-            )}
-
-            {activeTab === 'storage' && (
-              <StorageView
-                project={currentProject}
-                onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
-              />
-            )}
-
-            {activeTab === 'ipg' && <IpgView project={currentProject} />}
-
-            {activeTab === 'hosting' && (
-              <HostingView
-                project={currentProject}
-                onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
-                onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
-              />
-            )}
-
-            {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
-
-            {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
-
-            {activeTab === 'settings' && (
-              <SettingsView
-                project={currentProject}
-                onUpdateProject={handleUpdateProject}
-                onDeleteProject={handleDeleteProject}
-              />
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Modals */}
+      {/* Global Modals */}
       <CreateProjectModal
         isOpen={isCreateProjectOpen}
         onClose={() => setIsCreateProjectOpen(false)}

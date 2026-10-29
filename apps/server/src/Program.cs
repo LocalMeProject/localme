@@ -19,9 +19,12 @@ using LocalMe.DataPlane.Storage;
 using LocalMe.DataPlane.Storage.Adapters;
 using LocalMe.DataPlane.Mobile;
 using LocalMe.DataPlane.Realtime;
+using LocalMe.DataPlane.Network;
+using LocalMe.Server.Middleware;
 using LocalMe.Infrastructure.Storage;
 using LocalMe.Server.Diagnostics;
 using LocalMe.Server.Routes;
+using Npgsql;
 
 public class Program
 {
@@ -67,8 +70,26 @@ public class Program
         // Register Core Subsystems
         builder.Services.AddSingleton(configService.Pricing);
         builder.Services.AddSingleton<IProjectStore, PostgreSqlProjectStore>(_ => new PostgreSqlProjectStore());
+        builder.Services.AddSingleton<ITenantDatabaseStore>(sp =>
+        {
+            var store = sp.GetRequiredService<IProjectStore>();
+            if (store is PostgreSqlProjectStore pgStore && pgStore.DataSource != null)
+            {
+                return new PostgreSqlTenantSchemaStore(pgStore.DataSource);
+            }
+            var connStr = Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? Environment.GetEnvironmentVariable("LOCALME_PG_CONNECTION")
+                ?? "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
+            var ds = NpgsqlDataSource.Create(PostgreSqlProjectStore.NormalizePostgresConnectionString(connStr));
+            return new PostgreSqlTenantSchemaStore(ds);
+        });
+        builder.Services.AddSingleton<OutboundEgressDispatcher>(_ => new OutboundEgressDispatcher());
         builder.Services.AddSingleton<ProjectManagerService>(sp =>
-            new ProjectManagerService(sp.GetRequiredService<IProjectStore>()));
+        {
+            var pm = new ProjectManagerService(sp.GetRequiredService<IProjectStore>());
+            pm.TenantDbStore = sp.GetRequiredService<ITenantDatabaseStore>();
+            return pm;
+        });
         builder.Services.AddSingleton<PaymentIpgService>(sp =>
             new PaymentIpgService(sp.GetRequiredService<ProjectManagerService>()));
         builder.Services.AddSingleton<UsageMeteringService>();
@@ -105,6 +126,7 @@ public class Program
         }
 
         app.UseWebSockets();
+        app.UseMiddleware<GatewayCacheMiddleware>();
 
         // Multi-Tenant Edge Middleware: Subdomains (*.localme.ir) & Custom Domains
         app.Use(async (context, next) =>
