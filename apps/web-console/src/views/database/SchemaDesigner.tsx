@@ -36,31 +36,31 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] flex items-center justify-between">
+      <div className="p-4 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
         <div>
-          <h3 className="text-xs font-bold text-white flex items-center gap-2">
-            <Columns className="w-4 h-4 text-[#3ECF8E]" />
-            <span>ستون‌های جدول: </span>
-            <span className="font-mono text-[#3ECF8E]">{activeTable || 'بدون جدول'}</span>
+          <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+            <Columns className="w-4 h-4 text-emerald-600" />
+            <span>ستون‌ها و ساختار جدول: </span>
+            <span className="font-mono text-emerald-700 font-bold" dir="ltr">{activeTable || 'بدون جدول'}</span>
           </h3>
-          <p className="text-[11px] text-zinc-400 mt-0.5">
-            تعریف مستقیم تایپ‌ها، کلید اصلی و محدودیت‌های یکپارچگی در اسکیما
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            مشاهده نوع داده‌ها، کلیدهای اصلی و افزودن ستون‌های جدید به ساختار جدول
           </p>
         </div>
 
         <button
           onClick={() => setIsAddingColumn(!isAddingColumn)}
-          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3.5 py-1.5 transition shadow-xs"
           disabled={!activeTable}
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>+ افزودن ستون</span>
+          <span>افزودن ستون جدید</span>
         </button>
       </div>
 
       {schemaSuccessMsg && (
-        <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-[#3ECF8E] text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           <span>{schemaSuccessMsg}</span>
         </div>
       )}
@@ -69,141 +69,144 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
       {isAddingColumn && (
         <form
           onSubmit={handleSubmit}
-          className="p-4 rounded-xl bg-[#171717] border border-[#3ECF8E]/40 space-y-3"
+          className="p-4 rounded-xl bg-white border border-emerald-300 space-y-3 shadow-xs"
         >
-          <div className="text-xs font-bold text-white">افزودن ستون جدید (DDL Generator)</div>
+          <div className="text-xs font-bold text-slate-900">تعریف ستون جدید در جدول</div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
             <div>
-              <label className="block text-zinc-400 text-[11px] mb-1">نام ستون</label>
+              <label className="block text-slate-600 text-[11px] mb-1 font-medium">نام ستون</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. user_age"
                 value={newColName}
                 onChange={(e) => setNewColName(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-zinc-200 focus:outline-none focus:border-[#3ECF8E]"
+                placeholder="عنوان انگلیسی ستون"
                 dir="ltr"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
+
             <div>
-              <label className="block text-zinc-400 text-[11px] mb-1">نوع داده (Data Type)</label>
+              <label className="block text-slate-600 text-[11px] mb-1 font-medium">نوع داده</label>
               <select
                 value={newColType}
                 onChange={(e) => setNewColType(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-zinc-200 focus:outline-none focus:border-[#3ECF8E]"
                 dir="ltr"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
               >
                 <option value="VARCHAR(255)">VARCHAR(255)</option>
                 <option value="TEXT">TEXT</option>
-                <option value="INTEGER">INTEGER</option>
                 <option value="BIGINT">BIGINT</option>
+                <option value="INTEGER">INTEGER</option>
                 <option value="BOOLEAN">BOOLEAN</option>
                 <option value="JSONB">JSONB</option>
                 <option value="TIMESTAMPTZ">TIMESTAMPTZ</option>
-                <option value="UUID">UUID</option>
                 <option value="NUMERIC(14,2)">NUMERIC(14,2)</option>
               </select>
             </div>
+
             <div>
-              <label className="block text-zinc-400 text-[11px] mb-1">مقدار پیش‌فرض (اختیاری)</label>
+              <label className="block text-slate-600 text-[11px] mb-1 font-medium">مقدار پیش‌فرض</label>
               <input
                 type="text"
-                placeholder="e.g. 'active' or NOW()"
                 value={newColDefault}
                 onChange={(e) => setNewColDefault(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-zinc-200 focus:outline-none focus:border-[#3ECF8E]"
+                placeholder="اختیاری (مثال: 'ACTIVE')"
                 dir="ltr"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
-            <div className="flex items-center gap-2 pt-6">
-              <input
-                type="checkbox"
-                id="colNullable"
-                checked={newColNullable}
-                onChange={(e) => setNewColNullable(e.target.checked)}
-                className="rounded border-[#242424] text-[#3ECF8E] focus:ring-[#3ECF8E]"
-              />
-              <label htmlFor="colNullable" className="text-zinc-300 text-xs cursor-pointer">
-                تهی‌پذیر (NULL)
+
+            <div className="flex items-end pb-1.5">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={newColNullable}
+                  onChange={(e) => setNewColNullable(e.target.checked)}
+                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span>مجاز به مقدار خالی (NULL)</span>
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[#242424]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setIsAddingColumn(false)}
-              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3.5 py-1.5 transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 transition"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
+              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs"
             >
-              اعمال DDL در دیتابیس
+              افزودن به ساختار جدول
             </button>
           </div>
         </form>
       )}
 
-      {/* Schema Table */}
-      <div className="rounded-xl border border-[#242424] bg-[#171717] overflow-hidden">
-        <div className="overflow-x-auto" dir="ltr">
-          <table className="w-full text-left text-xs font-mono" dir="ltr">
-            <thead>
-              <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
-                <th className="py-2.5 px-3">Column Name</th>
-                <th className="py-2.5 px-3">Data Type</th>
-                <th className="py-2.5 px-3">Key</th>
-                <th className="py-2.5 px-3">Nullable</th>
-                <th className="py-2.5 px-3">Default Value</th>
+      {/* Schema Columns Table */}
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+        <table className="w-full text-right text-xs" dir="rtl">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+              <th className="py-2.5 px-4 text-right">نام ستون</th>
+              <th className="py-2.5 px-4 text-center">نوع داده</th>
+              <th className="py-2.5 px-4 text-center">پذیرش NULL</th>
+              <th className="py-2.5 px-4 text-center">مقدار پیش‌فرض</th>
+              <th className="py-2.5 px-4 text-center">نقش در جدول</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoadingSchema ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-slate-400">
+                  در حال بارگذاری ساختار جدول...
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#242424]">
-              {isLoadingSchema ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-zinc-500">
-                    در حال بررسی ساختار اسکیما...
+            ) : schemaColumns.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-slate-400">
+                  {activeTable ? 'هیچ ستونی برای این جدول یافت نشد.' : 'ابتدا یک جدول انتخاب نمایید.'}
+                </td>
+              </tr>
+            ) : (
+              schemaColumns.map((col) => (
+                <tr key={col.name} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                  <td className="py-2.5 px-4 font-mono font-bold text-slate-800" dir="ltr">
+                    {col.name}
+                  </td>
+                  <td className="py-2.5 px-4 text-center font-mono text-emerald-700" dir="ltr">
+                    {col.dataType}
+                  </td>
+                  <td className="py-2.5 px-4 text-center">
+                    {col.isNullable ? (
+                      <span className="text-[11px] text-slate-500">بله</span>
+                    ) : (
+                      <span className="text-[11px] font-bold text-rose-600">خیر (اجباری)</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-4 text-center font-mono text-slate-600 text-[11px]" dir="ltr">
+                    {col.defaultValue || '-'}
+                  </td>
+                  <td className="py-2.5 px-4 text-center">
+                    {col.isPrimaryKey ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        <Key className="w-3 h-3 text-amber-600" />
+                        کلید اصلی
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-[11px]">ستون داده</span>
+                    )}
                   </td>
                 </tr>
-              ) : schemaColumns.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-zinc-500">
-                    ستونی در این جدول ثبت نشده است.
-                  </td>
-                </tr>
-              ) : (
-                schemaColumns.map((c) => (
-                  <tr key={c.name} className="hover:bg-[#1f1f1f] transition">
-                    <td className="py-2.5 px-3 font-bold text-white">{c.name}</td>
-                    <td className="py-2.5 px-3 text-[#3ECF8E] font-mono">{c.dataType}</td>
-                    <td className="py-2.5 px-3">
-                      {c.isPrimaryKey ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-[#3ECF8E]/10 text-[#3ECF8E] font-bold border border-[#3ECF8E]/30 font-mono">
-                          <Key className="w-3 h-3" />
-                          PK
-                        </span>
-                      ) : (
-                        <span className="text-zinc-600">-</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      {c.isNullable ? (
-                        <span className="text-zinc-400">NULL</span>
-                      ) : (
-                        <span className="text-[#3ECF8E] font-semibold">NOT NULL</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-400">
-                      {c.defaultValue || <span className="text-zinc-600 italic">none</span>}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

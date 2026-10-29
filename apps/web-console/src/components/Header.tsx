@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Project } from '../types';
 import {
-  ShieldCheck,
-  Server,
-  Plus,
-  Wallet,
+  User,
   ChevronDown,
   LayoutGrid,
   ChevronLeft,
+  Plus,
+  Wallet,
+  Settings,
+  LogOut,
+  CreditCard,
+  Check,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -28,13 +31,23 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  // Project selector dropdown state
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Mini Profile popover state
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Outside click listeners
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target as Node)) {
+        setProjectDropdownOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -45,105 +58,106 @@ export const Header: React.FC<HeaderProps> = ({
   const tomanBalance = Math.floor((currentProject?.walletBalanceIrr ?? 0) / 10);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#242424] bg-[#0f0f0f]/95 backdrop-blur-xl px-6 py-3 flex items-center justify-between">
-      {/* Brand & Breadcrumb Navigation */}
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md px-5 py-2.5 flex items-center justify-between shadow-xs select-none">
+      {/* Brand & Project Breadcrumb Navigation */}
       <div className="flex items-center gap-3">
         {/* Brand Icon */}
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2.5 focus:outline-none group"
-          title="بازگشت به هاب پروژه‌ها"
+          className="flex items-center gap-2 focus:outline-none group"
+          title="بازگشت به فهرست پروژه‌ها"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#3ECF8E] flex items-center justify-center font-black text-black text-xs shadow-sm transition group-hover:scale-105">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center font-bold text-white text-xs shadow-xs transition">
             LM
           </div>
-          <div className="text-right">
-            <span className="text-xs font-bold tracking-tight text-white flex items-center gap-1.5">
-              LocalMe
-              <span className="text-[10px] text-zinc-400 font-mono px-1.5 py-0.5 rounded-full bg-[#171717] border border-[#242424]">
-                v2.0
-              </span>
-            </span>
-          </div>
+          <span className="text-xs font-bold text-slate-900 tracking-tight">
+            لوکال‌می
+          </span>
         </button>
 
-        <div className="h-4 w-px bg-[#242424]" />
+        <div className="h-4 w-px bg-slate-200" />
 
-        {/* Two-Stage Breadcrumb */}
+        {/* Breadcrumb & Project Selector */}
         {isHubView ? (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-            <LayoutGrid className="w-3.5 h-3.5 text-[#3ECF8E]" />
-            <span className="font-semibold text-white">میزکار فضای ابری (Workspace Hub)</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+            <LayoutGrid className="w-3.5 h-3.5 text-emerald-600" />
+            <span>میزکار مدیریت پروژه‌ها</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs">
-            {/* Back to all projects button */}
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-1 text-zinc-400 hover:text-white transition px-2 py-1 rounded-full hover:bg-[#1f1f1f]"
+              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition px-2 py-1 rounded-md hover:bg-slate-100"
             >
-              <ChevronLeft className="w-3.5 h-3.5 text-zinc-400" />
-              <span>همه پروژه‌ها</span>
+              <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
+              <span>پروژه‌ها</span>
             </button>
 
-            <span className="text-zinc-600">/</span>
+            <span className="text-slate-300">/</span>
 
             {/* Project Selector Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative" ref={projectDropdownRef}>
               <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#171717] hover:bg-[#1f1f1f] border border-[#242424] text-xs font-medium text-zinc-200 transition"
+                onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800 transition"
               >
-                <div className={`w-2 h-2 rounded-full ${currentProject ? 'bg-[#3ECF8E]' : 'bg-zinc-600'}`} />
+                <div className={`w-2 h-2 rounded-full ${currentProject ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 <span className="font-semibold">{currentProject ? currentProject.name : 'انتخاب پروژه'}</span>
                 {currentProject && (
-                  <span className="text-zinc-500 font-mono text-[11px]">({currentProject.slug})</span>
+                  <span className="text-slate-400 font-mono text-[11px]" dir="ltr">
+                    ({currentProject.slug})
+                  </span>
                 )}
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-[#171717] border border-[#242424] shadow-2xl py-1 z-50">
-                  <div className="px-3 py-2 text-[10px] font-semibold tracking-wider uppercase text-zinc-400 border-b border-[#242424]">
-                    انتخاب پروژه فعال
+              {projectDropdownOpen && (
+                <div className="absolute right-0 mt-1.5 w-64 rounded-xl bg-white border border-slate-200 shadow-xl py-1 z-50">
+                  <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-500 border-b border-slate-100">
+                    تغییر پروژه فعال
                   </div>
                   <div className="max-h-56 overflow-y-auto py-1">
                     {allProjects.length === 0 ? (
-                      <div className="px-3 py-3 text-xs text-zinc-500 text-center">هیچ پروژه‌ای تعریف نشده است</div>
+                      <div className="px-3 py-3 text-xs text-slate-400 text-center">
+                        هیچ پروژه‌ای یافت نشد
+                      </div>
                     ) : (
-                      allProjects.map((proj) => (
-                        <button
-                          key={proj.id}
-                          onClick={() => {
-                            onSelectProject(proj);
-                            setDropdownOpen(false);
-                            navigate(`/projects/${proj.slug}/database`);
-                          }}
-                          className={`w-full text-right px-3 py-2 flex items-center justify-between text-xs hover:bg-[#1f1f1f] transition ${
-                            proj.id === currentProject?.id ? 'bg-[#1f1f1f] text-[#3ECF8E]' : 'text-zinc-300'
-                          }`}
-                        >
-                          <div>
-                            <div className="font-medium">{proj.name}</div>
-                            <div className="text-[10px] text-zinc-500 font-mono">{proj.slug}</div>
-                          </div>
-                          {proj.id === currentProject?.id && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#3ECF8E]" />
-                          )}
-                        </button>
-                      ))
+                      allProjects.map((proj) => {
+                        const isCurrent = proj.id === currentProject?.id;
+                        return (
+                          <button
+                            key={proj.id}
+                            onClick={() => {
+                              onSelectProject(proj);
+                              setProjectDropdownOpen(false);
+                              navigate(`/projects/${proj.slug}/database`);
+                            }}
+                            className={`w-full text-right px-3 py-2 flex items-center justify-between text-xs hover:bg-slate-50 transition ${
+                              isCurrent ? 'bg-emerald-50 text-emerald-800 font-medium' : 'text-slate-700'
+                            }`}
+                          >
+                            <div className="truncate">
+                              <div className="font-medium truncate">{proj.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono truncate" dir="ltr">
+                                {proj.slug}
+                              </div>
+                            </div>
+                            {isCurrent && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                          </button>
+                        );
+                      })
                     )}
                   </div>
-                  <div className="border-t border-[#242424] p-1.5">
+                  <div className="border-t border-slate-100 p-1.5">
                     <button
                       onClick={() => {
-                        setDropdownOpen(false);
+                        setProjectDropdownOpen(false);
                         onOpenCreateModal();
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1f1f1f] hover:bg-[#282828] text-xs text-zinc-200 font-medium transition"
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800 font-medium transition"
                     >
-                      <Plus className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                      <span>ساخت پروژه جدید</span>
+                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>ایجاد پروژه جدید</span>
                     </button>
                   </div>
                 </div>
@@ -153,41 +167,89 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Sovereign Iran Status Indicators & Wallet */}
-      <div className="flex items-center gap-3 text-xs">
-        {/* Egress NAT Pill */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#171717] border border-[#242424] text-zinc-300 font-mono text-[11px]">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#3ECF8E]" />
-          <span>NAT: 2.180.12.94</span>
-          <span className="text-[10px] text-[#3ECF8E] font-bold">Whitelisted</span>
-        </div>
-
-        {/* Region */}
-        {currentProject && !isHubView && (
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#171717] border border-[#242424] text-zinc-400 font-mono text-[11px]">
-            <Server className="w-3.5 h-3.5 text-zinc-500" />
-            <span>{currentProject.region}</span>
+      {/* Mini Profile Popover (Replacing old raw badges) */}
+      <div className="relative" ref={profileRef}>
+        <button
+          onClick={() => setProfileOpen(!profileOpen)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs text-slate-700 transition"
+          title="مشخصات و حساب کاربری"
+        >
+          <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <User className="w-3.5 h-3.5" />
           </div>
-        )}
+          <span className="font-medium text-slate-800 hidden sm:inline">حساب کاربری</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+        </button>
 
-        {/* Rial / Toman Wallet */}
-        <div className="flex items-center gap-2 pl-2">
-          <div className="px-3 py-1 rounded-full bg-[#171717] border border-[#242424] flex items-center gap-2">
-            <Wallet className="w-3.5 h-3.5 text-[#3ECF8E]" />
-            <div className="text-right flex items-center gap-1">
-              <span className="text-[#3ECF8E] font-bold font-mono text-xs">
-                {tomanBalance.toLocaleString('fa-IR')}
-              </span>
-              <span className="text-[10px] text-zinc-400">تومان</span>
+        {profileOpen && (
+          <div className="absolute left-0 mt-1.5 w-72 rounded-xl bg-white border border-slate-200 shadow-xl p-3 z-50">
+            {/* User Details */}
+            <div className="pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold text-xs text-slate-900">سینا والی زاده</span>
+                <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                  توسعه‌دهنده
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono" dir="ltr">
+                +989121112233
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono" dir="ltr">
+                sina@example.com
+              </div>
+            </div>
+
+            {/* Wallet Balance Box */}
+            <div className="my-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-slate-600">
+                <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>موجودی کیف پول:</span>
+              </div>
+              <div className="font-semibold text-emerald-700 flex items-center gap-1">
+                <span dir="ltr">{tomanBalance.toLocaleString('fa-IR')}</span>
+                <span className="text-[10px] text-slate-500 font-normal">تومان</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  onOpenTopupModal();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>افزایش اعتبار کیف پول</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  if (currentProject) {
+                    navigate(`/projects/${currentProject.slug}/settings`);
+                  }
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 text-xs transition text-right"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400" />
+                <span>تنظیمات و دسترسی‌ها</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  navigate('/panel');
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-xs transition text-right"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>خروج از حساب</span>
+              </button>
             </div>
           </div>
-          <button
-            onClick={onOpenTopupModal}
-            className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3 py-1 transition-colors"
-          >
-            افزایش موجودی
-          </button>
-        </div>
+        )}
       </div>
     </header>
   );

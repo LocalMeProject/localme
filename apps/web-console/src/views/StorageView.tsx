@@ -8,6 +8,7 @@ import {
   Trash2,
   CheckCircle2,
   Plus,
+  Folder,
 } from 'lucide-react';
 
 interface StorageViewProps {
@@ -52,200 +53,176 @@ export const StorageView: React.FC<StorageViewProps> = ({ project, onOpenCreateB
     };
 
     setFiles((prev) => [newFile, ...prev]);
-    alert(`فایل "${file.name}" با موفقیت در باکت "${selectedBucket}" آپلود شد.`);
+    alert(`فایل "${file.name}" با موفقیت آپلود گردید.`);
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-              S3 / TUSDOTNET BLOB STORAGE
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              فضای ذخیره‌سازی ابری
             </span>
-            <span className="text-xs text-zinc-400 font-mono">
-              PROJECT: {project.slug}
+            <span className="text-xs text-slate-400 font-mono" dir="ltr">
+              {project.slug}
             </span>
           </div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <HardDrive className="w-5 h-5 text-[#3ECF8E]" />
-            ذخیره‌سازی ابری چندرسانه‌ای (Blob Storage)
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
-            پشتیبانی از آبجکت‌استوریج سازگار با S3، ریلود تکه‌ای TUS و تغییر سایز بلادرنگ تصاویر با ImageSharp.
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <HardDrive className="w-5 h-5 text-emerald-600" />
+            مدیریت باکت‌ها و ذخیره‌سازی فایل‌ها
+          </h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+            ذخیره‌سازی انواع فایل‌ها و اسناد، بهینه‌سازی خودکار تصاویر و دسترسی امن با پیوندهای مستقیم دانلود.
           </p>
         </div>
 
         <button
           onClick={onOpenCreateBucketModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-semibold text-xs transition shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>ساخت باکت جدید</span>
+          <Plus className="w-4 h-4" />
+          <span>ایجاد باکت جدید</span>
         </button>
       </div>
 
-      {/* Multi-Adapter Status Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-white">S3 Object Storage Adapter</div>
-            <div className="text-[10px] text-zinc-500 font-mono">ایران (مرکز داده آسیاتک)</div>
-          </div>
-          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-            CONNECTED
-          </span>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-white">TUS Protocol Chunk Resumption</div>
-            <div className="text-[10px] text-zinc-500 font-mono">TusDotNet Middleware</div>
-          </div>
-          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-            ENABLED
-          </span>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-white">ImageSharp WebP Optimization</div>
-            <div className="text-[10px] text-zinc-500 font-mono">In-Process WebP & WebM</div>
-          </div>
-          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-            ACTIVE
-          </span>
-        </div>
-      </div>
-
-      {/* Main Grid: Buckets and Files */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Bucket List */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] space-y-3">
-            <div className="text-xs font-semibold text-zinc-400 flex items-center justify-between">
-              <span>باکت‌های پروژه ({buckets.length})</span>
-              <span className="text-[10px] text-zinc-500 font-mono">S3 Protocol</span>
-            </div>
+        {/* Buckets List */}
+        <div className="lg:col-span-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <span className="text-xs font-bold text-slate-900">
+              باکت‌های ذخیره‌سازی ({buckets.length})
+            </span>
+          </div>
 
-            <div className="space-y-2 max-h-[480px] overflow-y-auto">
-              {buckets.length === 0 ? (
-                <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-[#242424]">
-                  هیچ باکتی ایجاد نشده است
-                </div>
-              ) : (
-                buckets.map((b) => (
-                  <div
-                    key={b.name}
-                    onClick={() => setSelectedBucket(b.name)}
-                    className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                      selectedBucket === b.name
-                        ? 'bg-[#1f1f1f] border-[#3ECF8E]/40 shadow-sm'
-                        : 'bg-[#171717] border-[#242424] hover:border-[#3ECF8E]/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-xs font-bold text-[#3ECF8E] dir-ltr">{b.name}</span>
-                      <span
-                        className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase font-mono ${
-                          b.isPublic
-                            ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30'
-                            : 'bg-[#1f1f1f] text-zinc-400 border border-[#2e2e2e]'
-                        }`}
-                      >
-                        {b.isPublic ? 'Public' : 'Private'}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-zinc-400 font-mono flex items-center justify-between mt-1.5">
-                      <span>{b.filesCount} files</span>
-                      <span>{(b.totalSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                    </div>
+          <div className="space-y-1.5 max-h-[460px] overflow-y-auto">
+            {buckets.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400 rounded-xl border border-dashed border-slate-200 space-y-2">
+                <p>هنوز باکتی ایجاد نشده است.</p>
+                <button
+                  onClick={onOpenCreateBucketModal}
+                  className="text-xs text-emerald-700 hover:underline font-medium"
+                >
+                  + ایجاد اولین باکت
+                </button>
+              </div>
+            ) : (
+              buckets.map((b) => (
+                <button
+                  key={b.name}
+                  onClick={() => setSelectedBucket(b.name)}
+                  className={`w-full p-3 rounded-xl border text-right transition flex items-center justify-between ${
+                    selectedBucket === b.name
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <Folder className={`w-4 h-4 ${selectedBucket === b.name ? 'text-emerald-600' : 'text-slate-400'}`} />
+                    <span className="text-xs font-mono font-bold truncate" dir="ltr">{b.name}</span>
                   </div>
-                ))
-              )}
-            </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">
+                    {b.isPublic ? 'عمومی' : 'خصوصی'}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
-        {/* File Explorer & Uploader */}
-        <div className="lg:col-span-8 p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#242424] pb-3">
+        {/* Files Explorer */}
+        <div className="lg:col-span-8 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
-              <span className="text-xs font-bold text-white">
-                کاوشگر فایل‌های باکت: <span className="font-mono text-[#3ECF8E]">{selectedBucket || 'بدون باکت'}</span>
+              <span className="text-xs font-bold text-slate-900">
+                فایل‌های باکت: <span className="font-mono text-emerald-700" dir="ltr">{selectedBucket || 'انتخاب نشده'}</span>
               </span>
-              <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+              <div className="text-[11px] text-slate-400 mt-0.5">
                 تعداد فایل‌ها: {filteredFiles.length}
               </div>
             </div>
 
-            {/* Upload Button */}
-            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1f1f1f] hover:bg-[#282828] text-zinc-200 font-semibold text-xs transition border border-[#2e2e2e] shadow-sm">
-              <Upload className="w-3.5 h-3.5 text-[#3ECF8E]" />
-              <span>آپلود فایل به باکت</span>
-              <input type="file" onChange={handleSimulatedUpload} className="hidden" />
-            </label>
+            {selectedBucket && (
+              <label className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium text-xs cursor-pointer transition border border-emerald-200">
+                <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                <span>آپلود فایل جدید</span>
+                <input
+                  type="file"
+                  onChange={handleSimulatedUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
-          {/* Files Table */}
-          <div className="overflow-x-auto rounded-xl border border-[#242424]">
-            <table className="w-full text-left text-xs font-mono" dir="ltr">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-right text-xs" dir="rtl">
               <thead>
-                <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
-                  <th className="py-2.5 px-3">File Name</th>
-                  <th className="py-2.5 px-3">Content Type</th>
-                  <th className="py-2.5 px-3">Size</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                  <th className="py-2.5 px-3">نام فایل</th>
+                  <th className="py-2.5 px-3 text-center">نوع فایل</th>
+                  <th className="py-2.5 px-3 text-center">حجم</th>
+                  <th className="py-2.5 px-3 text-center">زمان آپلود</th>
+                  <th className="py-2.5 px-3 text-center">عملیات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#242424]">
-                {filteredFiles.map((f) => (
-                  <tr key={f.name} className="hover:bg-[#1f1f1f] transition">
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                        <span className="font-bold text-white">{f.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-400">{f.contentType}</td>
-                    <td className="py-2.5 px-3 text-zinc-300">{(f.sizeBytes / 1024).toFixed(1)} KB</td>
-                    <td className="py-2.5 px-3 text-zinc-400">{f.uploadedAt}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleCopyUrl(f.url)}
-                          className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-[#1f1f1f]"
-                          title="Copy Link"
-                        >
-                          {copiedUrl === f.url ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteFile(f.name)}
-                          className="p-1 rounded-full text-zinc-500 hover:text-red-400 hover:bg-[#1f1f1f]"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredFiles.length === 0 && (
+              <tbody className="divide-y divide-slate-100">
+                {filteredFiles.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs text-zinc-500 font-sans" dir="rtl">
-                      فایلی در این باکت وجود ندارد. از دکمه آپلود فایل برای شروع استفاده کنید.
+                    <td colSpan={5} className="py-10 text-center text-xs text-slate-400">
+                      {selectedBucket ? 'هیچ فایلی در این باکت وجود ندارد.' : 'ابتدا یک باکت انتخاب نمایید.'}
                     </td>
                   </tr>
+                ) : (
+                  filteredFiles.map((f) => (
+                    <tr key={f.name} className="hover:bg-slate-50 transition">
+                      <td className="py-2.5 px-3 font-mono text-slate-800 font-bold" dir="ltr">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate max-w-xs">{f.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono text-slate-500 text-[11px]" dir="ltr">
+                        {f.contentType}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono text-slate-600 text-[11px]" dir="ltr">
+                        {(f.sizeBytes / 1024).toFixed(1)} KB
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-500 text-[11px]">
+                        {f.uploadedAt}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleCopyUrl(f.url)}
+                            className="p-1 rounded-md text-slate-500 hover:text-emerald-700 hover:bg-slate-100 transition"
+                            title="کپی لینک مستقیم فایل"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFile(f.name)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            title="حذف فایل"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
+
+          {copiedUrl && (
+            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="truncate">پیوند دانلود فایل کپی شد: {copiedUrl}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

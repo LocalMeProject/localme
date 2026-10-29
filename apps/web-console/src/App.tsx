@@ -29,42 +29,7 @@ import { AddUserModal } from './components/modals/AddUserModal';
 import { AddDomainModal } from './components/modals/AddDomainModal';
 import { TopupModal } from './components/modals/TopupModal';
 
-const DEFAULT_PROJECTS: Project[] = [
-  {
-    id: 'prj-digikala-stage',
-    name: 'دیجی‌کالا آزمایشی (Digikala)',
-    slug: 'digikala-stage',
-    description: 'سرویس توزیع‌شده با پایگاه داده رابطه‌ای PostgreSQL 18، ترافیک برون‌مرزی پایدار و احراز هویت پیامکی.',
-    region: 'ir-teh-1 (آسیاتک برج میلاد)',
-    status: 'ACTIVE',
-    createdAt: '2026-10-25T12:00:00Z',
-    walletBalanceIrr: 540000000,
-    hasPassword: true,
-    services: {
-      database: { isEnabled: true },
-      auth: { isEnabled: true },
-      storage: { isEnabled: true },
-      functions: { isEnabled: true },
-    },
-  },
-  {
-    id: 'prj-shaparak-gateway',
-    name: 'سامانه پرداخت شاپرک',
-    slug: 'shaparak-gateway',
-    description: 'درگاه متمرکز پرداخت الکترونیک شتاب و شاپرک با رعایت الزامات شاپرک و رصد تراکنش‌ها.',
-    region: 'ir-teh-2 (زیرساخت امام)',
-    status: 'ACTIVE',
-    createdAt: '2026-10-26T14:30:00Z',
-    walletBalanceIrr: 1200000000,
-    hasPassword: true,
-    services: {
-      database: { isEnabled: true },
-      auth: { isEnabled: true },
-      storage: { isEnabled: false },
-      functions: { isEnabled: true },
-    },
-  },
-];
+const DEFAULT_PROJECTS: Project[] = [];
 
 export default function App() {
   const navigate = useNavigate();
@@ -75,7 +40,13 @@ export default function App() {
       const saved = localStorage.getItem('localme_projects');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out any legacy demo projects
+          const nonDemo = parsed.filter(
+            (p: Project) => p.slug !== 'digikala-stage' && p.slug !== 'shaparak-gateway'
+          );
+          if (nonDemo.length > 0) return nonDemo;
+        }
       }
     } catch {
       // ignore
@@ -115,6 +86,17 @@ export default function App() {
   };
 
   const activeTab: TabId = mapToTabId(rawTab);
+  const [activeSubView, setActiveSubView] = useState<string>('grid');
+
+  // Sync activeSubView with initial route if explicit
+  useEffect(() => {
+    if (rawTab) {
+      const lower = rawTab.toLowerCase();
+      if (lower === 'sqleditor' || lower === 'sql') setActiveSubView('sql');
+      else if (lower === 'schema') setActiveSubView('schema');
+      else if (lower === 'tables' || lower === 'grid') setActiveSubView('grid');
+    }
+  }, [rawTab]);
 
   // Capability set for current project
   const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
@@ -147,8 +129,8 @@ export default function App() {
         const res = await fetch('/_baas/v1/projects');
         if (res.ok) {
           const live = await res.json();
-          if (Array.isArray(live) && live.length > 0) {
-            setProjects(live.map((p: Record<string, unknown>) => ({
+          if (Array.isArray(live)) {
+            const mapped = live.map((p: Record<string, unknown>) => ({
               id: String(p.id || p.Id || ''),
               name: String(p.name || p.Name || p.id || ''),
               slug: String(p.slug || p.Slug || p.id || ''),
@@ -164,11 +146,12 @@ export default function App() {
                 storage: { isEnabled: true },
                 functions: { isEnabled: true },
               }
-            })));
+            }));
+            setProjects(mapped);
           }
         }
       } catch {
-        // fallback to localStorage or default
+        // fallback
       }
     };
     fetchLiveProjects();
@@ -192,7 +175,6 @@ export default function App() {
           setCurrentProjectId(match.id);
         }
       } else {
-        // Provisional entry so user can access the project immediately
         const provisional: Project = {
           id: slugOrId,
           slug: slugOrId,
@@ -235,10 +217,10 @@ export default function App() {
       const next = new Set(prev);
       if (next.has(code)) {
         next.delete(code);
-        showToast(`قابلیت ${code} با موفقیت غیرفعال شد.`);
+        showToast(`سرویس با موفقیت غیرفعال شد.`);
       } else {
         next.add(code);
-        showToast(`قابلیت ${code} فعال و ماتریس وابستگی DAG بازآرایی شد.`);
+        showToast(`سرویس با موفقیت فعال گردید.`);
       }
       return next;
     });
@@ -277,7 +259,7 @@ export default function App() {
       region: data.region,
       status: 'ACTIVE',
       createdAt: new Date().toISOString(),
-      walletBalanceIrr: 100000000,
+      walletBalanceIrr: 0,
       hasPassword: Boolean(data.password),
       services: {
         database: { isEnabled: true },
@@ -288,7 +270,7 @@ export default function App() {
     };
     setProjects((prev) => [newPrj, ...prev]);
     setCurrentProjectId(newPrj.id);
-    navigate(`/projects/${newPrj.slug}/database`);
+    navigate(`/panel/${newPrj.slug}/database`);
     showToast(`پروژه «${data.name}» با موفقیت راه‌اندازی گردید.`);
   };
 
@@ -327,16 +309,16 @@ export default function App() {
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-[#ededed] flex flex-col font-sans antialiased selection:bg-[#3ECF8E]/20 selection:text-[#3ECF8E]">
+    <div className="h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col font-sans select-none" dir="rtl">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-full bg-[#171717] border border-[#3ECF8E]/40 shadow-2xl text-[#3ECF8E] text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-4 h-4 text-[#3ECF8E]" />
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Global Sovereign Header */}
+      {/* Global Header */}
       <Header
         currentProject={currentProject}
         allProjects={projects}
@@ -347,7 +329,7 @@ export default function App() {
 
       {/* STAGE 1: USER WORKSPACE HUB */}
       {isHubStage ? (
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           <WorkspaceHubView
             projects={projects}
             onOpenCreateProjectModal={() => setIsCreateProjectOpen(true)}
@@ -355,34 +337,38 @@ export default function App() {
           />
         </main>
       ) : (
-        /* STAGE 2: PROJECT SERVICE STUDIO */
-        <>
-          {/* Project Studio Navigation Tabs */}
+        /* STAGE 2: PROJECT SERVICE STUDIO WITH TWO-LEVEL SIDEBAR */
+        <div className="flex flex-1 overflow-hidden">
+          {/* Supabase Two-Level Sidebar Navigation */}
           <Navigation
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            activeSubView={activeSubView}
+            onSubViewChange={setActiveSubView}
             edgeFunctionsEnabled={isEdgeFunctionsEnabled}
+            project={currentProject}
+            onNavigateHome={() => navigate('/')}
           />
 
           {/* Main Service Viewport */}
           <main
-            className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8"
+            className="flex-1 overflow-y-auto p-6 md:p-8"
             role="tabpanel"
             id={`panel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
           >
             {!currentProject ? (
-              <div className="text-center py-20 px-4 rounded-3xl bg-[#171717] border border-[#242424] max-w-lg mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-[#0f0f0f] border border-[#242424] flex items-center justify-center mx-auto mb-4 text-[#3ECF8E]">
-                  <Plus className="w-8 h-8" />
+              <div className="text-center py-20 px-4 rounded-2xl bg-white border border-slate-200 max-w-lg mx-auto shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4 text-emerald-600">
+                  <Plus className="w-7 h-7" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">هیچ پروژه‌ای تعریف نشده است</h3>
-                <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
-                  جهت آغاز به کار در زیرساخت ابری لوکال‌می و دسترسی به پایگاه‌داده، احراز هویت و توابع، نخستین پروژه خود را راه‌اندازی نمایید.
+                <h3 className="text-base font-bold text-slate-900 mb-1">هیچ پروژه‌ای یافت نشد</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
+                  جهت آغاز به کار و دسترسی به پایگاه‌داده، احراز هویت و توابع، نخستین پروژه خود را راه‌اندازی نمایید.
                 </p>
                 <button
                   onClick={() => setIsCreateProjectOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2.5 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2 transition shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
                   <span>ساخت اولین پروژه</span>
@@ -394,6 +380,7 @@ export default function App() {
                   <DatabaseView
                     project={currentProject}
                     onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
+                    activeSubView={activeSubView}
                   />
                 )}
 
@@ -454,7 +441,7 @@ export default function App() {
               </>
             )}
           </main>
-        </>
+        </div>
       )}
 
       {/* Global Modals */}
@@ -468,7 +455,7 @@ export default function App() {
         isOpen={isDeployFunctionOpen}
         onClose={() => setIsDeployFunctionOpen(false)}
         onDeploy={(fn) => {
-          showToast(`تابع لبه «${fn.name}» با موفقیت در هسته Jint مستقر گردید.`);
+          showToast(`تابع لبه «${fn.name}» با موفقیت مستقر گردید.`);
         }}
       />
 
@@ -476,7 +463,7 @@ export default function App() {
         isOpen={isCreateTableOpen}
         onClose={() => setIsCreateTableOpen(false)}
         onCreate={(tbl) => {
-          showToast(`جدول «${tbl.name}» در طرحواره PostgreSQL 18 ایجاد گردید.`);
+          showToast(`جدول «${tbl.name}» با موفقیت ایجاد گردید.`);
         }}
       />
 
@@ -492,7 +479,7 @@ export default function App() {
         isOpen={isAddUserOpen}
         onClose={() => setIsAddUserOpen(false)}
         onAdd={(usr) => {
-          showToast(`کاربر «${usr.fullName}» در سامانه IDaaS ثبت گردید.`);
+          showToast(`کاربر «${usr.fullName}» با موفقیت ثبت گردید.`);
         }}
       />
 
@@ -500,7 +487,7 @@ export default function App() {
         isOpen={isAddDomainOpen}
         onClose={() => setIsAddDomainOpen(false)}
         onAdd={(dom) => {
-          showToast(`دامنه «${dom.domain}» ثبت شد. در حال صدور گواهی Let's Encrypt...`);
+          showToast(`دامنه «${dom.domain}» با موفقیت ثبت شد.`);
         }}
       />
 

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { X, Globe, ShieldCheck, AlertCircle } from 'lucide-react';
+import { X, Globe, Copy, Check } from 'lucide-react';
 import { CustomDomain } from '../../types';
 
 interface AddDomainModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (domain: Omit<CustomDomain, 'isVerified' | 'sslActive' | 'createdAt'>) => void;
+  onAdd: (domain: CustomDomain) => void;
 }
 
 export const AddDomainModal: React.FC<AddDomainModalProps> = ({
@@ -14,102 +14,110 @@ export const AddDomainModal: React.FC<AddDomainModalProps> = ({
   onAdd,
 }) => {
   const [domain, setDomain] = useState('');
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain.trim()) return;
+
     onAdd({
       domain: domain.trim().toLowerCase(),
+      isVerified: true,
+      sslActive: true,
       cnameTarget: 'edge.localme.ir',
+      createdAt: 'هم‌اکنون',
     });
+
     setDomain('');
     onClose();
   };
 
+  const handleCopyRecord = () => {
+    navigator.clipboard.writeText('edge.localme.ir');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-domain-modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
-              <Globe className="w-4 h-4" />
+      <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 text-slate-800 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Globe className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h3 id="add-domain-modal-title" className="text-base font-bold text-white">اتصال دامنه اختصاصی (.ir / .com)</h3>
-              <p className="text-xs text-zinc-400">صدور خودکار گواهی SSL رایگان Let's Encrypt</p>
+              <h3 id="add-domain-modal-title" className="text-base font-bold text-slate-900">
+                اتصال دامنه اختصاصی
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                اتصال دامنه‌های ملی و بین‌المللی با گواهی امنیتی خودکار
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">نام دامنه *</label>
+            <label className="block text-slate-700 font-medium mb-1.5">نشانی دامنه اختصاصی</label>
             <input
               type="text"
               required
+              placeholder="example.ir یا app.example.com"
               value={domain}
               onChange={(e) => setDomain(e.target.value.toLowerCase())}
-              placeholder="shop.example.ir"
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
               dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
             />
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] space-y-2">
-            <div className="flex items-center space-x-2 text-zinc-300 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-[#3ECF8E]" />
-              <span>تنظیمات DNS مورد نیاز در ارائه‌دهنده دامنه</span>
-            </div>
-            <div className="text-[11px] text-zinc-400 leading-relaxed">
-              رکورد <code className="px-1.5 py-0.5 rounded bg-[#171717] border border-[#242424] text-[#3ECF8E] font-mono">CNAME</code> زیر را در پنل کلودفلر، ابرآروان یا ایرنیک تنظیم نمایید:
-            </div>
-            <div className="p-2.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-[11px] text-zinc-200 flex justify-between items-center" dir="ltr">
-              <span>CNAME target:</span>
-              <span className="text-[#3ECF8E] font-bold">edge.localme.ir</span>
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <span className="text-slate-700 font-medium block">تنظیم رکورد DNS:</span>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              رکورد CNAME زیر را در پنل ارائه‌دهنده دامنه خود ثبت نمایید:
+            </p>
+            <div className="p-2 rounded-lg bg-white border border-slate-200 font-mono text-[11px] text-slate-800 flex justify-between items-center" dir="ltr">
+              <span>CNAME @ $\to$ edge.localme.ir</span>
+              <button
+                type="button"
+                onClick={handleCopyRecord}
+                className="text-slate-500 hover:text-emerald-700 flex items-center gap-1 text-[11px]"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'کپی شد' : 'کپی'}</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-start space-x-2 p-3 rounded-xl bg-[#3ECF8E]/5 border border-[#3ECF8E]/20 text-zinc-300 text-[11px]">
-            <AlertCircle className="w-4 h-4 text-[#3ECF8E] shrink-0 mt-0.5" />
-            <span>گواهی Let's Encrypt ظرف ۳۰ ثانیه پس از شناسایی CNAME صادر و فعال خواهد شد.</span>
-          </div>
-
-          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
+              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
             >
-              ثبت و استقرار دامنه
+              اتصال دامنه
             </button>
           </div>
         </form>

@@ -23,7 +23,7 @@ const INITIAL_FUNCTIONS: EdgeFunction[] = [];
 const INITIAL_ENV_VARS: FunctionEnvVar[] = [];
 
 export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
-  project,
+  project: _project,
   enabled,
   onToggleEnable,
   onOpenDeployModal,
@@ -32,7 +32,7 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   const [selectedFunc, setSelectedFunc] = useState<EdgeFunction | null>(null);
   const [editorCode, setEditorCode] = useState<string>('');
   const [testPayload, setTestPayload] = useState<string>('{\n  "phone": "09121112233",\n  "code": "582910"\n}');
-  const [testOutput, setTestOutput] = useState<string>('{\n  "status": "ready",\n  "message": "Click Run Live Script to execute in Jint sandbox"\n}');
+  const [testOutput, setTestOutput] = useState<string>('{\n  "status": "ready",\n  "message": "جهت اجرای تابع، دکمه اجرای آزمایشی را بزنید"\n}');
   const [execLatency, setExecLatency] = useState<number | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [envVars, setEnvVars] = useState<FunctionEnvVar[]>(INITIAL_ENV_VARS);
@@ -53,7 +53,7 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
         fn.id === selectedFunc.id ? { ...fn, script: editorCode } : fn
       )
     );
-    alert(`اسکریپت «${selectedFunc.name}» (${selectedFunc.slug}) در پروژه ${project.name} با موفقیت ذخیره گردید.`);
+    alert(`کد تابع «${selectedFunc.name}» با موفقیت ذخیره گردید.`);
   };
 
   const handleRunTest = () => {
@@ -74,11 +74,7 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
           status: 200,
           result: {
             dispatched: true,
-            provider: "kavenegar",
-            sender: "3000777",
             payloadReceived: parsedPayload,
-            memoryUsedBytes: 4194304,
-            engine: "Jint 4.0.0-beta Managed Clr-Free Sandbox"
           },
           timestampUtc: new Date().toISOString()
         };
@@ -127,28 +123,28 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Service Header Card */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-              JINT 4.0 ISOLATE SANDBOX
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              توابع ابری بدون سرور
             </span>
             <span
-              className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider ${
+              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                 enabled
-                  ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30'
-                  : 'bg-[#1f1f1f] text-zinc-500 border border-[#2e2e2e]'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
               }`}
             >
-              {enabled ? 'READY' : 'DISABLED'}
+              {enabled ? 'فعال و آماده' : 'غیرفعال'}
             </span>
           </div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-[#3ECF8E]" />
-            توابع سرورلس لبه شبکه (Serverless Edge Functions Studio)
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
-            اجرای توابع جاوااسکریپت و تایپ‌اسکریپت روی موتور ایزوله خالص Jint با سقف رم ۱۶ مگابایت و تاخیر زیر ۱۰ میلی‌ثانیه.
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Terminal className="w-5 h-5 text-emerald-600" />
+            اجرا و استقرار توابع بدون سرور
+          </h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+            اجرای منطق بک‌اند، وب‌هوک‌ها، محاسبات اختصاصی و مدیریت رویدادها با حداقل تاخیر در لبه شبکه.
           </p>
         </div>
 
@@ -156,21 +152,21 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             onClick={onToggleEnable}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition ${
               enabled
-                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
-                : 'bg-[#3ECF8E] hover:bg-[#34b27b] text-black shadow-sm'
+                ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
             }`}
           >
-            {enabled ? 'غیرفعال‌سازی سرویس توابع' : 'فعال‌سازی سرویس توابع لبه'}
+            {enabled ? 'غیرفعال‌سازی سرویس' : 'فعال‌سازی سرویس توابع'}
           </button>
 
           {enabled && (
             <button
               onClick={onOpenDeployModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
               <span>استقرار تابع جدید</span>
             </button>
           )}
@@ -178,265 +174,223 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
       </div>
 
       {!enabled ? (
-        <div className="p-12 text-center rounded-2xl bg-[#171717] border border-dashed border-[#242424] max-w-xl mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-full bg-[#1f1f1f] flex items-center justify-center mx-auto text-[#3ECF8E]">
+        <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 max-w-xl mx-auto space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto text-emerald-600">
             <Terminal className="w-6 h-6" />
           </div>
-          <h4 className="text-base font-bold text-white">سرویس توابع لبه برای این پروژه فعال نشده است</h4>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            برای اجرای کدهای هوک ارسال پیامک، اعتبارسنجی درگاه‌های بانکی، و کارهای بدون سرور، سرویس را فعال نمایید.
+          <h3 className="text-base font-bold text-slate-900">سرویس توابع ابری برای این پروژه فعال نشده است</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            برای اجرای توابع سفارشی، پردازش وب‌هوک‌های پرداخت و ثبت رخدادها، این سرویس را فعال نمایید.
           </p>
           <button
             onClick={onToggleEnable}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-semibold text-xs transition shadow-sm"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
           >
-            فعال‌سازی سرویس توابع لبه (Edge Functions)
+            فعال‌سازی سرویس توابع ابری
           </button>
         </div>
       ) : (
-        <>
-          {/* Main Studio: Function List & Interactive Code Editor */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Functions List Sidebar */}
-            <div className="lg:col-span-4 space-y-3">
-              <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="text-xs font-semibold text-zinc-400 flex items-center justify-between">
-                  <span>توابع مستقر شده ({functions.length})</span>
-                  <span className="text-[10px] text-zinc-500 font-mono">Jint Pool</span>
-                </div>
-                <div className="space-y-2 max-h-[480px] overflow-y-auto">
-                  {functions.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-[#242424]">
-                      هیچ تابعی ایجاد نشده است
-                    </div>
-                  ) : (
-                    functions.map((fn) => (
-                      <div
-                        key={fn.id}
-                        onClick={() => handleSelectFunc(fn)}
-                        className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                          selectedFunc?.id === fn.id
-                            ? 'bg-[#1f1f1f] border-[#3ECF8E]/40 shadow-sm'
-                            : 'bg-[#171717] border-[#242424] hover:border-[#3ECF8E]/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-xs font-bold text-[#3ECF8E] dir-ltr">{fn.slug}</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">{fn.invocationsCount} hits</span>
-                        </div>
-                        <div className="text-xs font-medium text-white">{fn.name}</div>
-                        <div className="text-[10px] text-zinc-400 font-mono mt-1.5 flex items-center gap-2">
-                          <span>RAM: {fn.memoryLimitMb}MB</span>
-                          <span>Timeout: {fn.timeoutSeconds}s</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Functions List Sidebar */}
+          <div className="lg:col-span-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs font-bold text-slate-900">
+                فهرست توابع مستقر شده ({functions.length})
+              </span>
             </div>
 
-            {/* Editor & Live Runner */}
-            <div className="lg:col-span-8 space-y-4">
-              {/* Code Editor Header */}
-              <div className="p-4 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4 text-[#3ECF8E]" />
-                    <span className="text-xs font-bold text-white">
-                      ویرایشگر جاوااسکریپت: <span className="font-mono text-[#3ECF8E]">{selectedFunc?.slug || 'بدون تابع'}</span>
+            <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
+              {functions.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 rounded-xl border border-dashed border-slate-200 space-y-2">
+                  <p>هنوز تابعی ثبت نشده است.</p>
+                  <button
+                    onClick={onOpenDeployModal}
+                    className="text-xs text-emerald-700 hover:underline font-medium"
+                  >
+                    + استقرار اولین تابع
+                  </button>
+                </div>
+              ) : (
+                functions.map((fn) => (
+                  <button
+                    key={fn.id}
+                    onClick={() => handleSelectFunc(fn)}
+                    className={`w-full p-3 rounded-xl border text-right transition flex items-center justify-between ${
+                      selectedFunc?.id === fn.id
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-bold">{fn.name}</div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5" dir="ltr">
+                        {fn.slug}
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500 font-mono" dir="ltr">
+                      {fn.runtime}
                     </span>
-                  </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Environment Variables Box */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                متغیرهای محیطی و کلیدهای محرمانه
+              </h4>
+
+              <form onSubmit={handleAddEnv} className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <input
+                    type="text"
+                    placeholder="KEY_NAME"
+                    value={newEnvKey}
+                    onChange={(e) => setNewEnvKey(e.target.value)}
+                    dir="ltr"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={newEnvVal}
+                    onChange={(e) => setNewEnvVal(e.target.value)}
+                    dir="ltr"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newEnvSecret}
+                      onChange={(e) => setNewEnvSecret(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>کلید محرمانه (Secret)</span>
+                  </label>
+                  <button
+                    type="submit"
+                    className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-medium text-slate-700 transition"
+                  >
+                    افزودن متغیر
+                  </button>
+                </div>
+              </form>
+
+              {envVars.length > 0 && (
+                <div className="space-y-1 max-h-32 overflow-y-auto pt-1">
+                  {envVars.map((env) => (
+                    <div
+                      key={env.key}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px]"
+                    >
+                      <span className="font-mono text-slate-700 font-bold" dir="ltr">{env.key}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-slate-500" dir="ltr">
+                          {env.isSecret && !visibleSecrets.has(env.key) ? '••••••••' : env.value}
+                        </span>
+                        {env.isSecret && (
+                          <button
+                            type="button"
+                            onClick={() => toggleSecretVisibility(env.key)}
+                            className="text-slate-400 hover:text-slate-600 p-0.5"
+                          >
+                            {visibleSecrets.has(env.key) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEnv(env.key)}
+                          className="text-slate-400 hover:text-rose-600 p-0.5"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Code Editor & Test Workspace */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Code className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-slate-900">
+                    ویرایشگر کد تابع: <span className="font-mono text-emerald-700" dir="ltr">{selectedFunc?.name || 'انتخاب نشده'}</span>
+                  </span>
+                </div>
+                {selectedFunc && (
                   <button
                     onClick={handleSaveScript}
-                    disabled={!selectedFunc}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1f1f1f] hover:bg-[#282828] disabled:opacity-50 text-zinc-200 font-medium text-xs transition border border-[#2e2e2e]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
                   >
-                    <Save className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                    <span>ذخیره اسکریپت</span>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>ذخیره تغییرات</span>
+                  </button>
+                )}
+              </div>
+
+              <textarea
+                value={editorCode}
+                onChange={(e) => setEditorCode(e.target.value)}
+                rows={10}
+                dir="ltr"
+                placeholder="// کد اسکریپت جاوااسکریپت تابع را اینجا بنویسید..."
+                className="w-full p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-xs focus:outline-none leading-relaxed"
+              />
+
+              {/* Test Execution Panel */}
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800">اجرای آزمایشی با ورودی داده</span>
+                  <button
+                    onClick={handleRunTest}
+                    disabled={isExecuting}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition disabled:opacity-50"
+                  >
+                    <Play className={`w-3.5 h-3.5 ${isExecuting ? 'animate-spin' : ''}`} />
+                    <span>{isExecuting ? 'در حال اجرا...' : 'اجرای آزمایشی'}</span>
                   </button>
                 </div>
 
-                {/* Code Textarea */}
-                <div dir="ltr">
-                  <textarea
-                    value={editorCode}
-                    onChange={(e) => setEditorCode(e.target.value)}
-                    className="w-full h-64 p-3.5 rounded-xl bg-[#0f0f0f] font-mono text-xs text-[#ededed] border border-[#242424] focus:outline-none focus:border-[#3ECF8E] leading-relaxed resize-y"
-                    spellCheck={false}
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              {/* Live Test Runner Pane */}
-              <div className="p-4 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">
-                    <Play className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                    آزمایش و اجرای زنده اسکریپت (Live Test Runner)
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {execLatency !== null && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-                        تاخیر: {execLatency} ms
-                      </span>
-                    )}
-                    <button
-                      onClick={handleRunTest}
-                      disabled={isExecuting}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-semibold text-xs transition shadow-sm disabled:opacity-50"
-                    >
-                      <Play className="w-3 h-3 fill-black" />
-                      <span>{isExecuting ? 'در حال اجرا...' : 'اجرای زنده'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3" dir="ltr">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label className="text-[11px] font-mono font-medium text-zinc-400 block mb-1">
-                      Input JSON Payload
-                    </label>
+                    <label className="text-[11px] text-slate-500 font-medium block mb-1">داده ورودی (JSON)</label>
                     <textarea
                       value={testPayload}
                       onChange={(e) => setTestPayload(e.target.value)}
-                      className="w-full h-32 p-2.5 rounded-xl bg-[#0f0f0f] font-mono text-[11px] text-zinc-300 border border-[#242424] focus:outline-none focus:border-[#3ECF8E] resize-none"
+                      rows={5}
                       dir="ltr"
+                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-[11px] text-slate-800 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono font-medium text-zinc-400 block mb-1">
-                      Execution Inspector
-                    </label>
-                    <pre className="w-full h-32 p-2.5 rounded-xl bg-[#0f0f0f] font-mono text-[11px] text-zinc-300 border border-[#242424] overflow-auto" dir="ltr">
-                      {testOutput}
-                    </pre>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] text-slate-500 font-medium">خروجی اجرا</label>
+                      {execLatency !== null && (
+                        <span className="text-[10px] text-emerald-700 font-mono" dir="ltr">{execLatency} ms</span>
+                      )}
+                    </div>
+                    <textarea
+                      value={testOutput}
+                      readOnly
+                      rows={5}
+                      dir="ltr"
+                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-[11px] text-slate-700 focus:outline-none"
+                    />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Secrets Vault & Environment Variables */}
-          <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
-            <div>
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-[#3ECF8E]" />
-                خزانه کلیدهای محرمانه و متغیرهای محیطی (Secrets Vault - AES-256-GCM)
-              </h4>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                کلیدهای محرمانه تنها در حافظه ایزوله Jint بارگذاری شده و به صورت رمزنگاری‌شده در دیتابیس ذخیره می‌شوند.
-              </p>
-            </div>
-
-            {/* Add Env Var Form */}
-            <form onSubmit={handleAddEnv} className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
-              <div className="md:col-span-4" dir="ltr">
-                <input
-                  type="text"
-                  placeholder="KEY_NAME (e.g. KAVENEGAR_TOKEN)"
-                  value={newEnvKey}
-                  onChange={(e) => setNewEnvKey(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:outline-none focus:border-[#3ECF8E] uppercase"
-                  dir="ltr"
-                />
-              </div>
-              <div className="md:col-span-5" dir="ltr">
-                <input
-                  type="password"
-                  placeholder="Secret value"
-                  value={newEnvVal}
-                  onChange={(e) => setNewEnvVal(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:outline-none focus:border-[#3ECF8E]"
-                  dir="ltr"
-                />
-              </div>
-              <div className="md:col-span-3 flex items-center justify-end gap-2">
-                <label className="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newEnvSecret}
-                    onChange={(e) => setNewEnvSecret(e.target.checked)}
-                    className="rounded border-[#242424] bg-[#0f0f0f] text-[#3ECF8E] focus:ring-[#3ECF8E]"
-                  />
-                  <span>محرمانه</span>
-                </label>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1f1f1f] hover:bg-[#282828] text-zinc-200 font-medium text-xs transition border border-[#2e2e2e]"
-                >
-                  <Plus className="w-3 h-3 text-[#3ECF8E]" />
-                  <span>افزودن</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Env Vars Table */}
-            <div className="overflow-x-auto rounded-xl border border-[#242424]">
-              <table className="w-full text-left text-xs font-mono" dir="ltr">
-                <thead>
-                  <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
-                    <th className="py-2.5 px-3">Variable Key</th>
-                    <th className="py-2.5 px-3">Value</th>
-                    <th className="py-2.5 px-3">Security Mode</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#242424]">
-                  {envVars.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-xs text-zinc-500 font-sans" dir="rtl">
-                        هیچ متغیر محیطی تعریف نشده است
-                      </td>
-                    </tr>
-                  ) : (
-                    envVars.map((v) => {
-                      const isVisible = visibleSecrets.has(v.key);
-                      return (
-                        <tr key={v.key} className="hover:bg-[#1f1f1f] transition">
-                          <td className="py-2.5 px-3 font-bold text-[#3ECF8E]">{v.key}</td>
-                          <td className="py-2.5 px-3 text-zinc-300">
-                            {v.isSecret && !isVisible ? '••••••••••••••••••••' : v.value}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                v.isSecret
-                                  ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30'
-                                  : 'bg-[#1f1f1f] text-zinc-400 border border-[#2e2e2e]'
-                              }`}
-                            >
-                              {v.isSecret ? 'AES-256 Secret' : 'Public Config'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {v.isSecret && (
-                                <button
-                                  onClick={() => toggleSecretVisibility(v.key)}
-                                  className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-[#1f1f1f]"
-                                >
-                                  {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-[#3ECF8E]" />}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleRemoveEnv(v.key)}
-                                className="p-1 rounded-full text-zinc-500 hover:text-red-400 hover:bg-[#1f1f1f]"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

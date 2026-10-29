@@ -34,6 +34,8 @@ affected_projects:
 - `apps/server/src/Routes/BaasServiceRoutes.cs`
 - `apps/server/src/wwwroot/panel.html`
 - `apps/web-console/package.json`
+- `apps/web-console/index.html`
+- `apps/web-console/tailwind.config.js`
 - `apps/web-console/src/index.css`
 - `apps/web-console/src/App.tsx`
 - `apps/web-console/vite.config.ts`
