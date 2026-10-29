@@ -77,7 +77,9 @@ public class Program
             {
                 return new PostgreSqlTenantSchemaStore(pgStore.DataSource);
             }
-            var connStr = Environment.GetEnvironmentVariable("DATABASE_URL")
+            var connStr = Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
+                ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_URL")
+                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
                 ?? Environment.GetEnvironmentVariable("LOCALME_PG_CONNECTION")
                 ?? "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
             var ds = NpgsqlDataSource.Create(PostgreSqlProjectStore.NormalizePostgresConnectionString(connStr));
@@ -310,14 +312,13 @@ public class Program
         app.MapGet("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
         app.MapGet("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
 
-        // Developer Console (/panel/*)
+        // Developer Console (/panel/* and /console/*)
         app.MapGet("/panel", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
         app.MapGet("/panel/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
         app.MapGet("/dashboard", () => Results.Redirect("/panel"));
 
-        // Redirect legacy /console routes to developer panel
-        app.MapGet("/console", () => Results.Redirect("/panel"));
-        app.MapGet("/console/{*sub}", () => Results.Redirect("/panel"));
+        app.MapGet("/console", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/console/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
 
         // Superadmin & Operator Portal (/admin/*)
         app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));

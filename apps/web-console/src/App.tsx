@@ -87,14 +87,34 @@ export default function App() {
     projects[0]?.id || ''
   );
 
-  // Parse route: either Stage 1 ('/' or '/hub') or Stage 2 ('/projects/:slug/:tab')
-  const isHubStage = location.pathname === '/' || location.pathname === '/hub';
+  // Parse route:
+  // Stage 1 Hub: '/', '/hub', '/panel', '/panel/', '/console', '/console/'
+  // Stage 2 Studio: '/panel/:slugOrId/:tab', '/console/:slugOrId/:tab', '/projects/:slugOrId/:tab'
   const pathParts = location.pathname.split('/').filter(Boolean);
+  const prefix = pathParts[0] || '';
+  const isPrefix = prefix === 'panel' || prefix === 'console' || prefix === 'projects';
+  const slugOrId = isPrefix ? pathParts[1] : (pathParts.length > 0 && prefix !== 'hub' ? pathParts[0] : null);
+  const rawTab = isPrefix ? pathParts[2] : pathParts[1];
 
-  let activeTab: TabId = 'database';
-  if (pathParts[0] === 'projects' && pathParts[2]) {
-    activeTab = pathParts[2] as TabId;
-  }
+  const isHubStage = !slugOrId || location.pathname === '/' || location.pathname === '/hub' || location.pathname === '/panel' || location.pathname === '/console';
+
+  const mapToTabId = (tab: string | undefined): TabId => {
+    if (!tab) return 'database';
+    const lower = tab.toLowerCase();
+    if (lower === 'db' || lower === 'sqleditor' || lower === 'tables' || lower === 'schema') return 'database';
+    if (lower === 'auth' || lower === 'users') return 'auth';
+    if (lower === 'storage' || lower === 'buckets' || lower === 'files') return 'storage';
+    if (lower === 'functions' || lower === 'edge') return 'functions';
+    if (lower === 'ipg' || lower === 'pay' || lower === 'payments') return 'ipg';
+    if (lower === 'hosting' || lower === 'domains') return 'hosting';
+    if (lower === 'compliance' || lower === 'enamad') return 'compliance';
+    if (lower === 'telemetry' || lower === 'logs') return 'telemetry';
+    if (lower === 'settings') return 'settings';
+    if (lower === 'overview') return 'overview';
+    return 'database';
+  };
+
+  const activeTab: TabId = mapToTabId(rawTab);
 
   // Capability set for current project
   const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
@@ -120,6 +140,40 @@ export default function App() {
     }, 3500);
   };
 
+  // Fetch live projects from backend API
+  useEffect(() => {
+    const fetchLiveProjects = async () => {
+      try {
+        const res = await fetch('/_baas/v1/projects');
+        if (res.ok) {
+          const live = await res.json();
+          if (Array.isArray(live) && live.length > 0) {
+            setProjects(live.map((p: Record<string, unknown>) => ({
+              id: String(p.id || p.Id || ''),
+              name: String(p.name || p.Name || p.id || ''),
+              slug: String(p.slug || p.Slug || p.id || ''),
+              description: String(p.description || p.Description || ''),
+              region: String(p.region || p.Region || 'ir-teh-1 (آسیاتک برج میلاد)'),
+              status: (p.status === 'PROVISIONING' || p.status === 'MAINTENANCE' ? p.status : 'ACTIVE') as Project['status'],
+              createdAt: String(p.createdAt || p.CreatedAt || new Date().toISOString()),
+              walletBalanceIrr: Number(p.walletBalanceIrr ?? p.WalletBalanceIrr ?? 0),
+              hasPassword: Boolean(p.hasPassword),
+              services: (p.services as Project['services']) || {
+                database: { isEnabled: true },
+                auth: { isEnabled: true },
+                storage: { isEnabled: true },
+                functions: { isEnabled: true },
+              }
+            })));
+          }
+        }
+      } catch {
+        // fallback to localStorage or default
+      }
+    };
+    fetchLiveProjects();
+  }, []);
+
   // Keep localStorage in sync
   useEffect(() => {
     try {
@@ -131,25 +185,48 @@ export default function App() {
 
   // Synchronize route with currentProjectId
   useEffect(() => {
-    if (pathParts[0] === 'projects' && pathParts[1]) {
-      const match = projects.find((p) => p.slug === pathParts[1]);
-      if (match && match.id !== currentProjectId) {
-        setCurrentProjectId(match.id);
+    if (slugOrId) {
+      const match = projects.find((p) => p.slug === slugOrId || p.id === slugOrId);
+      if (match) {
+        if (match.id !== currentProjectId) {
+          setCurrentProjectId(match.id);
+        }
+      } else {
+        // Provisional entry so user can access the project immediately
+        const provisional: Project = {
+          id: slugOrId,
+          slug: slugOrId,
+          name: slugOrId,
+          description: `پروژه ${slugOrId}`,
+          region: 'ir-teh-1 (آسیاتک برج میلاد)',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          walletBalanceIrr: 0,
+          hasPassword: false,
+          services: {
+            database: { isEnabled: true },
+            auth: { isEnabled: true },
+            storage: { isEnabled: true },
+            functions: { isEnabled: true },
+          }
+        };
+        setProjects((prev) => [provisional, ...prev]);
+        setCurrentProjectId(slugOrId);
       }
     }
-  }, [location.pathname, projects, currentProjectId, pathParts]);
+  }, [slugOrId, projects, currentProjectId]);
 
   const currentProject =
     projects.find((p) => p.id === currentProjectId) || projects[0];
 
   const handleSelectProject = (proj: Project) => {
     setCurrentProjectId(proj.id);
-    navigate(`/projects/${proj.slug}/${activeTab}`);
+    navigate(`/panel/${proj.slug}/${activeTab}`);
   };
 
   const handleTabChange = (tab: TabId) => {
     if (currentProject) {
-      navigate(`/projects/${currentProject.slug}/${tab}`);
+      navigate(`/panel/${currentProject.slug}/${tab}`);
     }
   };
 

@@ -16,7 +16,13 @@ cd "${ROOT_DIR}"
 echo "🧹 1. Cleaning up stale build artifacts..."
 rm -rf dist/server 2>/dev/null || true
 
-echo "🔨 2. Compiling and publishing .NET 10 host locally..."
+echo "⚛️ 2. Compiling web-console (React + Vite + Supabase Design System)..."
+pnpm -C apps/web-console build
+cp apps/web-console/dist/index.html apps/server/src/wwwroot/panel.html
+mkdir -p apps/server/src/wwwroot/assets
+cp -r apps/web-console/dist/assets/* apps/server/src/wwwroot/assets/
+
+echo "🔨 3. Compiling and publishing .NET 10 host locally..."
 dotnet publish apps/server/src/LocalMe.Server.csproj -c Release -o dist/server
 
 if [ ! -f "dist/server/LocalMe.Server.dll" ]; then

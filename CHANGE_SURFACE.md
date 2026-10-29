@@ -1,35 +1,42 @@
 ---
-title: "Change Surface: Full-Console Supabase Custom Design System & Localized Font Assets"
+title: "Change Surface: Console Production Integration, Resilient PostgreSQL SSL & Runflare Deployment"
 author: "Antigravity Engineering System"
 created_date: "2026-10-30"
 target_branch: "main"
 risk_level: "LOW"
 affected_projects:
   - "apps/web-console"
+  - "apps/server"
+  - "libs/infrastructure"
 ---
 
-# Change Surface: Full-Console Supabase Custom Design System & Localized Font Assets
+# Change Surface: Console Production Integration, Resilient PostgreSQL SSL & Runflare Deployment
 
 ## 1. Intent & Business Rationale
-Complete the 100% end-to-end frontend UI unification of the LocalMe Developer Console into the Supabase design system:
-1. Localize all font assets via `@fontsource/inter` and `@fontsource/source-code-pro` to avoid runtime dependencies on external CDNs or Google Fonts (which are throttled/blocked by Iranian DPI).
-2. Drop custom CSS utility classes from `index.css`, replacing them with pure standard Tailwind CSS utilities (`rounded-full`, `bg-[#3ECF8E]`, `dir="ltr"`).
-3. Overhaul all remaining 9 views (`OverviewView`, `AuthView`, `EdgeFunctionsView`, `StorageView`, `IpgView`, `HostingView`, `ComplianceView`, `TelemetryView`, `SettingsView`) and 5 modals (`DeployFunctionModal`, `CreateBucketModal`, `AddUserModal`, `AddDomainModal`, `TopupModal`) to the native near-black surfaces (`#0f0f0f` ground, `#171717` card surfaces, `#242424` borders), emerald accents (`#3ECF8E`), pill-shaped CTAs, Lucide icons, and zero emojis.
-4. Maintain strict LTR isolation container (`dir="ltr"`, `font-mono`) for code snippets, JSON payloads, URLs, hashes, and technical data.
+1. Fix production web-console delivery by integrating the compiled Vite/React Supabase developer console directly into `apps/server/src/wwwroot/panel.html` and `assets/`, ensuring that `/panel` and `/console` routes serve the modern design system rather than stale legacy static HTML.
+2. Fix PostgreSQL connection string parsing in `PostgreSqlProjectStore.cs` and `Program.cs` to support both URI and ADO.NET connection strings, resilient SSL modes (`SSL Mode=Prefer`), and structured JSON error responses instead of unhandled 500 HTML exceptions on database routes.
+3. Update `scripts/deploy-runflare.sh` to compile `apps/web-console` and synchronize all production static assets before publishing the .NET server container.
 
 ## 2. Affected Monorepo Projects & Profiles
 | Project Path | Architectural Profile | Responsibility in this Change |
 |---|---|---|
-| `apps/web-console` | Profile B (Web Application) | Complete Supabase design system overhaul across all views, modals, and local font bundling |
+| `apps/web-console` | Profile B (Web Application) | Base URL configuration, live project API sync, and multi-prefix route parser |
+| `apps/server` | Profile A (Backend Service) | Panel/console routing, structured JSON database error handling, and webroot asset delivery |
+| `libs/infrastructure` | Profile C (Shared Library) | Resilient PostgreSQL connection string normalization and SSL mode resolution |
 
 ## 3. Code Surface
 
 ### Added Files
-None
+- `apps/server/src/wwwroot/assets/`
 
 ### Modified Files
+- `apps/server/src/Program.cs`
+- `apps/server/src/Routes/BaasServiceRoutes.cs`
+- `apps/server/src/wwwroot/panel.html`
 - `apps/web-console/package.json`
 - `apps/web-console/src/index.css`
+- `apps/web-console/src/App.tsx`
+- `apps/web-console/vite.config.ts`
 - `apps/web-console/src/views/OverviewView.tsx`
 - `apps/web-console/src/views/AuthView.tsx`
 - `apps/web-console/src/views/EdgeFunctionsView.tsx`
@@ -44,7 +51,6 @@ None
 - `apps/web-console/src/views/database/TableDataGrid.tsx`
 - `apps/web-console/src/views/database/SchemaDesigner.tsx`
 - `apps/web-console/src/views/database/SqlQueryRunner.tsx`
-- `apps/web-console/src/App.tsx`
 - `apps/web-console/src/components/Header.tsx`
 - `apps/web-console/src/components/Navigation.tsx`
 - `apps/web-console/src/components/modals/DeployFunctionModal.tsx`
@@ -54,6 +60,8 @@ None
 - `apps/web-console/src/components/modals/TopupModal.tsx`
 - `apps/web-console/src/components/modals/CreateProjectModal.tsx`
 - `apps/web-console/src/components/modals/CreateTableModal.tsx`
+- `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`
+- `scripts/deploy-runflare.sh`
 - `pnpm-lock.yaml`
 
 ## 4. Test Surface
