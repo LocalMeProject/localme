@@ -49,26 +49,26 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-user-modal-title"
     >
-      <div className="relative w-full max-w-md rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+      <div className="relative w-full max-w-md rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="add-user-modal-title" className="text-base font-bold text-zinc-100">افزودن کاربر جدید</h3>
+              <h3 id="add-user-modal-title" className="text-base font-bold text-white">افزودن کاربر جدید</h3>
               <p className="text-xs text-zinc-400">ثبت مستقیم کاربر در دیتابیس ایزوله احراز هویت IDaaS</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -83,7 +83,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="مثال: علی رضایی"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100"
             />
           </div>
 
@@ -97,7 +97,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="0912xxxxxxx"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
+              dir="ltr"
             />
           </div>
 
@@ -111,7 +112,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="user@example.com"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
+              dir="ltr"
             />
           </div>
 
@@ -120,7 +122,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as UserAuthProvider)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus:outline-none text-zinc-100 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
             >
               <option value="sms_otp">کاوه‌نگار / ملی پیامک (OTP SMS)</option>
               <option value="password">نام کاربری و رمز عبور (Argon2id)</option>
@@ -128,17 +130,17 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
             </select>
           </div>
 
-          <div className="pt-4 flex items-center justify-end space-x-3">
+          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium transition"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/10"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
             >
               افزودن کاربر
             </button>

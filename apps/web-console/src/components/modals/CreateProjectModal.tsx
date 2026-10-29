@@ -163,13 +163,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="btn-pill-secondary text-xs px-4 py-2"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="btn-pill-primary text-xs px-5 py-2"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
             >
               ایجاد و راه‌اندازی پروژه
             </button>

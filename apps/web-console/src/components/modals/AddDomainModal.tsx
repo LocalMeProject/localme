@@ -39,26 +39,26 @@ export const AddDomainModal: React.FC<AddDomainModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-domain-modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
               <Globe className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="add-domain-modal-title" className="text-base font-bold text-zinc-100">اتصال دامنه اختصاصی (.ir / .com)</h3>
+              <h3 id="add-domain-modal-title" className="text-base font-bold text-white">اتصال دامنه اختصاصی (.ir / .com)</h3>
               <p className="text-xs text-zinc-400">صدور خودکار گواهی SSL رایگان Let's Encrypt</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -73,40 +73,41 @@ export const AddDomainModal: React.FC<AddDomainModalProps> = ({
               value={domain}
               onChange={(e) => setDomain(e.target.value.toLowerCase())}
               placeholder="shop.example.ir"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
+              dir="ltr"
             />
           </div>
 
-          <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+          <div className="p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] space-y-2">
             <div className="flex items-center space-x-2 text-zinc-300 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-[#3ECF8E]" />
               <span>تنظیمات DNS مورد نیاز در ارائه‌دهنده دامنه</span>
             </div>
             <div className="text-[11px] text-zinc-400 leading-relaxed">
-              رکورد <code className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-amber-400 font-mono">CNAME</code> زیر را در پنل کلودفلر، ابرآروان یا ایرنیک تنظیم نمایید:
+              رکورد <code className="px-1.5 py-0.5 rounded bg-[#171717] border border-[#242424] text-[#3ECF8E] font-mono">CNAME</code> زیر را در پنل کلودفلر، ابرآروان یا ایرنیک تنظیم نمایید:
             </div>
-            <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800/80 font-mono text-[11px] text-zinc-200 flex justify-between items-center">
+            <div className="p-2.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-[11px] text-zinc-200 flex justify-between items-center" dir="ltr">
               <span>CNAME target:</span>
-              <span className="text-amber-400 font-bold">edge.localme.ir</span>
+              <span className="text-[#3ECF8E] font-bold">edge.localme.ir</span>
             </div>
           </div>
 
-          <div className="flex items-start space-x-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-300/80 text-[11px]">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex items-start space-x-2 p-3 rounded-xl bg-[#3ECF8E]/5 border border-[#3ECF8E]/20 text-zinc-300 text-[11px]">
+            <AlertCircle className="w-4 h-4 text-[#3ECF8E] shrink-0 mt-0.5" />
             <span>گواهی Let's Encrypt ظرف ۳۰ ثانیه پس از شناسایی CNAME صادر و فعال خواهد شد.</span>
           </div>
 
-          <div className="pt-4 flex items-center justify-end space-x-3">
+          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium transition"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/10"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
             >
               ثبت و استقرار دامنه
             </button>

@@ -42,10 +42,10 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-amber-400" />
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-[#3ECF8E]" />
             مرکز تله‌متری و لاگ‌های زنده سرور (Live Telemetry & Traces)
           </h3>
           <p className="text-xs text-zinc-400 mt-1">
@@ -55,42 +55,42 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
 
         <button
           onClick={handleRefresh}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition border border-zinc-700"
+          className="flex items-center space-x-1.5 px-4 py-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] text-xs font-medium transition-colors"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+          <RefreshCw className="w-3.5 h-3.5 text-[#3ECF8E]" />
           <span>تازه‌سازی لاگ‌ها</span>
         </button>
       </div>
 
       {/* Usage Ledger Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+        <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] hover:border-[#2e2e2e] transition shadow-sm">
           <div className="text-[11px] text-zinc-400">کوئری‌های پایگاه داده</div>
-          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۲۴,۱۸۰</div>
+          <div className="text-xl font-bold font-mono text-white mt-1">۲۴,۱۸۰</div>
           <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۲ ریال به ازای هر کوئری</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+        <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] hover:border-[#2e2e2e] transition shadow-sm">
           <div className="text-[11px] text-zinc-400">پیامک‌های OTP خدماتی</div>
-          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۱,۴۲۰</div>
+          <div className="text-xl font-bold font-mono text-white mt-1">۱,۴۲۰</div>
           <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۱,۵۰۰ ریال به ازای پیامک</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+        <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] hover:border-[#2e2e2e] transition shadow-sm">
           <div className="text-[11px] text-zinc-400">پردازش توابع لبه Jint</div>
-          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۵۳,۶۴۰ ms</div>
+          <div className="text-xl font-bold font-mono text-white mt-1">۵۳,۶۴۰ ms</div>
           <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۱ ریال به ازای هر میلی‌ثانیه</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+        <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] hover:border-[#2e2e2e] transition shadow-sm">
           <div className="text-[11px] text-zinc-400">فضای ذخیره‌سازی ابری</div>
-          <div className="text-xl font-bold font-mono text-zinc-100 mt-1">۵۵.۰ MB</div>
+          <div className="text-xl font-bold font-mono text-white mt-1">۵۵.۰ MB</div>
           <div className="text-[10px] text-zinc-500 font-mono mt-0.5">نرخ: ۵۰ ریال به ازای هر مگابایت</div>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="w-3.5 h-3.5 text-zinc-500 absolute right-3 top-2.5" />
@@ -99,14 +99,14 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
               placeholder="جستجو در پیام لاگ‌ها..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60"
+              className="w-full pr-8 pl-3 py-1.5 rounded-full bg-[#0f0f0f] border border-[#242424] text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-[#3ECF8E]"
             />
           </div>
 
           <select
             value={selectedService}
             onChange={(e) => setSelectedService(e.target.value)}
-            className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-300"
+            className="px-3 py-1.5 rounded-full bg-[#0f0f0f] border border-[#242424] text-xs text-zinc-300 focus:outline-none focus:border-[#3ECF8E]"
           >
             <option value="all">همه سرویس‌ها</option>
             <option value="database">پایگاه داده</option>
@@ -119,7 +119,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
           <select
             value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
-            className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-300"
+            className="px-3 py-1.5 rounded-full bg-[#0f0f0f] border border-[#242424] text-xs text-zinc-300 focus:outline-none focus:border-[#3ECF8E]"
           >
             <option value="all">همه سطوح</option>
             <option value="INFO">INFO</option>
@@ -134,11 +134,11 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
       </div>
 
       {/* Logs Table */}
-      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+      <div className="rounded-xl border border-[#242424] bg-[#171717] overflow-hidden" dir="ltr">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+          <table className="w-full text-left text-xs font-mono border-collapse">
             <thead>
-              <tr className="border-b border-zinc-800/60 text-zinc-400">
+              <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
                 <th className="py-2.5 px-3">زمان</th>
                 <th className="py-2.5 px-3">سرویس</th>
                 <th className="py-2.5 px-3">سطح</th>
@@ -148,7 +148,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
                 <th className="py-2.5 px-3">ردیابی (TraceId)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/40">
+            <tbody className="divide-y divide-[#242424]">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-xs text-zinc-500">
@@ -157,21 +157,21 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-zinc-850/30">
+                  <tr key={log.id} className="hover:bg-[#1f1f1f] transition-colors">
                     <td className="py-2.5 px-3 text-zinc-500 whitespace-nowrap">{log.timestamp}</td>
                     <td className="py-2.5 px-3">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 font-bold uppercase">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#0f0f0f] border border-[#242424] text-zinc-300 font-bold uppercase">
                         {log.service}
                       </span>
                     </td>
                     <td className="py-2.5 px-3">
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                           log.level === 'INFO'
-                            ? 'text-emerald-400 bg-emerald-500/10'
+                            ? 'text-[#3ECF8E] bg-[#3ECF8E]/10 border-[#3ECF8E]/20'
                             : log.level === 'WARN'
-                            ? 'text-amber-400 bg-amber-500/10'
-                            : 'text-red-400 bg-red-500/10'
+                            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                            : 'text-red-400 bg-red-500/10 border-red-500/20'
                         }`}
                       >
                         {log.level}

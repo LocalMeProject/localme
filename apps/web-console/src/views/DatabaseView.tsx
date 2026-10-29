@@ -341,7 +341,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
         <div className="flex items-center gap-2.5">
           <button
             onClick={fetchTables}
-            className="btn-pill-secondary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3.5 py-1.5 transition-colors"
             title="بازخوانی جداول"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
@@ -349,7 +349,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
           </button>
           <button
             onClick={onOpenCreateTableModal}
-            className="btn-pill-primary"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-4 py-1.5 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ ساخت جدول جدید</span>

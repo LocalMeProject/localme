@@ -74,10 +74,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-amber-400" />
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Settings className="w-5 h-5 text-[#3ECF8E]" />
             تنظیمات عمومی، کلیدهای دسترسی و امنیت پروژه
           </h3>
           <p className="text-xs text-zinc-400 mt-1">
@@ -88,8 +88,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* General Settings */}
-        <div className="lg:col-span-6 p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-4">
-          <h4 className="text-xs font-bold text-zinc-200 border-b border-zinc-800/80 pb-3">
+        <div className="lg:col-span-6 p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
+          <h4 className="text-xs font-bold text-zinc-200 border-b border-[#242424] pb-3">
             مشخصات عمومی پروژه
           </h4>
 
@@ -100,7 +100,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 font-semibold"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] text-xs text-zinc-200 font-semibold focus:border-[#3ECF8E] focus:outline-none"
               />
             </div>
 
@@ -110,7 +110,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-amber-400 font-mono"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] text-xs text-[#3ECF8E] font-mono focus:border-[#3ECF8E] focus:outline-none"
+                dir="ltr"
               />
             </div>
 
@@ -120,13 +121,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 resize-none"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] text-xs text-zinc-300 resize-none focus:border-[#3ECF8E] focus:outline-none"
               />
             </div>
 
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition"
+              className="px-5 py-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs transition-colors"
             >
               ذخیره تغییرات عمومی
             </button>
@@ -134,17 +135,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Project Password (Scoped Credential) */}
-        <div className="lg:col-span-6 p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+        <div className="lg:col-span-6 p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
+          <div className="flex items-center justify-between border-b border-[#242424] pb-3">
             <h4 className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-400" />
+              <Lock className="w-4 h-4 text-[#3ECF8E]" />
               رمز عبور اختصاصی پروژه (Project-Scoped Access)
             </h4>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+              className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium ${
                 hasPassword
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-zinc-800 text-zinc-500'
+                  ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/20'
+                  : 'bg-[#0f0f0f] border border-[#242424] text-zinc-500'
               }`}
             >
               {hasPassword ? 'رمز فعال است' : 'رمز تنظیم نشده'}
@@ -163,14 +164,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 placeholder="حداقل ۴ کاراکتر"
                 value={projectPassword}
                 onChange={(e) => setProjectPassword(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 font-mono text-xs text-zinc-200"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
+                dir="ltr"
               />
             </div>
 
             <div className="flex items-center space-x-2">
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition"
+                className="px-5 py-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs transition-colors"
               >
                 ثبت رمز عبور اختصاصی
               </button>
@@ -178,7 +180,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={handleRemovePassword}
-                  className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition"
+                  className="px-4 py-2 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/20 transition-colors"
                 >
                   حذف رمز پروژه
                 </button>
@@ -189,11 +191,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Per-Service API Keys Management */}
-      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-4">
-        <div className="border-b border-zinc-800/80 pb-3 flex items-center justify-between">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
+        <div className="border-b border-[#242424] pb-3 flex items-center justify-between">
           <div>
             <h4 className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-              <Key className="w-4 h-4 text-amber-400" />
+              <Key className="w-4 h-4 text-[#3ECF8E]" />
               کلیدهای دسترسی تفکیک‌شده سرویس‌ها (Per-Service API Keys)
             </h4>
             <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -204,14 +206,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(apiKeys).map(([service, keyVal]) => (
-            <div key={service} className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+            <div key={service} className="p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase font-mono text-amber-400">
+                <span className="text-xs font-bold uppercase font-mono text-[#3ECF8E]">
                   سرویس {service}
                 </span>
                 <button
                   onClick={() => handleRegenerateKey(service)}
-                  className="flex items-center space-x-1 text-[11px] text-zinc-400 hover:text-zinc-200 transition"
+                  className="flex items-center space-x-1 text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors"
                 >
                   <RotateCw className="w-3 h-3" />
                   <span>صدور مجدد</span>
@@ -223,15 +225,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   readOnly
                   value={keyVal}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 font-mono text-xs text-zinc-300 select-all"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-xs text-zinc-300 select-all focus:outline-none"
+                  dir="ltr"
                 />
                 <button
                   onClick={() => handleCopyKey(service, keyVal)}
-                  className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-300 transition"
+                  className="p-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-zinc-300 transition-colors"
                   title="کپی کلید"
                 >
                   {copiedKey === service ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#3ECF8E]" />
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
@@ -243,7 +246,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Danger Zone */}
-      <div className="p-5 rounded-2xl bg-red-950/20 border border-red-500/30 space-y-3">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-red-500/30 space-y-3">
         <h4 className="text-xs font-bold text-red-400 flex items-center gap-2">
           <Trash2 className="w-4 h-4" />
           حذف دائمی پروژه (Danger Zone)
@@ -253,7 +256,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </p>
         <button
           onClick={onDeleteProject}
-          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition shadow-sm"
+          className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white font-medium text-xs transition-colors"
         >
           حذف دائمی این پروژه
         </button>

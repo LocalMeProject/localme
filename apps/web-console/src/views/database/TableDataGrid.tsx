@@ -61,7 +61,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
 
           <button
             onClick={onRefresh}
-            className="btn-pill-secondary text-xs px-3 py-1.5"
+            className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3 py-1.5 transition-colors"
             title="تازه سازی"
           >
             <RefreshCw className={`w-3 h-3 ${isLoadingData ? 'animate-spin' : ''}`} />
@@ -74,7 +74,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
           </span>
           <button
             onClick={() => setIsInsertOpen(true)}
-            className="btn-pill-primary text-xs px-3 py-1.5"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
             disabled={!activeTable}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -93,7 +93,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
 
       {/* STRICT LTR ISOLATION DATA GRID CONTAINER */}
       <div className="rounded-xl border border-[#242424] bg-[#171717] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto ltr-isolation max-h-[520px]">
+        <div className="overflow-x-auto max-h-[520px]" dir="ltr">
           <table className="w-full text-left text-xs font-mono border-collapse" dir="ltr">
             <thead>
               <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400 sticky top-0 z-10">
@@ -178,7 +178,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
             </button>
           </div>
 
-          <div className="ltr-isolation">
+          <div dir="ltr">
             <textarea
               value={insertRecordJson}
               onChange={(e) => setInsertRecordJson(e.target.value)}
@@ -192,13 +192,13 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setIsInsertOpen(false)}
-              className="btn-pill-secondary text-xs px-3 py-1.5"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3.5 py-1.5 transition-colors"
             >
               انصراف
             </button>
             <button
               onClick={handleInsert}
-              className="btn-pill-primary text-xs px-3 py-1.5"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
             >
               ذخیره در دیتابیس
             </button>
