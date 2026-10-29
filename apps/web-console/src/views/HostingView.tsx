@@ -42,10 +42,10 @@ export const HostingView: React.FC<HostingViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-amber-400" />
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Globe className="w-5 h-5 text-[#3ECF8E]" />
             استقرار وب‌سایت و مدیریت دامنه‌ها (Web Hosting & Anycast CDN)
           </h3>
           <p className="text-xs text-zinc-400 mt-1">
@@ -56,25 +56,26 @@ export const HostingView: React.FC<HostingViewProps> = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={onOpenDeployModal}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition shadow-sm"
+            className="flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs transition-colors"
           >
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <Zap className="w-3.5 h-3.5" />
             <span>+ استقرار نسخه جدید</span>
           </button>
         </div>
       </div>
 
       {/* Subdomain Live Banner */}
-      <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center space-x-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#3ECF8E] animate-pulse" />
           <div>
             <div className="text-[11px] text-zinc-400">آدرس زنده پروژه روی شبکه ملی توزیع محتوا:</div>
             <a
               href={`https://${project.slug}.localme.ir`}
               target="_blank"
               rel="noreferrer"
-              className="text-sm font-bold font-mono text-amber-400 hover:underline flex items-center gap-1.5 mt-0.5"
+              className="text-sm font-bold font-mono text-[#3ECF8E] hover:underline flex items-center gap-1.5 mt-0.5"
+              dir="ltr"
             >
               https://{project.slug}.localme.ir
               <ExternalLink className="w-3.5 h-3.5" />
@@ -83,15 +84,15 @@ export const HostingView: React.FC<HostingViewProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 text-xs font-mono">
-          <span className="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700">
-            گواهی امنیتی: <strong className="text-emerald-400">Let's Encrypt SSL</strong>
+          <span className="px-3 py-1 rounded-full bg-[#0f0f0f] text-zinc-300 border border-[#242424]">
+            گواهی امنیتی: <strong className="text-[#3ECF8E]">Let's Encrypt SSL</strong>
           </span>
         </div>
       </div>
 
       {/* Deployments Releases Table */}
-      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-3">
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
+        <div className="flex items-center justify-between border-b border-[#242424] pb-3">
           <span className="text-xs font-bold text-zinc-200">
             تاریخچه نسخه‌های مستقر شده ({deployments.length})
           </span>
@@ -100,10 +101,10 @@ export const HostingView: React.FC<HostingViewProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+        <div className="rounded-xl border border-[#242424] overflow-hidden" dir="ltr">
+          <table className="w-full text-left text-xs font-mono border-collapse">
             <thead>
-              <tr className="border-b border-zinc-800/60 text-zinc-400">
+              <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
                 <th className="py-2.5 px-3">شناسه استقرار</th>
                 <th className="py-2.5 px-3">شاخه گیت</th>
                 <th className="py-2.5 px-3">کامیت</th>
@@ -114,7 +115,7 @@ export const HostingView: React.FC<HostingViewProps> = ({
                 <th className="py-2.5 px-3 text-right">عملیات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/40">
+            <tbody className="divide-y divide-[#242424]">
               {deployments.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-xs text-zinc-500">
@@ -123,14 +124,14 @@ export const HostingView: React.FC<HostingViewProps> = ({
                 </tr>
               ) : (
                 deployments.map((dep) => (
-                  <tr key={dep.id} className="hover:bg-zinc-850/30">
+                  <tr key={dep.id} className="hover:bg-[#1f1f1f] transition-colors">
                     <td className="py-2.5 px-3 font-bold text-zinc-200">{dep.id}</td>
                     <td className="py-2.5 px-3 text-zinc-300">{dep.branch}</td>
-                    <td className="py-2.5 px-3 text-amber-400">{dep.commitSha}</td>
+                    <td className="py-2.5 px-3 text-[#3ECF8E]">{dep.commitSha}</td>
                     <td className="py-2.5 px-3 text-zinc-400">{dep.domain}</td>
                     <td className="py-2.5 px-3 text-zinc-300">{(dep.sizeBytes / (1024 * 1024)).toFixed(1)} MB</td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#3ECF8E]/10 text-[#3ECF8E] font-medium border border-[#3ECF8E]/20">
                         {dep.status}
                       </span>
                     </td>
@@ -141,13 +142,13 @@ export const HostingView: React.FC<HostingViewProps> = ({
                           href={dep.previewUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2 py-1 rounded text-[11px] bg-zinc-800 hover:bg-zinc-750 text-zinc-200"
+                          className="px-2.5 py-1 rounded-full text-[11px] bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] transition-colors"
                         >
                           پیش‌نمایش
                         </a>
                         <button
                           onClick={() => handleRollback(dep.id)}
-                          className="p-1 rounded text-zinc-400 hover:text-amber-400 hover:bg-zinc-800"
+                          className="p-1.5 rounded-full text-zinc-400 hover:text-[#3ECF8E] hover:bg-[#242424] transition-colors"
                           title="Rollback"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
@@ -163,29 +164,29 @@ export const HostingView: React.FC<HostingViewProps> = ({
       </div>
 
       {/* Custom Domains Manager */}
-      <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-3">
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
+        <div className="flex items-center justify-between border-b border-[#242424] pb-3">
           <div>
             <span className="text-xs font-bold text-zinc-200">
               دامنه‌های اختصاصی متصل (Custom Domains)
             </span>
             <div className="text-[11px] text-zinc-400 mt-0.5">
-              رکورد CNAME دامنه خود را به <span className="font-mono text-amber-400">cname.localme.ir</span> متصل کنید.
+              رکورد CNAME دامنه خود را به <span className="font-mono text-[#3ECF8E]">cname.localme.ir</span> متصل کنید.
             </div>
           </div>
 
           <button
             onClick={onOpenAddDomainModal}
-            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition"
+            className="px-4 py-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] text-xs font-medium transition-colors"
           >
             + اتصال دامنه اختصاصی
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+        <div className="rounded-xl border border-[#242424] overflow-hidden" dir="ltr">
+          <table className="w-full text-left text-xs font-mono border-collapse">
             <thead>
-              <tr className="border-b border-zinc-800/60 text-zinc-400">
+              <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
                 <th className="py-2.5 px-3">دامنه</th>
                 <th className="py-2.5 px-3">مقصد CNAME</th>
                 <th className="py-2.5 px-3">احراز مالکیت DNS</th>
@@ -194,7 +195,7 @@ export const HostingView: React.FC<HostingViewProps> = ({
                 <th className="py-2.5 px-3 text-right">عملیات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/40">
+            <tbody className="divide-y divide-[#242424]">
               {domains.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-xs text-zinc-500">
@@ -203,16 +204,16 @@ export const HostingView: React.FC<HostingViewProps> = ({
                 </tr>
               ) : (
                 domains.map((dom) => (
-                  <tr key={dom.domain} className="hover:bg-zinc-850/30">
-                    <td className="py-2.5 px-3 font-bold text-amber-400">{dom.domain}</td>
+                  <tr key={dom.domain} className="hover:bg-[#1f1f1f] transition-colors">
+                    <td className="py-2.5 px-3 font-bold text-[#3ECF8E]">{dom.domain}</td>
                     <td className="py-2.5 px-3 text-zinc-400">{dom.cnameTarget}</td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#3ECF8E]/10 text-[#3ECF8E] font-medium border border-[#3ECF8E]/20">
                         تایید شده
                       </span>
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 flex items-center gap-1 w-max">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#3ECF8E]/10 text-[#3ECF8E] font-medium border border-[#3ECF8E]/20 flex items-center gap-1 w-max">
                         <ShieldCheck className="w-3 h-3" />
                         فعال (Auto-Renew)
                       </span>
@@ -221,7 +222,7 @@ export const HostingView: React.FC<HostingViewProps> = ({
                     <td className="py-2.5 px-3 text-right">
                       <button
                         onClick={() => handleRemoveDomain(dom.domain)}
-                        className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition"
+                        className="p-1.5 rounded-full text-zinc-500 hover:text-red-400 hover:bg-[#242424] transition-colors"
                         title="حذف دامنه"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

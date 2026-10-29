@@ -305,7 +305,7 @@ export default function App() {
                 </p>
                 <button
                   onClick={() => setIsCreateProjectOpen(true)}
-                  className="btn-pill-primary"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2.5 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>ساخت اولین پروژه</span>

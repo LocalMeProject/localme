@@ -87,7 +87,7 @@ export const SqlQueryRunner: React.FC<SqlQueryRunnerProps> = ({
             }
           }}
           rows={6}
-          className="w-full p-4 font-mono text-xs text-[#ededed] bg-[#0f0f0f] focus:outline-none focus:ring-1 focus:ring-[#3ECF8E] resize-y leading-relaxed ltr-isolation"
+          className="w-full p-4 font-mono text-xs text-[#ededed] bg-[#0f0f0f] focus:outline-none focus:ring-1 focus:ring-[#3ECF8E] resize-y leading-relaxed"
           placeholder="SELECT * FROM table_name LIMIT 10;"
           dir="ltr"
         />
@@ -110,7 +110,7 @@ export const SqlQueryRunner: React.FC<SqlQueryRunnerProps> = ({
           <button
             onClick={onRunQuery}
             disabled={isRunningQuery}
-            className="btn-pill-primary text-xs px-4 py-1.5"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-4 py-1.5 transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-black" />
             <span>{isRunningQuery ? 'در حال اجرا...' : 'اجرای پرس‌وجو'}</span>
@@ -133,7 +133,7 @@ export const SqlQueryRunner: React.FC<SqlQueryRunnerProps> = ({
             </div>
           ) : (
             <div className="rounded-xl border border-[#242424] bg-[#171717] overflow-hidden">
-              <div className="overflow-x-auto ltr-isolation max-h-[380px]">
+              <div className="overflow-x-auto max-h-[380px]" dir="ltr">
                 <table className="w-full text-left text-xs font-mono" dir="ltr">
                   <thead>
                     <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400 sticky top-0">

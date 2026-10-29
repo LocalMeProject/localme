@@ -91,7 +91,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenCreateProjectModal}
-            className="btn-pill-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-4 py-2 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>ساخت پروژه جدید</span>
@@ -150,7 +150,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
         <div className="p-4 rounded-xl bg-[#171717] border border-[#242424] hover:border-[#2e2e2e] transition shadow-sm">
           <div className="flex items-center justify-between text-zinc-400 text-xs font-medium mb-2">
             <span>تأخیر پاسخ p99 (SLA)</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+            <Clock className="w-4 h-4 text-[#3ECF8E]" />
           </div>
           <div className="text-2xl font-bold tracking-tight text-white font-mono">
             {p99Latency}
@@ -279,7 +279,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
             </p>
             <button
               onClick={onOpenCreateProjectModal}
-              className="btn-pill-primary mt-2"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-4 py-2 mt-2 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>ساخت اولین پروژه</span>

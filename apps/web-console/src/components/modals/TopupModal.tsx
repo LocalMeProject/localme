@@ -47,26 +47,26 @@ export const TopupModal: React.FC<TopupModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="topup-modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
               <Wallet className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="topup-modal-title" className="text-base font-bold text-zinc-100">شارژ کیف پول ریالی پروژه (IRR)</h3>
+              <h3 id="topup-modal-title" className="text-base font-bold text-white">شارژ کیف پول ریالی پروژه (IRR)</h3>
               <p className="text-xs text-zinc-400">پرداخت امن از طریق درگاه‌های شاپرک با کارت‌های عضو شتاب</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -83,8 +83,8 @@ export const TopupModal: React.FC<TopupModalProps> = ({
                   onClick={() => setAmountToman(preset.toman)}
                   className={`p-2.5 rounded-xl border text-center transition ${
                     amountToman === preset.toman
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'
+                      ? 'border-[#3ECF8E] bg-[#3ECF8E]/10 text-[#3ECF8E] font-bold'
+                      : 'border-[#242424] bg-[#0f0f0f] text-zinc-400 hover:bg-[#1a1a1a]'
                   }`}
                 >
                   {preset.label}
@@ -99,14 +99,15 @@ export const TopupModal: React.FC<TopupModalProps> = ({
                 step="5000"
                 value={amountToman}
                 onChange={(e) => setAmountToman(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono text-sm"
+                dir="ltr"
               />
               <span className="absolute left-3 top-2.5 text-zinc-500 text-xs">تومان</span>
             </div>
 
             <div className="mt-1.5 flex items-center justify-between text-[11px] text-zinc-400 font-mono">
               <span>معادل در دفترکل ریالی (IRR BigInt):</span>
-              <span className="text-amber-400 font-bold">{amountIrr.toLocaleString('fa-IR')} ریال</span>
+              <span className="text-[#3ECF8E] font-bold">{amountIrr.toLocaleString('fa-IR')} ریال</span>
             </div>
           </div>
 
@@ -131,35 +132,35 @@ export const TopupModal: React.FC<TopupModalProps> = ({
                       setGateway(gw.id as TopupGateway);
                     }
                   }}
-                  className={`cursor-pointer p-3 rounded-xl border flex items-center space-x-2 transition focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none ${
+                  className={`cursor-pointer p-3 rounded-xl border flex items-center space-x-2 transition ${
                     gateway === gw.id
-                      ? 'border-amber-500/60 bg-amber-500/10 text-amber-300'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'
+                      ? 'border-[#3ECF8E]/60 bg-[#3ECF8E]/10 text-[#3ECF8E]'
+                      : 'border-[#242424] bg-[#0f0f0f] text-zinc-400 hover:bg-[#1a1a1a]'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4 shrink-0 text-amber-400" />
+                  <CreditCard className="w-4 h-4 shrink-0 text-[#3ECF8E]" />
                   <span className="text-xs font-medium">{gw.name}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center space-x-2 text-[11px] text-zinc-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="p-3 rounded-xl bg-[#0f0f0f] border border-[#242424] flex items-center space-x-2 text-[11px] text-zinc-400">
+            <ShieldCheck className="w-4 h-4 text-[#3ECF8E] shrink-0" />
             <span>آی‌پی سرور شما در فهرست سفید درگاه‌های بانکی شاپرک (NAT 2.180.12.94) قرار دارد.</span>
           </div>
 
-          <div className="pt-4 flex items-center justify-end space-x-3">
+          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium transition"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/10 flex items-center space-x-1.5"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors flex items-center space-x-1.5"
             >
               <span>اتصال به درگاه بانکی شاپرک</span>
             </button>
