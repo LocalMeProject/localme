@@ -1,0 +1,23 @@
+namespace LocalMe.DataPlane.MultiTenancy;
+
+using System.Collections.Generic;
+using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
+using LocalMe.Core.Database;
+
+public interface ITenantDatabaseStore
+{
+    Task EnsureTenantSchemaAsync(string projectSlug, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> GetTableNamesAsync(string projectSlug, CancellationToken ct = default);
+    Task<IReadOnlyList<TableColumnDefinition>> GetTableSchemaAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<bool> CreateTableAsync(string projectSlug, string tableName, IReadOnlyList<TableColumnDefinition>? columns = null, CancellationToken ct = default);
+    Task<bool> DropTableAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<TenantDbQueryResult> ExecuteQueryAsync(string projectSlug, string tableName, SqlAstQuery query, int timeoutMs = 3000, CancellationToken ct = default);
+    Task<JsonObject> InsertRowAsync(string projectSlug, string tableName, JsonObject data, CancellationToken ct = default);
+    Task<JsonObject?> UpdateRowAsync(string projectSlug, string tableName, string rowId, JsonObject patch, CancellationToken ct = default);
+    Task<JsonObject> UpsertRowAsync(string projectSlug, string tableName, string onConflictCol, JsonObject data, CancellationToken ct = default);
+    Task<bool> DeleteRowAsync(string projectSlug, string tableName, string rowId, CancellationToken ct = default);
+    Task<SqlExecutionResult> ExecuteRawSqlAsync(string projectSlug, string sql, int timeoutMs = 5000, CancellationToken ct = default);
+    Task<long> GetSchemaSizeBytesAsync(string projectSlug, CancellationToken ct = default);
+}

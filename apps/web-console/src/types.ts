@@ -196,3 +196,32 @@ export interface TelemetryLog {
   latencyMs?: number;
   timestamp: string;
 }
+
+export interface WorkspaceMetrics {
+  totalProjects: number;
+  totalDau: number;
+  totalDbStorageBytes: number;
+  totalRequests24h: number;
+  p99LatencyMs: number;
+  healthyProjectsCount: number;
+}
+
+export interface UserEgressConfig {
+  dedicatedIp?: string;
+  outboundCountry: string;
+  tunnelRelayActive: boolean;
+  tunnelPort: number;
+  protocol: 'TCP_TLS_443' | 'GRPC_MULTIPLEX';
+  assignedAsn: string;
+}
+
+export interface DatabaseQueryHistoryItem {
+  id: string;
+  query: string;
+  executedAt: string;
+  durationMs: number;
+  rowCount: number;
+  status: 'SUCCESS' | 'ERROR';
+  errorMessage?: string;
+}
+

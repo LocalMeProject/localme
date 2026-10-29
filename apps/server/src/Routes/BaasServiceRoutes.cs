@@ -8,6 +8,8 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using LocalMe.Core.Database;
+using LocalMe.Server.Middleware;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compute;
 using LocalMe.DataPlane.Finance;
@@ -19,7 +21,7 @@ public static class BaasServiceRoutes
     public static void MapBaasServiceRoutes(this WebApplication app)
     {
         // 5. Multi-Tenant Project Relational Data (PostgREST & Dynamic DB)
-        app.MapGet("/_baas/v1/{projectId}/rest/{table}", (string projectId, string table, ProjectManagerService pm, UsageMeteringService metering) =>
+        app.MapGet("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
@@ -27,11 +29,39 @@ public static class BaasServiceRoutes
                 return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
 
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-            var results = pm.QueryTable(projectId, table);
-            return Results.Json(results);
+
+            var queryDict = new Dictionary<string, string>();
+            foreach (var (k, v) in context.Request.Query)
+            {
+                queryDict[k] = v.ToString();
+            }
+
+            var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
+            var result = await pm.QueryTableAsync(projectId, table, ast);
+
+            context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return Results.Json(result.Rows);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/db/{table}", (string projectId, string table, ProjectManagerService pm, UsageMeteringService metering) =>
+        app.MapPost("/_baas/v1/{projectId}/rest/{table}/query", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+
+            using var reader = new StreamReader(request.Body);
+            var body = await reader.ReadToEndAsync();
+            var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
+
+            var ast = SqlAstQueryCompiler.ParseJsonQuery(jsonNode);
+            var result = await pm.QueryTableAsync(projectId, table, ast);
+            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+            return Results.Json(result);
+        });
+
+        app.MapGet("/_baas/v1/{projectId}/db/{table}", async (string projectId, string table, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
@@ -39,8 +69,15 @@ public static class BaasServiceRoutes
                 return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
 
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-            var results = pm.QueryTable(projectId, table);
-            return Results.Json(results);
+            var queryDict = new Dictionary<string, string>();
+            foreach (var (k, v) in context.Request.Query)
+            {
+                queryDict[k] = v.ToString();
+            }
+
+            var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
+            var result = await pm.QueryTableAsync(projectId, table, ast);
+            return Results.Json(result.Rows);
         });
 
         app.MapPost("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
@@ -53,9 +90,46 @@ public static class BaasServiceRoutes
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
-            var inserted = pm.InsertRow(projectId, table, jsonNode);
+            var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
             return Results.Json(inserted);
+        });
+
+        app.MapPatch("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+
+            using var reader = new StreamReader(request.Body);
+            var body = await reader.ReadToEndAsync();
+            var patch = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
+            var updated = await pm.UpdateRowAsync(projectId, table, rowId, patch);
+            if (updated == null) return Results.NotFound(new { error = "Row not found" });
+            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return Results.Json(updated);
+        });
+
+        app.MapPut("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+
+            var onConflict = request.Query["on_conflict"].ToString();
+            if (string.IsNullOrWhiteSpace(onConflict)) onConflict = "id";
+
+            using var reader = new StreamReader(request.Body);
+            var body = await reader.ReadToEndAsync();
+            var payload = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
+            var upserted = await pm.UpsertRowAsync(projectId, table, onConflict, payload);
+            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return Results.Json(upserted);
         });
 
         app.MapPost("/_baas/v1/{projectId}/db/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
@@ -68,26 +142,47 @@ public static class BaasServiceRoutes
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
-            var inserted = pm.InsertRow(projectId, table, jsonNode);
+            var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
             return Results.Json(inserted);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/db/tables", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables", async (string projectId, ProjectManagerService pm) =>
             !pm.IsServiceEnabled(projectId, "database")
                 ? AuthHelper.ServiceDisabled("database")
-                : Results.Json(pm.GetProjectTableNames(projectId)));
+                : Results.Json(await pm.GetProjectTableNamesAsync(projectId)));
 
-        app.MapGet("/_baas/v1/projects/{projectId}/tables", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/projects/{projectId}/tables", async (string projectId, ProjectManagerService pm) =>
             !pm.IsServiceEnabled(projectId, "database")
                 ? AuthHelper.ServiceDisabled("database")
-                : Results.Json(pm.GetProjectTableNames(projectId)));
+                : Results.Json(await pm.GetProjectTableNamesAsync(projectId)));
 
-        app.MapPost("/_baas/v1/{projectId}/db/tables", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/schema", async (string projectId, HttpRequest request, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var table = request.Query["table"].ToString();
+            if (string.IsNullOrWhiteSpace(table)) table = "products";
+            var columns = await pm.GetTableColumnsAsync(projectId, table);
+            return Results.Json(columns);
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/sql", async (string projectId, HttpRequest request, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            using var reader = new StreamReader(request.Body);
+            var body = await reader.ReadToEndAsync();
+            var json = JsonNode.Parse(body) as JsonObject;
+            var sql = json?["sql"]?.ToString() ?? body;
+            var result = pm.ExecuteSql(projectId, sql);
+            return Results.Json(result);
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables", async (string projectId, JsonObject body, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
             var name = body["name"]?.ToString() ?? "new_table";
-            var created = pm.CreateTable(projectId, name);
+            var created = await pm.CreateTableAsync(projectId, name);
             return created ? Results.Ok(new { success = true, table = name }) : Results.Conflict(new { error = "Table already exists" });
         });
 
@@ -98,10 +193,19 @@ public static class BaasServiceRoutes
             return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "Table not found" });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", (string projectId, string table, string rowId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var removed = pm.DeleteRow(projectId, table, rowId);
+            var removed = await pm.DeleteRowAsync(projectId, table, rowId);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "Row not found" });
+        });
+
+        app.MapDelete("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var removed = await pm.DeleteRowAsync(projectId, table, rowId);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
             return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "Row not found" });
         });
 
@@ -411,25 +515,6 @@ public static class BaasServiceRoutes
             var result = pm.ExecuteSql(projectId, sql);
             pm.AddProjectLog(projectId, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
             return Results.Json(result);
-        });
-
-        app.MapGet("/_baas/v1/{projectId}/db/schema", (string projectId, HttpRequest req, ProjectManagerService pm) =>
-        {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var tableName = req.Query["table"].ToString();
-            if (string.IsNullOrWhiteSpace(tableName))
-            {
-                var tables = pm.GetProjectTableNames(projectId);
-                if (tables.Count > 0)
-                {
-                    tableName = tables[0];
-                }
-                else
-                {
-                    return Results.Json(Array.Empty<TableColumnSchema>());
-                }
-            }
-            return Results.Json(pm.GetTableSchema(projectId, tableName));
         });
 
         // Shetab IPG Merchant Studio

@@ -66,26 +66,26 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-project-modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="create-project-modal-title" className="text-base font-bold text-zinc-100">ساخت پروژه ابری جدید</h3>
-              <p className="text-xs text-zinc-400">یک فضای ایزوله BaaS + PaaS با زیردامنه اختصاصی</p>
+              <h3 id="create-project-modal-title" className="text-base font-bold text-white">ساخت پروژه ابری جدید</h3>
+              <p className="text-xs text-zinc-400">یک فضای ایزوله BaaS + PaaS با زیردامنه اختصاصی و اسکیما مجزا</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -100,13 +100,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="مثال: دیجی‌کالا یا اسنپ کلون"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 placeholder-zinc-600"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
             />
           </div>
 
           <div>
             <label className="block text-zinc-300 font-medium mb-1.5">شناسه یکتا (Slug) *</label>
-            <div className="flex items-center rounded-xl bg-zinc-950 border border-zinc-800 focus-within:border-amber-500 px-3">
+            <div className="flex items-center rounded-xl bg-[#0f0f0f] border border-[#242424] focus-within:border-[#3ECF8E] px-3">
               <span className="text-zinc-500 font-mono text-xs">https://</span>
               <input
                 type="text"
@@ -127,7 +127,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="هدف یا سرویس اصلی پروژه"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 placeholder-zinc-600"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
             />
           </div>
 
@@ -137,11 +137,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 appearance-none font-mono"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 appearance-none font-mono"
               >
                 <option value="ir-teh-1 (آسیاتک برج میلاد)">ir-teh-1 (آسیاتک برج میلاد - Egress NAT)</option>
                 <option value="ir-teh-2 (زیرساخت امام)">ir-teh-2 (زیرساخت امام - اینترانت ملی)</option>
                 <option value="ir-mhd-1 (شاتل مشهد)">ir-mhd-1 (شاتل مشهد - لبه شرق)</option>
+                <option value="eu-fra-1 (هتزنر فرانکفورت)">eu-fra-1 (هتزنر فرانکفورت - تونل TLS 1.3)</option>
               </select>
               <Server className="w-4 h-4 text-zinc-500 absolute left-3 top-3 pointer-events-none" />
             </div>
@@ -154,21 +155,21 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="برای حفاظت از کنسول و تغییر تنظیمات حساس"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 placeholder-zinc-600"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
             />
           </div>
 
-          <div className="pt-4 flex items-center justify-end space-x-3">
+          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium transition"
+              className="btn-pill-secondary text-xs px-4 py-2"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/10"
+              className="btn-pill-primary text-xs px-5 py-2"
             >
               ایجاد و راه‌اندازی پروژه
             </button>
