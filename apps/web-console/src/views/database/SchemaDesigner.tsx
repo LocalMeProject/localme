@@ -50,7 +50,7 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
 
         <button
           onClick={() => setIsAddingColumn(!isAddingColumn)}
-          className="btn-pill-primary text-xs px-3 py-1.5"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
           disabled={!activeTable}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -133,13 +133,13 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
             <button
               type="button"
               onClick={() => setIsAddingColumn(false)}
-              className="btn-pill-secondary text-xs px-3 py-1.5"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3.5 py-1.5 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="btn-pill-primary text-xs px-3 py-1.5"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3.5 py-1.5 transition-colors"
             >
               اعمال DDL در دیتابیس
             </button>
@@ -149,7 +149,7 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
 
       {/* Schema Table */}
       <div className="rounded-xl border border-[#242424] bg-[#171717] overflow-hidden">
-        <div className="overflow-x-auto ltr-isolation">
+        <div className="overflow-x-auto" dir="ltr">
           <table className="w-full text-left text-xs font-mono" dir="ltr">
             <thead>
               <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
@@ -192,7 +192,7 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
                       {c.isNullable ? (
                         <span className="text-zinc-400">NULL</span>
                       ) : (
-                        <span className="text-amber-400 font-semibold">NOT NULL</span>
+                        <span className="text-[#3ECF8E] font-semibold">NOT NULL</span>
                       )}
                     </td>
                     <td className="py-2.5 px-3 text-zinc-400">

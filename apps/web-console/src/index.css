@@ -1,4 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/source-code-pro/400.css';
+@import '@fontsource/source-code-pro/500.css';
+@import '@fontsource/source-code-pro/600.css';
 
 @tailwind base;
 @tailwind components;
@@ -6,12 +12,6 @@
 
 :root {
   color-scheme: dark;
-  --bg-ground: #0f0f0f;
-  --bg-surface: #171717;
-  --bg-surface-elevated: #1f1f1f;
-  --border-default: #242424;
-  --brand-emerald: #3ECF8E;
-  --brand-hover: #34b27b;
 }
 
 body {
@@ -27,7 +27,7 @@ code, pre, kbd, samp, .font-mono {
   font-family: 'Source Code Pro', Fira Code, Consolas, Monaco, monospace;
 }
 
-/* Custom scrollbars for dense Supabase look */
+/* Minimal dark scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -36,26 +36,9 @@ code, pre, kbd, samp, .font-mono {
   background: #0f0f0f;
 }
 ::-webkit-scrollbar-thumb {
-  background: #282828;
+  background: #242424;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3e3e3e;
-}
-
-/* Strict LTR Container isolation helper */
-.ltr-isolation {
-  direction: ltr !important;
-  text-align: left !important;
-  unicode-bidi: isolate;
-  font-family: 'Source Code Pro', monospace;
-}
-
-/* Supabase Pill CTA utility */
-.btn-pill-primary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] active:bg-[#2da16f] text-black font-semibold text-xs tracking-tight transition shadow-sm;
-}
-
-.btn-pill-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-[#1f1f1f] hover:bg-[#282828] text-zinc-200 border border-[#2e2e2e] font-medium text-xs tracking-tight transition;
+  background: #333333;
 }

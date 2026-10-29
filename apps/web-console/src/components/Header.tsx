@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <button
             onClick={onOpenTopupModal}
-            className="btn-pill-primary text-xs px-3 py-1"
+            className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-3 py-1 transition-colors"
           >
             افزایش موجودی
           </button>

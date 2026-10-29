@@ -60,26 +60,26 @@ handler(context);`);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="deploy-function-modal-title"
     >
-      <div className="relative w-full max-w-2xl rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
               <Terminal className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="deploy-function-modal-title" className="text-base font-bold text-zinc-100">استقرار تابع سرورلس لبه (Jint 4.x)</h3>
+              <h3 id="deploy-function-modal-title" className="text-base font-bold text-white">استقرار تابع سرورلس لبه (Jint 4.x)</h3>
               <p className="text-xs text-zinc-400">اجرای ایزوله در هسته C# .NET 10 با تاخیر زیر ۵ میلی‌ثانیه</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none transition"
+            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -100,20 +100,21 @@ handler(context);`);
                   }
                 }}
                 placeholder="مثال: اعتبارسنجی کارت شتاب"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 placeholder-zinc-600"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
               />
             </div>
             <div>
               <label className="block text-zinc-300 font-medium mb-1.5">شناسه مسیر URL (Slug) *</label>
-              <div className="flex items-center rounded-xl bg-zinc-950 border border-zinc-800 px-3 focus-within:border-amber-500">
-                <span className="text-zinc-500 font-mono text-[11px]">/functions/</span>
+              <div className="flex items-center rounded-xl bg-[#0f0f0f] border border-[#242424] px-3 focus-within:border-[#3ECF8E]">
+                <span className="text-zinc-500 font-mono text-[11px]" dir="ltr">/functions/</span>
                 <input
                   type="text"
                   required
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                   placeholder="validate-shetab"
-                  className="w-full py-2.5 bg-transparent border-0 focus:outline-none text-zinc-100 font-mono text-xs"
+                  className="w-full py-2 bg-transparent border-0 focus:outline-none text-zinc-100 font-mono text-xs"
+                  dir="ltr"
                 />
               </div>
             </div>
@@ -128,7 +129,7 @@ handler(context);`);
               <select
                 value={memoryLimitMb}
                 onChange={(e) => setMemoryLimitMb(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
               >
                 <option value={16}>16 مگابایت (توابع سبک و OTP)</option>
                 <option value={32}>32 مگابایت (پیش‌فرض پیشنهادی)</option>
@@ -144,7 +145,7 @@ handler(context);`);
               <select
                 value={timeoutSeconds}
                 onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none text-zinc-100 font-mono"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
               >
                 <option value={3}>3 ثانیه (سریع‌ترین)</option>
                 <option value={5}>5 ثانیه (استاندارد وب‌هوک)</option>
@@ -160,21 +161,22 @@ handler(context);`);
               rows={8}
               value={script}
               onChange={(e) => setScript(e.target.value)}
-              className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:outline-none font-mono text-xs text-zinc-200"
+              className="w-full p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none font-mono text-xs text-zinc-200"
+              dir="ltr"
             />
           </div>
 
-          <div className="pt-4 flex items-center justify-end space-x-3">
+          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium transition"
+              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/10"
+              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
             >
               استقرار تابع
             </button>
