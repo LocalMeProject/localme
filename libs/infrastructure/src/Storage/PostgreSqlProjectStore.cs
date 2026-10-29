@@ -12,6 +12,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     private readonly string _pgConnectionString;
     private readonly string _redisConnectionString;
     private NpgsqlDataSource? _dataSource;
+    public NpgsqlDataSource? DataSource => _dataSource;
     private ConnectionMultiplexer? _redis;
     private IDatabase? _redisDb;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };

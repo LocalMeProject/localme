@@ -27,6 +27,7 @@ public sealed partial class ProjectManagerService
     private readonly ConcurrentDictionary<string, List<ProjectLogEntry>> _projectLogs = new();
     private readonly IProjectStore? _store;
     public IProjectStore? Store => _store;
+    public ITenantDatabaseStore? TenantDbStore { get; set; }
 
     public ProjectManagerService(IProjectStore? store = null)
     {
@@ -133,15 +134,7 @@ public sealed partial class ProjectManagerService
                     _projectUsers[pid] = list;
                 }
 
-                var tables = await _store.LoadTableRecordsAsync();
-                foreach (var (pid, prjTables) in tables)
-                {
-                    var cDict = _projectTables.GetOrAdd(pid, _ => new ConcurrentDictionary<string, List<JsonObject>>());
-                    foreach (var (tbl, rows) in prjTables)
-                    {
-                        cDict[tbl] = rows;
-                    }
-                }
+                // Table records are managed directly by ITenantDatabaseStore (stateless schema-per-tenant, 0 RAM overhead)
 
                 var logs = await _store.LoadRecentLogsAsync();
                 foreach (var (pid, list) in logs)
