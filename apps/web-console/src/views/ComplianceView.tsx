@@ -14,13 +14,13 @@ interface ComplianceViewProps {
 }
 
 const INITIAL_COMPLIANCE: ComplianceSettings = {
-  enamadToken: 'enamad_tok_991827364510',
-  enamadSymbolCode: '10928374',
-  samandehiCode: 'samandehi_reg_882910',
-  androidPackageName: 'ir.localme.demo',
-  androidSha256Fingerprint: 'AA:BB:CC:DD:EE:FF:11:22:33:44:55:66:77:88:99:00:11:22:33:44:55:66:77:88:99:00:AA:BB:CC:DD:EE:FF',
-  appleTeamId: 'TEAMIRAN99',
-  appleAppBundleId: 'ir.localme.demo',
+  enamadToken: '',
+  enamadSymbolCode: '',
+  samandehiCode: '',
+  androidPackageName: '',
+  androidSha256Fingerprint: '',
+  appleTeamId: '',
+  appleAppBundleId: '',
 };
 
 export const ComplianceView: React.FC<ComplianceViewProps> = ({ project }) => {

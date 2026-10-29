@@ -11,35 +11,7 @@ interface IpgViewProps {
   project: Project;
 }
 
-const INITIAL_TRANSACTIONS: LedgerTransaction[] = [
-  {
-    id: 'tx-901',
-    trackingCode: 'TRK_849201',
-    gateway: 'ZARINPAL',
-    amountIrr: 450000000,
-    customerPhone: '09121112233',
-    status: 'VERIFIED',
-    createdAt: '۱۴۰۳/۰۷/۱۶ - ۱۴:۲۰',
-  },
-  {
-    id: 'tx-902',
-    trackingCode: 'TRK_582910',
-    gateway: 'SEP',
-    amountIrr: 120000000,
-    customerPhone: '09359876543',
-    status: 'VERIFIED',
-    createdAt: '۱۴۰۳/۰۷/۱۶ - ۱۵:۱۰',
-  },
-  {
-    id: 'tx-903',
-    trackingCode: 'TRK_192834',
-    gateway: 'BEHPARDAKHT',
-    amountIrr: 85000000,
-    customerPhone: '09123334455',
-    status: 'PENDING',
-    createdAt: '۱۴۰۳/۰۷/۱۶ - ۱۶:۰۵',
-  },
-];
+const INITIAL_TRANSACTIONS: LedgerTransaction[] = [];
 
 export type PspGateway = 'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD';
 
@@ -306,32 +278,40 @@ export const IpgView: React.FC<IpgViewProps> = ({ project }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/40">
-              {transactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-zinc-850/30">
-                  <td className="py-2.5 px-3 font-bold text-zinc-300">{tx.id}</td>
-                  <td className="py-2.5 px-3 text-amber-400">{tx.trackingCode}</td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300">
-                      {tx.gateway}
-                    </span>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-xs text-zinc-500">
+                    هیچ تراکنشی ثبت نشده است
                   </td>
-                  <td className="py-2.5 px-3 text-zinc-200 font-bold">{tx.amountIrr.toLocaleString('fa-IR')}</td>
-                  <td className="py-2.5 px-3 text-emerald-400">{Math.floor(tx.amountIrr / 10).toLocaleString('fa-IR')}</td>
-                  <td className="py-2.5 px-3 text-zinc-400">{tx.customerPhone}</td>
-                  <td className="py-2.5 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        tx.status === 'VERIFIED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}
-                    >
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-zinc-500 text-[11px]">{tx.createdAt}</td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-zinc-850/30">
+                    <td className="py-2.5 px-3 font-bold text-zinc-300">{tx.id}</td>
+                    <td className="py-2.5 px-3 text-amber-400">{tx.trackingCode}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300">
+                        {tx.gateway}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-zinc-200 font-bold">{tx.amountIrr.toLocaleString('fa-IR')}</td>
+                    <td className="py-2.5 px-3 text-emerald-400">{Math.floor(tx.amountIrr / 10).toLocaleString('fa-IR')}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{tx.customerPhone}</td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          tx.status === 'VERIFIED'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}
+                      >
+                        {tx.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-zinc-500 text-[11px]">{tx.createdAt}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -15,38 +15,9 @@ interface HostingViewProps {
   onOpenAddDomainModal: () => void;
 }
 
-const INITIAL_DEPLOYMENTS: DeploymentRelease[] = [
-  {
-    id: 'dep-401',
-    branch: 'main',
-    commitSha: '9a8b7c6',
-    domain: 'digikala-clone.localme.ir',
-    status: 'READY',
-    sizeBytes: 1048576 * 4.2,
-    deployedAt: '۱۴۰۳/۰۷/۱۶ - ۱۴:۰۰',
-    previewUrl: 'https://digikala-clone.localme.ir',
-  },
-  {
-    id: 'dep-400',
-    branch: 'feat/checkout',
-    commitSha: '3d2e1f0',
-    domain: 'dep-400.digikala-clone.localme.ir',
-    status: 'READY',
-    sizeBytes: 1048576 * 4.1,
-    deployedAt: '۱۴۰۳/۰۷/۱۵ - ۱۸:۳۰',
-    previewUrl: 'https://digikala-clone.localme.ir',
-  },
-];
+const INITIAL_DEPLOYMENTS: DeploymentRelease[] = [];
 
-const INITIAL_DOMAINS: CustomDomain[] = [
-  {
-    domain: 'shop.mycompany.ir',
-    isVerified: true,
-    sslActive: true,
-    cnameTarget: 'cname.localme.ir',
-    createdAt: '۱۴۰۳/۰۷/۰۵',
-  },
-];
+const INITIAL_DOMAINS: CustomDomain[] = [];
 
 export const HostingView: React.FC<HostingViewProps> = ({
   project,
@@ -144,40 +115,48 @@ export const HostingView: React.FC<HostingViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/40">
-              {deployments.map((dep) => (
-                <tr key={dep.id} className="hover:bg-zinc-850/30">
-                  <td className="py-2.5 px-3 font-bold text-zinc-200">{dep.id}</td>
-                  <td className="py-2.5 px-3 text-zinc-300">{dep.branch}</td>
-                  <td className="py-2.5 px-3 text-amber-400">{dep.commitSha}</td>
-                  <td className="py-2.5 px-3 text-zinc-400">{dep.domain}</td>
-                  <td className="py-2.5 px-3 text-zinc-300">{(dep.sizeBytes / (1024 * 1024)).toFixed(1)} MB</td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                      {dep.status}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-zinc-500">{dep.deployedAt}</td>
-                  <td className="py-2.5 px-3 text-right">
-                    <div className="flex items-center justify-end space-x-1.5">
-                      <a
-                        href={dep.previewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded text-[11px] bg-zinc-800 hover:bg-zinc-750 text-zinc-200"
-                      >
-                        پیش‌نمایش
-                      </a>
-                      <button
-                        onClick={() => handleRollback(dep.id)}
-                        className="p-1 rounded text-zinc-400 hover:text-amber-400 hover:bg-zinc-800"
-                        title="Rollback"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              {deployments.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-xs text-zinc-500">
+                    هیچ نسخه‌ای مستقر نشده است
                   </td>
                 </tr>
-              ))}
+              ) : (
+                deployments.map((dep) => (
+                  <tr key={dep.id} className="hover:bg-zinc-850/30">
+                    <td className="py-2.5 px-3 font-bold text-zinc-200">{dep.id}</td>
+                    <td className="py-2.5 px-3 text-zinc-300">{dep.branch}</td>
+                    <td className="py-2.5 px-3 text-amber-400">{dep.commitSha}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{dep.domain}</td>
+                    <td className="py-2.5 px-3 text-zinc-300">{(dep.sizeBytes / (1024 * 1024)).toFixed(1)} MB</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                        {dep.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-zinc-500">{dep.deployedAt}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <a
+                          href={dep.previewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2 py-1 rounded text-[11px] bg-zinc-800 hover:bg-zinc-750 text-zinc-200"
+                        >
+                          پیش‌نمایش
+                        </a>
+                        <button
+                          onClick={() => handleRollback(dep.id)}
+                          className="p-1 rounded text-zinc-400 hover:text-amber-400 hover:bg-zinc-800"
+                          title="Rollback"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -216,33 +195,41 @@ export const HostingView: React.FC<HostingViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/40">
-              {domains.map((dom) => (
-                <tr key={dom.domain} className="hover:bg-zinc-850/30">
-                  <td className="py-2.5 px-3 font-bold text-amber-400">{dom.domain}</td>
-                  <td className="py-2.5 px-3 text-zinc-400">{dom.cnameTarget}</td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                      تایید شده
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 flex items-center gap-1 w-max">
-                      <ShieldCheck className="w-3 h-3" />
-                      فعال (Auto-Renew)
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-zinc-500">{dom.createdAt}</td>
-                  <td className="py-2.5 px-3 text-right">
-                    <button
-                      onClick={() => handleRemoveDomain(dom.domain)}
-                      className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition"
-                      title="حذف دامنه"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+              {domains.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-xs text-zinc-500">
+                    هیچ دامنه اختصاصی متصل نشده است
                   </td>
                 </tr>
-              ))}
+              ) : (
+                domains.map((dom) => (
+                  <tr key={dom.domain} className="hover:bg-zinc-850/30">
+                    <td className="py-2.5 px-3 font-bold text-amber-400">{dom.domain}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{dom.cnameTarget}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                        تایید شده
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 flex items-center gap-1 w-max">
+                        <ShieldCheck className="w-3 h-3" />
+                        فعال (Auto-Renew)
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-zinc-500">{dom.createdAt}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <button
+                        onClick={() => handleRemoveDomain(dom.domain)}
+                        className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition"
+                        title="حذف دامنه"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

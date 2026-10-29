@@ -10,58 +10,7 @@ interface TelemetryViewProps {
   project: Project;
 }
 
-const INITIAL_LOGS: TelemetryLog[] = [
-  {
-    id: 'log-101',
-    service: 'functions',
-    level: 'INFO',
-    message: 'Jint function [send-otp-kavenegar] executed successfully (status: 200).',
-    traceId: 'tr_489201a8',
-    statusCode: 200,
-    latencyMs: 6,
-    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۳۰:۰۵',
-  },
-  {
-    id: 'log-102',
-    service: 'database',
-    level: 'INFO',
-    message: 'Dynamic SQL query executed on table [products] (rows: 3).',
-    traceId: 'tr_771829bb',
-    statusCode: 200,
-    latencyMs: 3,
-    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۹:۵۰',
-  },
-  {
-    id: 'log-103',
-    service: 'ipg',
-    level: 'INFO',
-    message: 'Shetab callback verified with ZarinPal PSP (ref: TRK_849201, amount: 450,000,000 IRR).',
-    traceId: 'tr_192837cc',
-    statusCode: 200,
-    latencyMs: 140,
-    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۵:۱۲',
-  },
-  {
-    id: 'log-104',
-    service: 'auth',
-    level: 'WARN',
-    message: 'Rate limit threshold warning: 5 OTP requests dispatched in 60s for 09121112233.',
-    traceId: 'tr_339918dd',
-    statusCode: 429,
-    latencyMs: 12,
-    timestamp: '۱۴۰۳/۰۷/۱۶ - ۱۶:۲۰:۰۱',
-  },
-  {
-    id: 'log-105',
-    service: 'hosting',
-    level: 'INFO',
-    message: 'YARP Edge route matched [https://digikala-clone.localme.ir/] -> cached index.html.',
-    traceId: 'tr_998811ee',
-    statusCode: 200,
-    latencyMs: 1,
-    timestamp: '۱۴۰3/۰۷/۱۶ - ۱۶:۱۸:۴۵',
-  },
-];
+const INITIAL_LOGS: TelemetryLog[] = [];
 
 export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
   const [logs, setLogs] = useState<TelemetryLog[]>(INITIAL_LOGS);
@@ -200,33 +149,41 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({ project }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/40">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-zinc-850/30">
-                  <td className="py-2.5 px-3 text-zinc-500 whitespace-nowrap">{log.timestamp}</td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 font-bold uppercase">
-                      {log.service}
-                    </span>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-xs text-zinc-500">
+                    هیچ لاگی ثبت نشده است
                   </td>
-                  <td className="py-2.5 px-3">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        log.level === 'INFO'
-                          ? 'text-emerald-400 bg-emerald-500/10'
-                          : log.level === 'WARN'
-                          ? 'text-amber-400 bg-amber-500/10'
-                          : 'text-red-400 bg-red-500/10'
-                      }`}
-                    >
-                      {log.level}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-zinc-300">{log.statusCode || '-'}</td>
-                  <td className="py-2.5 px-3 text-zinc-400">{log.latencyMs ? `${log.latencyMs} ms` : '-'}</td>
-                  <td className="py-2.5 px-3 text-zinc-200">{log.message}</td>
-                  <td className="py-2.5 px-3 text-zinc-500">{log.traceId}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-zinc-850/30">
+                    <td className="py-2.5 px-3 text-zinc-500 whitespace-nowrap">{log.timestamp}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 font-bold uppercase">
+                        {log.service}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          log.level === 'INFO'
+                            ? 'text-emerald-400 bg-emerald-500/10'
+                            : log.level === 'WARN'
+                            ? 'text-amber-400 bg-amber-500/10'
+                            : 'text-red-400 bg-red-500/10'
+                        }`}
+                      >
+                        {log.level}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-zinc-300">{log.statusCode || '-'}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{log.latencyMs ? `${log.latencyMs} ms` : '-'}</td>
+                    <td className="py-2.5 px-3 text-zinc-200">{log.message}</td>
+                    <td className="py-2.5 px-3 text-zinc-500">{log.traceId}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

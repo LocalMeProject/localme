@@ -3,7 +3,7 @@ import { Project } from '../types';
 import { ShieldCheck, Server, Plus, Wallet, ChevronDown } from 'lucide-react';
 
 interface HeaderProps {
-  currentProject: Project;
+  currentProject?: Project;
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
   onOpenCreateModal: () => void;
@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const tomanBalance = Math.floor(currentProject.walletBalanceIrr / 10);
+  const tomanBalance = Math.floor((currentProject?.walletBalanceIrr ?? 0) / 10);
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between">
@@ -55,9 +55,9 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-850 border border-zinc-800 text-xs font-medium text-zinc-200 transition"
           >
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-semibold">{currentProject.name}</span>
-            <span className="text-zinc-500 font-mono text-[11px]">({currentProject.slug})</span>
+            <div className={`w-2 h-2 rounded-full ${currentProject ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
+            <span className="font-semibold">{currentProject ? currentProject.name : 'انتخاب پروژه'}</span>
+            {currentProject && <span className="text-zinc-500 font-mono text-[11px]">({currentProject.slug})</span>}
             <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-1" />
           </button>
 
@@ -67,26 +67,30 @@ export const Header: React.FC<HeaderProps> = ({
                 پروژه‌های شما
               </div>
               <div className="max-h-56 overflow-y-auto py-1">
-                {allProjects.map((proj) => (
-                  <button
-                    key={proj.id}
-                    onClick={() => {
-                      onSelectProject(proj);
-                      setDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs hover:bg-zinc-800/70 transition ${
-                      proj.id === currentProject.id ? 'bg-zinc-800/50 text-amber-400' : 'text-zinc-300'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium">{proj.name}</div>
-                      <div className="text-[10px] text-zinc-500 font-mono">{proj.slug}</div>
-                    </div>
-                    {proj.id === currentProject.id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    )}
-                  </button>
-                ))}
+                {allProjects.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-zinc-500 text-center">هیچ پروژه‌ای تعریف نشده است</div>
+                ) : (
+                  allProjects.map((proj) => (
+                    <button
+                      key={proj.id}
+                      onClick={() => {
+                        onSelectProject(proj);
+                        setDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs hover:bg-zinc-850/70 transition ${
+                        proj.id === currentProject?.id ? 'bg-zinc-800/50 text-amber-400' : 'text-zinc-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-medium">{proj.name}</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">{proj.slug}</div>
+                      </div>
+                      {proj.id === currentProject?.id && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      )}
+                    </button>
+                  ))
+                )}
               </div>
               <div className="border-t border-zinc-800/60 p-1.5">
                 <button
@@ -115,10 +119,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Region */}
-        <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[11px]">
-          <Server className="w-3.5 h-3.5 text-zinc-500" />
-          <span>{currentProject.region}</span>
-        </div>
+        {currentProject && (
+          <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[11px]">
+            <Server className="w-3.5 h-3.5 text-zinc-500" />
+            <span>{currentProject.region}</span>
+          </div>
+        )}
 
         {/* Rial / Toman Wallet */}
         <div className="flex items-center space-x-2 pl-2">

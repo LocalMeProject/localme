@@ -12,34 +12,7 @@ interface AuthViewProps {
   onOpenAddUserModal: () => void;
 }
 
-const INITIAL_USERS: ProjectUser[] = [
-  {
-    id: 'usr-1',
-    phone: '09121112233',
-    fullName: 'سینا والی‌پور',
-    provider: 'sms_otp',
-    isConfirmed: true,
-    createdAt: '۱۴۰۳/۰۷/۱۰',
-  },
-  {
-    id: 'usr-2',
-    phone: '09359876543',
-    email: 'user@example.ir',
-    username: 'ali_rezaei',
-    fullName: 'علی رضایی',
-    provider: 'password',
-    isConfirmed: true,
-    createdAt: '۱۴۰۳/۰۷/۱۲',
-  },
-  {
-    id: 'usr-3',
-    email: 'developer@snapp.ir',
-    fullName: 'مهسا احمدی',
-    provider: 'oauth_google',
-    isConfirmed: false,
-    createdAt: '۱۴۰۳/۰۷/۱۵',
-  },
-];
+const INITIAL_USERS: ProjectUser[] = [];
 
 export type OtpProvider = 'kavenegar' | 'melipayamak';
 
@@ -124,7 +97,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ project, onOpenAddUserModal 
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/40">
-                {users.map((u) => (
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-xs text-zinc-500">
+                      هیچ کاربری ثبت نام نکرده است
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((u) => (
                   <tr key={u.id} className="hover:bg-zinc-850/30">
                     <td className="py-2.5 px-3">
                       <div className="font-bold text-zinc-200">{u.fullName}</div>
@@ -164,7 +144,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ project, onOpenAddUserModal 
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

@@ -14,42 +14,13 @@ interface StorageViewProps {
   onOpenCreateBucketModal: () => void;
 }
 
-const INITIAL_BUCKETS: StorageBucket[] = [
-  { name: 'assets', isPublic: true, filesCount: 28, totalSizeBytes: 1048576 * 14.5, createdAt: '۱۴۰۳/۰۷/۰۱' },
-  { name: 'invoices', isPublic: false, filesCount: 142, totalSizeBytes: 1048576 * 32.1, createdAt: '۱۴۰۳/۰۷/۰۵' },
-  { name: 'user-avatars', isPublic: true, filesCount: 65, totalSizeBytes: 1048576 * 8.4, createdAt: '۱۴۰۳/۰۷/۰۸' },
-];
+const INITIAL_BUCKETS: StorageBucket[] = [];
 
-const INITIAL_FILES: StorageFile[] = [
-  {
-    name: 'logo-dark.png',
-    bucket: 'assets',
-    contentType: 'image/png',
-    sizeBytes: 1024 * 142,
-    uploadedAt: '۱۴۰۳/۰۷/۱۰',
-    url: 'https://digikala-clone.localme.ir/_baas/v1/storage/assets/logo-dark.png',
-  },
-  {
-    name: 'contract-template.pdf',
-    bucket: 'invoices',
-    contentType: 'application/pdf',
-    sizeBytes: 1024 * 850,
-    uploadedAt: '۱۴۰۳/۰۷/۱۲',
-    url: 'https://digikala-clone.localme.ir/_baas/v1/storage/invoices/contract-template.pdf',
-  },
-  {
-    name: 'avatar-101.jpg',
-    bucket: 'user-avatars',
-    contentType: 'image/jpeg',
-    sizeBytes: 1024 * 68,
-    uploadedAt: '۱۴۰۳/۰۷/۱۵',
-    url: 'https://digikala-clone.localme.ir/_baas/v1/storage/user-avatars/avatar-101.jpg',
-  },
-];
+const INITIAL_FILES: StorageFile[] = [];
 
 export const StorageView: React.FC<StorageViewProps> = ({ project, onOpenCreateBucketModal }) => {
   const [buckets] = useState<StorageBucket[]>(INITIAL_BUCKETS);
-  const [selectedBucket, setSelectedBucket] = useState<string>('assets');
+  const [selectedBucket, setSelectedBucket] = useState<string>('');
   const [files, setFiles] = useState<StorageFile[]>(INITIAL_FILES);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
@@ -151,34 +122,40 @@ export const StorageView: React.FC<StorageViewProps> = ({ project, onOpenCreateB
           </div>
 
           <div className="space-y-2">
-            {buckets.map((b) => (
-              <div
-                key={b.name}
-                onClick={() => setSelectedBucket(b.name)}
-                className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                  selectedBucket === b.name
-                    ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
-                    : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold text-amber-400">{b.name}</span>
-                  <span
-                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                      b.isPublic
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {b.isPublic ? 'Public' : 'Private'}
-                  </span>
-                </div>
-                <div className="text-[10px] text-zinc-500 font-mono flex items-center justify-between mt-1.5">
-                  <span>{b.filesCount} فایل</span>
-                  <span>حجم: {(b.totalSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                </div>
+            {buckets.length === 0 ? (
+              <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-zinc-800">
+                هیچ باکتی ایجاد نشده است
               </div>
-            ))}
+            ) : (
+              buckets.map((b) => (
+                <div
+                  key={b.name}
+                  onClick={() => setSelectedBucket(b.name)}
+                  className={`cursor-pointer p-3.5 rounded-xl border transition ${
+                    selectedBucket === b.name
+                      ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
+                      : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-xs font-bold text-amber-400">{b.name}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                        b.isPublic
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {b.isPublic ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 font-mono flex items-center justify-between mt-1.5">
+                    <span>{b.filesCount} فایل</span>
+                    <span>حجم: {(b.totalSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -187,7 +164,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ project, onOpenCreateB
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
             <div>
               <span className="text-xs font-bold text-zinc-200">
-                کاوشگر فایل‌های باکت: <span className="font-mono text-amber-400">{selectedBucket}</span>
+                کاوشگر فایل‌های باکت: <span className="font-mono text-amber-400">{selectedBucket || 'بدون باکت'}</span>
               </span>
               <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
                 تعداد فایل‌ها: {filteredFiles.length}

@@ -18,75 +18,9 @@ interface EdgeFunctionsViewProps {
   onOpenDeployModal: () => void;
 }
 
-const INITIAL_FUNCTIONS: EdgeFunction[] = [
-  {
-    id: 'fn-1',
-    slug: 'send-otp-kavenegar',
-    name: 'ارسال پیامک تایید با خط خدماتی',
-    runtime: 'Jint 4.x (Managed C#)',
-    memoryLimitMb: 16,
-    timeoutSeconds: 5,
-    invocationsCount: 1420,
-    lastExecutedAt: '۲ دقیقه قبل',
-    createdAt: '۱۴۰۳/۰۷/۱۰',
-    script: `// LocalMe Sandboxed Jint Script: Kavenegar OTP Dispatch Hook
-function handler(context) {
-  const req = context.request || {};
-  const phone = req.phone || '09121112233';
-  const code = req.code || '849201';
+const INITIAL_FUNCTIONS: EdgeFunction[] = [];
 
-  // Strict SSRF-isolated egress fetch via Whitelisted NAT
-  console.log("Dispatching OTP to " + phone + " via pattern localme-verify");
-
-  return {
-    status: 200,
-    dispatched: true,
-    provider: "kavenegar",
-    sender: "3000777",
-    phone: phone,
-    timestamp: new Date().toISOString()
-  };
-}
-
-handler(context);`,
-  },
-  {
-    id: 'fn-2',
-    slug: 'verify-zarinpal-webhook',
-    name: 'تایید وب‌هوک و امضای پرداخت زرین‌پال',
-    runtime: 'Jint 4.x (Managed C#)',
-    memoryLimitMb: 16,
-    timeoutSeconds: 5,
-    invocationsCount: 382,
-    lastExecutedAt: '۱ ساعت قبل',
-    createdAt: '۱۴۰۳/۰۷/۱۲',
-    script: `// LocalMe Sandboxed Jint Script: Zarinpal Webhook Verifier
-function handler(context) {
-  const payload = context.request || {};
-  const authority = payload.authority;
-  const status = payload.status;
-
-  if (status === "OK") {
-    return {
-      verified: true,
-      action: "SETTLE_WALLET",
-      authority: authority,
-      fee_irr: 50000
-    };
-  }
-
-  return { verified: false, action: "CANCEL_ORDER" };
-}
-
-handler(context);`,
-  },
-];
-
-const INITIAL_ENV_VARS: FunctionEnvVar[] = [
-  { key: 'KAVENEGAR_API_KEY', value: '4A526E67...4B713D', isSecret: true },
-  { key: 'ZARINPAL_MERCHANT_ID', value: '7c9e6679-7425-40de-944b-e07fc1f90ae7', isSecret: false },
-  { key: 'SHAHKAR_SERVICE_URL', value: 'https://pgw.shaparak.ir/api/v1', isSecret: false },
-];
+const INITIAL_ENV_VARS: FunctionEnvVar[] = [];
 
 export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   project,
@@ -95,8 +29,8 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   onOpenDeployModal,
 }) => {
   const [functions, setFunctions] = useState<EdgeFunction[]>(INITIAL_FUNCTIONS);
-  const [selectedFunc, setSelectedFunc] = useState<EdgeFunction>(INITIAL_FUNCTIONS[0]);
-  const [editorCode, setEditorCode] = useState<string>(INITIAL_FUNCTIONS[0]?.script || '');
+  const [selectedFunc, setSelectedFunc] = useState<EdgeFunction | null>(null);
+  const [editorCode, setEditorCode] = useState<string>('');
   const [testPayload, setTestPayload] = useState<string>('{\n  "phone": "09121112233",\n  "code": "582910"\n}');
   const [testOutput, setTestOutput] = useState<string>('{\n  "status": "ready",\n  "message": "Click Run Live Script to execute in Jint sandbox"\n}');
   const [execLatency, setExecLatency] = useState<number | null>(null);
@@ -113,6 +47,7 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   };
 
   const handleSaveScript = () => {
+    if (!selectedFunc) return;
     setFunctions((prev) =>
       prev.map((fn) =>
         fn.id === selectedFunc.id ? { ...fn, script: editorCode } : fn
@@ -265,27 +200,33 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
                 <span className="text-[10px] text-zinc-500 font-mono">Jint Isolate Pool</span>
               </div>
               <div className="space-y-2">
-                {functions.map((fn) => (
-                  <div
-                    key={fn.id}
-                    onClick={() => handleSelectFunc(fn)}
-                    className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                      selectedFunc?.id === fn.id
-                        ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
-                        : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-xs font-bold text-amber-400">{fn.slug}</span>
-                      <span className="text-[10px] text-zinc-500 font-mono">{fn.invocationsCount} فراخوانی</span>
-                    </div>
-                    <div className="text-xs font-medium text-zinc-200">{fn.name}</div>
-                    <div className="text-[10px] text-zinc-400 font-mono mt-1.5 flex items-center gap-2">
-                      <span>رم: {fn.memoryLimitMb}MB</span>
-                      <span>تایم‌اوت: {fn.timeoutSeconds}s</span>
-                    </div>
+                {functions.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-zinc-800">
+                    هیچ تابعی ایجاد نشده است
                   </div>
-                ))}
+                ) : (
+                  functions.map((fn) => (
+                    <div
+                      key={fn.id}
+                      onClick={() => handleSelectFunc(fn)}
+                      className={`cursor-pointer p-3.5 rounded-xl border transition ${
+                        selectedFunc?.id === fn.id
+                          ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
+                          : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono text-xs font-bold text-amber-400">{fn.slug}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono">{fn.invocationsCount} فراخوانی</span>
+                      </div>
+                      <div className="text-xs font-medium text-zinc-200">{fn.name}</div>
+                      <div className="text-[10px] text-zinc-400 font-mono mt-1.5 flex items-center gap-2">
+                        <span>رم: {fn.memoryLimitMb}MB</span>
+                        <span>تایم‌اوت: {fn.timeoutSeconds}s</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -297,12 +238,13 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
                   <div className="flex items-center space-x-2">
                     <Code className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-bold text-zinc-200">
-                      ویرایشگر جاوااسکریپت: <span className="font-mono text-amber-400">{selectedFunc?.slug}</span>
+                      ویرایشگر جاوااسکریپت: <span className="font-mono text-amber-400">{selectedFunc?.slug || 'بدون تابع'}</span>
                     </span>
                   </div>
                   <button
                     onClick={handleSaveScript}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium text-xs transition border border-zinc-700/60"
+                    disabled={!selectedFunc}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-200 font-medium text-xs transition border border-zinc-700/60"
                   >
                     <Save className="w-3.5 h-3.5 text-emerald-400" />
                     <span>ذخیره اسکریپت</span>
@@ -431,46 +373,54 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/40">
-                  {envVars.map((v) => {
-                    const isVisible = visibleSecrets.has(v.key);
-                    return (
-                      <tr key={v.key} className="hover:bg-zinc-850/30 transition">
-                        <td className="py-2.5 px-3 font-bold text-amber-400">{v.key}</td>
-                        <td className="py-2.5 px-3 text-zinc-300">
-                          {v.isSecret && !isVisible ? '••••••••••••••••••••' : v.value}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              v.isSecret
-                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                : 'bg-zinc-800 text-zinc-400'
-                            }`}
-                          >
-                            {v.isSecret ? 'AES-256 Secret' : 'Public Config'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <div className="flex items-center justify-end space-x-1.5">
-                            {v.isSecret && (
-                              <button
-                                onClick={() => toggleSecretVisibility(v.key)}
-                                className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-                              >
-                                {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRemoveEnv(v.key)}
-                              className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-zinc-800"
+                  {envVars.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-xs text-zinc-500">
+                        هیچ متغیر محیطی تعریف نشده است
+                      </td>
+                    </tr>
+                  ) : (
+                    envVars.map((v) => {
+                      const isVisible = visibleSecrets.has(v.key);
+                      return (
+                        <tr key={v.key} className="hover:bg-zinc-850/30 transition">
+                          <td className="py-2.5 px-3 font-bold text-amber-400">{v.key}</td>
+                          <td className="py-2.5 px-3 text-zinc-300">
+                            {v.isSecret && !isVisible ? '••••••••••••••••••••' : v.value}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                v.isSecret
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-zinc-800 text-zinc-400'
+                              }`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              {v.isSecret ? 'AES-256 Secret' : 'Public Config'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {v.isSecret && (
+                                <button
+                                  onClick={() => toggleSecretVisibility(v.key)}
+                                  className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                                >
+                                  {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleRemoveEnv(v.key)}
+                                className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-zinc-800"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

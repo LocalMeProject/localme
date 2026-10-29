@@ -255,7 +255,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             VALUES 
             ('usr_admin_01', 'مدیر ارشد سامانه', '+989120000001', 'admin@localme.ir', 'admin', @adminHash, 'Admin', 0, true, NOW()),
             ('usr_operator_02', 'اپراتور پشتیبانی', '+989120000002', 'support@localme.ir', 'operator', @operatorHash, 'Operator', 0, true, NOW()),
-            ('usr_developer_03', 'سینا والی زاده', '+989121112233', 'sina@example.com', 'sina', @developerHash, 'Developer', 10000000, true, NOW())
+            ('usr_developer_03', 'سینا والی زاده', '+989121112233', 'sina@example.com', 'sina', @developerHash, 'Developer', 0, true, NOW())
             ON CONFLICT (id) DO UPDATE SET 
                 username = EXCLUDED.username,
                 password_hash = CASE WHEN platform_users.password_hash NOT LIKE '%:%' THEN EXCLUDED.password_hash ELSE platform_users.password_hash END,
@@ -650,9 +650,58 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     public async Task WipeAllProjectDataAsync()
     {
         await EnsureInitializedAsync();
-        const string sql = "DELETE FROM projects; DELETE FROM platform_users WHERE id NOT IN ('usr_admin_01', 'usr_operator_02', 'usr_developer_03');";
+        const string sql = @"
+            DELETE FROM projects;
+            TRUNCATE TABLE 
+                payment_transactions,
+                payments,
+                customer_ledgers,
+                customer_wallets,
+                billing_usage_records,
+                project_push_devices,
+                project_push_configs,
+                project_iap_configs,
+                project_iap_records,
+                project_table_records,
+                project_auth_users,
+                project_collaborators,
+                project_ipg_configs,
+                project_compliance_configs,
+                project_deployments,
+                project_domains,
+                project_buckets,
+                project_storage_files,
+                project_functions,
+                project_logs
+            CASCADE;
+            DELETE FROM platform_users WHERE id NOT IN ('usr_admin_01', 'usr_operator_02', 'usr_developer_03');
+            UPDATE platform_users SET wallet_balance_irr = 0;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await cmd.ExecuteNonQueryAsync();
+
+        if (_redis != null)
+        {
+            try
+            {
+                var endpoints = _redis.GetEndPoints();
+                foreach (var ep in endpoints)
+                {
+                    var srv = _redis.GetServer(ep);
+                    if (srv.IsConnected)
+                    {
+                        var keys = srv.Keys(pattern: "localme:*").ToArray();
+                        if (keys.Length > 0 && _redisDb != null)
+                        {
+                            await _redisDb.KeyDeleteAsync(keys);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LocalMe.Store] Redis wipe warning: {ex.Message}");
+            }
+        }
     }
 
     private async Task EnsureInitializedAsync()

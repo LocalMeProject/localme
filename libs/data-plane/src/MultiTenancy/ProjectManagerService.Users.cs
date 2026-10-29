@@ -43,7 +43,7 @@ public sealed partial class ProjectManagerService
             Phone: "+989121112233",
             Email: "sina@example.com",
             Role: UserRole.Developer,
-            WalletBalanceIrr: 10_000_000,
+            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-1),
             IsActive: true,
             Username: "sina",

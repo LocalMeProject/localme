@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { Project, CapabilityCode } from './types';
 import { Header } from './components/Header';
 import { Navigation, TabId } from './components/Navigation';
@@ -24,46 +25,11 @@ import { AddUserModal } from './components/modals/AddUserModal';
 import { AddDomainModal } from './components/modals/AddDomainModal';
 import { TopupModal } from './components/modals/TopupModal';
 
-const INITIAL_PROJECTS: Project[] = [
-  {
-    id: 'prj-101',
-    name: 'دیجی‌کالا کلون',
-    slug: 'digikala-clone',
-    description: 'فروشگاه اینترنتی با پرداخت مستقیم شاپرک و احراز هویت پیامکی',
-    region: 'ir-teh-1 (آسیاتک)',
-    status: 'ACTIVE',
-    createdAt: '۱۴۰۳/۰۶/۱۵',
-    walletBalanceIrr: 450_000_000, // 45,000,000 Tomans
-    hasPassword: true,
-    services: {
-      database: { isEnabled: true },
-      auth: { isEnabled: true },
-      storage: { isEnabled: true },
-      functions: { isEnabled: true },
-    },
-  },
-  {
-    id: 'prj-102',
-    name: 'اسنپ تریپ اپ',
-    slug: 'snapp-trip',
-    description: 'سامانه رزرو بلیت و هتل بر بستر شبکه ملی اطلاعات',
-    region: 'ir-teh-2 (زیرساخت)',
-    status: 'ACTIVE',
-    createdAt: '۱۴۰۳/۰۷/۰۱',
-    walletBalanceIrr: 1_200_000_000,
-    hasPassword: false,
-    services: {
-      database: { isEnabled: true },
-      auth: { isEnabled: true },
-      storage: { isEnabled: false },
-      functions: { isEnabled: false },
-    },
-  },
-];
+const INITIAL_PROJECTS: Project[] = [];
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [currentProjectId, setCurrentProjectId] = useState<string>('prj-101');
+  const [currentProjectId, setCurrentProjectId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Capability set for current project
@@ -140,7 +106,7 @@ export default function App() {
       region: data.region,
       status: 'ACTIVE',
       createdAt: 'همین الان',
-      walletBalanceIrr: 100_000_000, // Initial promotional credit 10,000,000 IRR
+      walletBalanceIrr: 0,
       hasPassword: Boolean(data.password),
       services: {
         database: { isEnabled: true },
@@ -220,66 +186,87 @@ export default function App() {
         id={`panel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
       >
-        {activeTab === 'overview' && (
-          <OverviewView
-            project={currentProject}
-            activeCapabilities={activeCapabilities}
-            onToggleCapability={handleToggleCapability}
-            onNavigateTab={setActiveTab}
-            onDeployBuild={() => setIsDeployFunctionOpen(true)}
-          />
-        )}
+        {!currentProject ? (
+          <div className="text-center py-20 px-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 text-amber-400">
+              <Plus className="w-8 h-8" />
+            </div>
+            <h3 className="text-base font-bold text-zinc-100 mb-2">هیچ پروژه‌ای تعریف نشده است</h3>
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
+              جهت آغاز به کار در زیرساخت ابری لوکال‌می و دسترسی به پایگاه‌داده، احراز هویت و توابع، نخستین پروژه خود را راه‌اندازی نمایید.
+            </p>
+            <button
+              onClick={() => setIsCreateProjectOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 text-black font-semibold text-xs hover:opacity-95 transition shadow-lg shadow-amber-500/10"
+            >
+              <Plus className="w-4 h-4" />
+              <span>ساخت اولین پروژه</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'overview' && (
+              <OverviewView
+                project={currentProject}
+                activeCapabilities={activeCapabilities}
+                onToggleCapability={handleToggleCapability}
+                onNavigateTab={setActiveTab}
+                onDeployBuild={() => setIsDeployFunctionOpen(true)}
+              />
+            )}
 
-        {activeTab === 'database' && (
-          <DatabaseView
-            project={currentProject}
-            onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
-          />
-        )}
+            {activeTab === 'database' && (
+              <DatabaseView
+                project={currentProject}
+                onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
+              />
+            )}
 
-        {activeTab === 'auth' && (
-          <AuthView
-            project={currentProject}
-            onOpenAddUserModal={() => setIsAddUserOpen(true)}
-          />
-        )}
+            {activeTab === 'auth' && (
+              <AuthView
+                project={currentProject}
+                onOpenAddUserModal={() => setIsAddUserOpen(true)}
+              />
+            )}
 
-        {activeTab === 'functions' && (
-          <EdgeFunctionsView
-            project={currentProject}
-            enabled={isEdgeFunctionsEnabled}
-            onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
-            onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
-          />
-        )}
+            {activeTab === 'functions' && (
+              <EdgeFunctionsView
+                project={currentProject}
+                enabled={isEdgeFunctionsEnabled}
+                onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
+                onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+              />
+            )}
 
-        {activeTab === 'storage' && (
-          <StorageView
-            project={currentProject}
-            onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
-          />
-        )}
+            {activeTab === 'storage' && (
+              <StorageView
+                project={currentProject}
+                onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
+              />
+            )}
 
-        {activeTab === 'ipg' && <IpgView project={currentProject} />}
+            {activeTab === 'ipg' && <IpgView project={currentProject} />}
 
-        {activeTab === 'hosting' && (
-          <HostingView
-            project={currentProject}
-            onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
-            onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
-          />
-        )}
+            {activeTab === 'hosting' && (
+              <HostingView
+                project={currentProject}
+                onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+                onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
+              />
+            )}
 
-        {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
+            {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
 
-        {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
+            {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
 
-        {activeTab === 'settings' && (
-          <SettingsView
-            project={currentProject}
-            onUpdateProject={handleUpdateProject}
-            onDeleteProject={handleDeleteProject}
-          />
+            {activeTab === 'settings' && (
+              <SettingsView
+                project={currentProject}
+                onUpdateProject={handleUpdateProject}
+                onDeleteProject={handleDeleteProject}
+              />
+            )}
+          </>
         )}
       </main>
 

@@ -13,60 +13,17 @@ interface DatabaseViewProps {
   onOpenCreateTableModal: () => void;
 }
 
-const INITIAL_TABLES: DatabaseTable[] = [
-  { name: 'products', rowCount: 142, sizeBytes: 1048576 * 2.4, createdAt: '۱۴۰۳/۰۷/۰۱' },
-  { name: 'orders', rowCount: 1250, sizeBytes: 1048576 * 8.1, createdAt: '۱۴۰۳/۰۷/۰۲' },
-  { name: 'customers', rowCount: 890, sizeBytes: 1048576 * 4.2, createdAt: '۱۴۰۳/۰۷/۰۵' },
-];
+const INITIAL_TABLES: DatabaseTable[] = [];
 
-const INITIAL_COLUMNS: Record<string, DatabaseColumn[]> = {
-  products: [
-    { name: 'id', dataType: 'BIGSERIAL', isPrimaryKey: true, isNullable: false },
-    { name: 'title', dataType: 'VARCHAR(255)', isPrimaryKey: false, isNullable: false },
-    { name: 'price_irr', dataType: 'BIGINT', isPrimaryKey: false, isNullable: false, defaultValue: '0' },
-    { name: 'category', dataType: 'VARCHAR(64)', isPrimaryKey: false, isNullable: true },
-    { name: 'created_at_utc', dataType: 'TIMESTAMPTZ', isPrimaryKey: false, isNullable: false, defaultValue: 'NOW()' },
-  ],
-  orders: [
-    { name: 'id', dataType: 'UUID', isPrimaryKey: true, isNullable: false },
-    { name: 'customer_phone', dataType: 'VARCHAR(32)', isPrimaryKey: false, isNullable: false },
-    { name: 'total_amount_irr', dataType: 'BIGINT', isPrimaryKey: false, isNullable: false },
-    { name: 'status', dataType: 'VARCHAR(32)', isPrimaryKey: false, isNullable: false, defaultValue: "'PENDING'" },
-    { name: 'created_at_utc', dataType: 'TIMESTAMPTZ', isPrimaryKey: false, isNullable: false, defaultValue: 'NOW()' },
-  ],
-  customers: [
-    { name: 'id', dataType: 'BIGSERIAL', isPrimaryKey: true, isNullable: false },
-    { name: 'phone', dataType: 'VARCHAR(20)', isPrimaryKey: false, isNullable: false },
-    { name: 'full_name', dataType: 'VARCHAR(128)', isPrimaryKey: false, isNullable: true },
-    { name: 'created_at_utc', dataType: 'TIMESTAMPTZ', isPrimaryKey: false, isNullable: false, defaultValue: 'NOW()' },
-  ],
-};
+const INITIAL_COLUMNS: Record<string, DatabaseColumn[]> = {};
 
-const INITIAL_DATA_ROWS: Record<string, any[]> = {
-  products: [
-    { id: 101, title: 'سرور اختصاصی ابری ایران', price_irr: 150000000, category: 'هاستینگ', created_at_utc: '2026-10-15T12:00:00Z' },
-    { id: 102, title: 'اشتراک سالانه درگاه پرداخت', price_irr: 45000000, category: 'فین‌تک', created_at_utc: '2026-10-15T13:30:00Z' },
-    { id: 103, title: 'بسته پیامکی کاوه‌نگار', price_irr: 12000000, category: 'ارتباطات', created_at_utc: '2026-10-16T08:15:00Z' },
-  ],
-  orders: [
-    { id: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6', customer_phone: '09121112233', total_amount_irr: 150000000, status: 'VERIFIED', created_at_utc: '2026-10-16T14:20:00Z' },
-    { id: 'a29b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', customer_phone: '09359876543', total_amount_irr: 45000000, status: 'PENDING', created_at_utc: '2026-10-16T15:10:00Z' },
-  ],
-  customers: [
-    { id: 1, phone: '09121112233', full_name: 'سینا والی‌پور', created_at_utc: '2026-10-10T10:00:00Z' },
-    { id: 2, phone: '09359876543', full_name: 'کاربر تستی پلتفرم', created_at_utc: '2026-10-11T11:20:00Z' },
-  ],
-};
+const INITIAL_DATA_ROWS: Record<string, any[]> = {};
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreateTableModal }) => {
   const [tables] = useState<DatabaseTable[]>(INITIAL_TABLES);
-  const [activeTable, setActiveTable] = useState<string>('products');
-  const [sqlQuery, setSqlQuery] = useState<string>('SELECT * FROM products ORDER BY id DESC LIMIT 50;');
-  const [queryResults, setQueryResults] = useState<{ columns: string[]; rows: Record<string, unknown>[]; latencyMs: number } | null>({
-    columns: ['id', 'title', 'price_irr', 'category', 'created_at_utc'],
-    rows: INITIAL_DATA_ROWS['products'],
-    latencyMs: 3,
-  });
+  const [activeTable, setActiveTable] = useState<string>('');
+  const [sqlQuery, setSqlQuery] = useState<string>('');
+  const [queryResults, setQueryResults] = useState<{ columns: string[]; rows: Record<string, unknown>[]; latencyMs: number } | null>(null);
   const [isRunningQuery, setIsRunningQuery] = useState(false);
 
   const handleRunQuery = () => {
@@ -74,8 +31,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
     const start = performance.now();
 
     setTimeout(() => {
-      const rows = INITIAL_DATA_ROWS[activeTable] || INITIAL_DATA_ROWS['products'];
-      const columns = Object.keys(rows[0] || {});
+      const rows = INITIAL_DATA_ROWS[activeTable] || [];
+      const columns = rows.length > 0 ? Object.keys(rows[0] || {}) : [];
       const latency = Math.round(performance.now() - start) + 2;
 
       setQueryResults({
@@ -137,29 +94,35 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
           </div>
 
           <div className="space-y-2">
-            {tables.map((t) => (
-              <div
-                key={t.name}
-                onClick={() => {
-                  setActiveTable(t.name);
-                  setSqlQuery(`SELECT * FROM ${t.name} ORDER BY id DESC LIMIT 50;`);
-                }}
-                className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                  activeTable === t.name
-                    ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
-                    : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold text-amber-400">{t.name}</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">{t.rowCount.toLocaleString('fa-IR')} رکورد</span>
-                </div>
-                <div className="text-[10px] text-zinc-500 font-mono flex items-center justify-between">
-                  <span>حجم: {(t.sizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                  <span>ایجاد: {t.createdAt}</span>
-                </div>
+            {tables.length === 0 ? (
+              <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-zinc-800">
+                هیچ جدولی ایجاد نشده است
               </div>
-            ))}
+            ) : (
+              tables.map((t) => (
+                <div
+                  key={t.name}
+                  onClick={() => {
+                    setActiveTable(t.name);
+                    setSqlQuery(`SELECT * FROM ${t.name} ORDER BY id DESC LIMIT 50;`);
+                  }}
+                  className={`cursor-pointer p-3.5 rounded-xl border transition ${
+                    activeTable === t.name
+                      ? 'bg-zinc-850 border-amber-500/50 shadow-sm'
+                      : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-850/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-xs font-bold text-amber-400">{t.name}</span>
+                    <span className="text-[10px] text-zinc-400 font-mono">{t.rowCount.toLocaleString('fa-IR')} رکورد</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 font-mono flex items-center justify-between">
+                    <span>حجم: {(t.sizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                    <span>ایجاد: {t.createdAt}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -168,7 +131,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
             <span className="text-xs font-bold text-zinc-200 flex items-center gap-2">
               <TableIcon className="w-4 h-4 text-amber-400" />
-              ساختار فیلدهای جدول: <span className="font-mono text-amber-400">{activeTable}</span>
+              ساختار فیلدهای جدول: <span className="font-mono text-amber-400">{activeTable || 'بدون جدول'}</span>
             </span>
             <span className="text-[11px] text-zinc-400 font-mono">
               {currentColumns.length} ستون
@@ -187,23 +150,31 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/40">
-                {currentColumns.map((c) => (
-                  <tr key={c.name} className="hover:bg-zinc-850/30">
-                    <td className="py-2 px-3 font-bold text-zinc-200">{c.name}</td>
-                    <td className="py-2 px-3 text-amber-400">{c.dataType}</td>
-                    <td className="py-2 px-3">
-                      {c.isPrimaryKey ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
-                          PK
-                        </span>
-                      ) : (
-                        '-'
-                      )}
+                {currentColumns.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-xs text-zinc-500">
+                      ستونی برای نمایش وجود ندارد
                     </td>
-                    <td className="py-2 px-3 text-zinc-400">{c.isNullable ? 'NULL' : 'NOT NULL'}</td>
-                    <td className="py-2 px-3 text-zinc-400">{c.defaultValue || '-'}</td>
                   </tr>
-                ))}
+                ) : (
+                  currentColumns.map((c) => (
+                    <tr key={c.name} className="hover:bg-zinc-850/30">
+                      <td className="py-2 px-3 font-bold text-zinc-200">{c.name}</td>
+                      <td className="py-2 px-3 text-amber-400">{c.dataType}</td>
+                      <td className="py-2 px-3">
+                        {c.isPrimaryKey ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
+                            PK
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-zinc-400">{c.isNullable ? 'NULL' : 'NOT NULL'}</td>
+                      <td className="py-2 px-3 text-zinc-400">{c.defaultValue || '-'}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
