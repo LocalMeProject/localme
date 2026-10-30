@@ -39,7 +39,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
 
   const handleCardClick = (project: Project) => {
     onSelectProject(project);
-    navigate(`/projects/${project.slug}/database`);
+    navigate(`/panel/${project.slug}/database/grid`);
   };
 
   const activeProjectsCount = projects.filter((p) => p.status === 'ACTIVE').length;

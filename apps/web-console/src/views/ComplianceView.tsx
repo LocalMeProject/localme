@@ -9,6 +9,8 @@ import {
 
 interface ComplianceViewProps {
   project: Project;
+  activeSubView?: string;
+  onSubViewChange?: (subView: string) => void;
 }
 
 const INITIAL_COMPLIANCE: ComplianceSettings = {

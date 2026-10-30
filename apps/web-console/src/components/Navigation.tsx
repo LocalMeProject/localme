@@ -65,6 +65,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onNavigateHome,
 }) => {
   const [isSubNavCollapsed, setIsSubNavCollapsed] = useState(false);
+  const [isRailExpanded, setIsRailExpanded] = useState(false);
 
   // Primary level-1 modules
   const primaryModules: {
@@ -176,22 +177,44 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <aside className="flex h-full select-none" aria-label="ناوبری دو سطحی پروژه">
-      {/* Level 1: Primary Vertical Rail */}
+      {/* Level 1: Primary Vertical Rail with 150ms Hover Expansion */}
       <nav
-        className="w-16 bg-white border-l border-slate-200 flex flex-col justify-between py-3 items-center z-20 shrink-0 shadow-[1px_0_3px_rgba(0,0,0,0.02)]"
+        onMouseEnter={() => setIsRailExpanded(true)}
+        onMouseLeave={() => setIsRailExpanded(false)}
+        className={`bg-white border-l border-slate-200 flex flex-col justify-between py-3 z-30 shrink-0 shadow-[1px_0_3px_rgba(0,0,0,0.02)] transition-all duration-150 ease-in-out ${
+          isRailExpanded ? 'w-56 px-2.5' : 'w-14 items-center px-1.5'
+        }`}
         aria-label="سرویس‌های اصلی"
       >
-        <div className="flex flex-col items-center gap-1.5 w-full px-2">
+        <div className="flex flex-col gap-1 w-full">
           {/* Project Avatar / Mini Logo */}
           <button
             onClick={onNavigateHome}
             title={`بازگشت به هاب پروژه‌ها (${project?.name || 'انتخاب پروژه'})`}
-            className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold text-sm shadow-sm transition mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className={`flex items-center gap-2.5 rounded-xl transition text-right ${
+              isRailExpanded
+                ? 'w-full p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
+                : 'w-10 h-10 justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold text-sm mx-auto'
+            }`}
           >
-            {project?.name ? project.name.slice(0, 2) : 'LM'}
+            {isRailExpanded ? (
+              <>
+                <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  {project?.name ? project.name.slice(0, 2) : 'LM'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
+                    {project?.name || 'انتخاب پروژه'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
+                </div>
+              </>
+            ) : (
+              <span>{project?.name ? project.name.slice(0, 2) : 'LM'}</span>
+            )}
           </button>
 
-          <div className="w-8 h-px bg-slate-200 my-1" />
+          <div className="w-full h-px bg-slate-200 my-1" />
 
           {/* Module Icons */}
           {primaryModules.map((mod) => {
@@ -206,36 +229,49 @@ export const Navigation: React.FC<NavigationProps> = ({
                     if (firstSub) onSubViewChange(firstSub);
                   }
                 }}
-                title={mod.label}
+                title={!isRailExpanded ? mod.label : undefined}
                 aria-label={mod.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`relative group w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                className={`relative flex items-center rounded-xl transition-all ${
+                  isRailExpanded
+                    ? 'w-full px-3 py-2 gap-3 justify-start text-right'
+                    : 'w-10 h-10 justify-center mx-auto'
+                } ${
                   isActive
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200'
+                    ? 'bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-semibold'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
                 }`}
               >
-                {mod.icon}
-                {isActive && (
+                <span className="shrink-0">{mod.icon}</span>
+                {isRailExpanded && (
+                  <span className="flex-1 text-xs truncate whitespace-nowrap">
+                    {mod.label}
+                  </span>
+                )}
+                {isRailExpanded && mod.badge && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-medium">
+                    {mod.badge}
+                  </span>
+                )}
+                {isActive && !isRailExpanded && (
                   <span className="absolute right-0 top-2.5 bottom-2.5 w-1 bg-emerald-600 rounded-l-full" />
                 )}
-                {/* Floating tooltip */}
-                <span className="absolute right-14 bg-slate-900 text-white text-xs px-2.5 py-1 rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50 shadow-md">
-                  {mod.label}
-                </span>
               </button>
             );
           })}
         </div>
 
         {/* Bottom Hub Return Button */}
-        <div className="w-full px-2 flex flex-col items-center gap-1 pt-2 border-t border-slate-200">
+        <div className={`w-full pt-2 border-t border-slate-200 flex flex-col ${isRailExpanded ? 'px-1' : 'items-center'}`}>
           <button
             onClick={onNavigateHome}
-            title="همه پروژه‌ها"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+            title={!isRailExpanded ? 'همه پروژه‌ها' : undefined}
+            className={`rounded-xl flex items-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition ${
+              isRailExpanded ? 'w-full px-3 py-2 gap-3 justify-start text-xs font-medium' : 'w-10 h-10 justify-center'
+            }`}
           >
-            <FolderGit2 className="w-5 h-5" />
+            <FolderGit2 className="w-5 h-5 shrink-0" />
+            {isRailExpanded && <span>همه پروژه‌ها</span>}
           </button>
         </div>
       </nav>

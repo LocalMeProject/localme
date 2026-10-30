@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, CheckCircle2 } from 'lucide-react';
-import { Project, CapabilityCode } from './types';
+import { Project, CapabilityCode, DatabaseColumn, EdgeFunction, ProjectUser } from './types';
 import { Header } from './components/Header';
 import { Navigation, TabId } from './components/Navigation';
 
@@ -31,48 +31,42 @@ import { TopupModal } from './components/modals/TopupModal';
 
 const DEFAULT_PROJECTS: Project[] = [];
 
+const DEFAULT_SUB_VIEWS: Record<TabId, string> = {
+  overview: 'overview',
+  database: 'grid',
+  auth: 'users',
+  storage: 'buckets',
+  functions: 'list',
+  ipg: 'transactions',
+  hosting: 'deployments',
+  compliance: 'tokens',
+  telemetry: 'live',
+  settings: 'general',
+};
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    try {
-      const saved = localStorage.getItem('localme_projects');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Filter out any legacy demo projects
-          const nonDemo = parsed.filter(
-            (p: Project) => p.slug !== 'digikala-stage' && p.slug !== 'shaparak-gateway'
-          );
-          if (nonDemo.length > 0) return nonDemo;
-        }
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_PROJECTS;
-  });
-
-  const [currentProjectId, setCurrentProjectId] = useState<string>(
-    projects[0]?.id || ''
-  );
+  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [currentProjectId, setCurrentProjectId] = useState<string>('');
 
   // Parse route:
-  // Stage 1 Hub: '/', '/hub', '/panel', '/panel/', '/console', '/console/'
-  // Stage 2 Studio: '/panel/:slugOrId/:tab', '/console/:slugOrId/:tab', '/projects/:slugOrId/:tab'
+  // Hub: '/', '/hub', '/panel', '/panel/', '/console', '/projects'
+  // Studio: '/panel/:slug/:tab/:subview'
   const pathParts = location.pathname.split('/').filter(Boolean);
   const prefix = pathParts[0] || '';
   const isPrefix = prefix === 'panel' || prefix === 'console' || prefix === 'projects';
   const slugOrId = isPrefix ? pathParts[1] : (pathParts.length > 0 && prefix !== 'hub' ? pathParts[0] : null);
   const rawTab = isPrefix ? pathParts[2] : pathParts[1];
+  const rawSub = isPrefix ? pathParts[3] : pathParts[2];
 
-  const isHubStage = !slugOrId || location.pathname === '/' || location.pathname === '/hub' || location.pathname === '/panel' || location.pathname === '/console';
+  const isHubStage = !slugOrId || location.pathname === '/' || location.pathname === '/hub' || location.pathname === '/panel' || location.pathname === '/console' || location.pathname === '/projects';
 
   const mapToTabId = (tab: string | undefined): TabId => {
     if (!tab) return 'database';
     const lower = tab.toLowerCase();
-    if (lower === 'db' || lower === 'sqleditor' || lower === 'tables' || lower === 'schema') return 'database';
+    if (lower === 'db' || lower === 'sqleditor' || lower === 'tables' || lower === 'schema' || lower === 'database') return 'database';
     if (lower === 'auth' || lower === 'users') return 'auth';
     if (lower === 'storage' || lower === 'buckets' || lower === 'files') return 'storage';
     if (lower === 'functions' || lower === 'edge') return 'functions';
@@ -88,15 +82,22 @@ export default function App() {
   const activeTab: TabId = mapToTabId(rawTab);
   const [activeSubView, setActiveSubView] = useState<string>('grid');
 
-  // Sync activeSubView with initial route if explicit
+  // Sync activeSubView with initial route
   useEffect(() => {
-    if (rawTab) {
+    if (rawSub) {
+      const lower = rawSub.toLowerCase();
+      if (lower === 'sqleditor' || lower === 'sql') setActiveSubView('sql');
+      else if (lower === 'schema') setActiveSubView('schema');
+      else if (lower === 'tables' || lower === 'grid') setActiveSubView('grid');
+      else setActiveSubView(lower);
+    } else if (rawTab) {
       const lower = rawTab.toLowerCase();
       if (lower === 'sqleditor' || lower === 'sql') setActiveSubView('sql');
       else if (lower === 'schema') setActiveSubView('schema');
       else if (lower === 'tables' || lower === 'grid') setActiveSubView('grid');
+      else setActiveSubView(DEFAULT_SUB_VIEWS[activeTab] || 'grid');
     }
-  }, [rawTab]);
+  }, [rawTab, rawSub, activeTab]);
 
   // Capability set for current project
   const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
@@ -123,77 +124,52 @@ export default function App() {
   };
 
   // Fetch live projects from backend API
-  useEffect(() => {
-    const fetchLiveProjects = async () => {
-      try {
-        const res = await fetch('/_baas/v1/projects');
-        if (res.ok) {
-          const live = await res.json();
-          if (Array.isArray(live)) {
-            const mapped = live.map((p: Record<string, unknown>) => ({
-              id: String(p.id || p.Id || ''),
-              name: String(p.name || p.Name || p.id || ''),
-              slug: String(p.slug || p.Slug || p.id || ''),
-              description: String(p.description || p.Description || ''),
-              region: String(p.region || p.Region || 'ir-teh-1 (آسیاتک برج میلاد)'),
-              status: (p.status === 'PROVISIONING' || p.status === 'MAINTENANCE' ? p.status : 'ACTIVE') as Project['status'],
-              createdAt: String(p.createdAt || p.CreatedAt || new Date().toISOString()),
-              walletBalanceIrr: Number(p.walletBalanceIrr ?? p.WalletBalanceIrr ?? 0),
-              hasPassword: Boolean(p.hasPassword),
-              services: (p.services as Project['services']) || {
-                database: { isEnabled: true },
-                auth: { isEnabled: true },
-                storage: { isEnabled: true },
-                functions: { isEnabled: true },
-              }
-            }));
-            setProjects(mapped);
+  const fetchLiveProjects = useCallback(async () => {
+    try {
+      const res = await fetch('/_baas/v1/projects');
+      if (res.ok) {
+        const live = await res.json();
+        if (Array.isArray(live)) {
+          const mapped: Project[] = live.map((p: Record<string, unknown>) => ({
+            id: String(p.id || p.Id || ''),
+            name: String(p.name || p.Name || p.id || ''),
+            slug: String(p.slug || p.Slug || p.id || ''),
+            description: String(p.description || p.Description || ''),
+            region: String(p.region || p.Region || 'ir-teh-1 (آسیاتک برج میلاد)'),
+            status: (p.status === 'PROVISIONING' || p.status === 'MAINTENANCE' ? p.status : 'ACTIVE') as Project['status'],
+            createdAt: String(p.createdAt || p.CreatedAt || new Date().toISOString()),
+            walletBalanceIrr: Number(p.walletBalanceIrr ?? p.WalletBalanceIrr ?? 0),
+            hasPassword: Boolean(p.hasPassword),
+            services: (p.services as Project['services']) || {
+              database: { isEnabled: true },
+              auth: { isEnabled: true },
+              storage: { isEnabled: true },
+              functions: { isEnabled: true },
+            },
+          }));
+          setProjects(mapped);
+          if (mapped.length > 0 && !currentProjectId) {
+            setCurrentProjectId(mapped[0].id);
           }
         }
-      } catch {
-        // fallback
       }
-    };
-    fetchLiveProjects();
-  }, []);
-
-  // Keep localStorage in sync
-  useEffect(() => {
-    try {
-      localStorage.setItem('localme_projects', JSON.stringify(projects));
     } catch {
       // ignore
     }
-  }, [projects]);
+  }, [currentProjectId]);
 
-  // Synchronize route with currentProjectId
   useEffect(() => {
-    if (slugOrId) {
-      const match = projects.find((p) => p.slug === slugOrId || p.id === slugOrId);
-      if (match) {
-        if (match.id !== currentProjectId) {
-          setCurrentProjectId(match.id);
-        }
-      } else {
-        const provisional: Project = {
-          id: slugOrId,
-          slug: slugOrId,
-          name: slugOrId,
-          description: `پروژه ${slugOrId}`,
-          region: 'ir-teh-1 (آسیاتک برج میلاد)',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          walletBalanceIrr: 0,
-          hasPassword: false,
-          services: {
-            database: { isEnabled: true },
-            auth: { isEnabled: true },
-            storage: { isEnabled: true },
-            functions: { isEnabled: true },
-          }
-        };
-        setProjects((prev) => [provisional, ...prev]);
-        setCurrentProjectId(slugOrId);
+    fetchLiveProjects();
+  }, [fetchLiveProjects]);
+
+  // Sync URL project parameter
+  useEffect(() => {
+    if (slugOrId && projects.length > 0) {
+      const match = projects.find(
+        (p) => p.slug === slugOrId || p.id === slugOrId
+      );
+      if (match && match.id !== currentProjectId) {
+        setCurrentProjectId(match.id);
       }
     }
   }, [slugOrId, projects, currentProjectId]);
@@ -203,12 +179,21 @@ export default function App() {
 
   const handleSelectProject = (proj: Project) => {
     setCurrentProjectId(proj.id);
-    navigate(`/panel/${proj.slug}/${activeTab}`);
+    navigate(`/panel/${proj.slug}/${activeTab}/${activeSubView}`);
   };
 
   const handleTabChange = (tab: TabId) => {
+    const defaultSub = DEFAULT_SUB_VIEWS[tab] || 'overview';
+    setActiveSubView(defaultSub);
     if (currentProject) {
-      navigate(`/panel/${currentProject.slug}/${tab}`);
+      navigate(`/panel/${currentProject.slug}/${tab}/${defaultSub}`);
+    }
+  };
+
+  const handleSubViewChange = (subView: string) => {
+    setActiveSubView(subView);
+    if (currentProject) {
+      navigate(`/panel/${currentProject.slug}/${activeTab}/${subView}`);
     }
   };
 
@@ -244,73 +229,260 @@ export default function App() {
     }
   };
 
-  const handleCreateProject = (data: {
+  // Real API: Create Project
+  const handleCreateProject = async (data: {
     name: string;
     slug: string;
     description: string;
     region: string;
     password?: string;
   }) => {
-    const newPrj: Project = {
-      id: `prj-${Date.now()}`,
-      name: data.name,
-      slug: data.slug,
-      description: data.description,
-      region: data.region,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-      walletBalanceIrr: 0,
-      hasPassword: Boolean(data.password),
-      services: {
-        database: { isEnabled: true },
-        auth: { isEnabled: true },
-        storage: { isEnabled: true },
-        functions: { isEnabled: true },
-      },
-    };
-    setProjects((prev) => [newPrj, ...prev]);
-    setCurrentProjectId(newPrj.id);
-    navigate(`/panel/${newPrj.slug}/database`);
-    showToast(`پروژه «${data.name}» با موفقیت راه‌اندازی گردید.`);
+    try {
+      const res = await fetch('/_baas/v1/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          region: data.region,
+          password: data.password || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در ایجاد پروژه: ${err.error || res.statusText}`);
+        return;
+      }
+
+      const created = await res.json();
+      const newPrj: Project = {
+        id: String(created.id || data.slug),
+        name: String(created.name || data.name),
+        slug: String(created.slug || data.slug),
+        description: String(created.description || data.description),
+        region: String(created.region || data.region),
+        status: 'ACTIVE',
+        createdAt: String(created.createdAt || new Date().toISOString()),
+        walletBalanceIrr: 0,
+        hasPassword: Boolean(data.password),
+        services: {
+          database: { isEnabled: true },
+          auth: { isEnabled: true },
+          storage: { isEnabled: true },
+          functions: { isEnabled: true },
+        },
+      };
+
+      setProjects((prev) => [newPrj, ...prev.filter((p) => p.slug !== newPrj.slug)]);
+      setCurrentProjectId(newPrj.id);
+      showToast(`پروژه «${data.name}» با موفقیت ایجاد گردید.`);
+      navigate(`/panel/${newPrj.slug}/database/grid`);
+    } catch {
+      showToast('خطا در برقراری ارتباط با سرور.');
+    }
   };
 
-  const handleUpdateProject = (updated: Partial<Project>) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === currentProjectId ? { ...p, ...updated } : p))
-    );
-    showToast('تنظیمات پروژه با موفقیت ذخیره گردید.');
+  // Real API: Create Table
+  const handleCreateTable = async (tbl: { name: string; columns: DatabaseColumn[] }) => {
+    if (!currentProject) return;
+    try {
+      const colsSql = tbl.columns
+        .map((c) => {
+          let def = `"${c.name}" ${c.dataType}`;
+          if (c.isPrimaryKey) def += ' PRIMARY KEY';
+          if (!c.isNullable && !c.isPrimaryKey) def += ' NOT NULL';
+          if (c.defaultValue && c.defaultValue.trim()) def += ` DEFAULT ${c.defaultValue}`;
+          return def;
+        })
+        .join(', ');
+      const sql = `CREATE TABLE IF NOT EXISTS "${tbl.name}" (${colsSql});`;
+
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/sql/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql }),
+      });
+
+      if (res.ok) {
+        showToast(`جدول «${tbl.name}» با موفقیت ایجاد گردید.`);
+        setActiveSubView('grid');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در ایجاد جدول: ${err.error || res.statusText}`);
+      }
+    } catch {
+      showToast('خطا در برقراری ارتباط با پایگاه داده.');
+    }
   };
 
-  const handleDeleteProject = () => {
+  // Real API: Create Bucket
+  const handleCreateBucket = async (bkt: { name: string; isPublic: boolean }) => {
+    if (!currentProject) return;
+    try {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/storage/buckets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: bkt.name, isPublic: bkt.isPublic }),
+      });
+      if (res.ok) {
+        showToast(`باکت «${bkt.name}» با موفقیت ایجاد گردید.`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در ایجاد باکت: ${err.error || res.statusText}`);
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرویس ذخیره‌سازی.');
+    }
+  };
+
+  // Real API: Deploy Function
+  const handleDeployFunction = async (fn: EdgeFunction) => {
+    if (!currentProject) return;
+    try {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/functions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fn.name,
+          slug: fn.slug,
+          runtime: fn.runtime || 'nodejs20',
+          code: fn.script,
+        }),
+      });
+      if (res.ok) {
+        showToast(`تابع لبه «${fn.name}» با موفقیت مستقر گردید.`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در استقرار تابع: ${err.error || res.statusText}`);
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرور توابع.');
+    }
+  };
+
+  // Real API: Add User
+  const handleAddUser = async (usr: ProjectUser) => {
+    if (!currentProject) return;
+    try {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/auth/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: usr.fullName,
+          phone: usr.phone,
+          email: usr.email,
+          password: 'TempPassword123!',
+          role: usr.role || 'user',
+        }),
+      });
+      if (res.ok) {
+        showToast(`کاربر «${usr.fullName || usr.phone}» با موفقیت ثبت شد.`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در ثبت کاربر: ${err.error || res.statusText}`);
+      }
+    } catch {
+      showToast('خطا در ثبت کاربر.');
+    }
+  };
+
+  // Real API: Add Domain
+  const handleAddDomain = async (dom: { domain: string }) => {
+    if (!currentProject) return;
+    try {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/hosting/domains`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dom.domain }),
+      });
+      if (res.ok) {
+        showToast(`دامنه «${dom.domain}» با موفقیت ثبت شد.`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`خطا در ثبت دامنه: ${err.error || res.statusText}`);
+      }
+    } catch {
+      showToast('خطا در ثبت دامنه.');
+    }
+  };
+
+  // Real API: Update Project
+  const handleUpdateProject = async (updated: Partial<Project>) => {
+    if (!currentProject) return;
+    try {
+      const res = await fetch(`/_baas/v1/projects/${currentProject.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === currentProjectId ? { ...p, ...updated } : p))
+        );
+        showToast('مشخصات پروژه ذخیره گردید.');
+      }
+    } catch {
+      showToast('خطا در به‌روزرسانی پروژه.');
+    }
+  };
+
+  // Real API: Delete Project
+  const handleDeleteProject = async () => {
     if (projects.length <= 1) {
       showToast('خطا: حذف تنها پروژه فعال مجاز نمی‌باشد.');
       return;
     }
-    const remaining = projects.filter((p) => p.id !== currentProjectId);
-    setProjects(remaining);
-    setCurrentProjectId(remaining[0].id);
-    navigate('/');
-    showToast('پروژه با موفقیت حذف گردید.');
+    if (!currentProject) return;
+    if (!confirm(`آیا از حذف کامل پروژه «${currentProject.name}» اطمینان دارید؟`)) return;
+
+    try {
+      const res = await fetch(`/_baas/v1/projects/${currentProject.slug}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const remaining = projects.filter((p) => p.id !== currentProjectId);
+        setProjects(remaining);
+        setCurrentProjectId(remaining[0].id);
+        navigate('/panel');
+        showToast('پروژه با موفقیت حذف گردید.');
+      }
+    } catch {
+      showToast('خطا در حذف پروژه.');
+    }
   };
 
-  const handleTopup = (amountIrr: number, gateway: string) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === currentProjectId
-          ? { ...p, walletBalanceIrr: p.walletBalanceIrr + amountIrr }
-          : p
-      )
-    );
-    showToast(
-      `پرداخت موفق از طریق درگاه ${gateway}. مبلغ ${(amountIrr / 10).toLocaleString('fa-IR')} تومان به کیف پول افزوده شد.`
-    );
+  // Real API: Topup Wallet
+  const handleTopup = async (amountIrr: number, gateway: string) => {
+    try {
+      const res = await fetch('/_baas/v1/users/usr_developer_03/credit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deltaIrr: amountIrr }),
+      });
+      if (res.ok) {
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === currentProjectId
+              ? { ...p, walletBalanceIrr: p.walletBalanceIrr + amountIrr }
+              : p
+          )
+        );
+        showToast(
+          `پرداخت موفق از طریق ${gateway}. مبلغ ${(amountIrr / 10).toLocaleString('fa-IR')} تومان به کیف پول افزوده شد.`
+        );
+      }
+    } catch {
+      showToast('خطا در افزایش اعتبار کیف پول.');
+    }
   };
 
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col font-sans select-none" dir="rtl">
-      {/* Toast Notification Banner */}
+    <div className="min-h-screen flex flex-col bg-surface text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600">
+      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -344,10 +516,10 @@ export default function App() {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             activeSubView={activeSubView}
-            onSubViewChange={setActiveSubView}
+            onSubViewChange={handleSubViewChange}
             edgeFunctionsEnabled={isEdgeFunctionsEnabled}
             project={currentProject}
-            onNavigateHome={() => navigate('/')}
+            onNavigateHome={() => navigate('/panel')}
           />
 
           {/* Main Service Viewport */}
@@ -381,6 +553,7 @@ export default function App() {
                     project={currentProject}
                     onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
                     activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
 
@@ -398,6 +571,8 @@ export default function App() {
                   <AuthView
                     project={currentProject}
                     onOpenAddUserModal={() => setIsAddUserOpen(true)}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
 
@@ -407,6 +582,8 @@ export default function App() {
                     enabled={isEdgeFunctionsEnabled}
                     onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
                     onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
 
@@ -414,28 +591,52 @@ export default function App() {
                   <StorageView
                     project={currentProject}
                     onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
 
-                {activeTab === 'ipg' && <IpgView project={currentProject} />}
+                {activeTab === 'ipg' && (
+                  <IpgView
+                    project={currentProject}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
+                  />
+                )}
 
                 {activeTab === 'hosting' && (
                   <HostingView
                     project={currentProject}
                     onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
                     onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
 
-                {activeTab === 'compliance' && <ComplianceView project={currentProject} />}
+                {activeTab === 'compliance' && (
+                  <ComplianceView
+                    project={currentProject}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
+                  />
+                )}
 
-                {activeTab === 'telemetry' && <TelemetryView project={currentProject} />}
+                {activeTab === 'telemetry' && (
+                  <TelemetryView
+                    project={currentProject}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
+                  />
+                )}
 
                 {activeTab === 'settings' && (
                   <SettingsView
                     project={currentProject}
                     onUpdateProject={handleUpdateProject}
                     onDeleteProject={handleDeleteProject}
+                    activeSubView={activeSubView}
+                    onSubViewChange={handleSubViewChange}
                   />
                 )}
               </>
@@ -454,41 +655,31 @@ export default function App() {
       <DeployFunctionModal
         isOpen={isDeployFunctionOpen}
         onClose={() => setIsDeployFunctionOpen(false)}
-        onDeploy={(fn) => {
-          showToast(`تابع لبه «${fn.name}» با موفقیت مستقر گردید.`);
-        }}
+        onDeploy={handleDeployFunction}
       />
 
       <CreateTableModal
         isOpen={isCreateTableOpen}
         onClose={() => setIsCreateTableOpen(false)}
-        onCreate={(tbl) => {
-          showToast(`جدول «${tbl.name}» با موفقیت ایجاد گردید.`);
-        }}
+        onCreate={handleCreateTable}
       />
 
       <CreateBucketModal
         isOpen={isCreateBucketOpen}
         onClose={() => setIsCreateBucketOpen(false)}
-        onCreate={(bkt) => {
-          showToast(`باکت «${bkt.name}» با موفقیت ایجاد گردید.`);
-        }}
+        onCreate={handleCreateBucket}
       />
 
       <AddUserModal
         isOpen={isAddUserOpen}
         onClose={() => setIsAddUserOpen(false)}
-        onAdd={(usr) => {
-          showToast(`کاربر «${usr.fullName}» با موفقیت ثبت گردید.`);
-        }}
+        onAdd={handleAddUser}
       />
 
       <AddDomainModal
         isOpen={isAddDomainOpen}
         onClose={() => setIsAddDomainOpen(false)}
-        onAdd={(dom) => {
-          showToast(`دامنه «${dom.domain}» با موفقیت ثبت شد.`);
-        }}
+        onAdd={handleAddDomain}
       />
 
       <TopupModal

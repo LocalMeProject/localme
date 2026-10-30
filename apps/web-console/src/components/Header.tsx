@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
                             onClick={() => {
                               onSelectProject(proj);
                               setProjectDropdownOpen(false);
-                              navigate(`/projects/${proj.slug}/database`);
+                              navigate(`/panel/${proj.slug}/database/grid`);
                             }}
                             className={`w-full text-right px-3 py-2 flex items-center justify-between text-xs hover:bg-slate-50 transition ${
                               isCurrent ? 'bg-emerald-50 text-emerald-800 font-medium' : 'text-slate-700'
@@ -228,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => {
                   setProfileOpen(false);
                   if (currentProject) {
-                    navigate(`/projects/${currentProject.slug}/settings`);
+                    navigate(`/panel/${currentProject.slug}/settings/general`);
                   }
                 }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 text-xs transition text-right"

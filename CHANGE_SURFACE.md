@@ -29,6 +29,9 @@ affected_projects:
 ### Added Files
 - `apps/server/src/wwwroot/assets/`
 
+### Removed Files
+- `apps/server/src/wwwroot/`
+
 ### Modified Files
 - `apps/server/src/Program.cs`
 - `apps/server/src/Routes/BaasServiceRoutes.cs`
@@ -38,6 +41,7 @@ affected_projects:
 - `apps/web-console/tailwind.config.js`
 - `apps/web-console/src/index.css`
 - `apps/web-console/src/App.tsx`
+- `apps/web-console/src/types.ts`
 - `apps/web-console/vite.config.ts`
 - `apps/web-console/src/views/OverviewView.tsx`
 - `apps/web-console/src/views/AuthView.tsx`

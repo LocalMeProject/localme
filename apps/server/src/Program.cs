@@ -320,6 +320,9 @@ public class Program
         app.MapGet("/console", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
         app.MapGet("/console/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
 
+        app.MapGet("/projects", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/projects/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+
         // Superadmin & Operator Portal (/admin/*)
         app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
         app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));

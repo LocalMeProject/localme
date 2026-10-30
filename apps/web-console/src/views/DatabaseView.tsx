@@ -2,11 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Project, DatabaseColumn, DatabaseQueryHistoryItem } from '../types';
 import {
   Database,
-  Table as TableIcon,
   Plus,
   RefreshCw,
-  Code2,
-  Columns,
   ChevronRight,
   Archive,
   Key,
@@ -22,6 +19,7 @@ interface DatabaseViewProps {
   project: Project;
   onOpenCreateTableModal: () => void;
   activeSubView?: string;
+  onSubViewChange?: (subView: string) => void;
 }
 
 type StudioTab = 'grid' | 'schema' | 'sql' | 'backups' | 'config';
@@ -364,78 +362,15 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         </div>
       </div>
 
-      {/* Main Studio Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab('grid')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'grid'
-                ? 'bg-white text-emerald-700 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <TableIcon className="w-4 h-4" />
-            <span>جداول و داده‌ها</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('sql')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'sql'
-                ? 'bg-white text-emerald-700 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Code2 className="w-4 h-4" />
-            <span>ویرایشگر SQL</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('schema')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'schema'
-                ? 'bg-white text-emerald-700 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Columns className="w-4 h-4" />
-            <span>طراحی ساختار جدول</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('backups')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'backups'
-                ? 'bg-white text-emerald-700 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Archive className="w-4 h-4" />
-            <span>پشتیبان‌گیری</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'config'
-                ? 'bg-white text-emerald-700 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            <span>اطلاعات اتصال</span>
-          </button>
-        </div>
-
-        {/* Current Table Selector */}
-        {tables.length > 0 && activeTab === 'grid' && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 text-[11px]">جدول انتخابی:</span>
+      {/* Table Selector & Toolbar in Grid View */}
+      {activeTab === 'grid' && tables.length > 0 && (
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">جدول جاری:</span>
             <select
               value={activeTable}
               onChange={(e) => setActiveTable(e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono text-emerald-700 focus:outline-none focus:border-emerald-500 shadow-xs"
+              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono text-emerald-700 font-semibold focus:outline-none focus:border-emerald-500 shadow-xs"
               dir="ltr"
             >
               {tables.map((t) => (
@@ -445,8 +380,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               ))}
             </select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Main Studio Viewport */}
       {activeTab === 'backups' ? (

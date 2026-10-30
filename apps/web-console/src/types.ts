@@ -91,6 +91,7 @@ export interface ProjectUser {
   username?: string;
   fullName: string;
   provider: string;
+  role?: string;
   isConfirmed: boolean;
   createdAt: string;
 }
@@ -106,6 +107,8 @@ export interface EdgeFunction {
   invocationsCount: number;
   lastExecutedAt?: string;
   createdAt: string;
+  deployedAt?: string;
+  invocations24h?: number;
 }
 
 export interface FunctionEnvVar {
@@ -155,23 +158,28 @@ export interface LedgerTransaction {
   customerPhone: string;
   status: 'VERIFIED' | 'PENDING' | 'FAILED';
   createdAt: string;
+  settledAt?: string;
 }
 
 export interface DeploymentRelease {
   id: string;
   branch: string;
   commitSha: string;
+  commitMessage?: string;
   domain: string;
   status: 'READY' | 'BUILDING' | 'FAILED';
   sizeBytes: number;
   deployedAt: string;
+  url?: string;
   previewUrl: string;
 }
 
 export interface CustomDomain {
+  id?: string;
   domain: string;
   isVerified: boolean;
   sslActive: boolean;
+  hasSsl?: boolean;
   cnameTarget: string;
   createdAt: string;
 }
