@@ -212,8 +212,8 @@ export const Navigation: React.FC<NavigationProps> = ({
         <nav
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          className={`absolute top-0 right-0 h-full bg-white border-l border-slate-200 flex flex-col justify-between py-3 transition-all duration-150 ease-in-out ${
-            isRailExpanded ? 'w-56 shadow-2xl z-40 px-2.5' : 'w-14 items-center px-1.5'
+          className={`absolute top-0 right-0 h-full bg-white border-l border-slate-200 flex flex-col justify-between py-3 px-2 overflow-hidden transition-[width,box-shadow] duration-200 ease-in-out ${
+            isRailExpanded ? 'w-56 shadow-2xl z-40' : 'w-14'
           }`}
           aria-label="سرویس‌های اصلی"
         >
@@ -222,27 +222,21 @@ export const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={onNavigateHome}
               title={`بازگشت به هاب پروژه‌ها (${project?.name || 'انتخاب پروژه'})`}
-              className={`flex items-center gap-2.5 rounded-xl transition text-right ${
-                isRailExpanded
-                  ? 'w-full p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
-                  : 'w-10 h-10 justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold text-sm mx-auto'
-              }`}
+              className="w-full h-10 flex items-center rounded-xl transition-colors hover:bg-slate-100 text-right p-0 overflow-hidden"
             >
-              {isRailExpanded ? (
-                <>
-                  <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    {project?.name ? project.name.slice(0, 2) : 'LM'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
-                      {project?.name || 'انتخاب پروژه'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
-                  </div>
-                </>
-              ) : (
-                <span>{project?.name ? project.name.slice(0, 2) : 'LM'}</span>
-              )}
+              <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shadow-xs transition-colors">
+                {project?.name ? project.name.slice(0, 2) : 'LM'}
+              </div>
+              <div
+                className={`mr-2.5 flex-1 min-w-0 text-right transition-opacity duration-150 ${
+                  isRailExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+              >
+                <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
+                  {project?.name || 'انتخاب پروژه'}
+                </div>
+                <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
+              </div>
             </button>
 
             <div className="w-full h-px bg-slate-200 my-1" />
@@ -260,29 +254,33 @@ export const Navigation: React.FC<NavigationProps> = ({
                   title={!isRailExpanded ? mod.label : undefined}
                   aria-label={mod.label}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center rounded-xl transition-all ${
-                    isRailExpanded
-                      ? 'w-full px-3 py-2 gap-3 justify-start text-right'
-                      : 'w-10 h-10 justify-center mx-auto'
-                  } ${
+                  className={`relative w-full h-10 flex items-center rounded-xl transition-colors overflow-hidden ${
                     isActive
-                      ? 'bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-semibold'
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold'
                       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
                   }`}
                 >
-                  <span className="shrink-0">{mod.icon}</span>
-                  {isRailExpanded && (
-                    <span className="flex-1 text-xs truncate whitespace-nowrap">
-                      {mod.label}
-                    </span>
-                  )}
-                  {isRailExpanded && mod.badge && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-medium">
+                  <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+                    {mod.icon}
+                  </div>
+                  <span
+                    className={`mr-1 text-xs truncate whitespace-nowrap transition-opacity duration-150 ${
+                      isRailExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    {mod.label}
+                  </span>
+                  {mod.badge && (
+                    <span
+                      className={`mr-auto px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-medium whitespace-nowrap transition-opacity duration-150 ${
+                        isRailExpanded ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
                       {mod.badge}
                     </span>
                   )}
-                  {isActive && !isRailExpanded && (
-                    <span className="absolute right-0 top-2.5 bottom-2.5 w-1 bg-emerald-600 rounded-l-full" />
+                  {isActive && (
+                    <span className="absolute right-0 top-2 bottom-2 w-1 bg-emerald-600 rounded-l-full" />
                   )}
                 </button>
               );
@@ -290,16 +288,22 @@ export const Navigation: React.FC<NavigationProps> = ({
           </div>
 
           {/* Bottom Hub Return Button */}
-          <div className={`w-full pt-2 border-t border-slate-200 flex flex-col ${isRailExpanded ? 'px-1' : 'items-center'}`}>
+          <div className="w-full pt-2 border-t border-slate-200">
             <button
               onClick={onNavigateHome}
               title={!isRailExpanded ? 'همه پروژه‌ها' : undefined}
-              className={`rounded-xl flex items-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition ${
-                isRailExpanded ? 'w-full px-3 py-2 gap-3 justify-start text-xs font-medium' : 'w-10 h-10 justify-center'
-              }`}
+              className="w-full h-10 flex items-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors overflow-hidden"
             >
-              <FolderGit2 className="w-5 h-5 shrink-0" />
-              {isRailExpanded && <span>همه پروژه‌ها</span>}
+              <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+                <FolderGit2 className="w-5 h-5 shrink-0" />
+              </div>
+              <span
+                className={`mr-1 text-xs font-medium whitespace-nowrap transition-opacity duration-150 ${
+                  isRailExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+              >
+                همه پروژه‌ها
+              </span>
             </button>
           </div>
         </nav>

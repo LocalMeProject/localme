@@ -116,9 +116,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         } else {
           const schemaRes = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
           if (schemaRes.ok) {
-            const schema = (await schemaRes.json()) as Record<string, DatabaseColumn[]>;
-            const cols = (schema[tableName] || []).map((c) => c.name);
-            setTableColumns(cols);
+            const raw = await schemaRes.json();
+            let rawList: Record<string, unknown>[] = [];
+            if (Array.isArray(raw)) {
+              rawList = raw;
+            } else if (raw && typeof raw === 'object') {
+              if (Array.isArray(raw[tableName])) rawList = raw[tableName];
+              else if (Array.isArray(raw.columns)) rawList = raw.columns;
+            }
+            const cols = rawList.map((c) => String(c.name || c.Name || c.column_name || ''));
+            setTableColumns(cols.length > 0 ? cols : ['id']);
           } else {
             setTableColumns(['id']);
           }
@@ -141,8 +148,28 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
       if (res.ok) {
-        const schema = (await res.json()) as Record<string, DatabaseColumn[]>;
-        setSchemaColumns(schema[tableName] || []);
+        const raw = await res.json();
+        let rawList: Record<string, unknown>[] = [];
+        if (Array.isArray(raw)) {
+          rawList = raw;
+        } else if (raw && typeof raw === 'object') {
+          if (Array.isArray(raw[tableName])) rawList = raw[tableName];
+          else if (Array.isArray(raw.columns)) rawList = raw.columns;
+        }
+        setSchemaColumns(
+          rawList.map((c: Record<string, unknown>) => ({
+            name: String(c.name || c.Name || c.column_name || ''),
+            dataType: String(c.dataType || c.DataType || c.data_type || c.type || 'text'),
+            isPrimaryKey: Boolean(c.isPrimaryKey ?? c.IsPrimaryKey ?? c.is_primary_key ?? false),
+            isNullable: Boolean(c.isNullable ?? c.IsNullable ?? c.is_nullable ?? true),
+            defaultValue:
+              c.defaultValue !== undefined && c.defaultValue !== null
+                ? String(c.defaultValue)
+                : c.DefaultValue !== undefined && c.DefaultValue !== null
+                ? String(c.DefaultValue)
+                : undefined,
+          }))
+        );
       }
     } catch {
       // ignore
