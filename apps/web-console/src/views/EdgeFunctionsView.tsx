@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Project, EdgeFunction, FunctionEnvVar } from '../types';
 import {
   Terminal,
@@ -10,6 +10,8 @@ import {
   EyeOff,
   Code,
   Plus,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 
 interface EdgeFunctionsViewProps {
@@ -17,82 +19,161 @@ interface EdgeFunctionsViewProps {
   enabled: boolean;
   onToggleEnable: () => void;
   onOpenDeployModal: () => void;
+  activeSubView?: string;
+  onSubViewChange?: (subView: string) => void;
 }
-
-const INITIAL_FUNCTIONS: EdgeFunction[] = [];
-const INITIAL_ENV_VARS: FunctionEnvVar[] = [];
 
 export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   project,
   enabled,
   onToggleEnable,
   onOpenDeployModal,
+  activeSubView = 'list',
 }) => {
-  const [functions, setFunctions] = useState<EdgeFunction[]>(INITIAL_FUNCTIONS);
+  const [functions, setFunctions] = useState<EdgeFunction[]>([]);
   const [selectedFunc, setSelectedFunc] = useState<EdgeFunction | null>(null);
   const [editorCode, setEditorCode] = useState<string>('');
-  const [testPayload, setTestPayload] = useState<string>('{\n  "phone": "09121112233",\n  "code": "582910"\n}');
-  const [testOutput, setTestOutput] = useState<string>('{\n  "status": "ready",\n  "message": "Click Run Live Script to execute in Jint sandbox"\n}');
+  const [testPayload, setTestPayload] = useState<string>('{\n  "userId": "1001",\n  "action": "verify"\n}');
+  const [testOutput, setTestOutput] = useState<string>('{\n  "status": "ready",\n  "message": "برای تست و اجرای تابع، دکمه «اجرای تابع» را بزنید"\n}');
   const [execLatency, setExecLatency] = useState<number | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [envVars, setEnvVars] = useState<FunctionEnvVar[]>(INITIAL_ENV_VARS);
+  const [isLoadingFunctions, setIsLoadingFunctions] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Environment Variables
+  const [envVars, setEnvVars] = useState<FunctionEnvVar[]>([]);
   const [newEnvKey, setNewEnvKey] = useState('');
   const [newEnvVal, setNewEnvVal] = useState('');
   const [newEnvSecret, setNewEnvSecret] = useState(true);
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
+
+  // Real API: Fetch Functions
+  const fetchFunctions = useCallback(async () => {
+    setIsLoadingFunctions(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/functions`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const mapped: EdgeFunction[] = data.map((f: Record<string, unknown>) => ({
+            id: String(f.id || f.slug || ''),
+            name: String(f.name || f.slug || ''),
+            slug: String(f.slug || f.name || ''),
+            runtime: String(f.runtime || 'nodejs20'),
+            script: String(f.script || f.code || '// LocalMe Edge Function\nreturn { success: true, message: "Hello from Edge!" };'),
+            memoryLimitMb: Number(f.memoryLimitMb || 16),
+            timeoutSeconds: Number(f.timeoutSeconds || 3),
+            invocationsCount: Number(f.invocationsCount || 0),
+            createdAt: String(f.createdAt || 'هم‌اکنون'),
+            deployedAt: String(f.updatedAt || f.deployedAt || 'هم‌اکنون'),
+            invocations24h: Number(f.invocations24h || 0),
+          }));
+          setFunctions(mapped);
+          if (mapped.length > 0 && !selectedFunc) {
+            setSelectedFunc(mapped[0]);
+            setEditorCode(mapped[0].script);
+          }
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingFunctions(false);
+    }
+  }, [project.slug, selectedFunc]);
+
+  useEffect(() => {
+    fetchFunctions();
+  }, [fetchFunctions]);
 
   const handleSelectFunc = (fn: EdgeFunction) => {
     setSelectedFunc(fn);
     setEditorCode(fn.script);
   };
 
-  const handleSaveScript = () => {
+  // Real API: Save Script
+  const handleSaveScript = async () => {
     if (!selectedFunc) return;
-    setFunctions((prev) =>
-      prev.map((fn) =>
-        fn.id === selectedFunc.id ? { ...fn, script: editorCode } : fn
-      )
-    );
-    alert(`اسکریپت «${selectedFunc.name}» (${selectedFunc.slug}) در پروژه ${project.name} با موفقیت ذخیره گردید.`);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/functions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedFunc.name,
+          slug: selectedFunc.slug,
+          runtime: selectedFunc.runtime || 'nodejs20',
+          code: editorCode,
+        }),
+      });
+      if (res.ok) {
+        setFunctions((prev) =>
+          prev.map((fn) =>
+            fn.id === selectedFunc.id ? { ...fn, script: editorCode } : fn
+          )
+        );
+        alert(`کد تابع «${selectedFunc.name}» با موفقیت در سرور ذخیره شد.`);
+      } else {
+        alert('خطا در ذخیره کد تابع.');
+      }
+    } catch {
+      alert('خطا در برقراری ارتباط با سرور.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleRunTest = () => {
+  // Real API: Execute Function
+  const handleRunTest = async () => {
+    if (!selectedFunc) return;
     setIsExecuting(true);
     const start = performance.now();
 
-    setTimeout(() => {
+    try {
+      let parsedPayload = {};
       try {
-        let parsedPayload = {};
-        try {
-          parsedPayload = JSON.parse(testPayload);
-        } catch {
-          // ignore
-        }
-
-        const simulatedOutput = {
-          success: true,
-          status: 200,
-          result: {
-            dispatched: true,
-            provider: "kavenegar",
-            sender: "3000777",
-            payloadReceived: parsedPayload,
-            memoryUsedBytes: 4194304,
-            engine: "Jint 4.0.0-beta Managed Clr-Free Sandbox"
-          },
-          timestampUtc: new Date().toISOString()
-        };
-
-        const duration = Math.round(performance.now() - start) + 4;
-        setExecLatency(duration);
-        setTestOutput(JSON.stringify(simulatedOutput, null, 2));
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        setTestOutput(JSON.stringify({ error: errorMsg }, null, 2));
-      } finally {
-        setIsExecuting(false);
+        parsedPayload = JSON.parse(testPayload);
+      } catch {
+        // ignore
       }
-    }, 120);
+
+      const res = await fetch(`/_baas/v1/${project.slug}/functions/${selectedFunc.slug}/invoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsedPayload),
+      });
+
+      const duration = Math.round(performance.now() - start);
+      setExecLatency(duration);
+
+      const data = await res.json().catch(() => ({ status: res.status, statusText: res.statusText }));
+      setTestOutput(JSON.stringify(data, null, 2));
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setTestOutput(JSON.stringify({ error: errorMsg }, null, 2));
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // Real API: Delete Function
+  const handleDeleteFunc = async (slug: string) => {
+    if (!confirm(`آیا از حذف تابع "${slug}" اطمینان دارید؟`)) return;
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/functions/${slug}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const remaining = functions.filter((f) => f.slug !== slug);
+        setFunctions(remaining);
+        if (selectedFunc?.slug === slug) {
+          setSelectedFunc(remaining[0] || null);
+          setEditorCode(remaining[0]?.script || '');
+        }
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handleAddEnv = (e: React.FormEvent) => {
@@ -127,316 +208,298 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Service Header Card */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-              JINT 4.0 ISOLATE SANDBOX
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              توابع ابری بدون سرور
             </span>
             <span
-              className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider ${
+              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                 enabled
-                  ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30'
-                  : 'bg-[#1f1f1f] text-zinc-500 border border-[#2e2e2e]'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
               }`}
             >
-              {enabled ? 'READY' : 'DISABLED'}
+              {enabled ? 'فعال و آماده' : 'غیرفعال'}
             </span>
           </div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-[#3ECF8E]" />
-            توابع سرورلس لبه شبکه (Serverless Edge Functions Studio)
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
-            اجرای توابع جاوااسکریپت و تایپ‌اسکریپت روی موتور ایزوله خالص Jint با سقف رم ۱۶ مگابایت و تاخیر زیر ۱۰ میلی‌ثانیه.
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Terminal className="w-5 h-5 text-emerald-600" />
+            {activeSubView === 'env'
+              ? 'متغیرهای محیطی و تنظیمات توابع'
+              : activeSubView === 'deploy'
+              ? 'ثبت و استقرار تابع جدید'
+              : 'فهرست و محیط اجرای توابع لبه'}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+            اجرای توابع اختصاصی، وب‌هوک‌ها، محاسبات پرداخت و پردازش رویدادها با حداقل زمان تاخیر.
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchFunctions}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs"
+            title="بازخوانی توابع"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingFunctions ? 'animate-spin' : ''}`} />
+            <span>بازخوانی</span>
+          </button>
           <button
             onClick={onToggleEnable}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition ${
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition border ${
               enabled
-                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
-                : 'bg-[#3ECF8E] hover:bg-[#34b27b] text-black shadow-sm'
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent shadow-xs'
             }`}
           >
-            {enabled ? 'غیرفعال‌سازی سرویس توابع' : 'فعال‌سازی سرویس توابع لبه'}
+            {enabled ? 'غیرفعال‌سازی سرویس' : 'فعال‌سازی سرویس'}
           </button>
-
-          {enabled && (
-            <button
-              onClick={onOpenDeployModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>استقرار تابع جدید</span>
-            </button>
-          )}
+          <button
+            onClick={onOpenDeployModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>استقرار تابع جدید</span>
+          </button>
         </div>
       </div>
 
-      {!enabled ? (
-        <div className="p-12 text-center rounded-2xl bg-[#171717] border border-dashed border-[#242424] max-w-xl mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-full bg-[#1f1f1f] flex items-center justify-center mx-auto text-[#3ECF8E]">
-            <Terminal className="w-6 h-6" />
+      {/* Sub-View: Environment Variables */}
+      {activeSubView === 'env' && (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs max-w-3xl space-y-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Shield className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">متغیرهای محیطی و کلیدهای محرمانه توابع</h3>
           </div>
-          <h4 className="text-base font-bold text-white">سرویس توابع لبه برای این پروژه فعال نشده است</h4>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            برای اجرای کدهای هوک ارسال پیامک، اعتبارسنجی درگاه‌های بانکی، و کارهای بدون سرور، سرویس را فعال نمایید.
-          </p>
-          <button
-            onClick={onToggleEnable}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-semibold text-xs transition shadow-sm"
-          >
-            فعال‌سازی سرویس توابع لبه (Edge Functions)
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Main Studio: Function List & Interactive Code Editor */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Functions List Sidebar */}
-            <div className="lg:col-span-4 space-y-3">
-              <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="text-xs font-semibold text-zinc-400 flex items-center justify-between">
-                  <span>توابع مستقر شده ({functions.length})</span>
-                  <span className="text-[10px] text-zinc-500 font-mono">Jint Pool</span>
-                </div>
-                <div className="space-y-2 max-h-[480px] overflow-y-auto">
-                  {functions.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-zinc-500 rounded-xl border border-dashed border-[#242424]">
-                      هیچ تابعی ایجاد نشده است
-                    </div>
-                  ) : (
-                    functions.map((fn) => (
-                      <div
-                        key={fn.id}
-                        onClick={() => handleSelectFunc(fn)}
-                        className={`cursor-pointer p-3.5 rounded-xl border transition ${
-                          selectedFunc?.id === fn.id
-                            ? 'bg-[#1f1f1f] border-[#3ECF8E]/40 shadow-sm'
-                            : 'bg-[#171717] border-[#242424] hover:border-[#3ECF8E]/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-xs font-bold text-[#3ECF8E] dir-ltr">{fn.slug}</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">{fn.invocationsCount} hits</span>
-                        </div>
-                        <div className="text-xs font-medium text-white">{fn.name}</div>
-                        <div className="text-[10px] text-zinc-400 font-mono mt-1.5 flex items-center gap-2">
-                          <span>RAM: {fn.memoryLimitMb}MB</span>
-                          <span>Timeout: {fn.timeoutSeconds}s</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Editor & Live Runner */}
-            <div className="lg:col-span-8 space-y-4">
-              {/* Code Editor Header */}
-              <div className="p-4 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4 text-[#3ECF8E]" />
-                    <span className="text-xs font-bold text-white">
-                      ویرایشگر جاوااسکریپت: <span className="font-mono text-[#3ECF8E]">{selectedFunc?.slug || 'بدون تابع'}</span>
+          <form onSubmit={handleAddEnv} className="flex flex-col sm:flex-row items-end gap-3 pb-4 border-b border-slate-100">
+            <div className="flex-1 w-full sm:w-auto">
+              <label className="text-xs text-slate-600 block mb-1">نام کلید (KEY)</label>
+              <input
+                type="text"
+                value={newEnvKey}
+                onChange={(e) => setNewEnvKey(e.target.value)}
+                placeholder="JWT_SECRET"
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs uppercase"
+                dir="ltr"
+              />
+            </div>
+            <div className="flex-1 w-full sm:w-auto">
+              <label className="text-xs text-slate-600 block mb-1">مقدار (VALUE)</label>
+              <input
+                type="text"
+                value={newEnvVal}
+                onChange={(e) => setNewEnvVal(e.target.value)}
+                placeholder="sk_live_..."
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
+                dir="ltr"
+              />
+            </div>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 pb-2.5 cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={newEnvSecret}
+                onChange={(e) => setNewEnvSecret(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+              />
+              <span>محرمانه (Secret)</span>
+            </label>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs shrink-0"
+            >
+              افزودن متغیر
+            </button>
+          </form>
+
+          <div className="space-y-2">
+            {envVars.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center">هنوز متغیر محیطی تعریف نشده است.</p>
+            ) : (
+              envVars.map((env) => (
+                <div key={env.key} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs font-bold text-slate-800" dir="ltr">{env.key}</span>
+                    <span className="font-mono text-xs text-slate-500" dir="ltr">
+                      {env.isSecret && !visibleSecrets.has(env.key) ? '••••••••••••' : env.value}
                     </span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    {env.isSecret && (
+                      <button
+                        onClick={() => toggleSecretVisibility(env.key)}
+                        className="p-1 text-slate-400 hover:text-slate-600"
+                      >
+                        {visibleSecrets.has(env.key) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleRemoveEnv(env.key)}
+                      className="p-1 text-slate-400 hover:text-rose-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Functions Studio (List & Code Editor) */}
+      {activeSubView !== 'env' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Functions Sidebar List */}
+          <div className="lg:col-span-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs font-bold text-slate-900">
+                فهرست توابع ({functions.length})
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {isLoadingFunctions ? (
+                <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                  <span>در حال دریافت توابع...</span>
+                </div>
+              ) : functions.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 rounded-xl border border-dashed border-slate-200 space-y-2">
+                  <p>هنوز تابعی ایجاد نشده است.</p>
                   <button
-                    onClick={handleSaveScript}
-                    disabled={!selectedFunc}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1f1f1f] hover:bg-[#282828] disabled:opacity-50 text-zinc-200 font-medium text-xs transition border border-[#2e2e2e]"
+                    onClick={onOpenDeployModal}
+                    className="text-xs text-emerald-700 hover:underline font-medium"
                   >
-                    <Save className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                    <span>ذخیره اسکریپت</span>
+                    + استقرار اولین تابع
                   </button>
                 </div>
+              ) : (
+                functions.map((fn) => (
+                  <div
+                    key={fn.slug}
+                    className={`w-full p-3 rounded-xl border text-right transition flex items-center justify-between ${
+                      selectedFunc?.slug === fn.slug
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleSelectFunc(fn)}
+                      className="flex items-center gap-2.5 truncate flex-1 text-right"
+                    >
+                      <Code className={`w-4 h-4 shrink-0 ${selectedFunc?.slug === fn.slug ? 'text-emerald-600' : 'text-slate-400'}`} />
+                      <div className="truncate">
+                        <div className="text-xs font-bold truncate">{fn.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono" dir="ltr">/{fn.slug}</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFunc(fn.slug)}
+                      className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                      title="حذف تابع"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
-                {/* Code Textarea */}
-                <div dir="ltr">
-                  <textarea
-                    value={editorCode}
-                    onChange={(e) => setEditorCode(e.target.value)}
-                    className="w-full h-64 p-3.5 rounded-xl bg-[#0f0f0f] font-mono text-xs text-[#ededed] border border-[#242424] focus:outline-none focus:border-[#3ECF8E] leading-relaxed resize-y"
-                    spellCheck={false}
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              {/* Live Test Runner Pane */}
-              <div className="p-4 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">
-                    <Play className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                    آزمایش و اجرای زنده اسکریپت (Live Test Runner)
-                  </span>
+          {/* Code Editor & Test Console */}
+          <div className="lg:col-span-8 space-y-4">
+            {selectedFunc ? (
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 font-mono" dir="ltr">
+                      {selectedFunc.name} ({selectedFunc.runtime})
+                    </h3>
+                    <div className="text-[10px] text-slate-400 font-mono" dir="ltr">
+                      POST /_baas/v1/{project.slug}/functions/{selectedFunc.slug}/invoke
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    {execLatency !== null && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-                        تاخیر: {execLatency} ms
-                      </span>
-                    )}
+                    <button
+                      onClick={handleSaveScript}
+                      disabled={isSaving}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs disabled:opacity-50"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{isSaving ? 'در حال ذخیره...' : 'ذخیره کد'}</span>
+                    </button>
                     <button
                       onClick={handleRunTest}
                       disabled={isExecuting}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-semibold text-xs transition shadow-sm disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition shadow-xs disabled:opacity-50"
                     >
-                      <Play className="w-3 h-3 fill-black" />
-                      <span>{isExecuting ? 'در حال اجرا...' : 'اجرای زنده'}</span>
+                      <Play className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{isExecuting ? 'در حال اجرا...' : 'اجرای تابع'}</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3" dir="ltr">
+                {/* Code Canvas */}
+                <div>
+                  <label className="text-[11px] text-slate-500 font-medium block mb-1">
+                    کد جاوااسکریپت تابع لبه:
+                  </label>
+                  <textarea
+                    value={editorCode}
+                    onChange={(e) => setEditorCode(e.target.value)}
+                    rows={10}
+                    className="w-full p-3 rounded-xl bg-slate-900 text-emerald-300 font-mono text-xs focus:outline-none border border-slate-800 shadow-xs"
+                    dir="ltr"
+                    spellCheck={false}
+                  />
+                </div>
+
+                {/* Tester Payload & Output */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-[11px] font-mono font-medium text-zinc-400 block mb-1">
-                      Input JSON Payload
+                    <label className="text-[11px] text-slate-500 font-medium block mb-1">
+                      ورودی JSON درخواست:
                     </label>
                     <textarea
                       value={testPayload}
                       onChange={(e) => setTestPayload(e.target.value)}
-                      className="w-full h-32 p-2.5 rounded-xl bg-[#0f0f0f] font-mono text-[11px] text-zinc-300 border border-[#242424] focus:outline-none focus:border-[#3ECF8E] resize-none"
+                      rows={5}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-mono text-xs focus:outline-none focus:border-emerald-500"
                       dir="ltr"
                     />
                   </div>
+
                   <div>
-                    <label className="text-[11px] font-mono font-medium text-zinc-400 block mb-1">
-                      Execution Inspector
-                    </label>
-                    <pre className="w-full h-32 p-2.5 rounded-xl bg-[#0f0f0f] font-mono text-[11px] text-zinc-300 border border-[#242424] overflow-auto" dir="ltr">
-                      {testOutput}
-                    </pre>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] text-slate-500 font-medium">
+                        خروجی اجرای زنده:
+                      </label>
+                      {execLatency !== null && (
+                        <span className="text-[10px] text-emerald-700 font-mono flex items-center gap-1" dir="ltr">
+                          <Clock className="w-3 h-3" /> {execLatency} ms
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      value={testOutput}
+                      readOnly
+                      rows={5}
+                      className="w-full p-2.5 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs focus:outline-none border border-slate-800"
+                      dir="ltr"
+                    />
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-12 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                جهت مشاهده، ویرایش و تست، یک تابع از ستون کناری انتخاب نمایید.
+              </div>
+            )}
           </div>
-
-          {/* Secrets Vault & Environment Variables */}
-          <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
-            <div>
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-[#3ECF8E]" />
-                خزانه کلیدهای محرمانه و متغیرهای محیطی (Secrets Vault - AES-256-GCM)
-              </h4>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                کلیدهای محرمانه تنها در حافظه ایزوله Jint بارگذاری شده و به صورت رمزنگاری‌شده در دیتابیس ذخیره می‌شوند.
-              </p>
-            </div>
-
-            {/* Add Env Var Form */}
-            <form onSubmit={handleAddEnv} className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
-              <div className="md:col-span-4" dir="ltr">
-                <input
-                  type="text"
-                  placeholder="KEY_NAME (e.g. KAVENEGAR_TOKEN)"
-                  value={newEnvKey}
-                  onChange={(e) => setNewEnvKey(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:outline-none focus:border-[#3ECF8E] uppercase"
-                  dir="ltr"
-                />
-              </div>
-              <div className="md:col-span-5" dir="ltr">
-                <input
-                  type="password"
-                  placeholder="Secret value"
-                  value={newEnvVal}
-                  onChange={(e) => setNewEnvVal(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:outline-none focus:border-[#3ECF8E]"
-                  dir="ltr"
-                />
-              </div>
-              <div className="md:col-span-3 flex items-center justify-end gap-2">
-                <label className="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newEnvSecret}
-                    onChange={(e) => setNewEnvSecret(e.target.checked)}
-                    className="rounded border-[#242424] bg-[#0f0f0f] text-[#3ECF8E] focus:ring-[#3ECF8E]"
-                  />
-                  <span>محرمانه</span>
-                </label>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1f1f1f] hover:bg-[#282828] text-zinc-200 font-medium text-xs transition border border-[#2e2e2e]"
-                >
-                  <Plus className="w-3 h-3 text-[#3ECF8E]" />
-                  <span>افزودن</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Env Vars Table */}
-            <div className="overflow-x-auto rounded-xl border border-[#242424]">
-              <table className="w-full text-left text-xs font-mono" dir="ltr">
-                <thead>
-                  <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
-                    <th className="py-2.5 px-3">Variable Key</th>
-                    <th className="py-2.5 px-3">Value</th>
-                    <th className="py-2.5 px-3">Security Mode</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#242424]">
-                  {envVars.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-xs text-zinc-500 font-sans" dir="rtl">
-                        هیچ متغیر محیطی تعریف نشده است
-                      </td>
-                    </tr>
-                  ) : (
-                    envVars.map((v) => {
-                      const isVisible = visibleSecrets.has(v.key);
-                      return (
-                        <tr key={v.key} className="hover:bg-[#1f1f1f] transition">
-                          <td className="py-2.5 px-3 font-bold text-[#3ECF8E]">{v.key}</td>
-                          <td className="py-2.5 px-3 text-zinc-300">
-                            {v.isSecret && !isVisible ? '••••••••••••••••••••' : v.value}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                v.isSecret
-                                  ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30'
-                                  : 'bg-[#1f1f1f] text-zinc-400 border border-[#2e2e2e]'
-                              }`}
-                            >
-                              {v.isSecret ? 'AES-256 Secret' : 'Public Config'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {v.isSecret && (
-                                <button
-                                  onClick={() => toggleSecretVisibility(v.key)}
-                                  className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-[#1f1f1f]"
-                                >
-                                  {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-[#3ECF8E]" />}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleRemoveEnv(v.key)}
-                                className="p-1 rounded-full text-zinc-500 hover:text-red-400 hover:bg-[#1f1f1f]"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

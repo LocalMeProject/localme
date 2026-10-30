@@ -149,14 +149,34 @@ public static class BaasServiceRoutes
         });
 
         app.MapGet("/_baas/v1/{projectId}/db/tables", async (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "database")
-                ? AuthHelper.ServiceDisabled("database")
-                : Results.Json(await pm.GetProjectTableNamesAsync(projectId)));
+        {
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var tables = await pm.GetProjectTableNamesAsync(projectId);
+                return Results.Json(tables);
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { error = ex.Message, success = false }, statusCode: 500);
+            }
+        });
 
         app.MapGet("/_baas/v1/projects/{projectId}/tables", async (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "database")
-                ? AuthHelper.ServiceDisabled("database")
-                : Results.Json(await pm.GetProjectTableNamesAsync(projectId)));
+        {
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var tables = await pm.GetProjectTableNamesAsync(projectId);
+                return Results.Json(tables);
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { error = ex.Message, success = false }, statusCode: 500);
+            }
+        });
 
         app.MapGet("/_baas/v1/{projectId}/db/schema", async (string projectId, HttpRequest request, ProjectManagerService pm) =>
         {
@@ -512,9 +532,23 @@ public static class BaasServiceRoutes
 
             var sql = body["sql"]?.ToString() ?? body["query"]?.ToString() ?? "SELECT * FROM products LIMIT 50;";
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-            var result = pm.ExecuteSql(projectId, sql);
-            pm.AddProjectLog(projectId, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
-            return Results.Json(result);
+            try
+            {
+                var result = pm.ExecuteSql(projectId, sql);
+                pm.AddProjectLog(projectId, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
+                return Results.Json(result);
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new
+                {
+                    success = false,
+                    error = $"خطای ارتباط با پایگاه داده: {ex.Message}",
+                    columns = Array.Empty<string>(),
+                    rows = Array.Empty<object>(),
+                    executionTimeMs = 0
+                }, statusCode: 500);
+            }
         });
 
         // Shetab IPG Merchant Studio

@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Project, DatabaseColumn, DatabaseQueryHistoryItem } from '../types';
 import {
   Database,
-  Table as TableIcon,
   Plus,
   RefreshCw,
-  Code2,
-  Columns,
   ChevronRight,
+  Archive,
+  Key,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 import { TableDataGrid } from './database/TableDataGrid';
@@ -17,15 +18,30 @@ import { SqlQueryRunner } from './database/SqlQueryRunner';
 interface DatabaseViewProps {
   project: Project;
   onOpenCreateTableModal: () => void;
+  activeSubView?: string;
+  onSubViewChange?: (subView: string) => void;
 }
 
-type StudioTab = 'grid' | 'schema' | 'sql';
+type StudioTab = 'grid' | 'schema' | 'sql' | 'backups' | 'config';
 
-export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreateTableModal }) => {
+export const DatabaseView: React.FC<DatabaseViewProps> = ({
+  project,
+  onOpenCreateTableModal,
+  activeSubView,
+}) => {
   const [activeTab, setActiveTab] = useState<StudioTab>('grid');
   const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string>('');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
+
+  // Sync with Level 2 sidebar subview
+  useEffect(() => {
+    if (activeSubView === 'sql') setActiveTab('sql');
+    else if (activeSubView === 'schema') setActiveTab('schema');
+    else if (activeSubView === 'backups') setActiveTab('backups');
+    else if (activeSubView === 'config') setActiveTab('config');
+    else if (activeSubView === 'grid') setActiveTab('grid');
+  }, [activeSubView]);
 
   // Table Data Grid State
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
@@ -49,7 +65,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
     error?: string;
   } | null>(null);
   const [isRunningQuery, setIsRunningQuery] = useState(false);
-  const [queryHistory, setQueryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
+  const [queryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
+
+  // Copied state
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   // Load Tables
   const fetchTables = useCallback(async () => {
@@ -91,9 +116,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
         } else {
           const schemaRes = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
           if (schemaRes.ok) {
-            const schema = (await schemaRes.json()) as Record<string, DatabaseColumn[]>;
-            const cols = (schema[tableName] || []).map((c) => c.name);
-            setTableColumns(cols);
+            const raw = await schemaRes.json();
+            let rawList: Record<string, unknown>[] = [];
+            if (Array.isArray(raw)) {
+              rawList = raw;
+            } else if (raw && typeof raw === 'object') {
+              if (Array.isArray(raw[tableName])) rawList = raw[tableName];
+              else if (Array.isArray(raw.columns)) rawList = raw.columns;
+            }
+            const cols = rawList.map((c) => String(c.name || c.Name || c.column_name || ''));
+            setTableColumns(cols.length > 0 ? cols : ['id']);
           } else {
             setTableColumns(['id']);
           }
@@ -116,8 +148,28 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/db/schema?table=${tableName}`);
       if (res.ok) {
-        const schema = (await res.json()) as Record<string, DatabaseColumn[]>;
-        setSchemaColumns(schema[tableName] || []);
+        const raw = await res.json();
+        let rawList: Record<string, unknown>[] = [];
+        if (Array.isArray(raw)) {
+          rawList = raw;
+        } else if (raw && typeof raw === 'object') {
+          if (Array.isArray(raw[tableName])) rawList = raw[tableName];
+          else if (Array.isArray(raw.columns)) rawList = raw.columns;
+        }
+        setSchemaColumns(
+          rawList.map((c: Record<string, unknown>) => ({
+            name: String(c.name || c.Name || c.column_name || ''),
+            dataType: String(c.dataType || c.DataType || c.data_type || c.type || 'text'),
+            isPrimaryKey: Boolean(c.isPrimaryKey ?? c.IsPrimaryKey ?? c.is_primary_key ?? false),
+            isNullable: Boolean(c.isNullable ?? c.IsNullable ?? c.is_nullable ?? true),
+            defaultValue:
+              c.defaultValue !== undefined && c.defaultValue !== null
+                ? String(c.defaultValue)
+                : c.DefaultValue !== undefined && c.DefaultValue !== null
+                ? String(c.DefaultValue)
+                : undefined,
+          }))
+        );
       }
     } catch {
       // ignore
@@ -141,7 +193,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
     setIsRunningQuery(true);
     const start = performance.now();
     try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/sql`, {
+      const res = await fetch(`/_baas/v1/${project.slug}/sql/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sql: sqlQuery }),
@@ -162,50 +214,29 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
           rowCount: count,
         });
 
-        setQueryHistory((prev) => [
-          {
-            id: String(Date.now()),
-            query: sqlQuery,
-            executedAt: new Date().toLocaleTimeString('fa-IR'),
-            durationMs: latency,
-            rowCount: count,
-            status: 'SUCCESS',
-          },
-          ...prev.slice(0, 19),
-        ]);
-
-        if (/CREATE|ALTER|DROP/i.test(sqlQuery)) {
+        if (
+          sqlQuery.toUpperCase().includes('CREATE TABLE') ||
+          sqlQuery.toUpperCase().includes('DROP TABLE') ||
+          sqlQuery.toUpperCase().includes('ALTER TABLE')
+        ) {
           fetchTables();
         }
       } else {
-        const errText = await res.text();
+        const errData = await res.json().catch(() => null);
+        const errMsg = errData?.error || (await res.text()) || 'خطا در اجرای کوئری';
         setQueryResults({
           columns: [],
           rows: [],
           latencyMs: latency,
           rowCount: 0,
-          error: errText || `Error ${res.status}`,
+          error: errMsg,
         });
-
-        setQueryHistory((prev) => [
-          {
-            id: String(Date.now()),
-            query: sqlQuery,
-            executedAt: new Date().toLocaleTimeString('fa-IR'),
-            durationMs: latency,
-            rowCount: 0,
-            status: 'ERROR',
-            errorMessage: errText,
-          },
-          ...prev.slice(0, 19),
-        ]);
       }
     } catch (err) {
-      const latency = Math.round(performance.now() - start);
       setQueryResults({
         columns: [],
         rows: [],
-        latencyMs: latency,
+        latencyMs: 0,
         rowCount: 0,
         error: String(err),
       });
@@ -214,19 +245,20 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
     }
   };
 
-  // Add Column via SQL
+  // Add Column
   const handleAddColumn = async (
     name: string,
     type: string,
     nullable: boolean,
     defaultVal: string
   ): Promise<boolean> => {
-    const nullClause = nullable ? '' : ' NOT NULL';
-    const defaultClause = defaultVal ? ` DEFAULT ${defaultVal}` : '';
-    const ddl = `ALTER TABLE ${activeTable} ADD COLUMN ${name} ${type}${nullClause}${defaultClause};`;
+    let ddl = `ALTER TABLE ${activeTable} ADD COLUMN ${name} ${type}`;
+    if (!nullable) ddl += ' NOT NULL';
+    if (defaultVal) ddl += ` DEFAULT ${defaultVal}`;
+    ddl += ';';
 
     try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/sql`, {
+      const res = await fetch(`/_baas/v1/${project.slug}/sql/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sql: ddl }),
@@ -250,7 +282,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
 
   // Delete Row
   const handleDeleteRow = async (rowId: string) => {
-    if (!confirm(`آیا از حذف رکورد با شناسه ${rowId} اطمینان دارید؟`)) return;
+    if (!confirm(`آیا از حذف این رکورد اطمینان دارید؟`)) return;
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
         method: 'DELETE',
@@ -319,92 +351,54 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
   return (
     <div className="space-y-6">
       {/* Top Studio Header */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium tracking-wide bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30">
-              POSTGRESQL 18.1 ENTERPRISE DBAAS
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              پایگاه داده رابطه‌ای
             </span>
-            <span className="text-[11px] font-mono text-zinc-400">
-              SCHEMA: prj_{project.slug}
+            <span className="text-xs text-slate-400 font-mono" dir="ltr">
+              prj_{project.slug}
             </span>
           </div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Database className="w-5 h-5 text-[#3ECF8E]" />
-            استودیو مدیریت داده‌های رابطه‌ای (Relational Database Studio)
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Database className="w-5 h-5 text-emerald-600" />
+            مدیریت پایگاه داده و جدول‌ها
           </h2>
-          <p className="text-xs text-zinc-400 mt-1 max-w-3xl leading-relaxed">
-            محیط داده‌های توزیع‌شده با ایزولاسیون LTR، پشتیبانی PostgREST، اجرای DDL/DML، مدیریت ایندکس‌ها و اتصال کانکشن‌پول Npgsql.
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+            مشاهده و مدیریت ساختار داده‌ها، اجرای پرس‌وجوهای متنی و ویرایش مستقیم رکوردهای جدول در محیطی امن و ایزوله.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={fetchTables}
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-3.5 py-1.5 transition-colors"
-            title="بازخوانی جداول"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3.5 py-1.5 transition"
+            title="بازخوانی فهرست جداول"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
             <span>بازخوانی</span>
           </button>
           <button
             onClick={onOpenCreateTableModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-4 py-1.5 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-1.5 transition shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ ساخت جدول جدید</span>
+            <span>ایجاد جدول جدید</span>
           </button>
         </div>
       </div>
 
-      {/* Main Studio Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-[#242424] pb-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('grid')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
-              activeTab === 'grid'
-                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
-            }`}
-          >
-            <TableIcon className="w-4 h-4" />
-            <span>مرورگر داده‌ها (Data Grid)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('schema')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
-              activeTab === 'schema'
-                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
-            }`}
-          >
-            <Columns className="w-4 h-4" />
-            <span>طراح اسکیما (Schema Designer)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('sql')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition ${
-              activeTab === 'sql'
-                ? 'bg-[#3ECF8E] text-black font-semibold shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f1f]'
-            }`}
-          >
-            <Code2 className="w-4 h-4" />
-            <span>کنسول و اجرای SQL (Query Runner)</span>
-          </button>
-        </div>
-
-        {/* Current Table Selector Pill */}
-        {tables.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-zinc-500 text-[11px]">جدول انتخابی:</span>
+      {/* Table Selector & Toolbar in Grid View */}
+      {activeTab === 'grid' && tables.length > 0 && (
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">جدول جاری:</span>
             <select
               value={activeTable}
               onChange={(e) => setActiveTable(e.target.value)}
-              className="px-3 py-1.5 rounded-full bg-[#171717] border border-[#242424] text-xs font-mono text-[#3ECF8E] focus:outline-none focus:border-[#3ECF8E]"
+              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono text-emerald-700 font-semibold focus:outline-none focus:border-emerald-500 shadow-xs"
+              dir="ltr"
             >
               {tables.map((t) => (
                 <option key={t} value={t}>
@@ -413,93 +407,163 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ project, onOpenCreat
               ))}
             </select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Main Studio Viewport */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: Table Navigator Sidebar */}
-        <div className="lg:col-span-3 space-y-3">
-          <div className="p-3.5 rounded-xl bg-[#171717] border border-[#242424] space-y-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-zinc-400">
-              <span className="flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                <span>جداول اسکیما ({tables.length})</span>
-              </span>
-              <span className="text-[10px] font-mono text-zinc-500">PostgreSQL</span>
+      {activeTab === 'backups' ? (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Archive className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">نسخه‌های پشتیبان پایگاه داده</h3>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+            پشتیبان‌گیری خودکار روزانه از تمام اسکیماها و داده‌های این پروژه انجام می‌پذیرد. همچنین می‌توانید در هر لحظه نسخه پشتیبان لحظه‌ای دریافت کنید.
+          </p>
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-xs text-slate-800">اسنپ‌شات لحظه‌ای از تمام جداول</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">فرمت استاندارد SQL سازگار با بازیابی کامل</div>
             </div>
-
-            <div className="space-y-1 max-h-[480px] overflow-y-auto">
-              {tables.length === 0 ? (
-                <div className="p-4 text-center text-xs text-zinc-500 rounded-lg border border-dashed border-[#242424] space-y-2">
-                  <p>هیچ جدولی ایجاد نشده است</p>
-                  <button
-                    onClick={onOpenCreateTableModal}
-                    className="text-[11px] text-[#3ECF8E] hover:underline font-medium"
-                  >
-                    + ایجاد اولین جدول
-                  </button>
-                </div>
-              ) : (
-                tables.map((tbl) => (
-                  <button
-                    key={tbl}
-                    onClick={() => setActiveTable(tbl)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition text-left dir-ltr ${
-                      activeTable === tbl
-                        ? 'bg-[#1f1f1f] text-[#3ECF8E] border border-[#3ECF8E]/30 font-semibold shadow-sm'
-                        : 'text-zinc-400 hover:text-white hover:bg-[#1a1a1a]'
-                    }`}
-                  >
-                    <span className="truncate">{tbl}</span>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
-                  </button>
-                ))
-              )}
+            <a
+              href={`/_baas/v1/${project.slug}/db/snapshot`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs"
+            >
+              دانلود فایل پشتیبان
+            </a>
+          </div>
+        </div>
+      ) : activeTab === 'config' ? (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Key className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">مشخصات اتصال مستقیم به پایگاه داده</h3>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+            از این اطلاعات برای اتصال برنامه‌ها، ORMها و ابزارهای مدیریت داده به اسکیما استفاده نمایید:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[11px] text-slate-500">طرحواره اختصاصی (Schema):</span>
+              <div className="font-mono font-bold text-slate-900" dir="ltr">
+                prj_{project.slug}
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[11px] text-slate-500">پورت استاندارد:</span>
+              <div className="font-mono font-bold text-slate-900" dir="ltr">
+                5432
+              </div>
+            </div>
+            <div className="md:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-500">رشته اتصال (URI):</span>
+                <button
+                  onClick={() =>
+                    copyToClipboard(
+                      `postgresql://postgres:***@remote-respina-free.runflare.com:31725/sina-infwqq_db?options=-csearch_path=prj_${project.slug},public`,
+                      'uri'
+                    )
+                  }
+                  className="flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-800"
+                >
+                  {copiedKey === 'uri' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedKey === 'uri' ? 'کپی شد' : 'کپی'}</span>
+                </button>
+              </div>
+              <div className="font-mono text-xs text-slate-800 break-all select-all pt-1" dir="ltr">
+                postgresql://postgres:***@remote-respina-free.runflare.com:31725/sina-infwqq_db?options=-csearch_path=prj_{project.slug},public
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left: Table Navigator Sidebar */}
+          <div className="lg:col-span-3 space-y-3">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>جداول پروژه ({tables.length})</span>
+                </span>
+              </div>
 
-        {/* Right: Active Tab Workspace */}
-        <div className="lg:col-span-9 space-y-4">
-          {activeTab === 'grid' && (
-            <TableDataGrid
-              activeTable={activeTable}
-              tableColumns={tableColumns}
-              filteredRows={filteredRows}
-              filterQuery={filterQuery}
-              onFilterQueryChange={setFilterQuery}
-              isLoadingData={isLoadingData}
-              gridError={gridError}
-              onRefresh={() => fetchTableData(activeTable)}
-              onDeleteRow={handleDeleteRow}
-              onInsertRow={handleInsertRow}
-            />
-          )}
+              <div className="space-y-1 max-h-[480px] overflow-y-auto">
+                {tables.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400 rounded-lg border border-dashed border-slate-200 space-y-2">
+                    <p>هنوز جدولی ایجاد نشده است</p>
+                    <button
+                      onClick={onOpenCreateTableModal}
+                      className="text-[11px] text-emerald-700 hover:underline font-medium"
+                    >
+                      + ساخت اولین جدول
+                    </button>
+                  </div>
+                ) : (
+                  tables.map((tbl) => (
+                    <button
+                      key={tbl}
+                      onClick={() => setActiveTable(tbl)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition text-left ${
+                        activeTable === tbl
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                      dir="ltr"
+                    >
+                      <span className="truncate">{tbl}</span>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-50 shrink-0" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
 
-          {activeTab === 'schema' && (
-            <SchemaDesigner
-              activeTable={activeTable}
-              schemaColumns={schemaColumns}
-              isLoadingSchema={isLoadingSchema}
-              schemaSuccessMsg={schemaSuccessMsg}
-              onAddColumn={handleAddColumn}
-            />
-          )}
+          {/* Right: Active Tab Workspace */}
+          <div className="lg:col-span-9 space-y-4">
+            {activeTab === 'grid' && (
+              <TableDataGrid
+                activeTable={activeTable}
+                tableColumns={tableColumns}
+                filteredRows={filteredRows}
+                filterQuery={filterQuery}
+                onFilterQueryChange={setFilterQuery}
+                isLoadingData={isLoadingData}
+                gridError={gridError}
+                onRefresh={() => fetchTableData(activeTable)}
+                onDeleteRow={handleDeleteRow}
+                onInsertRow={handleInsertRow}
+              />
+            )}
 
-          {activeTab === 'sql' && (
-            <SqlQueryRunner
-              sqlQuery={sqlQuery}
-              onSqlQueryChange={setSqlQuery}
-              onRunQuery={handleRunQuery}
-              isRunningQuery={isRunningQuery}
-              queryResults={queryResults}
-              queryHistory={queryHistory}
-              onApplySnippet={handleApplySnippet}
-            />
-          )}
+            {activeTab === 'schema' && (
+              <SchemaDesigner
+                activeTable={activeTable}
+                schemaColumns={schemaColumns}
+                isLoadingSchema={isLoadingSchema}
+                schemaSuccessMsg={schemaSuccessMsg}
+                onAddColumn={handleAddColumn}
+              />
+            )}
+
+            {activeTab === 'sql' && (
+              <SqlQueryRunner
+                sqlQuery={sqlQuery}
+                onSqlQueryChange={setSqlQuery}
+                onRunQuery={handleRunQuery}
+                isRunningQuery={isRunningQuery}
+                queryResults={queryResults}
+                queryHistory={queryHistory}
+                onApplySnippet={handleApplySnippet}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -35,7 +35,12 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
                 var database = uri.AbsolutePath.TrimStart('/');
                 var port = uri.Port > 0 ? uri.Port : 5432;
-                return $"Host={uri.Host};Port={port};Username={username};Password={password};Database={database};SSL Mode=Disable;Trust Server Certificate=true;";
+                var sslMode = trimmed.Contains("sslmode=require", StringComparison.OrdinalIgnoreCase)
+                    ? "SSL Mode=Require;Trust Server Certificate=true;"
+                    : (trimmed.Contains("sslmode=disable", StringComparison.OrdinalIgnoreCase)
+                        ? "SSL Mode=Disable;"
+                        : "SSL Mode=Prefer;Trust Server Certificate=true;");
+                return $"Host={uri.Host};Port={port};Username={username};Password={password};Database={database};{sslMode}";
             }
             catch
             {

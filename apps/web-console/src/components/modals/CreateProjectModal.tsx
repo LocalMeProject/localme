@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Server } from 'lucide-react';
+import { X, FolderPlus, Server } from 'lucide-react';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (project: {
+  onCreate: (data: {
     name: string;
     slug: string;
     description: string;
@@ -23,155 +23,171 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [description, setDescription] = useState('');
   const [region, setRegion] = useState('ir-teh-1 (آسیاتک برج میلاد)');
   const [password, setPassword] = useState('');
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const [enablePassword, setEnablePassword] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    const generated = val
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 32);
+    setSlug(generated);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !slug.trim()) return;
+
     onCreate({
       name: name.trim(),
-      slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+      slug: slug.trim(),
       description: description.trim(),
       region,
-      password: password || undefined,
+      password: enablePassword && password.trim() ? password.trim() : undefined,
     });
+
     setName('');
     setSlug('');
     setDescription('');
     setPassword('');
+    setEnablePassword(false);
     onClose();
-  };
-
-  const handleNameChange = (val: string) => {
-    setName(val);
-    if (!slug || slug === name.toLowerCase().replace(/[^a-z0-9-]/g, '-')) {
-      setSlug(
-        val
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-]/g, '')
-      );
-    }
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-project-modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 text-slate-800 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
-              <Sparkles className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <FolderPlus className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h3 id="create-project-modal-title" className="text-base font-bold text-white">ساخت پروژه ابری جدید</h3>
-              <p className="text-xs text-zinc-400">یک فضای ایزوله BaaS + PaaS با زیردامنه اختصاصی و اسکیما مجزا</p>
+              <h3 id="create-project-modal-title" className="text-base font-bold text-slate-900">
+                ایجاد پروژه ابری جدید
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                تخصیص پایگاه داده و زیرساخت اختصاصی ابری
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">نام پروژه *</label>
+            <label className="block text-slate-700 font-medium mb-1.5">نام پروژه</label>
             <input
               type="text"
               required
+              placeholder="مثال: فروشگاه آنلاین"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="مثال: دیجی‌کالا یا اسنپ کلون"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
+              onChange={handleNameChange}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900"
             />
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">شناسه یکتا (Slug) *</label>
-            <div className="flex items-center rounded-xl bg-[#0f0f0f] border border-[#242424] focus-within:border-[#3ECF8E] px-3">
-              <span className="text-zinc-500 font-mono text-xs">https://</span>
-              <input
-                type="text"
-                required
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                placeholder="my-cool-app"
-                className="w-full py-2.5 bg-transparent border-0 focus:outline-none text-zinc-100 font-mono text-xs"
-              />
-              <span className="text-zinc-500 font-mono text-xs">.localme.ir</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">توضیحات کوتاه</label>
+            <label className="block text-slate-700 font-medium mb-1.5">
+              شناسه یکتا (Slug)
+            </label>
             <input
               type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="هدف یا سرویس اصلی پروژه"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
+              required
+              placeholder="my-project"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
             />
+            <span className="text-[11px] text-slate-400 mt-1 block">
+              دامنه پیش‌فرض: <span className="text-emerald-700 font-mono" dir="ltr">{slug || 'my-project'}.localme.ir</span>
+            </span>
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">دیتاسنتر و منطقه ابری</label>
+            <label className="block text-slate-700 font-medium mb-1.5">موقعیت زیرساخت</label>
             <div className="relative">
+              <Server className="w-4 h-4 text-slate-400 absolute right-3.5 top-2.5" />
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 appearance-none font-mono"
+                className="w-full pr-10 pl-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800"
               >
-                <option value="ir-teh-1 (آسیاتک برج میلاد)">ir-teh-1 (آسیاتک برج میلاد - Egress NAT)</option>
-                <option value="ir-teh-2 (زیرساخت امام)">ir-teh-2 (زیرساخت امام - اینترانت ملی)</option>
-                <option value="ir-mhd-1 (شاتل مشهد)">ir-mhd-1 (شاتل مشهد - لبه شرق)</option>
-                <option value="eu-fra-1 (هتزنر فرانکفورت)">eu-fra-1 (هتزنر فرانکفورت - تونل TLS 1.3)</option>
+                <option value="ir-teh-1 (آسیاتک برج میلاد)">آسیاتک برج میلاد (تهران)</option>
+                <option value="ir-teh-2 (زیرساخت امام)">زیرساخت امام (تهران)</option>
               </select>
-              <Server className="w-4 h-4 text-zinc-500 absolute left-3 top-3 pointer-events-none" />
             </div>
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">گذرواژه امنیتی پروژه (اختیاری)</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="برای حفاظت از کنسول و تغییر تنظیمات حساس"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 placeholder-zinc-600"
+            <label className="block text-slate-700 font-medium mb-1.5">توضیحات کوتاه</label>
+            <textarea
+              rows={2}
+              placeholder="توضیحات اختیاری درباره کارکرد این پروژه..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800 leading-relaxed"
             />
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enablePassword}
+                onChange={(e) => setEnablePassword(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-slate-700 font-medium">تنظیم رمز عبور اختصاصی برای پروژه</span>
+            </label>
+
+            {enablePassword && (
+              <div className="pt-1">
+                <input
+                  type="password"
+                  placeholder="رمز عبور پروژه"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  dir="ltr"
+                  className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
+              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
             >
-              ایجاد و راه‌اندازی پروژه
+              ایجاد پروژه
             </button>
           </div>
         </form>

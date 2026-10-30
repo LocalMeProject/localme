@@ -1,341 +1,375 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Project, LedgerTransaction } from '../types';
 import {
   CreditCard,
   ShieldCheck,
-  Play,
   Receipt,
   CheckCircle2,
+  RefreshCw,
+  Save,
 } from 'lucide-react';
 
 interface IpgViewProps {
   project: Project;
+  activeSubView?: string;
+  onSubViewChange?: (subView: string) => void;
 }
-
-const INITIAL_TRANSACTIONS: LedgerTransaction[] = [];
 
 export type PspGateway = 'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD';
 
-export const IpgView: React.FC<IpgViewProps> = ({ project }) => {
-  const [transactions, setTransactions] = useState<LedgerTransaction[]>(INITIAL_TRANSACTIONS);
+export const IpgView: React.FC<IpgViewProps> = ({
+  project,
+  activeSubView = 'transactions',
+}) => {
+  const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [defaultPsp, setDefaultPsp] = useState<PspGateway>('ZARINPAL');
   const [isSandbox, setIsSandbox] = useState(true);
+  const [merchantId, setMerchantId] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isLoadingTx, setIsLoadingTx] = useState(false);
 
-  // Shetab Simulator State
+  // Simulator State
   const [simCard, setSimCard] = useState('6037-9918-1234-5678');
-  const [simCvv2, setSimCvv2] = useState('382');
   const [simAmountToman, setSimAmountToman] = useState('50000');
   const [simOtp, setSimOtp] = useState('123456');
   const [simFeedback, setSimFeedback] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  const detectBankName = (num: string) => {
-    const clean = num.replace(/-/g, '').slice(0, 6);
-    switch (clean) {
-      case '603799': return 'بانک ملی ایران';
-      case '610433': return 'بانک ملت';
-      case '621986': return 'بانک سامان';
-      case '502229': return 'بانک پاسارگاد';
-      case '627412': return 'بانک اقتصاد نوین';
-      default: return 'کارت بانکی عضو شتاب';
+  // Real API: Fetch Transactions
+  const fetchTransactions = useCallback(async () => {
+    setIsLoadingTx(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/ipg/transactions`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setTransactions(
+            data.map((tx: Record<string, unknown>) => ({
+              id: String(tx.id || tx.trackId || ''),
+              trackingCode: String(tx.trackingCode || tx.refId || tx.id || ''),
+              gateway: String(tx.gateway || tx.psp || 'ZARINPAL'),
+              amountIrr: Number(tx.amountIrr || (Number(tx.amount || 0) * 10)),
+              customerPhone: String(tx.customerPhone || tx.phone || '-'),
+              status: (tx.status as LedgerTransaction['status']) || 'VERIFIED',
+              createdAt: String(tx.createdAt || tx.settledAt || 'هم‌اکنون'),
+              settledAt: String(tx.settledAt || tx.createdAt || 'هم‌اکنون'),
+            }))
+          );
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingTx(false);
+    }
+  }, [project.slug]);
+
+  // Real API: Fetch Config
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/ipg/config`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          if (data.psp) setDefaultPsp(data.psp.toUpperCase() as PspGateway);
+          if (typeof data.sandbox === 'boolean') setIsSandbox(data.sandbox);
+          else if (typeof data.sandbox === 'string') setIsSandbox(data.sandbox === 'true');
+          if (data.merchantId) setMerchantId(String(data.merchantId));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [project.slug]);
+
+  useEffect(() => {
+    fetchTransactions();
+    fetchConfig();
+  }, [fetchTransactions, fetchConfig]);
+
+  // Real API: Save Config
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/ipg/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          psp: defaultPsp.toLowerCase(),
+          sandbox: isSandbox,
+          merchantId,
+        }),
+      });
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch {
+      alert('خطا در ذخیره تنظیمات درگاه.');
     }
   };
 
-  const handleSimulatePayment = (e: React.FormEvent) => {
+  // Real API: Initiate Payment
+  const handleSimulatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSimulating(true);
     setSimFeedback(null);
 
-    setTimeout(() => {
+    const amountIrr = parseInt(simAmountToman, 10) * 10;
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/pay/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountIrr,
+          description: `پرداخت آزمایشی شتاب - کارت ${simCard.slice(-4)}`,
+          callbackUrl: `${window.location.origin}/panel/${project.slug}/ipg/transactions`,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setSimFeedback(`تراکنش بانکی با موفقیت ثبت شد. کد پیگیری: ${data.trackId || data.trackingCode}`);
+        fetchTransactions();
+      } else {
+        setSimFeedback(`پاسخ درگاه پرداخت: ${data.error || 'تراکنش ناموفق'}`);
+      }
+    } catch {
+      setSimFeedback('خطا در برقراری ارتباط با سوییچ درگاه پرداخت.');
+    } finally {
       setIsSimulating(false);
-      const amountIrr = parseInt(simAmountToman, 10) * 10;
-      const trackingCode = `TRK_${Math.floor(100000 + Math.random() * 900000)}`;
-
-      const newTx: LedgerTransaction = {
-        id: `tx-${Date.now().toString().slice(-4)}`,
-        trackingCode,
-        gateway: defaultPsp,
-        amountIrr,
-        customerPhone: '09121112233',
-        status: 'VERIFIED',
-        createdAt: 'هم‌اکنون',
-      };
-
-      setTransactions((prev) => [newTx, ...prev]);
-      setSimFeedback(`تراکنش شتاب با موفقیت تایید شد. کد رهگیری شاپرک: ${trackingCode}`);
-    }, 500);
-  };
-
-  const handleRequestOtp = () => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setSimOtp(otp);
-    alert(`رمز پویای پیامکی شتاب: ${otp}`);
-  };
-
-  const handleSaveSettings = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-[#3ECF8E]" />
-            درگاه پرداخت شاپرک و دفترکل ریالی (IPG Studio & IRR Ledger)
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1">
-            اتصال مستقیم ۱ به ۱ پذیرنده برای پروژه {project.name} با آی‌پی استاتیک ملی (Whitelisted NAT) و ثبت دفترکل دوبل ریالی.
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              شبکه پرداخت شتاب و شاپرک
+            </span>
+            <span className="text-xs text-slate-400 font-mono" dir="ltr">
+              {project.slug}
+            </span>
+          </div>
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-emerald-600" />
+            {activeSubView === 'gateways'
+              ? 'پیکربندی درگاه‌های بانکی و شاپرک'
+              : activeSubView === 'ledger'
+              ? 'شبیه‌ساز پرداخت شتاب و تسویه'
+              : 'گزارش تراکنش‌های پرداخت و دفتر کل'}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+            اتصال مستقیم به درگاه‌های پرداخت، مدیریت تراکنش‌ها، ممیزی مالی و دفتر کل تسویه وجوه.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="px-3 py-1 rounded-full bg-[#0f0f0f] border border-[#242424] text-xs font-mono text-zinc-300">
-            استاندارد ارز: <strong className="text-[#3ECF8E]">IRR (ریال دقیق)</strong>
-          </span>
-        </div>
+        <button
+          onClick={fetchTransactions}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs"
+          title="بازخوانی تراکنش‌ها"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTx ? 'animate-spin' : ''}`} />
+          <span>بازخوانی</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* PSP Gateway Configuration */}
-        <div className="lg:col-span-6 p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
-          <div className="flex items-center justify-between border-b border-[#242424] pb-3">
-            <h4 className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#3ECF8E]" />
-              تنظیمات درگاه‌های شاپرک پروژه
-            </h4>
-            {saveSuccess && (
-              <span className="flex items-center gap-1 text-[11px] text-[#3ECF8E] font-medium animate-fadeIn">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>ذخیره شد</span>
-              </span>
-            )}
+      {/* Sub-View: Gateways Config */}
+      {activeSubView === 'gateways' && (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs max-w-2xl space-y-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">تنظیمات درگاه فعال پروژه</h3>
           </div>
 
-          <div className="space-y-3.5">
+          <form onSubmit={handleSaveConfig} className="space-y-4 text-xs">
             <div>
-              <label className="text-[11px] text-zinc-400 block mb-1">درگاه پیش‌فرض شاپرک (Default PSP)</label>
+              <label className="font-semibold text-slate-700 block mb-1.5">ارائه‌دهنده درگاه پرداخت (PSP)</label>
               <select
                 value={defaultPsp}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDefaultPsp(e.target.value as PspGateway)}
-                className="w-full px-3 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] text-xs font-semibold text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
+                onChange={(e) => setDefaultPsp(e.target.value as PspGateway)}
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-emerald-500 shadow-xs"
               >
-                <option value="ZARINPAL">زرین‌پال (ZarinPal REST v4)</option>
-                <option value="BEHPARDAKHT">به‌پرداخت ملت (Mellat bpPayRequest)</option>
-                <option value="SEP">سامان‌کیش سپ (SEP Shaparak)</option>
-                <option value="SADAD">پرداخت الکترونیک سداد ملی (Sadad)</option>
+                <option value="ZARINPAL">زرین‌پال (ZarinPal)</option>
+                <option value="BEHPARDAKHT">به‌پرداخت ملت</option>
+                <option value="SEP">سپ (سامان کیش)</option>
+                <option value="SADAD">سداد (بانک ملی)</option>
               </select>
             </div>
 
-            {defaultPsp === 'ZARINPAL' && (
-              <div className="p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] space-y-3">
-                <div className="text-[11px] font-bold text-[#3ECF8E]">مشخصات درگاه زرین‌پال</div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">کد ۳۶ کاراکتری مرچنت (Merchant ID)</label>
-                  <input
-                    type="text"
-                    defaultValue="7c9e6679-7425-40de-944b-e07fc1f90ae7"
-                    className="w-full px-3 py-1.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
-                    dir="ltr"
-                  />
-                </div>
-                <label className="flex items-center space-x-2 text-xs text-zinc-400 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded border-[#242424] bg-[#171717] text-[#3ECF8E] focus:ring-[#3ECF8E]" />
-                  <span>فعال‌سازی درگاه مستقیم زرین‌گیت (ZarinGate)</span>
-                </label>
-              </div>
-            )}
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">کد پذیرنده (Merchant ID / Terminal ID)</label>
+              <input
+                type="text"
+                value={merchantId}
+                onChange={(e) => setMerchantId(e.target.value)}
+                placeholder="mer_..."
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
+                dir="ltr"
+              />
+            </div>
 
-            {defaultPsp === 'BEHPARDAKHT' && (
-              <div className="p-3.5 rounded-xl bg-[#0f0f0f] border border-[#242424] space-y-3">
-                <div className="text-[11px] font-bold text-[#3ECF8E]">مشخصات درگاه به‌پرداخت ملت</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-zinc-400 block mb-1">کد پایانه (TerminalId)</label>
-                    <input type="text" defaultValue="1234567" className="w-full px-3 py-1.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none" dir="ltr" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-zinc-400 block mb-1">نام کاربری وب‌سرویس</label>
-                    <input type="text" defaultValue="mellat_usr" className="w-full px-3 py-1.5 rounded-lg bg-[#171717] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none" dir="ltr" />
-                  </div>
-                </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <div className="font-semibold text-slate-800">محیط آزمایشی (Sandbox)</div>
+                <div className="text-[11px] text-slate-400">انجام تراکنش بدون کسر موجودی واقعی کارت</div>
               </div>
-            )}
-
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0f0f0f] border border-[#242424] text-xs">
-              <span className="text-zinc-400">حالت آزمایشی (سندباکس تست):</span>
-              <button
-                type="button"
-                onClick={() => setIsSandbox(!isSandbox)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                  isSandbox ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/30' : 'bg-[#242424] text-zinc-500'
-                }`}
-              >
-                {isSandbox ? 'Sandbox فعال' : 'محیط عملیاتی'}
-              </button>
+              <input
+                type="checkbox"
+                checked={isSandbox}
+                onChange={(e) => setIsSandbox(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+              />
             </div>
 
             <button
-              onClick={handleSaveSettings}
-              className="w-full py-2.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs transition-colors"
+              type="submit"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
             >
-              ذخیره و اعتبارسنجی پذیرنده
+              <Save className="w-3.5 h-3.5" />
+              <span>ذخیره تنظیمات درگاه</span>
             </button>
-          </div>
+
+            {saveSuccess && (
+              <span className="text-xs text-emerald-700 font-medium mr-3">
+                تنظیمات با موفقیت ذخیره گردید.
+              </span>
+            )}
+          </form>
         </div>
+      )}
 
-        {/* Shetab Payment Simulator */}
-        <div className="lg:col-span-6 p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-4">
-          <h4 className="text-xs font-bold text-zinc-200 flex items-center justify-between border-b border-[#242424] pb-3">
-            <span className="flex items-center gap-2">
-              <Play className="w-4 h-4 text-[#3ECF8E]" />
-              شبیه‌ساز پرداخت شاپرک (Shetab Simulator)
-            </span>
-            <span className="text-[10px] text-zinc-400 font-mono">
-              {detectBankName(simCard)}
-            </span>
-          </h4>
+      {/* Sub-View: Ledger Simulator */}
+      {activeSubView === 'ledger' && (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs max-w-2xl space-y-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Receipt className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">شبیه‌ساز پرداخت شتاب</h3>
+          </div>
 
-          <form onSubmit={handleSimulatePayment} className="space-y-3">
+          <form onSubmit={handleSimulatePayment} className="space-y-4 text-xs">
             <div>
-              <label className="text-[11px] text-zinc-400 block mb-1">شماره کارت ۱۶ رقمی شتاب</label>
+              <label className="font-semibold text-slate-700 block mb-1.5">مبلغ تراکنش (تومان)</label>
               <input
-                type="text"
-                value={simCard}
-                onChange={(e) => setSimCard(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
+                type="number"
+                value={simAmountToman}
+                onChange={(e) => setSimAmountToman(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
                 dir="ltr"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-zinc-400 block mb-1">کد CVV2</label>
+                <label className="font-semibold text-slate-700 block mb-1.5">شماره کارت آزمایشی</label>
                 <input
                   type="text"
-                  value={simCvv2}
-                  onChange={(e) => setSimCvv2(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
+                  value={simCard}
+                  onChange={(e) => setSimCard(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
                   dir="ltr"
                 />
               </div>
               <div>
-                <label className="text-[11px] text-zinc-400 block mb-1">مبلغ آزمایشی (تومان)</label>
+                <label className="font-semibold text-slate-700 block mb-1.5">رمز یکبار مصرف (OTP)</label>
                 <input
-                  type="number"
-                  value={simAmountToman}
-                  onChange={(e) => setSimAmountToman(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
-                  dir="ltr"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] text-zinc-400 block mb-1">رمز پویا (OTP)</label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
+                  type="text"
                   value={simOtp}
                   onChange={(e) => setSimOtp(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#0f0f0f] border border-[#242424] font-mono text-xs text-zinc-200 focus:border-[#3ECF8E] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
                   dir="ltr"
                 />
-                <button
-                  type="button"
-                  onClick={handleRequestOtp}
-                  className="px-4 py-1.5 rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] text-xs font-medium whitespace-nowrap transition-colors"
-                >
-                  دریافت رمز پویا
-                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isSimulating}
-              className="w-full py-2.5 rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs transition-colors disabled:opacity-50"
+              className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs disabled:opacity-50 inline-flex items-center gap-2"
             >
-              {isSimulating ? 'در حال تایید پرداخت شاپرک...' : 'تایید و پرداخت آزمایشی شتاب'}
+              {isSimulating ? 'در حال ارسال به درگاه...' : 'شروع پرداخت آزمایشی'}
             </button>
 
             {simFeedback && (
-              <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-[#3ECF8E] leading-relaxed">
-                {simFeedback}
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 leading-relaxed flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{simFeedback}</span>
               </div>
             )}
           </form>
         </div>
-      </div>
+      )}
 
-      {/* Double-Entry Rial Ledger Table */}
-      <div className="p-5 rounded-2xl bg-[#171717] border border-[#242424] space-y-3">
-        <div className="flex items-center justify-between border-b border-[#242424] pb-3">
-          <span className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#3ECF8E]" />
-            دفترکل اسناد و تراکنش‌های حسابداری ریالی (Double-Entry Ledger)
-          </span>
-          <span className="text-[10px] text-zinc-400 font-mono">
-            {transactions.length} تراکنش ثبت‌شده
-          </span>
-        </div>
+      {/* Sub-View: Transactions Table (Default) */}
+      {(activeSubView === 'transactions' || (!activeSubView && activeSubView !== 'gateways' && activeSubView !== 'ledger')) && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <span className="text-xs font-bold text-slate-900">
+              تراکنش‌های ثبت‌شده ({transactions.length})
+            </span>
+          </div>
 
-        <div className="rounded-xl border border-[#242424] overflow-hidden" dir="ltr">
-          <table className="w-full text-left text-xs font-mono border-collapse">
-            <thead>
-              <tr className="border-b border-[#242424] bg-[#1a1a1a] text-zinc-400">
-                <th className="py-2.5 px-3">شناسه سند</th>
-                <th className="py-2.5 px-3">کد رهگیری شاپرک</th>
-                <th className="py-2.5 px-3">درگاه</th>
-                <th className="py-2.5 px-3">مبلغ ریالی (IRR)</th>
-                <th className="py-2.5 px-3">معادل تومان</th>
-                <th className="py-2.5 px-3">موبایل مشتری</th>
-                <th className="py-2.5 px-3">وضعیت</th>
-                <th className="py-2.5 px-3">تاریخ و زمان</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#242424]">
-              {transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-xs text-zinc-500">
-                    هیچ تراکنشی ثبت نشده است
-                  </td>
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-right text-xs" dir="rtl">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                  <th className="py-2.5 px-3">کد پیگیری تراکنش</th>
+                  <th className="py-2.5 px-3 text-center">درگاه</th>
+                  <th className="py-2.5 px-3 text-center">مبلغ (تومان)</th>
+                  <th className="py-2.5 px-3 text-center">شماره پرداخت‌کننده</th>
+                  <th className="py-2.5 px-3 text-center">وضعیت</th>
+                  <th className="py-2.5 px-3 text-center">زمان ثبت</th>
                 </tr>
-              ) : (
-                transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-[#1f1f1f] transition-colors">
-                    <td className="py-2.5 px-3 font-bold text-zinc-300">{tx.id}</td>
-                    <td className="py-2.5 px-3 text-[#3ECF8E]">{tx.trackingCode}</td>
-                    <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#0f0f0f] border border-[#242424] text-zinc-300">
-                        {tx.gateway}
-                      </span>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {isLoadingTx ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center text-xs text-slate-500">
+                      در حال بارگذاری تراکنش‌ها...
                     </td>
-                    <td className="py-2.5 px-3 text-zinc-200 font-bold">{tx.amountIrr.toLocaleString('fa-IR')}</td>
-                    <td className="py-2.5 px-3 text-[#3ECF8E]">{Math.floor(tx.amountIrr / 10).toLocaleString('fa-IR')}</td>
-                    <td className="py-2.5 px-3 text-zinc-400">{tx.customerPhone}</td>
-                    <td className="py-2.5 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          tx.status === 'VERIFIED'
-                            ? 'bg-[#3ECF8E]/10 text-[#3ECF8E] border border-[#3ECF8E]/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}
-                      >
-                        {tx.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-500 text-[11px]">{tx.createdAt}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center text-xs text-slate-400">
+                      هنوز تراکنشی در این پروژه ثبت نشده است.
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-slate-50 transition">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800" dir="ltr">
+                        {tx.trackingCode}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-medium">
+                          {tx.gateway}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-700" dir="ltr">
+                        {(tx.amountIrr / 10).toLocaleString('fa-IR')}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono text-slate-600 text-[11px]" dir="ltr">
+                        {tx.customerPhone}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+                          تایید شده
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-500 text-[11px]">
+                        {tx.settledAt}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

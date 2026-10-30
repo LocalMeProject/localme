@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { X, Users, Smartphone, Mail } from 'lucide-react';
+import { X, UserPlus } from 'lucide-react';
 import { ProjectUser } from '../../types';
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (user: Omit<ProjectUser, 'id' | 'createdAt'>) => void;
+  onAdd: (user: ProjectUser) => void;
 }
-
-export type UserAuthProvider = 'sms_otp' | 'password' | 'samandehi_sso';
 
 export const AddUserModal: React.FC<AddUserModalProps> = ({
   isOpen,
@@ -16,32 +14,30 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   onAdd,
 }) => {
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [provider, setProvider] = useState<UserAuthProvider>('sms_otp');
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const [provider, setProvider] = useState<'sms' | 'credentials'>('sms');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || (!phone.trim() && !email.trim())) return;
+    if (!fullName.trim()) return;
+
     onAdd({
+      id: `usr-${Date.now()}`,
       fullName: fullName.trim(),
+      username: username.trim() || undefined,
       phone: phone.trim() || undefined,
       email: email.trim() || undefined,
       provider,
       isConfirmed: true,
+      createdAt: 'هم‌اکنون',
     });
+
     setFullName('');
+    setUsername('');
     setPhone('');
     setEmail('');
     onClose();
@@ -49,98 +45,97 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-user-modal-title"
     >
-      <div className="relative w-full max-w-md rounded-2xl bg-[#171717] border border-[#242424] shadow-2xl p-6 text-zinc-100 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 flex items-center justify-center text-[#3ECF8E]">
-              <Users className="w-4 h-4" />
+      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 text-slate-800 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <UserPlus className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h3 id="add-user-modal-title" className="text-base font-bold text-white">افزودن کاربر جدید</h3>
-              <p className="text-xs text-zinc-400">ثبت مستقیم کاربر در دیتابیس ایزوله احراز هویت IDaaS</p>
+              <h3 id="add-user-modal-title" className="text-base font-bold text-slate-900">
+                افزودن کاربر جدید
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                ثبت دستی کاربر در پایگاه داده احراز هویت
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="بستن"
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f1f] transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">نام و نام خانوادگی *</label>
+            <label className="block text-slate-700 font-medium mb-1.5">نام و نام‌خانوادگی</label>
             <input
               type="text"
               required
+              placeholder="مثال: علی احمدی"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="مثال: علی رضایی"
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900"
             />
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5 flex items-center gap-1.5">
-              <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
-              <span>شماره همراه ایران (OTP)</span>
-            </label>
+            <label className="block text-slate-700 font-medium mb-1.5">شماره تلفن همراه</label>
             <input
-              type="text"
+              type="tel"
+              placeholder="09121112233"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="0912xxxxxxx"
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
               dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-zinc-400" />
-              <span>پست الکترونیک (اختیاری)</span>
-            </label>
+            <label className="block text-slate-700 font-medium mb-1.5">ایمیل (اختیاری)</label>
             <input
               type="email"
+              placeholder="ali@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@example.com"
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
               dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-zinc-300 font-medium mb-1.5">روش احراز هویت اولیه</label>
+            <label className="block text-slate-700 font-medium mb-1.5">روش احراز هویت</label>
             <select
               value={provider}
-              onChange={(e) => setProvider(e.target.value as UserAuthProvider)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0f0f0f] border border-[#242424] focus:border-[#3ECF8E] focus:outline-none text-zinc-100 font-mono"
+              onChange={(e) => setProvider(e.target.value as 'sms' | 'credentials')}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800"
             >
-              <option value="sms_otp">کاوه‌نگار / ملی پیامک (OTP SMS)</option>
-              <option value="password">نام کاربری و رمز عبور (Argon2id)</option>
-              <option value="samandehi_sso">پنجره ملی خدمات دولت / ساماندهی</option>
+              <option value="sms">ورود با کد تایید پیامک (OTP)</option>
+              <option value="credentials">نام کاربری و گذرواژه</option>
             </select>
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-[#242424]">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full bg-[#242424] hover:bg-[#2e2e2e] text-[#ededed] border border-[#2e2e2e] font-medium text-xs px-4 py-2 transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="rounded-full bg-[#3ECF8E] hover:bg-[#34b27b] text-[#0f0f0f] font-medium text-xs px-5 py-2 transition-colors"
+              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
             >
               افزودن کاربر
             </button>
