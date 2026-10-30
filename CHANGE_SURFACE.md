@@ -33,6 +33,7 @@ affected_projects:
 - `apps/server/src/wwwroot/`
 
 ### Modified Files
+- `.runflareignore`
 - `apps/server/src/Program.cs`
 - `apps/server/src/Routes/BaasServiceRoutes.cs`
 - `apps/server/src/wwwroot/panel.html`

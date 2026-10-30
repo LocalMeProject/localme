@@ -24,6 +24,7 @@ cp -r apps/web-console/dist/assets/* apps/server/src/wwwroot/assets/
 
 echo "🔨 3. Compiling and publishing .NET 10 host locally..."
 dotnet publish apps/server/src/LocalMe.Server.csproj -c Release -o dist/server
+rm -f dist/server/*.pdb 2>/dev/null || true
 
 if [ ! -f "dist/server/LocalMe.Server.dll" ]; then
   echo "❌ Error: dist/server/LocalMe.Server.dll not found after publish!"
@@ -42,6 +43,7 @@ restore_gitignore() {
   if [ -f .gitignore.bak ]; then
     mv .gitignore.bak .gitignore 2>/dev/null || true
   fi
+  rm -f .gitignore.bak 2>/dev/null || true
 }
 trap restore_gitignore EXIT INT TERM
 

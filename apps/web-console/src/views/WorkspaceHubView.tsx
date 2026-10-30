@@ -45,7 +45,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
   const activeProjectsCount = projects.filter((p) => p.status === 'ACTIVE').length;
 
   return (
-    <div className="min-h-[calc(100vh-65px)] bg-slate-50 text-slate-800 p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+    <div className="min-h-full bg-white text-slate-800 p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
       {/* Top Banner / Welcome */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>

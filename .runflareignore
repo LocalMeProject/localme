@@ -2,22 +2,45 @@
 .git
 .github
 .nx
-node_modules
-.agents
 .ep
+.agents
+.gemini
+.vscode
+.idea
 
-# Storage & temp data
+# Dependencies & package caches
+node_modules
+**/node_modules
+.pnpm-store
+
+# Source code & tests (pre-built into dist/server for lean Docker build)
+apps/
+libs/
+tests/
+scripts/
+docs/
+
+# Intermediate build artifacts
+**/bin/
+**/obj/
+**/*.pdb
+**/*.map
+build/
+coverage/
+test-results/
+
+# Storage, logs & local state
 .localme-storage
 data
 *.log
-*.sqlite
 *.sqlite*
+*.bak
 
-# Test & Docs
-tests
-docs
-
-# Environment files
+# Environments
 .env
 .env.*
 !.env.example
+
+# Explicitly keep Dockerfile and dist/server
+!Dockerfile
+!dist/server/**

@@ -182,8 +182,8 @@ export default function App() {
     navigate(`/panel/${proj.slug}/${activeTab}/${activeSubView}`);
   };
 
-  const handleTabChange = (tab: TabId) => {
-    const defaultSub = DEFAULT_SUB_VIEWS[tab] || 'overview';
+  const handleTabChange = (tab: TabId, subView?: string) => {
+    const defaultSub = subView || DEFAULT_SUB_VIEWS[tab] || 'overview';
     setActiveSubView(defaultSub);
     if (currentProject) {
       navigate(`/panel/${currentProject.slug}/${tab}/${defaultSub}`);
@@ -481,7 +481,7 @@ export default function App() {
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600">
+    <div className="h-screen flex flex-col bg-white text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600 overflow-hidden" dir="rtl">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
@@ -501,7 +501,7 @@ export default function App() {
 
       {/* STAGE 1: USER WORKSPACE HUB */}
       {isHubStage ? (
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 h-[calc(100vh-3.5rem)] overflow-y-auto bg-white">
           <WorkspaceHubView
             projects={projects}
             onOpenCreateProjectModal={() => setIsCreateProjectOpen(true)}
@@ -510,7 +510,7 @@ export default function App() {
         </main>
       ) : (
         /* STAGE 2: PROJECT SERVICE STUDIO WITH TWO-LEVEL SIDEBAR */
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 h-[calc(100vh-3.5rem)] overflow-hidden">
           {/* Supabase Two-Level Sidebar Navigation */}
           <Navigation
             activeTab={activeTab}
@@ -524,7 +524,7 @@ export default function App() {
 
           {/* Main Service Viewport */}
           <main
-            className="flex-1 overflow-y-auto p-6 md:p-8"
+            className="flex-1 h-full overflow-y-auto p-6 md:p-8 bg-white"
             role="tabpanel"
             id={`panel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}

@@ -104,9 +104,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className={`w-2 h-2 rounded-full ${currentProject ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 <span className="font-semibold">{currentProject ? currentProject.name : 'انتخاب پروژه'}</span>
                 {currentProject && (
-                  <span className="text-slate-400 font-mono text-[11px]" dir="ltr">
+                  <bdi className="text-slate-400 font-mono text-[11px] inline-block" dir="ltr">
                     ({currentProject.slug})
-                  </span>
+                  </bdi>
                 )}
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
@@ -177,7 +177,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
             <User className="w-3.5 h-3.5" />
           </div>
-          <span className="font-medium text-slate-800 hidden sm:inline">حساب کاربری</span>
+          <span className="font-medium text-slate-800 hidden sm:inline-flex items-center gap-1.5">
+            <span>سینا ولی زاده</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-emerald-700 font-semibold">{tomanBalance.toLocaleString('fa-IR')} تومان</span>
+          </span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 

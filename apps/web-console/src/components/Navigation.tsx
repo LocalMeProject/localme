@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   LayoutGrid,
   Database,
@@ -47,7 +47,7 @@ export interface SubViewItem {
 
 interface NavigationProps {
   activeTab: TabId;
-  onTabChange: (tab: TabId) => void;
+  onTabChange: (tab: TabId, subView?: string) => void;
   activeSubView?: string;
   onSubViewChange?: (subView: string) => void;
   edgeFunctionsEnabled: boolean;
@@ -66,6 +66,36 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const [isSubNavCollapsed, setIsSubNavCollapsed] = useState(false);
   const [isRailExpanded, setIsRailExpanded] = useState(false);
+
+  const enterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    enterTimeoutRef.current = setTimeout(() => {
+      setIsRailExpanded(true);
+    }, 100);
+  };
+
+  const handleMouseLeave = () => {
+    if (enterTimeoutRef.current) {
+      clearTimeout(enterTimeoutRef.current);
+      enterTimeoutRef.current = null;
+    }
+    leaveTimeoutRef.current = setTimeout(() => {
+      setIsRailExpanded(false);
+    }, 100);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
+      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+    };
+  }, []);
 
   // Primary level-1 modules
   const primaryModules: {
@@ -176,109 +206,108 @@ export const Navigation: React.FC<NavigationProps> = ({
   const currentSubGroup = subViewGroups[activeTab] || subViewGroups.database;
 
   return (
-    <aside className="flex h-full select-none" aria-label="ناوبری دو سطحی پروژه">
-      {/* Level 1: Primary Vertical Rail with 150ms Hover Expansion */}
-      <nav
-        onMouseEnter={() => setIsRailExpanded(true)}
-        onMouseLeave={() => setIsRailExpanded(false)}
-        className={`bg-white border-l border-slate-200 flex flex-col justify-between py-3 z-30 shrink-0 shadow-[1px_0_3px_rgba(0,0,0,0.02)] transition-all duration-150 ease-in-out ${
-          isRailExpanded ? 'w-56 px-2.5' : 'w-14 items-center px-1.5'
-        }`}
-        aria-label="سرویس‌های اصلی"
-      >
-        <div className="flex flex-col gap-1 w-full">
-          {/* Project Avatar / Mini Logo */}
-          <button
-            onClick={onNavigateHome}
-            title={`بازگشت به هاب پروژه‌ها (${project?.name || 'انتخاب پروژه'})`}
-            className={`flex items-center gap-2.5 rounded-xl transition text-right ${
-              isRailExpanded
-                ? 'w-full p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
-                : 'w-10 h-10 justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold text-sm mx-auto'
-            }`}
-          >
-            {isRailExpanded ? (
-              <>
-                <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                  {project?.name ? project.name.slice(0, 2) : 'LM'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
-                    {project?.name || 'انتخاب پروژه'}
+    <aside className="flex h-full select-none shrink-0 relative" aria-label="ناوبری دو سطحی پروژه">
+      {/* Level 1: Primary Vertical Rail with 100ms Hover Delay and Non-Pushing Overlay */}
+      <div className="relative w-14 h-full shrink-0 z-30">
+        <nav
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className={`absolute top-0 right-0 h-full bg-white border-l border-slate-200 flex flex-col justify-between py-3 transition-all duration-150 ease-in-out ${
+            isRailExpanded ? 'w-56 shadow-2xl z-40 px-2.5' : 'w-14 items-center px-1.5'
+          }`}
+          aria-label="سرویس‌های اصلی"
+        >
+          <div className="flex flex-col gap-1 w-full">
+            {/* Project Avatar / Mini Logo */}
+            <button
+              onClick={onNavigateHome}
+              title={`بازگشت به هاب پروژه‌ها (${project?.name || 'انتخاب پروژه'})`}
+              className={`flex items-center gap-2.5 rounded-xl transition text-right ${
+                isRailExpanded
+                  ? 'w-full p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
+                  : 'w-10 h-10 justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold text-sm mx-auto'
+              }`}
+            >
+              {isRailExpanded ? (
+                <>
+                  <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    {project?.name ? project.name.slice(0, 2) : 'LM'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
+                      {project?.name || 'انتخاب پروژه'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
                   </div>
-                  <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
-                </div>
-              </>
-            ) : (
-              <span>{project?.name ? project.name.slice(0, 2) : 'LM'}</span>
-            )}
-          </button>
+                </>
+              ) : (
+                <span>{project?.name ? project.name.slice(0, 2) : 'LM'}</span>
+              )}
+            </button>
 
-          <div className="w-full h-px bg-slate-200 my-1" />
+            <div className="w-full h-px bg-slate-200 my-1" />
 
-          {/* Module Icons */}
-          {primaryModules.map((mod) => {
-            const isActive = activeTab === mod.id;
-            return (
-              <button
-                key={mod.id}
-                onClick={() => {
-                  onTabChange(mod.id);
-                  if (onSubViewChange) {
+            {/* Module Icons */}
+            {primaryModules.map((mod) => {
+              const isActive = activeTab === mod.id;
+              return (
+                <button
+                  key={mod.id}
+                  onClick={() => {
                     const firstSub = subViewGroups[mod.id]?.items[0]?.id;
-                    if (firstSub) onSubViewChange(firstSub);
-                  }
-                }}
-                title={!isRailExpanded ? mod.label : undefined}
-                aria-label={mod.label}
-                aria-current={isActive ? 'page' : undefined}
-                className={`relative flex items-center rounded-xl transition-all ${
-                  isRailExpanded
-                    ? 'w-full px-3 py-2 gap-3 justify-start text-right'
-                    : 'w-10 h-10 justify-center mx-auto'
-                } ${
-                  isActive
-                    ? 'bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-semibold'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                <span className="shrink-0">{mod.icon}</span>
-                {isRailExpanded && (
-                  <span className="flex-1 text-xs truncate whitespace-nowrap">
-                    {mod.label}
-                  </span>
-                )}
-                {isRailExpanded && mod.badge && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-medium">
-                    {mod.badge}
-                  </span>
-                )}
-                {isActive && !isRailExpanded && (
-                  <span className="absolute right-0 top-2.5 bottom-2.5 w-1 bg-emerald-600 rounded-l-full" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    onTabChange(mod.id, firstSub);
+                  }}
+                  title={!isRailExpanded ? mod.label : undefined}
+                  aria-label={mod.label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`relative flex items-center rounded-xl transition-all ${
+                    isRailExpanded
+                      ? 'w-full px-3 py-2 gap-3 justify-start text-right'
+                      : 'w-10 h-10 justify-center mx-auto'
+                  } ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-semibold'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="shrink-0">{mod.icon}</span>
+                  {isRailExpanded && (
+                    <span className="flex-1 text-xs truncate whitespace-nowrap">
+                      {mod.label}
+                    </span>
+                  )}
+                  {isRailExpanded && mod.badge && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-medium">
+                      {mod.badge}
+                    </span>
+                  )}
+                  {isActive && !isRailExpanded && (
+                    <span className="absolute right-0 top-2.5 bottom-2.5 w-1 bg-emerald-600 rounded-l-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Bottom Hub Return Button */}
-        <div className={`w-full pt-2 border-t border-slate-200 flex flex-col ${isRailExpanded ? 'px-1' : 'items-center'}`}>
-          <button
-            onClick={onNavigateHome}
-            title={!isRailExpanded ? 'همه پروژه‌ها' : undefined}
-            className={`rounded-xl flex items-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition ${
-              isRailExpanded ? 'w-full px-3 py-2 gap-3 justify-start text-xs font-medium' : 'w-10 h-10 justify-center'
-            }`}
-          >
-            <FolderGit2 className="w-5 h-5 shrink-0" />
-            {isRailExpanded && <span>همه پروژه‌ها</span>}
-          </button>
-        </div>
-      </nav>
+          {/* Bottom Hub Return Button */}
+          <div className={`w-full pt-2 border-t border-slate-200 flex flex-col ${isRailExpanded ? 'px-1' : 'items-center'}`}>
+            <button
+              onClick={onNavigateHome}
+              title={!isRailExpanded ? 'همه پروژه‌ها' : undefined}
+              className={`rounded-xl flex items-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition ${
+                isRailExpanded ? 'w-full px-3 py-2 gap-3 justify-start text-xs font-medium' : 'w-10 h-10 justify-center'
+              }`}
+            >
+              <FolderGit2 className="w-5 h-5 shrink-0" />
+              {isRailExpanded && <span>همه پروژه‌ها</span>}
+            </button>
+          </div>
+        </nav>
+      </div>
 
       {/* Level 2: Secondary Sub-Navigation Pane */}
       <nav
-        className={`bg-slate-50 border-l border-slate-200 flex flex-col transition-all duration-200 ease-in-out shrink-0 z-10 ${
+        className={`bg-slate-50 border-l border-slate-200 flex flex-col h-full transition-all duration-200 ease-in-out shrink-0 z-10 ${
           isSubNavCollapsed ? 'w-0 overflow-hidden border-none' : 'w-56'
         }`}
         aria-label={currentSubGroup.title}
