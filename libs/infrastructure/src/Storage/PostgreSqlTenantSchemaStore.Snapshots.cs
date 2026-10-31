@@ -91,14 +91,18 @@ public sealed partial class PostgreSqlTenantSchemaStore
                 {
                     if (tblObj.TryGetPropertyValue("schema", out var schemaNode) && schemaNode is JsonArray colsArr)
                     {
+                        var colMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                         var cols = new List<TableColumnDefinition>();
                         foreach (var cNode in colsArr)
                         {
                             if (cNode is JsonObject cObj)
                             {
+                                var cName = cObj["name"]?.ToString() ?? "id";
+                                var cType = cObj["dataType"]?.ToString() ?? "varchar(64)";
+                                colMap[cName] = cType;
                                 cols.Add(new TableColumnDefinition(
-                                    Name: cObj["name"]?.ToString() ?? "id",
-                                    DataType: cObj["dataType"]?.ToString() ?? "varchar(64)",
+                                    Name: cName,
+                                    DataType: cType,
                                     IsPrimaryKey: cObj["isPrimaryKey"]?.GetValue<bool>() ?? false,
                                     IsNullable: cObj["isNullable"]?.GetValue<bool>() ?? true,
                                     DefaultValue: cObj["defaultValue"]?.ToString()
@@ -117,6 +121,15 @@ public sealed partial class PostgreSqlTenantSchemaStore
 
                     if (tblObj.TryGetPropertyValue("rows", out var rowsNode) && rowsNode is JsonArray rowsArr)
                     {
+                        // Ensure colMap is populated even if schema wasn't in snapshot tables node
+                        var activeColMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        try
+                        {
+                            var existingCols = await GetTableSchemaAsync(projectSlug, cleanTbl, ct);
+                            foreach (var ec in existingCols) activeColMap[ec.Name] = ec.DataType;
+                        }
+                        catch { /* ignore */ }
+
                         foreach (var rowNode in rowsArr)
                         {
                             if (rowNode is JsonObject rowData)
@@ -132,7 +145,8 @@ public sealed partial class PostgreSqlTenantSchemaStore
                                     colsList.Add($@"""{cleanCol}""");
                                     var p = $"@p{pIdx++}";
                                     paramList.Add(p);
-                                    paramMap[p] = v?.ToString();
+                                    var dt = activeColMap.TryGetValue(cleanCol, out var d) ? d : "text";
+                                    paramMap[p] = ConvertToTypedValue(v?.ToString(), dt);
                                 }
 
                                 if (colsList.Count > 0)

@@ -169,22 +169,29 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         {
             var defs = new List<string>();
             var hasId = false;
+            var pkCols = new List<string>();
 
             foreach (var col in columns)
             {
                 var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(col.Name);
                 if (cleanCol.Equals("id", StringComparison.OrdinalIgnoreCase)) hasId = true;
+                if (col.IsPrimaryKey) pkCols.Add($@"""{cleanCol}""");
 
-                var nullStr = col.IsPrimaryKey ? "" : (col.IsNullable ? "NULL" : "NOT NULL");
-                var pkStr = col.IsPrimaryKey ? "PRIMARY KEY" : "";
+                var nullStr = col.IsPrimaryKey ? "NOT NULL" : (col.IsNullable ? "NULL" : "NOT NULL");
                 var defStr = string.IsNullOrWhiteSpace(col.DefaultValue) ? "" : $"DEFAULT {col.DefaultValue}";
 
-                defs.Add($@"""{cleanCol}"" {col.DataType} {nullStr} {pkStr} {defStr}".Trim().Replace("  ", " "));
+                defs.Add($@"""{cleanCol}"" {col.DataType} {nullStr} {defStr}".Trim().Replace("  ", " "));
             }
 
-            if (!hasId)
+            if (!hasId && pkCols.Count == 0)
             {
-                defs.Insert(0, @"""id"" VARCHAR(64) PRIMARY KEY");
+                defs.Insert(0, @"""id"" VARCHAR(64) NOT NULL");
+                pkCols.Add(@"""id""");
+            }
+
+            if (pkCols.Count > 0)
+            {
+                defs.Add($"PRIMARY KEY ({string.Join(", ", pkCols)})");
             }
 
             sb.Append(string.Join(", ", defs));
@@ -474,11 +481,14 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             }
         }
 
+        var conflictClause = updates.Count > 0
+            ? $"DO UPDATE SET {string.Join(", ", updates)}"
+            : "DO NOTHING";
+
         var sql = $@"
             INSERT INTO ""{schema}"".""{cleanTable}"" ({string.Join(", ", cols)})
             VALUES ({string.Join(", ", placeholders)})
-            ON CONFLICT (""{cleanConflict}"") DO UPDATE SET
-            {string.Join(", ", updates)}
+            ON CONFLICT (""{cleanConflict}"") {conflictClause}
             RETURNING *;";
 
         await using var conn = await _dataSource.OpenConnectionAsync(ct);

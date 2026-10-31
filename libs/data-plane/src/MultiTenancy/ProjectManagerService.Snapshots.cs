@@ -260,6 +260,45 @@ public sealed partial class ProjectManagerService
         }
     }
 
+    public bool DeleteDatabaseSnapshot(string projectId, string snapshotId)
+    {
+        EnsureSnapshotsLoadedFromDisk(projectId);
+        var removed = false;
+        if (_projectSnapshots.TryGetValue(projectId, out var list))
+        {
+            lock (list)
+            {
+                var target = list.FirstOrDefault(s => s.Id.Equals(snapshotId, StringComparison.OrdinalIgnoreCase));
+                if (target != null)
+                {
+                    list.Remove(target);
+                    removed = true;
+                }
+            }
+        }
+
+        try
+        {
+            var dir = Path.Combine(AppContext.BaseDirectory, "snapshots", projectId);
+            var file = Path.Combine(dir, $"{snapshotId}.json");
+            if (File.Exists(file))
+            {
+                File.Delete(file);
+                removed = true;
+            }
+        }
+        catch
+        {
+            // Ignore disk errors
+        }
+
+        if (removed)
+        {
+            AddProjectLog(projectId, "database", "INFO", $"اسنپ‌شات {snapshotId} حذف گردید.", statusCode: 200);
+        }
+        return removed;
+    }
+
     private void EnsureSnapshotsLoadedFromDisk(string projectId)
     {
         try
