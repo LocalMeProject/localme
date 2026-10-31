@@ -35,6 +35,11 @@ This is the **tailored operating skill** for this product monorepo. Agents worki
 - Zero dependencies on concrete services or application code.
 - Semantic versioning and backward-compatible schema evolutions.
 
+### Section 2.1: DBaaS Operational & Security Invariants
+1. **Zero Direct Datastore Access**: Direct PostgreSQL connection strings, credentials, and connection URI panels are strictly forbidden from being displayed, logged, or exposed in developer portals or client SDKs. All operations route exclusively through authenticated LocalMe gateway routes (`/_baas/v1/*`).
+2. **Strict SQL Runner Guardrails**: The raw SQL execution engine (`/_baas/v1/{projectId}/sql/execute` and `/db/sql`) enforces strict DML-only execution. All DDL operations (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `RENAME`) are blocked at the gateway and reserved exclusively for Schema Designer endpoints.
+3. **Automated Snapshot Lifecycle**: Tenant database snapshots enforce a 3-day retention policy (`RetentionDays = 3`, configurable by system administrators). Expired snapshot records and disk assets must be automatically pruned.
+
 ---
 
 ## 3. High-Velocity Single-Turn Ingestion Mandate (P0)

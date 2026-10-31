@@ -347,6 +347,17 @@ public sealed partial class ProjectManagerService
     }
 
     // 9. Interactive SQL Runner & Schema Inspection
+    public async Task<SqlExecutionResult> ExecuteSqlAsync(string projectId, string sql, string? userId = null, string? role = null)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.ExecuteRawSqlAsync(slug, sql, userId, role);
+        }
+
+        return ExecuteSql(projectId, sql);
+    }
+
     public SqlExecutionResult ExecuteSql(string projectId, string sql)
     {
         if (TenantDbStore != null)
