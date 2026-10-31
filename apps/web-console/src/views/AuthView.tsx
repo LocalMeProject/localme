@@ -11,6 +11,7 @@ import {
   Search,
   Save,
 } from 'lucide-react';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
 
 interface AuthViewProps {
   project: Project;
@@ -29,6 +30,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [users, setUsers] = useState<ProjectUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   // SMS OTP Test State
   const [testPhone, setTestPhone] = useState('09121112233');
@@ -144,8 +146,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
   };
 
   // Real API: Delete User
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('آیا از حذف این کاربر اطمینان دارید؟')) return;
+  const handleDeleteUser = (userId: string) => {
+    setUserToDelete(userId);
+  };
+
+  const executeDeleteUser = async (userId: string) => {
+    setUserToDelete(null);
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/auth/users/${userId}`, {
         method: 'DELETE',
@@ -513,6 +519,19 @@ export const AuthView: React.FC<AuthViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Accessible Confirm Modal for User Deletion */}
+      <ConfirmModal
+        isOpen={Boolean(userToDelete)}
+        title="حذف حساب کاربر"
+        message="آیا از حذف دائم این حساب کاربری اطمینان دارید؟ تمام دسترسی‌های کاربر لغو خواهد شد."
+        confirmLabel="حذف کاربر"
+        isDanger={true}
+        onConfirm={() => {
+          if (userToDelete) executeDeleteUser(userToDelete);
+        }}
+        onCancel={() => setUserToDelete(null)}
+      />
     </div>
   );
 };

@@ -6,13 +6,14 @@ import {
   Key,
   Trash2,
   Edit2,
-  Layers,
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
 import { DatabaseColumn } from '../../types';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { SchemaPoliciesSection } from './SchemaPoliciesSection';
+import { SchemaIndexesSection } from './SchemaIndexesSection';
+import { SchemaRelationshipsSection } from './SchemaRelationshipsSection';
 
 interface SchemaDesignerProps {
   projectSlug: string;
@@ -64,12 +65,6 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
   const [showDropTableModal, setShowDropTableModal] = useState(false);
   const [showTruncateModal, setShowTruncateModal] = useState(false);
 
-  // Index Creation State
-  const [isAddingIndex, setIsAddingIndex] = useState(false);
-  const [newIndexName, setNewIndexName] = useState('');
-  const [newIndexCol, setNewIndexCol] = useState('');
-  const [newIndexUnique, setNewIndexUnique] = useState(false);
-
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColName.trim() || !activeTable) return;
@@ -95,33 +90,6 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
     if (ok) {
       setEditingCol(null);
       onRefreshSchema?.();
-    }
-  };
-
-  const handleCreateIndex = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newIndexCol || !activeTable) return;
-    const name = newIndexName.trim() || `idx_${activeTable}_${newIndexCol}`;
-    try {
-      const res = await fetch(`/_baas/v1/${projectSlug}/db/tables/${activeTable}/indexes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          columns: [newIndexCol],
-          isUnique: newIndexUnique,
-        }),
-      });
-      if (res.ok) {
-        setIsAddingIndex(false);
-        setNewIndexName('');
-        alert('ایندکس با موفقیت ایجاد گردید.');
-      } else {
-        const err = await res.json();
-        alert(`خطا: ${err.error || 'ایجاد ایندکس ناموفق بود'}`);
-      }
-    } catch (err) {
-      alert(`خطا در ایجاد ایندکس: ${String(err)}`);
     }
   };
 
@@ -181,14 +149,6 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
             </button>
           )}
           <button
-            onClick={() => setIsAddingIndex(!isAddingIndex)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3 py-1.5 transition"
-            disabled={!activeTable}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>ایجاد ایندکس</span>
-          </button>
-          <button
             onClick={() => setIsAddingColumn(!isAddingColumn)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3 py-1.5 transition shadow-xs"
             disabled={!activeTable}
@@ -204,75 +164,6 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{schemaSuccessMsg}</span>
         </div>
-      )}
-
-      {/* Add Index Inline Form */}
-      {isAddingIndex && (
-        <form
-          onSubmit={handleCreateIndex}
-          className="p-4 rounded-xl bg-white border border-emerald-200 space-y-3 shadow-xs"
-        >
-          <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-emerald-600" />
-            <span>ایجاد ایندکس جدید روی جدول {activeTable}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div>
-              <label className="block text-slate-600 text-[11px] mb-1 font-medium">نام ایندکس (اختیاری)</label>
-              <input
-                type="text"
-                value={newIndexName}
-                onChange={(e) => setNewIndexName(e.target.value)}
-                placeholder={`idx_${activeTable}_col`}
-                dir="ltr"
-                className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-600 text-[11px] mb-1 font-medium">انتخاب ستون</label>
-              <select
-                value={newIndexCol}
-                onChange={(e) => setNewIndexCol(e.target.value)}
-                required
-                dir="ltr"
-                className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">-- انتخاب ستون --</option>
-                {schemaColumns.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end pb-2">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={newIndexUnique}
-                  onChange={(e) => setNewIndexUnique(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span>یکتا (UNIQUE INDEX)</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsAddingIndex(false)}
-              className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 transition"
-            >
-              انصراف
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs"
-            >
-              ساخت ایندکس
-            </button>
-          </div>
-        </form>
       )}
 
       {/* Add Column Inline Form */}
@@ -506,6 +397,21 @@ export const SchemaDesigner: React.FC<SchemaDesignerProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Table Indexes Management */}
+      <SchemaIndexesSection
+        projectSlug={projectSlug}
+        activeTable={activeTable}
+        columns={schemaColumns}
+      />
+
+      {/* Table Relationships & Foreign Keys */}
+      <SchemaRelationshipsSection
+        projectSlug={projectSlug}
+        activeTable={activeTable}
+        tables={tables}
+        columns={schemaColumns}
+      />
 
       {/* Row Level Security (RLS) Policies Section */}
       <SchemaPoliciesSection projectSlug={projectSlug} activeTable={activeTable} />

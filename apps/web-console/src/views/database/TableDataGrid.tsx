@@ -15,11 +15,14 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { DatabaseColumn } from '../../types';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
+import { InsertRecordModal } from './InsertRecordModal';
 
 interface TableDataGridProps {
   activeTable: string;
   tableColumns: string[];
+  schemaColumns?: DatabaseColumn[];
   filteredRows: Record<string, unknown>[];
   filterQuery: string;
   onFilterQueryChange: (q: string) => void;
@@ -27,7 +30,8 @@ interface TableDataGridProps {
   gridError: string | null;
   onRefresh: () => void;
   onDeleteRow: (id: string) => void;
-  onInsertRow: (jsonText: string) => Promise<boolean>;
+  onInsertRow?: (jsonText: string) => Promise<boolean>;
+  onInsertRecord?: (data: Record<string, unknown>) => Promise<{ success: boolean; error?: string; code?: string; detail?: string }>;
   onUpdateRow?: (id: string, patch: Record<string, unknown>) => Promise<boolean>;
   // Pagination & Sorting props
   currentPage?: number;
@@ -42,6 +46,7 @@ interface TableDataGridProps {
 export const TableDataGrid: React.FC<TableDataGridProps> = ({
   activeTable,
   tableColumns,
+  schemaColumns,
   filteredRows,
   filterQuery,
   onFilterQueryChange,
@@ -50,6 +55,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   onRefresh,
   onDeleteRow,
   onInsertRow,
+  onInsertRecord,
   onUpdateRow,
   currentPage = 1,
   pageSize = 50,
@@ -60,7 +66,6 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   onSortChange,
 }) => {
   const [isInsertOpen, setIsInsertOpen] = useState(false);
-  const [insertRecordJson, setInsertRecordJson] = useState('{\n  \n}');
 
   // Deletion state
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -68,12 +73,24 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; col: string; value: string } | null>(null);
 
-  const handleInsert = async () => {
-    const ok = await onInsertRow(insertRecordJson);
-    if (ok) {
-      setIsInsertOpen(false);
-      setInsertRecordJson('{\n  \n}');
+  const effectiveColumns: DatabaseColumn[] = schemaColumns && schemaColumns.length > 0
+    ? schemaColumns
+    : tableColumns.map((col) => ({
+        name: col,
+        dataType: 'text',
+        isPrimaryKey: col === 'id',
+        isNullable: true,
+      }));
+
+  const handleInsertRecordSubmit = async (data: Record<string, unknown>) => {
+    if (onInsertRecord) {
+      return await onInsertRecord(data);
     }
+    if (onInsertRow) {
+      const ok = await onInsertRow(JSON.stringify(data));
+      return { success: ok };
+    }
+    return { success: false, error: 'اکشن ثبت رکورد تعریف نشده است.' };
   };
 
   const handleSaveCell = async () => {
@@ -381,52 +398,14 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
         )}
       </div>
 
-      {/* JSON Insert Modal */}
-      {isInsertOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">
-                افزودن رکورد جدید به جدول <span className="font-mono text-emerald-700" dir="ltr">{activeTable}</span>
-              </h3>
-              <button
-                onClick={() => setIsInsertOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm"
-              >
-                بستن
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 leading-relaxed">
-              مشخصات رکورد جدید را در قالب JSON وارد نمایید:
-            </p>
-
-            <textarea
-              value={insertRecordJson}
-              onChange={(e) => setInsertRecordJson(e.target.value)}
-              rows={8}
-              dir="ltr"
-              className="w-full rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
-              placeholder={`{\n  "title": "عنوان",\n  "status": "ACTIVE"\n}`}
-            />
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => setIsInsertOpen(false)}
-                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-medium text-slate-700 transition"
-              >
-                انصراف
-              </button>
-              <button
-                onClick={handleInsert}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium text-white transition shadow-xs"
-              >
-                ثبت رکورد در پایگاه داده
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Typed Record Insert Modal */}
+      <InsertRecordModal
+        isOpen={isInsertOpen}
+        tableName={activeTable}
+        columns={effectiveColumns}
+        onClose={() => setIsInsertOpen(false)}
+        onSubmit={handleInsertRecordSubmit}
+      />
 
       {/* Accessible Confirm Deletion Modal */}
       <ConfirmModal

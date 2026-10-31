@@ -16,6 +16,8 @@ using LocalMe.DataPlane.MultiTenancy;
 
 public static class BaasDatabaseRoutes
 {
+    private static IResult FormatDbError(Exception ex) => BaasDatabaseErrorHelper.FormatDbError(ex);
+
     public static void MapBaasDatabaseRoutes(this IEndpointRouteBuilder app)
     {
         // 1. PostgREST URL Filter Query
@@ -34,12 +36,19 @@ public static class BaasDatabaseRoutes
                 queryDict[k] = v.ToString();
             }
 
-            var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-            var result = await pm.QueryTableAsync(projectId, table, ast);
+            try
+            {
+                var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
+                var result = await pm.QueryTableAsync(projectId, table, ast);
 
-            context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return Results.Json(result.Rows);
+                context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Results.Json(result.Rows);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 2. Structured JSON AST Query
@@ -50,16 +59,21 @@ public static class BaasDatabaseRoutes
             if (!pm.IsServiceEnabled(projectId, "database"))
                 return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
 
-            var ast = SqlAstQueryCompiler.ParseJsonQuery(jsonNode);
-            var result = await pm.QueryTableAsync(projectId, table, ast);
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-            return Results.Json(result);
+            try
+            {
+                var ast = SqlAstQueryCompiler.ParseJsonQuery(jsonNode);
+                var result = await pm.QueryTableAsync(projectId, table, ast);
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+                return Results.Json(result);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 3. Simple Table Query Fallback
@@ -78,12 +92,19 @@ public static class BaasDatabaseRoutes
                 queryDict[k] = v.ToString();
             }
 
-            var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-            var result = await pm.QueryTableAsync(projectId, table, ast);
+            try
+            {
+                var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
+                var result = await pm.QueryTableAsync(projectId, table, ast);
 
-            context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return Results.Json(result.Rows);
+                context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Results.Json(result.Rows);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 4. REST Table Insert (Single or Batch)
@@ -124,9 +145,9 @@ public static class BaasDatabaseRoutes
                     return Results.Json(inserted);
                 }
             }
-            catch (Npgsql.PostgresException pex) when (pex.SqlState == "42703")
+            catch (Exception ex)
             {
-                return Results.BadRequest(new { error = $"ستون درخواستی در جدول وجود ندارد: {pex.MessageText}", code = "COLUMN_NOT_FOUND" });
+                return FormatDbError(ex);
             }
         });
 
@@ -138,18 +159,25 @@ public static class BaasDatabaseRoutes
             if (!pm.IsServiceEnabled(projectId, "database"))
                 return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
 
-            var insertedList = new List<JsonObject>();
-            foreach (var item in records)
+            try
             {
-                if (item is JsonObject row)
+                var insertedList = new List<JsonObject>();
+                foreach (var item in records)
                 {
-                    var ins = await pm.InsertRowAsync(projectId, table, row);
-                    insertedList.Add(ins);
+                    if (item is JsonObject row)
+                    {
+                        var ins = await pm.InsertRowAsync(projectId, table, row);
+                        insertedList.Add(ins);
+                    }
                 }
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return Results.Json(insertedList);
             }
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return Results.Json(insertedList);
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 6. Real-Time CDC Table Events over Server-Sent Events (SSE)
@@ -227,12 +255,19 @@ public static class BaasDatabaseRoutes
             var body = await reader.ReadToEndAsync();
             var patch = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
 
-            var updated = await pm.UpdateRowAsync(projectId, table, rowId, patch);
-            if (updated == null) return Results.NotFound(new { error = "Row not found" });
+            try
+            {
+                var updated = await pm.UpdateRowAsync(projectId, table, rowId, patch);
+                if (updated == null) return Results.NotFound(new { error = "Row not found" });
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return Results.Json(updated);
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return Results.Json(updated);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 8. REST Row Upsert (PUT)
@@ -248,10 +283,17 @@ public static class BaasDatabaseRoutes
             var onConflict = request.Query["on_conflict"].ToString();
             if (string.IsNullOrWhiteSpace(onConflict)) onConflict = "id";
 
-            var upserted = await pm.UpsertRowAsync(projectId, table, onConflict, payload);
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return Results.Json(upserted);
+            try
+            {
+                var upserted = await pm.UpsertRowAsync(projectId, table, onConflict, payload);
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return Results.Json(upserted);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 9. Legacy Single Row Insert (POST)
@@ -265,10 +307,17 @@ public static class BaasDatabaseRoutes
             var body = await reader.ReadToEndAsync();
             var json = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
 
-            var inserted = await pm.InsertRowAsync(projectId, table, json);
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return Results.Json(inserted);
+            try
+            {
+                var inserted = await pm.InsertRowAsync(projectId, table, json);
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return Results.Json(inserted);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 10. List Tables
@@ -282,7 +331,7 @@ public static class BaasDatabaseRoutes
             }
             catch (Exception ex)
             {
-                return Results.Json(new { error = ex.Message, success = false }, statusCode: 500);
+                return FormatDbError(ex);
             }
         });
 
@@ -296,7 +345,7 @@ public static class BaasDatabaseRoutes
             }
             catch (Exception ex)
             {
-                return Results.Json(new { error = ex.Message, success = false }, statusCode: 500);
+                return FormatDbError(ex);
             }
         });
 
@@ -306,8 +355,15 @@ public static class BaasDatabaseRoutes
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
             var table = request.Query["table"].ToString();
             if (string.IsNullOrWhiteSpace(table)) table = "products";
-            var columns = await pm.GetTableColumnsAsync(projectId, table);
-            return Results.Json(columns);
+            try
+            {
+                var columns = await pm.GetTableColumnsAsync(projectId, table);
+                return Results.Json(columns);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 12. Sandboxed DML SQL Query Runner
@@ -339,8 +395,15 @@ public static class BaasDatabaseRoutes
                           ?? context.Request.Headers["X-User-Role"].FirstOrDefault() 
                           ?? "authenticated";
 
-            var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
-            return Results.Json(result);
+            try
+            {
+                var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
+                return Results.Json(result);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 13. Create Table (DDL)
@@ -368,16 +431,30 @@ public static class BaasDatabaseRoutes
                 }
             }
 
-            var created = await pm.CreateTableAsync(projectId, name, colDefs);
-            return created ? Results.Ok(new { success = true, table = name }) : Results.Conflict(new { error = "Table already exists or failed to create" });
+            try
+            {
+                var created = await pm.CreateTableAsync(projectId, name, colDefs);
+                return created ? Results.Ok(new { success = true, table = name }) : Results.Conflict(new { error = "جدول با این نام قبلاً ایجاد شده یا خطایی رخ داد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 14. Drop Table
         app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}", async (string projectId, string table, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var removed = await pm.DeleteTableAsync(projectId, table);
-            return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "Table not found" });
+            try
+            {
+                var removed = await pm.DeleteTableAsync(projectId, table);
+                return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "جدول یافت نشد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 15. Add Column
@@ -388,16 +465,30 @@ public static class BaasDatabaseRoutes
             var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "text";
             var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
             var defaultValue = body["defaultValue"]?.ToString();
-            var ok = await pm.AddColumnAsync(projectId, table, new TableColumnDefinition(name, dataType, false, isNullable, defaultValue));
-            return ok ? Results.Ok(new { success = true, column = name }) : Results.BadRequest(new { error = "Failed to add column" });
+            try
+            {
+                var ok = await pm.AddColumnAsync(projectId, table, new TableColumnDefinition(name, dataType, false, isNullable, defaultValue));
+                return ok ? Results.Ok(new { success = true, column = name }) : Results.BadRequest(new { error = "افزودن ستون ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 16. Drop Column
         app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var ok = await pm.DropColumnAsync(projectId, table, column);
-            return ok ? Results.Ok(new { success = true, column }) : Results.NotFound(new { error = "Failed to drop column" });
+            try
+            {
+                var ok = await pm.DropColumnAsync(projectId, table, column);
+                return ok ? Results.Ok(new { success = true, column }) : Results.NotFound(new { error = "حذف ستون ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         // 17. Alter Column
@@ -408,37 +499,163 @@ public static class BaasDatabaseRoutes
             var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "";
             var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
             var defaultValue = body["defaultValue"]?.ToString();
-            var ok = await pm.AlterColumnAsync(projectId, table, column, new TableColumnDefinition(newName, dataType, false, isNullable, defaultValue));
-            return ok ? Results.Ok(new { success = true, column = newName }) : Results.BadRequest(new { error = "Failed to alter column" });
+            try
+            {
+                var ok = await pm.AlterColumnAsync(projectId, table, column, new TableColumnDefinition(newName, dataType, false, isNullable, defaultValue));
+                return ok ? Results.Ok(new { success = true, column = newName }) : Results.BadRequest(new { error = "تغییر ستون ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
-        // 18. Create Index
+        // 18. Index Management (List, Create, Drop, Rebuild)
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var indexes = await pm.GetIndexesAsync(projectId, table);
+                return Results.Json(indexes);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
         app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
             var name = body["name"]?.ToString() ?? $"idx_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
             var cols = body["columns"] is JsonArray arr ? arr.Select(x => x?.ToString() ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList() : new List<string>();
-            if (cols.Count == 0) return Results.BadRequest(new { error = "At least one column is required for an index." });
+            if (cols.Count == 0) return Results.BadRequest(new { error = "حداقل انتخاب یک ستون برای ایجاد شاخص الزامی است." });
             var isUnique = body["isUnique"]?.GetValue<bool>() ?? false;
-            var ok = await pm.CreateIndexAsync(projectId, table, name, cols, isUnique);
-            return ok ? Results.Ok(new { success = true, index = name }) : Results.BadRequest(new { error = "Failed to create index" });
+            try
+            {
+                var ok = await pm.CreateIndexAsync(projectId, table, name, cols, isUnique);
+                return ok ? Results.Ok(new { success = true, index = name }) : Results.BadRequest(new { error = "ایجاد ایندکس ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
-        // 19. Truncate Table
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}", async (string projectId, string table, string indexName, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var ok = await pm.DropIndexAsync(projectId, table, indexName);
+                return ok ? Results.Ok(new { success = true, index = indexName }) : Results.NotFound(new { error = "شاخص مورد نظر یافت نشد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}/rebuild", async (string projectId, string table, string indexName, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var ok = await pm.RebuildIndexAsync(projectId, table, indexName);
+                return ok ? Results.Ok(new { success = true, index = indexName }) : Results.BadRequest(new { error = "بازسازی شاخص ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        // 19. Foreign Key Relationships Management (List, Add, Drop)
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var rels = await pm.GetRelationshipsAsync(projectId, table);
+                return Results.Json(rels);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var sourceCol = body["sourceColumn"]?.ToString() ?? "";
+            var targetTable = body["targetTable"]?.ToString() ?? "";
+            var targetCol = body["targetColumn"]?.ToString() ?? "id";
+            var onDelete = body["onDelete"]?.ToString() ?? "NO ACTION";
+            var onUpdate = body["onUpdate"]?.ToString() ?? "NO ACTION";
+            var name = body["constraintName"]?.ToString() ?? $"fk_{table}_{sourceCol}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            if (string.IsNullOrWhiteSpace(sourceCol) || string.IsNullOrWhiteSpace(targetTable))
+            {
+                return Results.BadRequest(new { error = "انتخاب ستون مبدا و جدول مقصد الزامی است." });
+            }
+
+            var rel = new TableRelationshipDefinition(name, table, sourceCol, targetTable, targetCol, onDelete, onUpdate);
+            try
+            {
+                var ok = await pm.AddRelationshipAsync(projectId, rel);
+                return ok ? Results.Ok(new { success = true, relationship = rel }) : Results.BadRequest(new { error = "ایجاد رابطه کلید خارجی ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/relationships/{constraintName}", async (string projectId, string table, string constraintName, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var ok = await pm.DropRelationshipAsync(projectId, table, constraintName);
+                return ok ? Results.Ok(new { success = true, constraintName }) : Results.NotFound(new { error = "رابطه یافت نشد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        // 20. Truncate Table
         app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/truncate", async (string projectId, string table, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var ok = await pm.TruncateTableAsync(projectId, table);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return ok ? Results.Ok(new { success = true, table }) : Results.BadRequest(new { error = "Failed to truncate table" });
+            try
+            {
+                var ok = await pm.TruncateTableAsync(projectId, table);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return ok ? Results.Ok(new { success = true, table }) : Results.BadRequest(new { error = "پاکسازی جدول ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
-        // 20. RLS Policies
+        // 21. RLS Policies
         app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var policies = await pm.GetPoliciesAsync(projectId, table);
-            return Results.Json(policies);
+            try
+            {
+                var policies = await pm.GetPoliciesAsync(projectId, table);
+                return Results.Json(policies);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
@@ -450,38 +667,63 @@ public static class BaasDatabaseRoutes
             var usingExpr = body["usingExpression"]?.ToString() ?? "true";
             var checkExpr = body["checkExpression"]?.ToString();
             var policy = new TablePolicyDefinition(name, table, cmd, roles, usingExpr, checkExpr);
-            var ok = await pm.CreatePolicyAsync(projectId, table, policy);
-            return ok ? Results.Ok(new { success = true, policy = name }) : Results.BadRequest(new { error = "Failed to create policy" });
+            try
+            {
+                var ok = await pm.CreatePolicyAsync(projectId, table, policy);
+                return ok ? Results.Ok(new { success = true, policy = name }) : Results.BadRequest(new { error = "ایجاد قاعده امنیتی ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/policies/{policy}", async (string projectId, string table, string policy, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(table);
-            var cleanPolicy = SqlAstQueryCompiler.SanitizeIdentifier(policy);
-            var sql = $@"DROP POLICY IF EXISTS ""{cleanPolicy}"" ON ""{cleanTable}"";";
-            var res = await pm.ExecuteSqlAsync(projectId, sql, "admin", "service_role");
-            return res.Success ? Results.Ok(new { success = true, policy }) : Results.BadRequest(new { error = res.Error });
+            try
+            {
+                var ok = await pm.DropPolicyAsync(projectId, table, policy);
+                return ok ? Results.Ok(new { success = true, policy }) : Results.BadRequest(new { error = "حذف قاعده امنیتی ناموفق بود" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
-        // 21. Delete Rows
+        // 22. Delete Rows
         app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var removed = await pm.DeleteRowAsync(projectId, table, rowId);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "Row not found" });
+            try
+            {
+                var removed = await pm.DeleteRowAsync(projectId, table, rowId);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "رکورد یافت نشد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
         app.MapDelete("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var removed = await pm.DeleteRowAsync(projectId, table, rowId);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "Row not found" });
+            try
+            {
+                var removed = await pm.DeleteRowAsync(projectId, table, rowId);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "رکورد یافت نشد" });
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
         });
 
-        // 22. Visual SQL Studio Execution Endpoint
+        // 23. Visual SQL Studio Execution Endpoint
         app.MapPost("/_baas/v1/{projectId}/sql/execute", async (string projectId, JsonObject body, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
             var project = pm.GetProject(projectId);
@@ -520,14 +762,7 @@ public static class BaasDatabaseRoutes
             }
             catch (Exception ex)
             {
-                return Results.Json(new
-                {
-                    success = false,
-                    error = $"خطای ارتباط با پایگاه داده: {ex.Message}",
-                    columns = Array.Empty<string>(),
-                    rows = Array.Empty<object>(),
-                    executionTimeMs = 0
-                }, statusCode: 500);
+                return FormatDbError(ex);
             }
         });
     }

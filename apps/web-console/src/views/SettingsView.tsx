@@ -10,6 +10,8 @@ import {
   Users,
   Save,
 } from 'lucide-react';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface SettingsViewProps {
   project: Project;
@@ -44,6 +46,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Network Settings
   const [egressRegion, setEgressRegion] = useState('ir-tehran');
   const [isDedicatedIp, setIsDedicatedIp] = useState(false);
+
+  // Modals
+  const [showRemovePasswordModal, setShowRemovePasswordModal] = useState(false);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   const fetchTeam = useCallback(async () => {
     try {
@@ -98,7 +114,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectPassword || projectPassword.length < 4) {
-      alert('رمز عبور پروژه باید حداقل ۴ کاراکتر باشد.');
+      setAlertState({
+        isOpen: true,
+        title: 'رمز عبور نامعتبر است',
+        message: 'رمز عبور پروژه باید حداقل ۴ کاراکتر باشد.',
+        type: 'error',
+      });
       return;
     }
     try {
@@ -110,28 +131,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       if (res.ok) {
         setHasPassword(true);
         setProjectPassword('');
-        alert('رمز عبور اختصاصی پروژه با موفقیت تنظیم گردید.');
+        setAlertState({
+          isOpen: true,
+          title: 'تنظیم موفق رمز عبور',
+          message: 'رمز عبور اختصاصی پروژه با موفقیت تنظیم گردید.',
+          type: 'success',
+        });
       } else {
-        alert('خطا در تنظیم رمز عبور پروژه.');
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در تنظیم رمز عبور',
+          message: 'تنظیم رمز عبور پروژه با خطا مواجه شد.',
+          type: 'error',
+        });
       }
     } catch {
-      alert('خطا در ارتباط با سرور.');
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'برقراری ارتباط با سرور ناموفق بود.',
+        type: 'error',
+      });
     }
   };
 
   // Real API: Remove Password
-  const handleRemovePassword = async () => {
-    if (!confirm('آیا از حذف رمز عبور اختصاصی پروژه اطمینان دارید؟')) return;
+  const handleRemovePassword = () => {
+    setShowRemovePasswordModal(true);
+  };
+
+  const executeRemovePassword = async () => {
+    setShowRemovePasswordModal(false);
     try {
       const res = await fetch(`/_baas/v1/projects/${project.slug}/password`, {
         method: 'DELETE',
       });
       if (res.ok) {
         setHasPassword(false);
-        alert('رمز عبور اختصاصی پروژه حذف شد.');
+        setAlertState({
+          isOpen: true,
+          title: 'حذف رمز عبور',
+          message: 'رمز عبور اختصاصی پروژه با موفقیت حذف گردید.',
+          type: 'success',
+        });
       }
     } catch {
-      // ignore
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در حذف رمز عبور پروژه.',
+        type: 'error',
+      });
     }
   };
 
@@ -470,6 +520,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Accessible Confirm Modal for Removing Password */}
+      <ConfirmModal
+        isOpen={showRemovePasswordModal}
+        title="حذف رمز عبور پروژه"
+        message="آیا از حذف رمز عبور اختصاصی پروژه اطمینان دارید؟ پس از حذف، ورود به کنسول نیاز به گذرواژه نخواهد داشت."
+        confirmLabel="حذف رمز عبور"
+        isDanger={true}
+        onConfirm={executeRemovePassword}
+        onCancel={() => setShowRemovePasswordModal(false)}
+      />
+
+      {/* Accessible Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

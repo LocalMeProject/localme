@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Shield,
 } from 'lucide-react';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface StorageViewProps {
   project: Project;
@@ -32,6 +34,21 @@ export const StorageView: React.FC<StorageViewProps> = ({
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  // Modals state
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+  const [bucketToDelete, setBucketToDelete] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   // Real API: Fetch Buckets
   const fetchBuckets = useCallback(async () => {
@@ -119,8 +136,12 @@ export const StorageView: React.FC<StorageViewProps> = ({
   };
 
   // Real API: Delete File
-  const handleDeleteFile = async (fileName: string) => {
-    if (!confirm(`آیا از حذف فایل "${fileName}" اطمینان دارید؟`)) return;
+  const handleDeleteFile = (fileName: string) => {
+    setFileToDelete(fileName);
+  };
+
+  const executeDeleteFile = async (fileName: string) => {
+    setFileToDelete(null);
     try {
       const res = await fetch(
         `/_baas/v1/${project.slug}/storage/${selectedBucket}/${encodeURIComponent(fileName)}`,
@@ -128,15 +149,30 @@ export const StorageView: React.FC<StorageViewProps> = ({
       );
       if (res.ok) {
         setFiles((prev) => prev.filter((f) => f.name !== fileName));
+        setAlertState({
+          isOpen: true,
+          title: 'حذف فایل موفق',
+          message: `فایل «${fileName}» با موفقیت حذف گردید.`,
+          type: 'success',
+        });
       }
     } catch {
-      // ignore
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارسال درخواست حذف فایل.',
+        type: 'error',
+      });
     }
   };
 
   // Real API: Delete Bucket
-  const handleDeleteBucket = async (bucketName: string) => {
-    if (!confirm(`آیا از حذف کامل باکت "${bucketName}" اطمینان دارید؟`)) return;
+  const handleDeleteBucket = (bucketName: string) => {
+    setBucketToDelete(bucketName);
+  };
+
+  const executeDeleteBucket = async (bucketName: string) => {
+    setBucketToDelete(null);
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/storage/buckets/${bucketName}`, {
         method: 'DELETE',
@@ -146,9 +182,20 @@ export const StorageView: React.FC<StorageViewProps> = ({
         if (selectedBucket === bucketName) {
           setSelectedBucket(buckets[0]?.name || '');
         }
+        setAlertState({
+          isOpen: true,
+          title: 'حذف باکت موفق',
+          message: `باکت «${bucketName}» با موفقیت حذف گردید.`,
+          type: 'success',
+        });
       }
     } catch {
-      // ignore
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارسال درخواست حذف باکت.',
+        type: 'error',
+      });
     }
   };
 
@@ -173,11 +220,28 @@ export const StorageView: React.FC<StorageViewProps> = ({
 
       if (res.ok) {
         await fetchFiles(selectedBucket);
+        setAlertState({
+          isOpen: true,
+          title: 'بارگذاری فایل موفق',
+          message: `فایل «${file.name}» با موفقیت در باکت بارگذاری شد.`,
+          type: 'success',
+        });
       } else {
-        alert('خطا در بارگذاری فایل در باکت.');
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در بارگذاری فایل',
+          message: err?.error || 'بارگذاری فایل در باکت با خطا مواجه شد.',
+          type: 'error',
+        });
       }
-    } catch {
-      alert('خطا در ارتباط با سرور ذخیره‌سازی.');
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارتباط با سرور ذخیره‌سازی.',
+        type: 'error',
+      });
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -418,6 +482,41 @@ export const StorageView: React.FC<StorageViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Accessible Confirm Modal for File Deletion */}
+      <ConfirmModal
+        isOpen={Boolean(fileToDelete)}
+        title="حذف فایل از فضای ذخیره‌سازی"
+        message={`آیا از حذف دائم فایل «${fileToDelete}» اطمینان دارید؟`}
+        confirmLabel="حذف فایل"
+        isDanger={true}
+        onConfirm={() => {
+          if (fileToDelete) executeDeleteFile(fileToDelete);
+        }}
+        onCancel={() => setFileToDelete(null)}
+      />
+
+      {/* Accessible Confirm Modal for Bucket Deletion */}
+      <ConfirmModal
+        isOpen={Boolean(bucketToDelete)}
+        title="حذف کامل باکت ذخیره‌سازی"
+        message={`آیا از حذف کامل باکت «${bucketToDelete}» و تمامی فایل‌های درون آن اطمینان دارید؟`}
+        confirmLabel="حذف باکت"
+        isDanger={true}
+        onConfirm={() => {
+          if (bucketToDelete) executeDeleteBucket(bucketToDelete);
+        }}
+        onCancel={() => setBucketToDelete(null)}
+      />
+
+      {/* Accessible Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };
