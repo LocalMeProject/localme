@@ -66,6 +66,26 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     return this;
   }
 
+  public or(filters: string): this {
+    this.queryParams['or'] = filters.startsWith('(') ? filters : `(${filters})`;
+    return this;
+  }
+
+  public contains(column: string, value: unknown): this {
+    this.queryParams[column] = `cs.${typeof value === 'object' ? JSON.stringify(value) : value}`;
+    return this;
+  }
+
+  public containedBy(column: string, value: unknown): this {
+    this.queryParams[column] = `cd.${typeof value === 'object' ? JSON.stringify(value) : value}`;
+    return this;
+  }
+
+  public textSearch(column: string, query: string): this {
+    this.queryParams[column] = `fts.${query}`;
+    return this;
+  }
+
   public order(column: string, options?: { ascending?: boolean }): this {
     const dir = options?.ascending === false ? 'desc' : 'asc';
     this.queryParams['order'] = `${column}.${dir}`;
@@ -81,6 +101,18 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     this.queryParams['offset'] = String(from);
     this.queryParams['limit'] = String(to - from + 1);
     return this;
+  }
+
+  public async count(): Promise<number> {
+    const params = { ...this.queryParams, limit: '1' };
+    const search = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/_baas/v1/${this.projectSlug}/rest/${this.table}${search ? `?${search}` : ''}`;
+    const res = await fetch(url, { headers: this.headers });
+    if (!res.ok) throw new Error(`Count failed: ${res.status}`);
+    const countHeader = res.headers.get('X-Total-Count');
+    if (countHeader) return Number(countHeader);
+    const rows = (await res.json()) as unknown[];
+    return rows.length;
   }
 
   public async execute(): Promise<T[]> {
@@ -106,6 +138,26 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     });
     if (!res.ok) throw new Error(`Insert failed: ${res.status}`);
     return (await res.json()) as T;
+  }
+
+  public async insertMany(records: Partial<T>[], options?: { chunkSize?: number }): Promise<T[]> {
+    if (records.length === 0) return [];
+    const chunkSize = options?.chunkSize ?? 50;
+    const results: T[] = [];
+
+    for (let i = 0; i < records.length; i += chunkSize) {
+      const chunk = records.slice(i, i + chunkSize);
+      const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/rest/${this.table}/batch`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(chunk),
+      });
+      if (!res.ok) throw new Error(`Batch insert failed: ${res.status}`);
+      const inserted = (await res.json()) as T[];
+      results.push(...inserted);
+    }
+
+    return results;
   }
 
   public update(patch: Partial<T>) {
@@ -155,6 +207,45 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
         if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
         return (await res.json()) as { success: boolean; rowId: string };
       },
+    };
+  }
+
+  /**
+   * Real-Time Change Data Capture (CDC) table event listener over Server-Sent Events.
+   */
+  public on(
+    event: 'INSERT' | 'UPDATE' | 'DELETE' | '*',
+    callback: (payload: { table: string; action: string; payload: unknown; timestamp: string }) => void
+  ): () => void {
+    if (typeof EventSource === 'undefined') {
+      return () => {};
+    }
+
+    const url = `${this.baseUrl}/_baas/v1/${this.projectSlug}/db/realtime?table=${encodeURIComponent(this.table)}`;
+    const es = new EventSource(url);
+
+    const handler = (e: MessageEvent) => {
+      try {
+        const parsed = JSON.parse(e.data);
+        if (event === '*' || parsed.action === event) {
+          callback(parsed);
+        }
+      } catch {
+        // Ignore unparseable frames
+      }
+    };
+
+    if (event === '*') {
+      es.onmessage = handler;
+      es.addEventListener('INSERT', handler);
+      es.addEventListener('UPDATE', handler);
+      es.addEventListener('DELETE', handler);
+    } else {
+      es.addEventListener(event, handler);
+    }
+
+    return () => {
+      es.close();
     };
   }
 }
