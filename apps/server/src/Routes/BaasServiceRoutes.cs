@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using LocalMe.Core.Database;
+using LocalMe.CoreDomain.Database;
 using LocalMe.Server.Middleware;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compute;
@@ -77,6 +78,8 @@ public static class BaasServiceRoutes
 
             var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
             var result = await pm.QueryTableAsync(projectId, table, ast);
+            context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
             return Results.Json(result.Rows);
         });
 
@@ -90,10 +93,17 @@ public static class BaasServiceRoutes
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
-            var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-            return Results.Json(inserted);
+            try
+            {
+                var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
+                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                return Results.Json(inserted);
+            }
+            catch (Npgsql.PostgresException pex) when (pex.SqlState == "42703")
+            {
+                return Results.BadRequest(new { error = $"ستون درخواستی در جدول وجود ندارد: {pex.MessageText}", code = "COLUMN_NOT_FOUND" });
+            }
         });
 
         app.MapPatch("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
@@ -187,14 +197,35 @@ public static class BaasServiceRoutes
             return Results.Json(columns);
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/sql", async (string projectId, HttpRequest request, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/sql", async (string projectId, HttpRequest request, HttpContext context, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var json = JsonNode.Parse(body) as JsonObject;
             var sql = json?["sql"]?.ToString() ?? body;
-            var result = pm.ExecuteSql(projectId, sql);
+
+            var validation = SqlGuardrailValidator.ValidateDmlOnly(sql);
+            if (!validation.IsValid)
+            {
+                return Results.Json(new
+                {
+                    success = false,
+                    error = validation.ErrorMessage,
+                    columns = Array.Empty<string>(),
+                    rows = Array.Empty<object>(),
+                    executionTimeMs = 0
+                }, statusCode: 400);
+            }
+
+            var userId = context.User.FindFirst("sub")?.Value 
+                         ?? context.Request.Headers["X-User-Id"].FirstOrDefault() 
+                         ?? "anon";
+            var userRole = context.User.FindFirst("role")?.Value 
+                          ?? context.Request.Headers["X-User-Role"].FirstOrDefault() 
+                          ?? "authenticated";
+
+            var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
             return Results.Json(result);
         });
 
@@ -206,10 +237,10 @@ public static class BaasServiceRoutes
             return created ? Results.Ok(new { success = true, table = name }) : Results.Conflict(new { error = "Table already exists" });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}", (string projectId, string table, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}", async (string projectId, string table, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
-            var removed = pm.DeleteTable(projectId, table);
+            var removed = await pm.DeleteTableAsync(projectId, table);
             return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "Table not found" });
         });
 
@@ -523,7 +554,7 @@ public static class BaasServiceRoutes
         });
 
         // Visual SQL Runner & Schema Designer
-        app.MapPost("/_baas/v1/{projectId}/sql/execute", (string projectId, JsonObject body, ProjectManagerService pm, UsageMeteringService metering) =>
+        app.MapPost("/_baas/v1/{projectId}/sql/execute", async (string projectId, JsonObject body, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
@@ -531,10 +562,31 @@ public static class BaasServiceRoutes
                 return AuthHelper.ServiceDisabled("database");
 
             var sql = body["sql"]?.ToString() ?? body["query"]?.ToString() ?? "SELECT * FROM products LIMIT 50;";
+
+            var validation = SqlGuardrailValidator.ValidateDmlOnly(sql);
+            if (!validation.IsValid)
+            {
+                return Results.Json(new
+                {
+                    success = false,
+                    error = validation.ErrorMessage,
+                    columns = Array.Empty<string>(),
+                    rows = Array.Empty<object>(),
+                    executionTimeMs = 0
+                }, statusCode: 400);
+            }
+
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
             try
             {
-                var result = pm.ExecuteSql(projectId, sql);
+                var userId = context.User.FindFirst("sub")?.Value 
+                             ?? context.Request.Headers["X-User-Id"].FirstOrDefault() 
+                             ?? "anon";
+                var userRole = context.User.FindFirst("role")?.Value 
+                              ?? context.Request.Headers["X-User-Role"].FirstOrDefault() 
+                              ?? "authenticated";
+
+                var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
                 pm.AddProjectLog(projectId, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
                 return Results.Json(result);
             }

@@ -56,16 +56,16 @@ export const SqlQueryRunner: React.FC<SqlQueryRunnerProps> = ({
             INSERT
           </button>
           <button
-            onClick={() => onApplySnippet('create_table')}
+            onClick={() => onApplySnippet('update')}
             className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-mono text-slate-700 border border-slate-200 transition"
           >
-            CREATE TABLE
+            UPDATE
           </button>
           <button
-            onClick={() => onApplySnippet('index')}
+            onClick={() => onApplySnippet('delete')}
             className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-mono text-slate-700 border border-slate-200 transition"
           >
-            INDEX
+            DELETE
           </button>
           <button
             onClick={() => onApplySnippet('explain')}

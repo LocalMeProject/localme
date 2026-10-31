@@ -6,9 +6,10 @@ import {
   RefreshCw,
   ChevronRight,
   Archive,
-  Key,
-  Copy,
-  Check,
+  Download,
+  RotateCcw,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 
 import { TableDataGrid } from './database/TableDataGrid';
@@ -22,7 +23,15 @@ interface DatabaseViewProps {
   onSubViewChange?: (subView: string) => void;
 }
 
-type StudioTab = 'grid' | 'schema' | 'sql' | 'backups' | 'config';
+export interface SnapshotItem {
+  id: string;
+  type: string;
+  sizeBytes: number;
+  status: string;
+  createdAtUtc: string;
+}
+
+type StudioTab = 'grid' | 'schema' | 'sql' | 'backups';
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   project,
@@ -39,9 +48,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     if (activeSubView === 'sql') setActiveTab('sql');
     else if (activeSubView === 'schema') setActiveTab('schema');
     else if (activeSubView === 'backups') setActiveTab('backups');
-    else if (activeSubView === 'config') setActiveTab('config');
     else if (activeSubView === 'grid') setActiveTab('grid');
   }, [activeSubView]);
+
+  // Snapshots / Backup State
+  const [snapshots, setSnapshots] = useState<SnapshotItem[]>([]);
+  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
 
   // Table Data Grid State
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
@@ -67,13 +83,75 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [isRunningQuery, setIsRunningQuery] = useState(false);
   const [queryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
 
-  // Copied state
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const fetchSnapshots = useCallback(async () => {
+    setIsLoadingSnapshots(true);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`);
+      if (res.ok) {
+        const data = await res.json();
+        setSnapshots(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to load snapshots:', err);
+    } finally {
+      setIsLoadingSnapshots(false);
+    }
+  }, [project.slug]);
 
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+  useEffect(() => {
+    if (activeTab === 'backups') {
+      fetchSnapshots();
+    }
+  }, [activeTab, fetchSnapshots]);
+
+  const handleCreateSnapshot = async () => {
+    setIsCreatingSnapshot(true);
+    setBackupMessage(null);
+    setBackupError(null);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'دستی فوری' }),
+      });
+      if (res.ok) {
+        setBackupMessage('اسنپ‌شات جدید با موفقیت ایجاد گردید.');
+        await fetchSnapshots();
+      } else {
+        const err = await res.json();
+        setBackupError(err.error || 'خطا در ایجاد اسنپ‌شات');
+      }
+    } catch (err) {
+      setBackupError(String(err));
+    } finally {
+      setIsCreatingSnapshot(false);
+    }
+  };
+
+  const handleRestoreSnapshot = async (snapshotId: string) => {
+    if (!window.confirm(`آیا از بازیابی اسنپ‌شات ${snapshotId} اطمینان دارید؟ تمامی داده‌های فعلی بازنویسی خواهند شد.`)) {
+      return;
+    }
+    setRestoringSnapshotId(snapshotId);
+    setBackupMessage(null);
+    setBackupError(null);
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots/${snapshotId}/restore`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setBackupMessage(`اسنپ‌شات ${snapshotId} با موفقیت بازیابی شد.`);
+        await fetchTables();
+        await fetchSnapshots();
+      } else {
+        const err = await res.json();
+        setBackupError(err.error || 'خطا در بازیابی اسنپ‌شات');
+      }
+    } catch (err) {
+      setBackupError(String(err));
+    } finally {
+      setRestoringSnapshotId(null);
+    }
   };
 
   // Load Tables
@@ -329,11 +407,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       case 'insert':
         setSqlQuery(`INSERT INTO ${activeTable || 'records'} (title, status, created_at)\nVALUES ('عنوان نمونه', 'ACTIVE', NOW())\nRETURNING *;`);
         break;
-      case 'create_table':
-        setSqlQuery(`CREATE TABLE IF NOT EXISTS user_profiles (\n  id BIGSERIAL PRIMARY KEY,\n  user_id UUID NOT NULL,\n  full_name VARCHAR(128),\n  meta JSONB DEFAULT '{}'::jsonb,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);`);
+      case 'update':
+        setSqlQuery(`UPDATE ${activeTable || 'records'} SET status = 'INACTIVE' WHERE id = 1 RETURNING *;`);
         break;
-      case 'index':
-        setSqlQuery(`CREATE INDEX IF NOT EXISTS idx_${activeTable || 'records'}_created_at\nON ${activeTable || 'records'} (created_at DESC);`);
+      case 'delete':
+        setSqlQuery(`DELETE FROM ${activeTable || 'records'} WHERE id = 0 RETURNING *;`);
         break;
       case 'explain':
         setSqlQuery(`EXPLAIN ANALYZE\nSELECT * FROM ${activeTable || 'records'} WHERE id > 0;`);
@@ -412,71 +490,113 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
       {/* Main Studio Viewport */}
       {activeTab === 'backups' ? (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Archive className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-sm font-bold text-slate-900">نسخه‌های پشتیبان پایگاه داده</h3>
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <Archive className="w-5 h-5 text-emerald-600" />
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">نسخه‌های پشتیبان و اسنپ‌شات‌های پایگاه داده</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  پشتیبان‌گیری خودکار ۳ روزه با قابلیت بازیابی در زمان (PITR) و دانلود مستقیم اسنپ‌شات ساختار و داده‌ها.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchSnapshots}
+                disabled={isLoadingSnapshots}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSnapshots ? 'animate-spin' : ''}`} />
+                <span>بازخوانی</span>
+              </button>
+              <button
+                onClick={handleCreateSnapshot}
+                disabled={isCreatingSnapshot}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isCreatingSnapshot ? 'در حال تهیه اسنپ‌شات...' : 'تهیه اسنپ‌شات جدید'}</span>
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
-            پشتیبان‌گیری خودکار روزانه از تمام اسکیماها و داده‌های این پروژه انجام می‌پذیرد. همچنین می‌توانید در هر لحظه نسخه پشتیبان لحظه‌ای دریافت کنید.
-          </p>
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-xs text-slate-800">اسنپ‌شات لحظه‌ای از تمام جداول</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">فرمت استاندارد SQL سازگار با بازیابی کامل</div>
+
+          {backupMessage && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{backupMessage}</span>
             </div>
-            <a
-              href={`/_baas/v1/${project.slug}/db/snapshot`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs"
-            >
-              دانلود فایل پشتیبان
-            </a>
-          </div>
-        </div>
-      ) : activeTab === 'config' ? (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Key className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-sm font-bold text-slate-900">مشخصات اتصال مستقیم به پایگاه داده</h3>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
-            از این اطلاعات برای اتصال برنامه‌ها، ORMها و ابزارهای مدیریت داده به اسکیما استفاده نمایید:
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-[11px] text-slate-500">طرحواره اختصاصی (Schema):</span>
-              <div className="font-mono font-bold text-slate-900" dir="ltr">
-                prj_{project.slug}
-              </div>
+          )}
+
+          {backupError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{backupError}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <span className="text-[11px] text-slate-500">پورت استاندارد:</span>
-              <div className="font-mono font-bold text-slate-900" dir="ltr">
-                5432
-              </div>
-            </div>
-            <div className="md:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-500">رشته اتصال (URI):</span>
-                <button
-                  onClick={() =>
-                    copyToClipboard(
-                      `postgresql://postgres:***@remote-respina-free.runflare.com:31725/sina-infwqq_db?options=-csearch_path=prj_${project.slug},public`,
-                      'uri'
-                    )
-                  }
-                  className="flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-800"
-                >
-                  {copiedKey === 'uri' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === 'uri' ? 'کپی شد' : 'کپی'}</span>
-                </button>
-              </div>
-              <div className="font-mono text-xs text-slate-800 break-all select-all pt-1" dir="ltr">
-                postgresql://postgres:***@remote-respina-free.runflare.com:31725/sina-infwqq_db?options=-csearch_path=prj_{project.slug},public
-              </div>
-            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-xs text-right">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-4">شناسه اسنپ‌شات</th>
+                  <th className="py-2.5 px-4">نوع عملیات</th>
+                  <th className="py-2.5 px-4">حجم تخمینی</th>
+                  <th className="py-2.5 px-4">وضعیت</th>
+                  <th className="py-2.5 px-4">زمان ثبت (UTC)</th>
+                  <th className="py-2.5 px-4 text-center">عملیات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {snapshots.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      {isLoadingSnapshots ? 'در حال دریافت اطلاعات اسنپ‌شات‌ها...' : 'هیچ اسنپ‌شاتی برای این پروژه ثبت نشده است.'}
+                    </td>
+                  </tr>
+                ) : (
+                  snapshots.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50/70 transition">
+                      <td className="py-2.5 px-4 font-mono font-medium text-slate-900" dir="ltr">
+                        {s.id}
+                      </td>
+                      <td className="py-2.5 px-4 text-slate-700">{s.type}</td>
+                      <td className="py-2.5 px-4 font-mono text-slate-600" dir="ltr">
+                        {(s.sizeBytes / 1024).toFixed(1)} KB
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-slate-500" dir="ltr">
+                        {new Date(s.createdAtUtc).toLocaleString('fa-IR')}
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <a
+                            href={`/_baas/v1/${project.slug}/db/snapshots/${s.id}/download`}
+                            download
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>دانلود</span>
+                          </a>
+                          <button
+                            onClick={() => handleRestoreSnapshot(s.id)}
+                            disabled={restoringSnapshotId === s.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-medium transition disabled:opacity-50"
+                          >
+                            <RotateCcw className={`w-3 h-3 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
+                            <span>{restoringSnapshotId === s.id ? 'در حال بازیابی...' : 'بازیابی داده'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (
