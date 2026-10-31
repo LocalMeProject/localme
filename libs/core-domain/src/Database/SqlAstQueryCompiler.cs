@@ -227,59 +227,84 @@ public static class SqlAstQueryCompiler
             foreach (var filter in query.Filters)
             {
                 var col = $"\"{filter.Column}\"";
-                var pName = $"@p{paramIdx++}";
 
                 switch (filter.Operator)
                 {
                     case QueryOperator.Equals:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} = {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.NotEquals:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} != {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.GreaterThan:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} > {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.GreaterThanOrEqual:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} >= {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.LessThan:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} < {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.LessThanOrEqual:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} <= {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.Like:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} LIKE {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.ILike:
+                    {
+                        var pName = $"@p{paramIdx++}";
                         filterClauses.Add($"{col} ILIKE {pName}");
                         parameters[pName] = filter.Value;
                         break;
+                    }
                     case QueryOperator.IsNull:
                         filterClauses.Add($"{col} IS NULL");
                         break;
                     case QueryOperator.IsNotNull:
                         filterClauses.Add($"{col} IS NOT NULL");
                         break;
-                    case QueryOperator.In when filter.Value is IEnumerable<string> inValues:
+                    case QueryOperator.In when filter.Value is System.Collections.IEnumerable inValues and not string:
+                    {
                         var inClauses = new List<string>();
                         foreach (var inVal in inValues)
                         {
                             var inParam = $"@p{paramIdx++}";
                             inClauses.Add(inParam);
-                            parameters[inParam] = inVal;
+                            parameters[inParam] = inVal?.ToString();
                         }
                         if (inClauses.Count > 0)
                             filterClauses.Add($"{col} IN ({string.Join(", ", inClauses)})");
                         break;
+                    }
                 }
             }
 

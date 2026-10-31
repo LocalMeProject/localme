@@ -10,7 +10,7 @@ public static class BaasDbSnapshotRoutes
 {
     public static void MapBaasDbSnapshotRoutes(this WebApplication app)
     {
-        app.MapPost("/_baas/v1/{projectId}/db/snapshots", (string projectId, JsonObject? body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/snapshots", async (string projectId, JsonObject? body, ProjectManagerService pm) =>
         {
             var project = pm.GetProject(projectId);
             if (project == null) return Results.NotFound(new { error = "Project not found" });
@@ -18,7 +18,7 @@ public static class BaasDbSnapshotRoutes
                 return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
 
             var type = body?["type"]?.ToString() ?? "دستی فوری";
-            var snapshot = pm.CreateDatabaseSnapshot(projectId, type);
+            var snapshot = await pm.CreateDatabaseSnapshotAsync(projectId, type);
             return Results.Ok(new
             {
                 success = true,
@@ -59,6 +59,19 @@ public static class BaasDbSnapshotRoutes
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(snapshot.DataJson);
             return Results.File(bytes, "application/json", $"{snapshotId}.json");
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/snapshots/{snapshotId}/restore", async (string projectId, string snapshotId, ProjectManagerService pm) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+
+            var ok = await pm.RestoreDatabaseSnapshotAsync(projectId, snapshotId);
+            if (!ok) return Results.BadRequest(new { error = "بازیابی اسنپ‌شات با خطا مواجه شد یا اسنپ‌شات معتبر نیست." });
+
+            return Results.Ok(new { success = true, message = $"اسنپ‌شات {snapshotId} با موفقیت بازیابی شد." });
         });
     }
 }

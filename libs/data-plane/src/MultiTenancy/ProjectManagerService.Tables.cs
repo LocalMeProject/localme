@@ -103,7 +103,24 @@ public sealed partial class ProjectManagerService
             OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", inserted);
             return inserted;
         }
-        return InsertRow(projectId, table, payload);
+
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        var rows = tables.GetOrAdd(table.ToLowerInvariant().Trim(), _ => []);
+
+        if (!payload.ContainsKey("id"))
+        {
+            payload["id"] = $"row_{Guid.NewGuid():N}"[..12];
+        }
+
+        rows.Add(payload);
+        OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", payload);
+        if (_store != null)
+        {
+            var rowId = payload["id"]?.ToString() ?? Guid.NewGuid().ToString("N");
+            try { await _store.SaveTableRecordAsync(projectId, table.ToLowerInvariant().Trim(), rowId, payload); }
+            catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SaveTableRecord error: {ex.Message}"); }
+        }
+        return payload;
     }
 
     public async Task<JsonObject?> UpdateRowAsync(string projectId, string table, string rowId, JsonObject patch)
@@ -242,6 +259,31 @@ public sealed partial class ProjectManagerService
         return removed;
     }
 
+    public async Task<bool> DeleteTableAsync(string projectId, string tableName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            var res = await TenantDbStore.DropTableAsync(slug, tableName);
+            if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DROP_TABLE", new { table = tableName });
+            return res;
+        }
+
+        var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        var removed = tables.TryRemove(cleanName, out _);
+        if (removed)
+        {
+            OnTableEvent?.Invoke(projectId, cleanName, "DROP_TABLE", new { table = cleanName });
+            if (_store != null)
+            {
+                try { await _store.DeleteTableAsync(projectId, cleanName); }
+                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteTable error: {ex.Message}"); }
+            }
+        }
+        return removed;
+    }
+
     public bool DeleteRow(string projectId, string tableName, string rowId)
     {
         if (TenantDbStore != null)
@@ -288,6 +330,32 @@ public sealed partial class ProjectManagerService
             if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DELETE", new { id = rowId });
             return res;
         }
-        return DeleteRow(projectId, tableName, rowId);
+
+        var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        if (!tables.TryGetValue(cleanName, out var rows)) return false;
+
+        lock (rows)
+        {
+            var target = rows.FirstOrDefault(r =>
+                (r.ContainsKey("id") && r["id"]?.ToString() == rowId) ||
+                (r.ContainsKey("ID") && r["ID"]?.ToString() == rowId));
+            if (target != null)
+            {
+                rows.Remove(target);
+                OnTableEvent?.Invoke(projectId, cleanName, "DELETE", new { id = rowId });
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (_store != null)
+        {
+            try { await _store.DeleteTableRecordAsync(projectId, cleanName, rowId); }
+            catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteRow error: {ex.Message}"); }
+        }
+        return true;
     }
 }

@@ -169,7 +169,7 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         return true;
     }
 
-    public async Task<TenantDbQueryResult> ExecuteQueryAsync(string projectSlug, string tableName, SqlAstQuery query, int timeoutMs = 3000, CancellationToken ct = default)
+    public async Task<TenantDbQueryResult> ExecuteQueryAsync(string projectSlug, string tableName, SqlAstQuery query, string? userId = null, string? userRole = null, int timeoutMs = 3000, CancellationToken ct = default)
     {
         await EnsureTenantSchemaAsync(projectSlug, ct);
         var schema = GetSchemaName(projectSlug);
@@ -180,12 +180,14 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
 
-        // Inject sandbox limits
+        // Inject sandbox limits and RLS claim context
         await using (var setCmd = conn.CreateCommand())
         {
             setCmd.Transaction = tx;
             setCmd.CommandText = $@"
-                SET LOCAL search_path = ""{schema}"";
+                SET LOCAL search_path = ""{schema}"", auth, public;
+                SET LOCAL request.jwt.claim.sub = '{userId ?? ""}';
+                SET LOCAL request.jwt.claim.role = '{userRole ?? "anon"}';
                 SET LOCAL statement_timeout = '{Math.Clamp(timeoutMs, 500, 30000)}ms';
                 SET LOCAL work_mem = '8MB';";
             await setCmd.ExecuteNonQueryAsync(ct);
@@ -231,7 +233,12 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                             decimal dec => (double)dec,
                             DateTime dt => dt.ToString("O"),
                             DateTimeOffset dto => dto.ToString("O"),
-                            _ => val.ToString()
+                            Guid g => g.ToString("D"),
+                            byte[] bytes => Convert.ToBase64String(bytes),
+                            Array arr => JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(arr)),
+                            _ => (val.ToString() is { } s && (s.StartsWith('{') || s.StartsWith('[')))
+                                ? (JsonNode.Parse(s) ?? (JsonNode)s)
+                                : val.ToString()
                         };
                     }
                 }
@@ -282,49 +289,17 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             cmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
         }
 
-        try
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        var result = new JsonObject();
+        if (await reader.ReadAsync(ct))
         {
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            var result = new JsonObject();
-            if (await reader.ReadAsync(ct))
+            for (var i = 0; i < reader.FieldCount; i++)
             {
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    var col = reader.GetName(i);
-                    result[col] = reader.IsDBNull(i) ? null : reader.GetValue(i)?.ToString();
-                }
+                var col = reader.GetName(i);
+                result[col] = reader.IsDBNull(i) ? null : reader.GetValue(i)?.ToString();
             }
-            return result;
         }
-        catch (PostgresException ex) when (ex.SqlState == "42703") // Column does not exist
-        {
-            // Auto-heal table schema by adding missing column dynamically as TEXT
-            foreach (var (k, _) in data)
-            {
-                var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(k);
-                await using var alterCmd = conn.CreateCommand();
-                alterCmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ADD COLUMN IF NOT EXISTS ""{cleanCol}"" TEXT;";
-                await alterCmd.ExecuteNonQueryAsync(ct);
-            }
-
-            // Retry insert once
-            await using var retryCmd = conn.CreateCommand();
-            retryCmd.CommandText = sql;
-            foreach (var (k, v) in paramValues)
-            {
-                retryCmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
-            }
-            await using var retryReader = await retryCmd.ExecuteReaderAsync(ct);
-            var retryResult = new JsonObject();
-            if (await retryReader.ReadAsync(ct))
-            {
-                for (var i = 0; i < retryReader.FieldCount; i++)
-                {
-                    retryResult[retryReader.GetName(i)] = retryReader.IsDBNull(i) ? null : retryReader.GetValue(i)?.ToString();
-                }
-            }
-            return retryResult;
-        }
+        return result;
     }
 
     public async Task<JsonObject?> UpdateRowAsync(string projectSlug, string tableName, string rowId, JsonObject patch, CancellationToken ct = default)
@@ -449,7 +424,7 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         return rows > 0;
     }
 
-    public async Task<SqlExecutionResult> ExecuteRawSqlAsync(string projectSlug, string sql, int timeoutMs = 5000, CancellationToken ct = default)
+    public async Task<SqlExecutionResult> ExecuteRawSqlAsync(string projectSlug, string sql, string? userId = null, string? userRole = null, int timeoutMs = 5000, CancellationToken ct = default)
     {
         await EnsureTenantSchemaAsync(projectSlug, ct);
         var schema = GetSchemaName(projectSlug);
@@ -464,7 +439,9 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             {
                 setCmd.Transaction = tx;
                 setCmd.CommandText = $@"
-                    SET LOCAL search_path = ""{schema}"";
+                    SET LOCAL search_path = ""{schema}"", auth, public;
+                    SET LOCAL request.jwt.claim.sub = '{userId ?? ""}';
+                    SET LOCAL request.jwt.claim.role = '{userRole ?? "anon"}';
                     SET LOCAL statement_timeout = '{Math.Clamp(timeoutMs, 500, 30000)}ms';
                     SET LOCAL work_mem = '8MB';";
                 await setCmd.ExecuteNonQueryAsync(ct);
@@ -479,10 +456,9 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                 cmd.Transaction = tx;
                 cmd.CommandText = sql;
 
-                if (sql.Trim().StartsWith("select", StringComparison.OrdinalIgnoreCase) ||
-                    sql.Trim().StartsWith("with", StringComparison.OrdinalIgnoreCase))
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                if (reader.FieldCount > 0)
                 {
-                    await using var reader = await cmd.ExecuteReaderAsync(ct);
                     for (var i = 0; i < reader.FieldCount; i++)
                     {
                         columns.Add(reader.GetName(i));
@@ -501,7 +477,7 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                 }
                 else
                 {
-                    affected = await cmd.ExecuteNonQueryAsync(ct);
+                    affected = reader.RecordsAffected;
                 }
             }
 
@@ -529,5 +505,143 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 
         var result = await cmd.ExecuteScalarAsync(ct);
         return result is long l ? l : 0;
+    }
+
+    public async Task<JsonObject> ExportTenantDataAsync(string projectSlug, CancellationToken ct = default)
+    {
+        await EnsureTenantSchemaAsync(projectSlug, ct);
+        var schema = GetSchemaName(projectSlug);
+        var snapshotObj = new JsonObject
+        {
+            ["projectId"] = projectSlug,
+            ["createdAtUtc"] = DateTimeOffset.UtcNow.ToString("O"),
+            ["tables"] = new JsonObject()
+        };
+
+        var tables = await GetTableNamesAsync(projectSlug, ct);
+        var tablesObj = snapshotObj["tables"]!.AsObject();
+
+        foreach (var tbl in tables)
+        {
+            var cleanTbl = SqlAstQueryCompiler.SanitizeIdentifier(tbl);
+            var cols = await GetTableSchemaAsync(projectSlug, cleanTbl, ct);
+            var query = new SqlAstQuery(["*"], [], Limit: 5000);
+            var queryRes = await ExecuteQueryAsync(projectSlug, cleanTbl, query, ct: ct);
+
+            var tblObj = new JsonObject();
+            var colsArr = new JsonArray();
+            foreach (var col in cols)
+            {
+                colsArr.Add(new JsonObject
+                {
+                    ["name"] = col.Name,
+                    ["dataType"] = col.DataType,
+                    ["isNullable"] = col.IsNullable,
+                    ["isPrimaryKey"] = col.IsPrimaryKey,
+                    ["defaultValue"] = col.DefaultValue
+                });
+            }
+            tblObj["schema"] = colsArr;
+            tblObj["rows"] = queryRes.Rows;
+            tablesObj[tbl] = tblObj;
+        }
+
+        return snapshotObj;
+    }
+
+    public async Task<bool> RestoreTenantDataAsync(string projectSlug, JsonObject snapshotData, CancellationToken ct = default)
+    {
+        await EnsureTenantSchemaAsync(projectSlug, ct);
+        var schema = GetSchemaName(projectSlug);
+
+        if (!snapshotData.TryGetPropertyValue("tables", out var tablesNode) || tablesNode is not JsonObject tablesObj)
+        {
+            return false;
+        }
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        try
+        {
+            foreach (var (tblName, tableDataNode) in tablesObj)
+            {
+                var cleanTbl = SqlAstQueryCompiler.SanitizeIdentifier(tblName);
+
+                if (tableDataNode is JsonObject tblObj)
+                {
+                    if (tblObj.TryGetPropertyValue("schema", out var schemaNode) && schemaNode is JsonArray colsArr)
+                    {
+                        var cols = new List<TableColumnDefinition>();
+                        foreach (var cNode in colsArr)
+                        {
+                            if (cNode is JsonObject cObj)
+                            {
+                                cols.Add(new TableColumnDefinition(
+                                    Name: cObj["name"]?.ToString() ?? "id",
+                                    DataType: cObj["dataType"]?.ToString() ?? "varchar(64)",
+                                    IsPrimaryKey: cObj["isPrimaryKey"]?.GetValue<bool>() ?? false,
+                                    IsNullable: cObj["isNullable"]?.GetValue<bool>() ?? true,
+                                    DefaultValue: cObj["defaultValue"]?.ToString()
+                                ));
+                            }
+                        }
+                        await CreateTableAsync(projectSlug, cleanTbl, cols, ct);
+                    }
+
+                    await using (var truncCmd = conn.CreateCommand())
+                    {
+                        truncCmd.Transaction = tx;
+                        truncCmd.CommandText = $@"TRUNCATE TABLE ""{schema}"".""{cleanTbl}"" CASCADE;";
+                        await truncCmd.ExecuteNonQueryAsync(ct);
+                    }
+
+                    if (tblObj.TryGetPropertyValue("rows", out var rowsNode) && rowsNode is JsonArray rowsArr)
+                    {
+                        foreach (var rowNode in rowsArr)
+                        {
+                            if (rowNode is JsonObject rowData)
+                            {
+                                var colsList = new List<string>();
+                                var paramList = new List<string>();
+                                var paramMap = new Dictionary<string, object?>();
+                                var pIdx = 0;
+
+                                foreach (var (k, v) in rowData)
+                                {
+                                    var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(k);
+                                    colsList.Add($@"""{cleanCol}""");
+                                    var p = $"@p{pIdx++}";
+                                    paramList.Add(p);
+                                    paramMap[p] = v?.ToString();
+                                }
+
+                                if (colsList.Count > 0)
+                                {
+                                    await using var insCmd = conn.CreateCommand();
+                                    insCmd.Transaction = tx;
+                                    insCmd.CommandText = $@"
+                                        INSERT INTO ""{schema}"".""{cleanTbl}"" ({string.Join(", ", colsList)})
+                                        VALUES ({string.Join(", ", paramList)});";
+                                    foreach (var (pk, pv) in paramMap)
+                                    {
+                                        insCmd.Parameters.AddWithValue(pk, pv ?? DBNull.Value);
+                                    }
+                                    await insCmd.ExecuteNonQueryAsync(ct);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            await tx.CommitAsync(ct);
+            return true;
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 }
