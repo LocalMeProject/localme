@@ -12,6 +12,7 @@ using Xunit;
 
 public class DbaasSecurityAndGuardrailTests
 {
+    private static readonly int[] SampleCategoryIds = [101, 102, 103];
     [Theory]
     [InlineData("CREATE TABLE evil (id INT PRIMARY KEY);")]
     [InlineData("create table if not exists backdoor (token text);")]
@@ -55,7 +56,7 @@ public class DbaasSecurityAndGuardrailTests
         var query = new SqlAstQuery(
             SelectColumns: ["id", "price"],
             Filters: [
-                new QueryFilterNode("category_id", QueryOperator.In, new int[] { 101, 102, 103 })
+                new QueryFilterNode("category_id", QueryOperator.In, SampleCategoryIds)
             ],
             Limit: 10
         );
