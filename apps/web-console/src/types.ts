@@ -84,6 +84,25 @@ export interface DatabaseColumn {
   defaultValue?: string;
 }
 
+export interface TableIndex {
+  name: string;
+  tableName: string;
+  columns: string[];
+  isUnique: boolean;
+  isPrimary: boolean;
+  definition?: string;
+}
+
+export interface TableRelationship {
+  constraintName: string;
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+  onDelete: string;
+  onUpdate: string;
+}
+
 export interface ProjectUser {
   id: string;
   phone?: string;

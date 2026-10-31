@@ -14,7 +14,7 @@ using LocalMe.DataPlane.MultiTenancy;
 using Npgsql;
 using NpgsqlTypes;
 
-public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
+public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -30,12 +30,62 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         return $"prj_{safe}";
     }
 
+    private static object? ConvertToTypedValue(string? valStr, string dataType)
+    {
+        if (valStr == null) return DBNull.Value;
+        var dt = dataType.ToLowerInvariant();
+        if (dt.Contains("int") || dt.Contains("serial"))
+        {
+            if (long.TryParse(valStr, out var l)) return l;
+        }
+        else if (dt.Contains("bool"))
+        {
+            if (bool.TryParse(valStr, out var b)) return b;
+            if (valStr == "1") return true;
+            if (valStr == "0") return false;
+        }
+        else if (dt.Contains("numeric") || dt.Contains("decimal") || dt.Contains("real") || dt.Contains("double") || dt.Contains("float"))
+        {
+            if (decimal.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var d)) return d;
+        }
+        else if (dt.Contains("uuid"))
+        {
+            if (Guid.TryParse(valStr, out var g)) return g;
+        }
+        else if (dt.Contains("timestamp") || dt.Contains("date"))
+        {
+            if (DateTimeOffset.TryParse(valStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var dto))
+            {
+                return dto.UtcDateTime;
+            }
+        }
+        return valStr;
+    }
+
     public async Task EnsureTenantSchemaAsync(string projectSlug, CancellationToken ct = default)
     {
         var schema = GetSchemaName(projectSlug);
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+                    CREATE ROLE authenticated NOLOGIN;
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+                    CREATE ROLE anon NOLOGIN;
+                END IF;
+            END $$;
+
+            CREATE SCHEMA IF NOT EXISTS auth;
+            CREATE OR REPLACE FUNCTION auth.uid() RETURNS text AS $$
+                SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '');
+            $$ LANGUAGE sql STABLE;
+
+            CREATE OR REPLACE FUNCTION auth.role() RETURNS text AS $$
+                SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
+            $$ LANGUAGE sql STABLE;
+
             CREATE SCHEMA IF NOT EXISTS ""{schema}"";
             CREATE TABLE IF NOT EXISTS ""{schema}"".""_schema_migrations"" (
                 id SERIAL PRIMARY KEY,
@@ -257,9 +307,26 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var schema = GetSchemaName(projectSlug);
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
 
-        if (!data.ContainsKey("id") || string.IsNullOrWhiteSpace(data["id"]?.ToString()))
+        var schemaCols = await GetTableSchemaAsync(projectSlug, tableName, ct);
+        var colMap = schemaCols.ToDictionary(c => c.Name.ToLowerInvariant(), c => c.DataType.ToLowerInvariant());
+
+        if (data.ContainsKey("id") && string.IsNullOrWhiteSpace(data["id"]?.ToString()))
         {
-            data["id"] = $"row_{Guid.NewGuid():N}"[..12];
+            data.Remove("id");
+        }
+        else if (!data.ContainsKey("id"))
+        {
+            if (colMap.TryGetValue("id", out var idType))
+            {
+                if (idType.Contains("uuid"))
+                {
+                    data["id"] = Guid.NewGuid().ToString();
+                }
+                else if (idType.Contains("char") || idType.Contains("text"))
+                {
+                    data["id"] = $"row_{Guid.NewGuid():N}"[..12];
+                }
+            }
         }
 
         var cols = new List<string>();
@@ -273,7 +340,8 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             cols.Add($@"""{cleanCol}""");
             var p = $"@p{idx++}";
             paramPlaceholders.Add(p);
-            paramValues[p] = node?.ToString();
+            var dt = colMap.TryGetValue(cleanCol.ToLowerInvariant(), out var d) ? d : "text";
+            paramValues[p] = ConvertToTypedValue(node?.ToString(), dt);
         }
 
         var sql = $@"
@@ -308,6 +376,9 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var schema = GetSchemaName(projectSlug);
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
 
+        var schemaCols = await GetTableSchemaAsync(projectSlug, tableName, ct);
+        var colMap = schemaCols.ToDictionary(c => c.Name.ToLowerInvariant(), c => c.DataType.ToLowerInvariant());
+
         var sets = new List<string>();
         var paramValues = new Dictionary<string, object?>();
         var idx = 0;
@@ -318,7 +389,8 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(k);
             var p = $"@p{idx++}";
             sets.Add($@"""{cleanCol}"" = {p}");
-            paramValues[p] = node?.ToString();
+            var dt = colMap.TryGetValue(cleanCol.ToLowerInvariant(), out var d) ? d : "text";
+            paramValues[p] = ConvertToTypedValue(node?.ToString(), dt);
         }
 
         if (sets.Count == 0) return null;
@@ -332,7 +404,8 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
-        cmd.Parameters.AddWithValue("rowId", rowId);
+        var idType = colMap.TryGetValue("id", out var it) ? it : "text";
+        cmd.Parameters.AddWithValue("rowId", ConvertToTypedValue(rowId, idType) ?? DBNull.Value);
         foreach (var (k, v) in paramValues)
         {
             cmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
@@ -358,9 +431,26 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var cleanConflict = SqlAstQueryCompiler.SanitizeIdentifier(onConflictCol);
 
-        if (!data.ContainsKey("id"))
+        var schemaCols = await GetTableSchemaAsync(projectSlug, tableName, ct);
+        var colMap = schemaCols.ToDictionary(c => c.Name.ToLowerInvariant(), c => c.DataType.ToLowerInvariant());
+
+        if (data.ContainsKey("id") && string.IsNullOrWhiteSpace(data["id"]?.ToString()))
         {
-            data["id"] = $"row_{Guid.NewGuid():N}"[..12];
+            data.Remove("id");
+        }
+        else if (!data.ContainsKey("id"))
+        {
+            if (colMap.TryGetValue("id", out var idType))
+            {
+                if (idType.Contains("uuid"))
+                {
+                    data["id"] = Guid.NewGuid().ToString();
+                }
+                else if (idType.Contains("char") || idType.Contains("text"))
+                {
+                    data["id"] = $"row_{Guid.NewGuid():N}"[..12];
+                }
+            }
         }
 
         var cols = new List<string>();
@@ -375,7 +465,8 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             cols.Add($@"""{cleanCol}""");
             var p = $"@p{idx++}";
             placeholders.Add(p);
-            paramValues[p] = node?.ToString();
+            var dt = colMap.TryGetValue(cleanCol.ToLowerInvariant(), out var d) ? d : "text";
+            paramValues[p] = ConvertToTypedValue(node?.ToString(), dt);
 
             if (!cleanCol.Equals(cleanConflict, StringComparison.OrdinalIgnoreCase))
             {
@@ -492,159 +583,6 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         }
     }
 
-    public async Task<long> GetSchemaSizeBytesAsync(string projectSlug, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name))), 0)::BIGINT
-            FROM information_schema.tables 
-            WHERE table_schema = @schema;";
-        cmd.Parameters.AddWithValue("schema", schema);
-
-        var result = await cmd.ExecuteScalarAsync(ct);
-        return result is long l ? l : 0;
-    }
-
-    public async Task<JsonObject> ExportTenantDataAsync(string projectSlug, CancellationToken ct = default)
-    {
-        await EnsureTenantSchemaAsync(projectSlug, ct);
-        var schema = GetSchemaName(projectSlug);
-        var snapshotObj = new JsonObject
-        {
-            ["projectId"] = projectSlug,
-            ["createdAtUtc"] = DateTimeOffset.UtcNow.ToString("O"),
-            ["tables"] = new JsonObject()
-        };
-
-        var tables = await GetTableNamesAsync(projectSlug, ct);
-        var tablesObj = snapshotObj["tables"]!.AsObject();
-
-        foreach (var tbl in tables)
-        {
-            var cleanTbl = SqlAstQueryCompiler.SanitizeIdentifier(tbl);
-            var cols = await GetTableSchemaAsync(projectSlug, cleanTbl, ct);
-            var query = new SqlAstQuery(["*"], [], Limit: 5000);
-            var queryRes = await ExecuteQueryAsync(projectSlug, cleanTbl, query, ct: ct);
-
-            var tblObj = new JsonObject();
-            var colsArr = new JsonArray();
-            foreach (var col in cols)
-            {
-                colsArr.Add(new JsonObject
-                {
-                    ["name"] = col.Name,
-                    ["dataType"] = col.DataType,
-                    ["isNullable"] = col.IsNullable,
-                    ["isPrimaryKey"] = col.IsPrimaryKey,
-                    ["defaultValue"] = col.DefaultValue
-                });
-            }
-            tblObj["schema"] = colsArr;
-            tblObj["rows"] = queryRes.Rows;
-            tablesObj[tbl] = tblObj;
-        }
-
-        return snapshotObj;
-    }
-
-    public async Task<bool> RestoreTenantDataAsync(string projectSlug, JsonObject snapshotData, CancellationToken ct = default)
-    {
-        await EnsureTenantSchemaAsync(projectSlug, ct);
-        var schema = GetSchemaName(projectSlug);
-
-        if (!snapshotData.TryGetPropertyValue("tables", out var tablesNode) || tablesNode is not JsonObject tablesObj)
-        {
-            return false;
-        }
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var tx = await conn.BeginTransactionAsync(ct);
-
-        try
-        {
-            foreach (var (tblName, tableDataNode) in tablesObj)
-            {
-                var cleanTbl = SqlAstQueryCompiler.SanitizeIdentifier(tblName);
-
-                if (tableDataNode is JsonObject tblObj)
-                {
-                    if (tblObj.TryGetPropertyValue("schema", out var schemaNode) && schemaNode is JsonArray colsArr)
-                    {
-                        var cols = new List<TableColumnDefinition>();
-                        foreach (var cNode in colsArr)
-                        {
-                            if (cNode is JsonObject cObj)
-                            {
-                                cols.Add(new TableColumnDefinition(
-                                    Name: cObj["name"]?.ToString() ?? "id",
-                                    DataType: cObj["dataType"]?.ToString() ?? "varchar(64)",
-                                    IsPrimaryKey: cObj["isPrimaryKey"]?.GetValue<bool>() ?? false,
-                                    IsNullable: cObj["isNullable"]?.GetValue<bool>() ?? true,
-                                    DefaultValue: cObj["defaultValue"]?.ToString()
-                                ));
-                            }
-                        }
-                        await CreateTableAsync(projectSlug, cleanTbl, cols, ct);
-                    }
-
-                    await using (var truncCmd = conn.CreateCommand())
-                    {
-                        truncCmd.Transaction = tx;
-                        truncCmd.CommandText = $@"TRUNCATE TABLE ""{schema}"".""{cleanTbl}"" CASCADE;";
-                        await truncCmd.ExecuteNonQueryAsync(ct);
-                    }
-
-                    if (tblObj.TryGetPropertyValue("rows", out var rowsNode) && rowsNode is JsonArray rowsArr)
-                    {
-                        foreach (var rowNode in rowsArr)
-                        {
-                            if (rowNode is JsonObject rowData)
-                            {
-                                var colsList = new List<string>();
-                                var paramList = new List<string>();
-                                var paramMap = new Dictionary<string, object?>();
-                                var pIdx = 0;
-
-                                foreach (var (k, v) in rowData)
-                                {
-                                    var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(k);
-                                    colsList.Add($@"""{cleanCol}""");
-                                    var p = $"@p{pIdx++}";
-                                    paramList.Add(p);
-                                    paramMap[p] = v?.ToString();
-                                }
-
-                                if (colsList.Count > 0)
-                                {
-                                    await using var insCmd = conn.CreateCommand();
-                                    insCmd.Transaction = tx;
-                                    insCmd.CommandText = $@"
-                                        INSERT INTO ""{schema}"".""{cleanTbl}"" ({string.Join(", ", colsList)})
-                                        VALUES ({string.Join(", ", paramList)});";
-                                    foreach (var (pk, pv) in paramMap)
-                                    {
-                                        insCmd.Parameters.AddWithValue(pk, pv ?? DBNull.Value);
-                                    }
-                                    await insCmd.ExecuteNonQueryAsync(ct);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            await tx.CommitAsync(ct);
-            return true;
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
-    }
-
     public async Task<bool> AddColumnAsync(string projectSlug, string tableName, TableColumnDefinition column, CancellationToken ct = default)
     {
         var schema = GetSchemaName(projectSlug);
@@ -708,21 +646,6 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         return true;
     }
 
-    public async Task<bool> CreateIndexAsync(string projectSlug, string tableName, string indexName, IReadOnlyList<string> columns, bool isUnique = false, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-        var cleanIdx = SqlAstQueryCompiler.SanitizeIdentifier(indexName);
-        var cleanCols = string.Join(", ", columns.Select(c => $@"""{SqlAstQueryCompiler.SanitizeIdentifier(c)}"""));
-        var unique = isUnique ? "UNIQUE" : "";
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"CREATE {unique} INDEX IF NOT EXISTS ""{cleanIdx}"" ON ""{schema}"".""{cleanTable}"" ({cleanCols});";
-        await cmd.ExecuteNonQueryAsync(ct);
-        return true;
-    }
-
     public async Task<bool> TruncateTableAsync(string projectSlug, string tableName, CancellationToken ct = default)
     {
         var schema = GetSchemaName(projectSlug);
@@ -732,65 +655,6 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"TRUNCATE TABLE ""{schema}"".""{cleanTable}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);
-        return true;
-    }
-
-    public async Task<IReadOnlyList<TablePolicyDefinition>> GetPoliciesAsync(string projectSlug, string tableName, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT policyname, tablename, cmd, roles, qual, with_check
-            FROM pg_policies
-            WHERE schemaname = @schema AND tablename = @table;";
-        cmd.Parameters.AddWithValue("schema", schema);
-        cmd.Parameters.AddWithValue("table", cleanTable);
-
-        var list = new List<TablePolicyDefinition>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            var pName = reader.GetString(0);
-            var tName = reader.GetString(1);
-            var pCmd = reader.GetString(2);
-            var pRoles = reader.IsDBNull(3) ? "public" : string.Join(", ", (string[])reader.GetValue(3));
-            var pQual = reader.IsDBNull(4) ? "true" : reader.GetString(4);
-            var pCheck = reader.IsDBNull(5) ? null : reader.GetString(5);
-
-            list.Add(new TablePolicyDefinition(pName, tName, pCmd, pRoles, pQual, pCheck));
-        }
-        return list;
-    }
-
-    public async Task<bool> CreatePolicyAsync(string projectSlug, string tableName, TablePolicyDefinition policy, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-        var cleanPolicy = SqlAstQueryCompiler.SanitizeIdentifier(policy.Name);
-        var cmd = policy.Command.ToUpperInvariant();
-        var usingClause = !string.IsNullOrWhiteSpace(policy.UsingExpression) ? $"USING ({policy.UsingExpression})" : "";
-        var checkClause = !string.IsNullOrWhiteSpace(policy.CheckExpression) ? $"WITH CHECK ({policy.CheckExpression})" : "";
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-
-        // Ensure RLS enabled on table
-        await using var enableCmd = conn.CreateCommand();
-        enableCmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ENABLE ROW LEVEL SECURITY;";
-        await enableCmd.ExecuteNonQueryAsync(ct);
-
-        // Create policy
-        await using var polCmd = conn.CreateCommand();
-        polCmd.CommandText = $@"
-            DROP POLICY IF EXISTS ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}"";
-            CREATE POLICY ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}""
-            FOR {cmd}
-            TO {policy.Roles}
-            {usingClause}
-            {checkClause};";
-        await polCmd.ExecuteNonQueryAsync(ct);
         return true;
     }
 }
