@@ -358,4 +358,82 @@ public sealed partial class ProjectManagerService
         }
         return true;
     }
+
+    public async Task<bool> AddColumnAsync(string projectId, string tableName, TableColumnDefinition column)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.AddColumnAsync(slug, tableName, column);
+        }
+        return true;
+    }
+
+    public async Task<bool> DropColumnAsync(string projectId, string tableName, string columnName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.DropColumnAsync(slug, tableName, columnName);
+        }
+        return true;
+    }
+
+    public async Task<bool> AlterColumnAsync(string projectId, string tableName, string oldColumnName, TableColumnDefinition newColumn)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.AlterColumnAsync(slug, tableName, oldColumnName, newColumn);
+        }
+        return true;
+    }
+
+    public async Task<bool> CreateIndexAsync(string projectId, string tableName, string indexName, IReadOnlyList<string> columns, bool isUnique = false)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.CreateIndexAsync(slug, tableName, indexName, columns, isUnique);
+        }
+        return true;
+    }
+
+    public async Task<bool> TruncateTableAsync(string projectId, string tableName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.TruncateTableAsync(slug, tableName);
+        }
+
+        var cleanName = tableName.Trim().ToLowerInvariant().Replace(' ', '_');
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        if (tables.TryGetValue(cleanName, out var rows))
+        {
+            lock (rows) { rows.Clear(); }
+            return true;
+        }
+        return false;
+    }
+
+    public async Task<IReadOnlyList<TablePolicyDefinition>> GetPoliciesAsync(string projectId, string tableName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.GetPoliciesAsync(slug, tableName);
+        }
+        return Array.Empty<TablePolicyDefinition>();
+    }
+
+    public async Task<bool> CreatePolicyAsync(string projectId, string tableName, TablePolicyDefinition policy)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.CreatePolicyAsync(slug, tableName, policy);
+        }
+        return true;
+    }
 }
