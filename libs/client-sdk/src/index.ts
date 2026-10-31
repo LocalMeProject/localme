@@ -26,9 +26,16 @@ import type {
   PushDeviceRegistration,
   PushMessageRequest,
   IapValidationRequest,
+  TableIndexDefinition,
+  TableRelationshipDefinition,
+  TablePolicyDefinition,
+  TableColumnMeta,
+  DatabaseSnapshotMeta,
 } from './types';
 export * from './query-builder';
+export * from './database';
 import { TableQueryBuilder } from './query-builder';
+import { DatabaseClient } from './database';
 
 export class LocalMeClient {
   public readonly projectSlug: string;
@@ -171,53 +178,8 @@ export class LocalMeClient {
   /**
    * Direct Database & Schema Management API.
    */
-  public get database() {
-    const baseUrl = this.baseUrl;
-    const projectSlug = this.projectSlug;
-    const headers = this.getHeaders();
-
-    return {
-      async listTables(): Promise<string[]> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/db/tables`, { headers });
-        if (!res.ok) throw new Error(`List tables failed: ${res.status}`);
-        return (await res.json()) as string[];
-      },
-
-      async createTable(name: string): Promise<{ success: boolean; table: string }> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/db/tables`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ name }),
-        });
-        if (!res.ok) throw new Error(`Create table failed: ${res.status}`);
-        return (await res.json()) as { success: boolean; table: string };
-      },
-
-      async deleteTable(table: string): Promise<{ success: boolean; table: string }> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/db/tables/${table}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (!res.ok) throw new Error(`Delete table failed: ${res.status}`);
-        return (await res.json()) as { success: boolean; table: string };
-      },
-
-      async getSchema(table = 'products'): Promise<Record<string, unknown>> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/db/schema?table=${encodeURIComponent(table)}`, { headers });
-        if (!res.ok) throw new Error(`Get schema failed: ${res.status}`);
-        return (await res.json()) as Record<string, unknown>;
-      },
-
-      async executeSql<T = unknown>(sql: string): Promise<SqlExecutionResult<T>> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/sql/execute`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ sql }),
-        });
-        if (!res.ok) throw new Error(`Execute SQL failed: ${res.status}`);
-        return (await res.json()) as SqlExecutionResult<T>;
-      },
-    };
+  public get database(): DatabaseClient {
+    return new DatabaseClient(this.baseUrl, this.projectSlug, this.getHeaders());
   }
 
   /**

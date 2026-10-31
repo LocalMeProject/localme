@@ -73,5 +73,18 @@ public static class BaasDbSnapshotRoutes
 
             return Results.Ok(new { success = true, message = $"اسنپ‌شات {snapshotId} با موفقیت بازیابی شد." });
         });
+
+        app.MapDelete("/_baas/v1/{projectId}/db/snapshots/{snapshotId}", (string projectId, string snapshotId, ProjectManagerService pm) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+
+            var deleted = pm.DeleteDatabaseSnapshot(projectId, snapshotId);
+            return deleted
+                ? Results.Ok(new { success = true, snapshotId })
+                : Results.NotFound(new { error = "اسنپ‌شات یافت نشد یا حذف ناموفق بود." });
+        });
     }
 }

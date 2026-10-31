@@ -53,7 +53,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [filterQuery, setFilterQuery] = useState('');
   const [gridError, setGridError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
   const [totalRowCount, setTotalRowCount] = useState(0);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortAscending, setSortAscending] = useState(true);
@@ -186,6 +186,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     fetchTableData(activeTable, newPage, sortColumn, sortAscending);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    fetchTableData(activeTable, 1, sortColumn, sortAscending);
   };
 
   const handleUpdateRow = async (rowId: string, patch: Record<string, unknown>): Promise<boolean> => {
@@ -638,6 +644,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               pageSize={pageSize}
               totalCount={totalRowCount}
               onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
               sortColumn={sortColumn}
               sortAscending={sortAscending}
               onSortChange={handleSortChange}

@@ -66,6 +66,11 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     return this;
   }
 
+  public not(column: string, operator: string, value: unknown): this {
+    this.queryParams[column] = `not.${operator}.${value}`;
+    return this;
+  }
+
   public or(filters: string): this {
     this.queryParams['or'] = filters.startsWith('(') ? filters : `(${filters})`;
     return this;
@@ -123,6 +128,48 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     return (await res.json()) as T[];
   }
 
+  public async single(): Promise<T> {
+    const prevLimit = this.queryParams['limit'];
+    this.queryParams['limit'] = '2';
+    try {
+      const rows = await this.execute();
+      if (rows.length === 0) {
+        throw new Error('JSON object requested, multiple (or no) rows returned');
+      }
+      if (rows.length > 1) {
+        throw new Error('JSON object requested, multiple rows returned');
+      }
+      return rows[0];
+    } finally {
+      if (prevLimit !== undefined) {
+        this.queryParams['limit'] = prevLimit;
+      } else {
+        delete this.queryParams['limit'];
+      }
+    }
+  }
+
+  public async maybeSingle(): Promise<T | null> {
+    const prevLimit = this.queryParams['limit'];
+    this.queryParams['limit'] = '2';
+    try {
+      const rows = await this.execute();
+      if (rows.length === 0) {
+        return null;
+      }
+      if (rows.length > 1) {
+        throw new Error('JSON object requested, multiple rows returned');
+      }
+      return rows[0];
+    } finally {
+      if (prevLimit !== undefined) {
+        this.queryParams['limit'] = prevLimit;
+      } else {
+        delete this.queryParams['limit'];
+      }
+    }
+  }
+
   public then<TResult1 = T[], TResult2 = never>(
     onfulfilled?: ((value: T[]) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
@@ -163,8 +210,8 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
   public update(patch: Partial<T>) {
     const { baseUrl, projectSlug, table, headers } = this;
     return {
-      async match(filter: { id: string }): Promise<T> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${filter.id}`, {
+      async match(filter: { id: string | number }): Promise<T> {
+        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(filter.id))}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify(patch),
@@ -186,11 +233,11 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     return (await res.json()) as T;
   }
 
-  public delete(rowId?: string) {
+  public delete(rowId?: string | number) {
     const { baseUrl, projectSlug, table, headers } = this;
-    if (rowId) {
+    if (rowId !== undefined) {
       return (async () => {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${rowId}`, {
+        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(rowId))}`, {
           method: 'DELETE',
           headers,
         });
@@ -199,8 +246,8 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
       })();
     }
     return {
-      async match(filter: { id: string }): Promise<{ success: boolean; rowId: string }> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${filter.id}`, {
+      async match(filter: { id: string | number }): Promise<{ success: boolean; rowId: string }> {
+        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(filter.id))}`, {
           method: 'DELETE',
           headers,
         });

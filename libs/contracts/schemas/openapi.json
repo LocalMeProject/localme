@@ -2161,6 +2161,37 @@
         }
       }
     },
+    "/_baas/v1/{projectId}/db/snapshots/{id}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Delete a point-in-time database snapshot",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot deleted"
+          }
+        }
+      }
+    },
     "/_baas/v1/{projectId}/db/tables/{table}/columns": {
       "post": {
         "tags": [
@@ -2269,6 +2300,35 @@
       }
     },
     "/_baas/v1/{projectId}/db/tables/{table}/indexes": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List indexes for tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of index definitions"
+          }
+        }
+      },
       "post": {
         "tags": [
           "Dynamic Relational Database"
@@ -2295,6 +2355,183 @@
         "responses": {
           "200": {
             "description": "Index created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Drop index from tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "indexName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Index dropped"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}/rebuild": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Rebuild index on tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "indexName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Index rebuilt"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/relationships": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List foreign key relationships for tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of relationships"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Create foreign key relationship on tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relationship created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/relationships/{constraintName}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Drop foreign key relationship from tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "constraintName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relationship dropped"
           }
         }
       }

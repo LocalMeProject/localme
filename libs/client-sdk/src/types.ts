@@ -181,3 +181,46 @@ export interface IapValidationRequest {
   userId?: string;
   priceIrr?: number;
 }
+
+export interface TableIndexDefinition {
+  name: string;
+  tableName: string;
+  columns: string[];
+  isUnique: boolean;
+  method?: string;
+}
+
+export interface TableRelationshipDefinition {
+  constraintName: string;
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+  onDelete: string;
+  onUpdate: string;
+}
+
+export interface TablePolicyDefinition {
+  name: string;
+  tableName: string;
+  command: string;
+  roles: string;
+  usingExpression?: string;
+  checkExpression?: string;
+}
+
+export interface TableColumnMeta {
+  name: string;
+  dataType: string;
+  isPrimaryKey: boolean;
+  isNullable: boolean;
+  defaultValue?: string;
+}
+
+export interface DatabaseSnapshotMeta {
+  id: string;
+  type: string;
+  sizeBytes: number;
+  status: string;
+  createdAtUtc: string;
+}

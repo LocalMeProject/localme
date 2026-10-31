@@ -14,6 +14,7 @@ import {
   Edit2,
   Check,
   X,
+  Key,
 } from 'lucide-react';
 import { DatabaseColumn } from '../../types';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
@@ -38,6 +39,7 @@ interface TableDataGridProps {
   pageSize?: number;
   totalCount?: number;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   sortColumn?: string | null;
   sortAscending?: boolean;
   onSortChange?: (column: string) => void;
@@ -61,6 +63,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   pageSize = 50,
   totalCount = filteredRows.length,
   onPageChange,
+  onPageSizeChange,
   sortColumn,
   sortAscending = true,
   onSortChange,
@@ -233,24 +236,37 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
                 <th className="py-2.5 px-3 font-semibold text-slate-500 w-12 text-center">#</th>
                 {tableColumns.map((col) => {
                   const isSorted = sortColumn === col;
+                  const schemaCol = effectiveColumns.find(
+                    (c) => c.name.toLowerCase() === col.toLowerCase()
+                  );
                   return (
                     <th
                       key={col}
                       onClick={() => onSortChange?.(col)}
-                      className={`py-2.5 px-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:bg-slate-100/80 transition ${
+                      className={`py-2 px-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:bg-slate-100/80 transition ${
                         isSorted ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
+                        {schemaCol?.isPrimaryKey && (
+                          <span title="Primary Key">
+                            <Key className="w-3 h-3 text-amber-500 shrink-0" />
+                          </span>
+                        )}
                         <span>{col}</span>
+                        {schemaCol?.dataType && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-100 uppercase tracking-tighter">
+                            {schemaCol.dataType.replace(/\(.*?\)/g, '')}
+                          </span>
+                        )}
                         {isSorted ? (
                           sortAscending ? (
-                            <ArrowUp className="w-3 h-3 text-emerald-600" />
+                            <ArrowUp className="w-3 h-3 text-emerald-600 shrink-0" />
                           ) : (
-                            <ArrowDown className="w-3 h-3 text-emerald-600" />
+                            <ArrowDown className="w-3 h-3 text-emerald-600 shrink-0" />
                           )
                         ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-30" />
+                          <ArrowUpDown className="w-3 h-3 opacity-30 shrink-0" />
                         )}
                       </div>
                     </th>
@@ -372,11 +388,36 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
         </div>
 
         {/* Server-Side Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-            <span className="text-slate-500">
-              صفحه {currentPage} از {totalPages}
+        <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3 text-slate-500">
+            <span>
+              مجموع: <strong className="text-slate-800 font-mono">{totalCount}</strong> رکورد
             </span>
+            <span className="text-slate-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>تعداد در صفحه:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
+                className="px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-700 text-xs font-mono focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            {totalPages > 1 && (
+              <>
+                <span className="text-slate-300">|</span>
+                <span>
+                  صفحه {currentPage} از {totalPages}
+                </span>
+              </>
+            )}
+          </div>
+
+          {totalPages > 1 && (
             <div className="flex items-center gap-1.5" dir="ltr">
               <button
                 onClick={() => onPageChange?.(currentPage - 1)}
@@ -394,8 +435,8 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Typed Record Insert Modal */}

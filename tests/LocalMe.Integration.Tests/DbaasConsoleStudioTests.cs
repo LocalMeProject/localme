@@ -155,4 +155,58 @@ public class DbaasConsoleStudioTests
         Assert.NotNull(inserted);
         Assert.True(inserted.ContainsKey("id"));
     }
+
+    [Fact]
+    public async Task ProjectManagerService_CompositePrimaryKey_TableCreation_Succeeds()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تست کلید مرکب", "test-composite-pk"));
+
+        var columns = new List<TableColumnDefinition>
+        {
+            new("order_id", "bigint", true, false),
+            new("item_id", "bigint", true, false),
+            new("quantity", "integer", false, false, "1")
+        };
+
+        var created = await pm.CreateTableAsync(proj.Id, "order_items", columns);
+        Assert.True(created);
+    }
+
+    [Fact]
+    public async Task ProjectManagerService_DatabaseSnapshots_CreateAndDelete_Succeeds()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تست چرخه اسنپ‌شات", "test-snapshot-lifecycle"));
+
+        await pm.CreateTableAsync(proj.Id, "configs");
+        var snapshot = await pm.CreateDatabaseSnapshotAsync(proj.Id, "تست خودکار");
+        Assert.NotNull(snapshot);
+        Assert.False(string.IsNullOrWhiteSpace(snapshot.Id));
+
+        var snapshotsBefore = pm.GetDatabaseSnapshots(proj.Id);
+        Assert.Contains(snapshotsBefore, s => s.Id == snapshot.Id);
+
+        var deleted = pm.DeleteDatabaseSnapshot(proj.Id, snapshot.Id);
+        Assert.True(deleted);
+
+        var snapshotsAfter = pm.GetDatabaseSnapshots(proj.Id);
+        Assert.DoesNotContain(snapshotsAfter, s => s.Id == snapshot.Id);
+    }
+
+    [Fact]
+    public async Task ProjectManagerService_Upsert_KeyOnlyPayload_Succeeds()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تست آپسرت فقط کلید", "test-upsert-keyonly"));
+
+        await pm.CreateTableAsync(proj.Id, "tokens");
+        var row = new JsonObject
+        {
+            ["id"] = "tok_primary_123"
+        };
+
+        var upserted = await pm.UpsertRowAsync(proj.Id, "tokens", "id", row);
+        Assert.NotNull(upserted);
+    }
 }

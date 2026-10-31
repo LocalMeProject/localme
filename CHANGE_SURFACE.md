@@ -1,5 +1,5 @@
 ---
-title: "Change Surface: Fix BigInt Datatype Mismatch 42804, Implement Index Lifecycle & Foreign Key Relations, Add Typed Record Insert Form, Fix RLS Policies, and Eliminate Browser Dialogs with Accessible Technical Error Modals"
+title: "Change Surface: Full-Stack DBaaS Refinements - SDK Parity, Composite Keys, Snapshot Lifecycle & UI Badges"
 author: "Antigravity Engineering System"
 created_date: "2026-10-31"
 target_branch: "main"
@@ -7,107 +7,90 @@ risk_level: "LOW"
 affected_projects:
   - "apps/server"
   - "apps/web-console"
-  - "libs/core-domain"
+  - "libs/client-sdk"
+  - "libs/contracts"
   - "libs/data-plane"
   - "libs/infrastructure"
   - "tests/LocalMe.Integration.Tests"
 ---
 
-# Change Surface: Fix BigInt Datatype Mismatch 42804, Implement Index Lifecycle & Foreign Key Relations, Add Typed Record Insert Form, Fix RLS Policies, and Eliminate Browser Dialogs with Accessible Technical Error Modals
+# Change Surface: Full-Stack DBaaS Refinements - SDK Parity, Composite Keys, Snapshot Lifecycle & UI Badges
 
 ## 1. Intent & Business Rationale
-Address Issue #62:
-1. Fix PostgreSQL error `42804: column "id" is of type bigint but expression is of type text` when inserting rows into tables with `bigint` / numeric / serial `id` columns via `POST /_baas/v1/{projectId}/rest/{table}`:
-   - In `PostgreSqlTenantSchemaStore.cs`, removed unconditional injection of text string ID (`row_...`) when `id` is not supplied. Allowed auto-generating database sequences and identity columns to assign IDs naturally.
-   - Added `ConvertToTypedValue` helper to properly type parameters according to column metadata (`long`, `decimal`, `bool`, `DateTime`, `Guid`).
-2. Implement full Index Management lifecycle across backend and frontend:
-   - Domain definition: `TableIndexDefinition.cs`.
-   - Store & service implementation: `GetIndexesAsync`, `CreateIndexAsync`, `DropIndexAsync`, and `RebuildIndexAsync` (REINDEX).
-   - Dedicated REST endpoints: `GET /db/tables/{table}/indexes`, `POST /db/tables/{table}/indexes`, `DELETE /db/tables/{table}/indexes/{indexName}`, `POST /db/tables/{table}/indexes/{indexName}/rebuild`.
-   - Frontend UI: `SchemaIndexesSection.tsx` embedded in `SchemaDesigner.tsx` with column selectors, uniqueness toggle, reindexing spinner, and deletion confirmation.
-3. Enable defining Foreign Key table relationships from the frontend and visualizing them in ER diagram:
-   - Domain definition: `TableRelationshipDefinition.cs`.
-   - Store & service implementation: `GetRelationshipsAsync`, `AddRelationshipAsync`, and `DropRelationshipAsync`.
-   - Dedicated REST endpoints: `GET /db/tables/{table}/relationships`, `POST /db/tables/{table}/relationships`, `DELETE /db/tables/{table}/relationships/{constraintName}`.
-   - Frontend UI: `SchemaRelationshipsSection.tsx` embedded in `SchemaDesigner.tsx` with source/target column dropdowns, `ON DELETE` and `ON UPDATE` actions (`CASCADE`, `SET NULL`, `RESTRICT`, `NO ACTION`), and `SchemaDiagramView.tsx` visual relationship badges.
-4. Replace raw JSON textarea for inserting rows with a type-aware structured record form:
-   - Frontend modal: `InsertRecordModal.tsx` accepting `schemaColumns` and generating typed inputs (number, toggle boolean, datetime, json textarea, text) with nullability/required badges and primary key awareness.
-   - Added toggle for direct JSON mode ("ورود مستقیم JSON") for power users.
-5. Fix Row-Level Security (RLS) policy creation and runtime execution:
-   - Syntax specialization: PostgreSQL requires `WITH CHECK (...)` for `INSERT` policies and `USING (...)` for `SELECT`/`DELETE` policies.
-   - Provisioned `authenticated` and `anon` roles (`DO $$ BEGIN ... END $$;`), `auth` schema, and functions `auth.uid()` and `auth.role()` in `EnsureTenantSchemaAsync`.
-   - Extracted policy storage logic to `PostgreSqlTenantSchemaStore.Policies.cs`.
-6. Globally handle internal database errors and provide rich technical investigation details:
-   - Created `BaasDatabaseErrorHelper.cs`: catches `PostgresException` codes (`42804`, `42703`, `23505`, `23503`, `23502`, `23514`, `42P01`) and produces Persian explanations, HTTP statuses (`400`, `404`, `409`), and technical details.
-   - Replaced unhandled Kestrel crashes in `BaasDatabaseRoutes.cs` with structured JSON error responses (`{ error, code, detail, canInvestigate }`).
-7. Complete elimination of primitive browser dialogs (`alert()` and `confirm()`):
-   - Created `AlertModal.tsx`: accessible dialog with expandable technical investigation details (SQLSTATE, exception detail), copy button ("کپی جزییات خطا"), and type indicators.
-   - Audited and eliminated 100% of `alert()` and `confirm()` calls across all views (`TopupModal.tsx`, `DatabaseView.tsx`, `SchemaDesigner.tsx`, `TableDataGrid.tsx`, `DatabaseBackupsView.tsx`, `EdgeFunctionsView.tsx`, `HostingView.tsx`, `IpgView.tsx`, `SettingsView.tsx`, `StorageView.tsx`, `AuthView.tsx`, and `App.tsx`).
-8. Enforce Rule 2.6 line-count ceiling (<= 800 lines):
-   - Split `PostgreSqlTenantSchemaStore` partial class into `.Indexes.cs`, `.Relationships.cs`, `.Snapshots.cs`, and `.Policies.cs`.
-   - Extracted `BaasDatabaseErrorHelper.cs` from `BaasDatabaseRoutes.cs`.
-   - Decoupled `DatabaseBackupsView.tsx` into a self-contained component.
+Address Issue #66:
+1. **Client SDK Parity (`@localme/sdk`)**:
+   - Implemented `DatabaseClient` in `libs/client-sdk/src/database.ts` with complete DBaaS administrative and DDL capabilities: `truncateTable`, `getIndexes`, `createIndex`, `deleteIndex`, `rebuildIndex`, `getRelationships`, `createRelationship`, `deleteRelationship`, `getPolicies`, `createPolicy`, `deletePolicy`, `listSnapshots`, `createSnapshot`, `restoreSnapshot`, and `deleteSnapshot`.
+   - Updated `TableQueryBuilder` to support `string | number` primary key IDs in `.match()` and `.delete()`.
+   - Added `.not(column, operator, value)`, `.single(): Promise<T>`, and `.maybeSingle(): Promise<T | null>` operators.
+   - Decoupled `DatabaseClient` to preserve Rule 2.6 line-count ceiling (<800 lines) across all SDK files.
+2. **Disaster Recovery & Storage Integrity**:
+   - In `PostgreSqlTenantSchemaStore.Snapshots.cs`, fixed `RestoreTenantDataAsync` by inspecting table column metadata and executing typed parameter mapping via `ConvertToTypedValue(v?.ToString(), dt)`, eliminating PostgreSQL error `42804` during non-text column restoration.
+   - In `PostgreSqlTenantSchemaStore.cs`, resolved `UpsertRowAsync` malformed SQL on key-only payloads by emitting `DO NOTHING` when `updates.Count == 0`.
+   - Supported composite primary keys in `CreateTableAsync` by emitting `PRIMARY KEY ("col1", "col2")` table-level constraints when multiple columns are flagged as primary keys.
+3. **Snapshot Lifecycle Deletion**:
+   - Added `DeleteDatabaseSnapshot(projectId, snapshotId)` in `ProjectManagerService.Snapshots.cs` with file unlinking and audit logging.
+   - Exposed `DELETE /_baas/v1/{projectId}/db/snapshots/{snapshotId}` route in `BaasDbSnapshotRoutes.cs`.
+   - Added delete button with accessible `ConfirmModal` in `DatabaseBackupsView.tsx`.
+4. **Architectural Modularity & Rule 2.6 Compliance**:
+   - Extracted schema DDL, index, relationship, policy, and truncate routes from `BaasDatabaseRoutes.cs` (which had reached 769 lines) into `BaasDatabaseSchemaRoutes.cs` (303 lines), dropping `BaasDatabaseRoutes.cs` to 486 lines.
+5. **Console UX & Data Exploration**:
+   - Added column data type pills and primary key icons in `TableDataGrid.tsx` header.
+   - Added customizable page size selector (10, 25, 50, 100 rows per page) in `TableDataGrid.tsx` and wired handler in `DatabaseView.tsx`.
+   - Ensured form field reset on opening/closing `CreateTableModal.tsx`.
+   - Synchronized compiled assets in `apps/server/src/wwwroot/` and updated `panel.html`.
+6. **OpenAPI 3.0 Specifications**:
+   - Added full OpenAPI paths in `libs/contracts/schemas/openapi.json` for index lifecycle, relationships, truncate, columns, and snapshot deletion.
+7. **Automated Integration Testing**:
+   - Added automated tests in `tests/LocalMe.Integration.Tests/DbaasConsoleStudioTests.cs` verifying composite primary keys, snapshot deletion, and key-only upserts (99/99 passing).
 
 ## 2. Affected Monorepo Projects & Profiles
 | Project Path | Architectural Profile | Responsibility in this Change |
 |---|---|---|
-| `apps/server` | Profile A (Backend Service Host) | Route database indexes, relationships, policies, format PostgreSQL exceptions with technical investigation details, host updated web console SPA bundles |
-| `apps/web-console` | Profile C (Frontend Application) | Typed insert form, index management section, relationship foreign key manager, zero browser dialogs with AlertModal and ConfirmModal |
-| `libs/core-domain` | Profile B (Domain & Data Engine) | Domain records for `TableIndexDefinition` and `TableRelationshipDefinition` |
-| `libs/data-plane` | Profile B (Domain & Data Engine) | Database store contract signatures and `ProjectManagerService` forwarding for indexes, relations, and policies |
-| `libs/infrastructure` | Profile B (Infrastructure / Storage) | PostgreSQL storage implementation for typed insert/update, index lifecycle, foreign key constraints, RLS policies, and auth schema roles |
-| `tests/LocalMe.Integration.Tests` | Profile D (Verification Suite) | Integration tests covering index lifecycle, relationship foreign key lifecycle, policy drop/create, and typed numeric inserts |
+| `apps/server` | Profile A (Backend Service Host) | Route schema operations via `BaasDatabaseSchemaRoutes.cs`, snapshot deletion, and serve compiled web console SPA assets |
+| `apps/web-console` | Profile C (Frontend Application) | Column datatype badges, key icons, page size dropdown in grid, snapshot deletion UI with ConfirmModal |
+| `libs/client-sdk` | Profile B (Client SDK) | `DatabaseClient` admin methods parity, numeric IDs, and query builder operators |
+| `libs/contracts` | Profile B (OpenAPI Contracts) | OpenAPI 3.0 definitions for indexes, relationships, truncate, and snapshot deletion |
+| `libs/data-plane` | Profile B (Domain & Data Engine) | Snapshot deletion engine in `ProjectManagerService.Snapshots.cs` |
+| `libs/infrastructure` | Profile B (Infrastructure / Storage) | Typed parameter restore, composite PK table DDL, and upsert DO NOTHING fallback |
+| `tests/LocalMe.Integration.Tests` | Profile D (Verification Suite) | Integration tests for composite PKs, snapshot deletion, and key-only upserts |
 
 ## 3. Code Surface
 
 ### Added Files
-- `apps/server/src/Routes/BaasDatabaseErrorHelper.cs`: Formatter for PostgreSQL exceptions mapping error codes to user-friendly messages and investigation details.
-- `apps/server/src/wwwroot/assets/index-R5pgNvsI.js`: Production JavaScript bundle for Web Console.
-- `apps/server/src/wwwroot/assets/index-De8sK6id.css`: Production CSS stylesheet for Web Console.
-- `apps/web-console/src/components/modals/AlertModal.tsx`: Accessible dialog for errors with expandable technical investigation details and copy functionality.
-- `apps/web-console/src/views/database/InsertRecordModal.tsx`: Type-aware structured form modal for inserting database records with raw JSON toggle.
-- `apps/web-console/src/views/database/SchemaIndexesSection.tsx`: Table index lifecycle manager (list, create, rebuild, delete).
-- `apps/web-console/src/views/database/SchemaRelationshipsSection.tsx`: Table foreign key relationship manager (list, create, delete, cascade rules).
-- `libs/core-domain/src/Database/TableIndexDefinition.cs`: Domain model for index metadata.
-- `libs/core-domain/src/Database/TableRelationshipDefinition.cs`: Domain model for foreign key constraints.
-- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Indexes.cs`: PostgreSQL index implementation (get, create, drop, rebuild).
-- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Policies.cs`: PostgreSQL RLS policies implementation (get, create with INSERT/SELECT/DELETE syntax specialization, drop).
-- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Relationships.cs`: PostgreSQL foreign key relationships implementation (get, add, drop).
-- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Snapshots.cs`: PostgreSQL schema sizing and snapshot export/restore extracted partial.
+- `apps/server/src/Routes/BaasDatabaseSchemaRoutes.cs`: Schema DDL, indexes, relationships, policies, and truncate routes.
+- `apps/server/src/wwwroot/assets/index-B2tKMOT0.css`: Compiled CSS bundle.
+- `apps/server/src/wwwroot/assets/index-CGtuW_oL.js`: Compiled JavaScript bundle.
+- `libs/client-sdk/src/database.ts`: Client SDK DBaaS administrative and DDL client class.
 
 ### Modified Files
-- `CHANGE_SURFACE.md`: Updated declared change surface for Issue #62 comprehensive DBaaS enhancements.
-- `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Wrapped endpoints in structured error handling and registered index, relationship, and policy routes.
+- `CHANGE_SURFACE.md`: Updated declared change surface for Issue #66.
+- `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Delegated schema routes to `BaasDatabaseSchemaRoutes.cs` to remain well below 800 lines.
+- `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Added snapshot deletion route (`DELETE /db/snapshots/{snapshotId}`).
 - `apps/server/src/wwwroot/panel.html`: Updated bundle references to newly compiled assets.
-- `apps/web-console/src/App.tsx`: Replaced project deletion browser confirm with accessible `ConfirmModal`.
-- `apps/web-console/src/components/modals/TopupModal.tsx`: Replaced browser alert with inline validation message.
-- `apps/web-console/src/types.ts`: Added `TableIndex` and `TableRelationship` interface definitions.
-- `apps/web-console/src/views/AuthView.tsx`: Replaced user deletion browser confirm with accessible `ConfirmModal`.
-- `apps/web-console/src/views/DatabaseView.tsx`: Replaced browser alerts with `AlertModal`, passed `schemaColumns` and `onInsertRecord` to `TableDataGrid`, decoupled backups.
-- `apps/web-console/src/views/EdgeFunctionsView.tsx`: Replaced browser alerts and confirms with `AlertModal` and `ConfirmModal`.
-- `apps/web-console/src/views/HostingView.tsx`: Replaced browser alerts and confirms with `AlertModal` and `ConfirmModal`.
-- `apps/web-console/src/views/IpgView.tsx`: Replaced browser alert with inline error feedback.
-- `apps/web-console/src/views/SettingsView.tsx`: Replaced browser alerts and confirms with `AlertModal` and `ConfirmModal`.
-- `apps/web-console/src/views/StorageView.tsx`: Replaced browser alerts and confirms with `AlertModal` and `ConfirmModal`.
-- `apps/web-console/src/views/database/DatabaseBackupsView.tsx`: Decoupled backups view into a self-contained component with `ConfirmModal` and `AlertModal`.
-- `apps/web-console/src/views/database/SchemaDesigner.tsx`: Embedded `SchemaIndexesSection` and `SchemaRelationshipsSection`, removed browser alerts.
-- `apps/web-console/src/views/database/SchemaDiagramView.tsx`: Fetched real foreign key relationships and rendered actual FK connection badges.
-- `apps/web-console/src/views/database/TableDataGrid.tsx`: Replaced raw JSON modal with `InsertRecordModal`.
-- `libs/data-plane/src/MultiTenancy/ITenantDatabaseStore.cs`: Added index, relationship, and policy contract methods.
-- `libs/data-plane/src/MultiTenancy/ProjectManagerService.Tables.cs`: Implemented forwarding methods for indexes, relationships, and policies.
-- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.cs`: Converted to partial class, added `ConvertToTypedValue`, omitted auto-generated `id` on insert, provisioned auth schema and roles.
-- `tests/LocalMe.Integration.Tests/DbaasConsoleStudioTests.cs`: Added comprehensive integration tests for index lifecycle, relationship foreign keys, policies, and typed inserts.
+- `apps/web-console/src/components/modals/CreateTableModal.tsx`: Form state reset on modal open/close.
+- `apps/web-console/src/views/DatabaseView.tsx`: Page size state handling and propagation.
+- `apps/web-console/src/views/database/DatabaseBackupsView.tsx`: Snapshot deletion action and confirmation modal.
+- `apps/web-console/src/views/database/TableDataGrid.tsx`: Column datatype badges, key icons, and page size dropdown.
+- `libs/client-sdk/src/index.ts`: Delegated `client.database` to `DatabaseClient`.
+- `libs/client-sdk/src/query-builder.ts`: Numeric ID support, `.not()`, `.single()`, `.maybeSingle()`.
+- `libs/client-sdk/src/types.ts`: DBaaS types definitions for indexes, relationships, policies, and snapshots.
+- `libs/contracts/schemas/openapi.json`: OpenAPI 3.0 path specifications for indexes, relationships, truncate, and snapshot deletion.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.Snapshots.cs`: Snapshot deletion method implementation.
+- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Snapshots.cs`: Typed parameter casting during snapshot restoration.
+- `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.cs`: Composite primary key table DDL and upsert DO NOTHING fallback.
+- `tests/LocalMe.Integration.Tests/DbaasConsoleStudioTests.cs`: Integration tests for composite PKs, snapshot deletion, and key-only upserts.
 
 ### Deleted Files
-- `apps/server/src/wwwroot/assets/index-D4vOVRfX.js`: Pruned old JavaScript bundle.
-- `apps/server/src/wwwroot/assets/index-tjv4kZUo.css`: Pruned old CSS bundle.
+- `apps/server/src/wwwroot/assets/index-De8sK6id.css`: Pruned obsolete CSS bundle.
+- `apps/server/src/wwwroot/assets/index-R5pgNvsI.js`: Pruned obsolete JavaScript bundle.
 
 ## 4. Test Surface
 
 ### Verification
 - `dotnet build LocalMe.sln`: 0 warnings, 0 errors.
-- `dotnet test tests/LocalMe.Integration.Tests/`: 96/96 integration tests passing.
-- `pnpm -C apps/web-console build`: 0 errors, Vite production build succeeded.
+- `dotnet test tests/LocalMe.Integration.Tests/`: 99/99 integration tests passing.
+- `pnpm -C libs/client-sdk build`: TypeScript build succeeded.
+- `pnpm -C apps/web-console build`: Vite production build succeeded.
 - `python3 scripts/ep.py surface validate`: Validated against schema.
 - `python3 scripts/ep.py surface check-diff --strict`: Zero undeclared files.
 - `python3 scripts/ep.py verify`: All automated verification gates passing.
@@ -117,14 +100,14 @@ Address Issue #62:
 - [x] Tier 1: Zero direct database URI leakage. All operations route through managed HTTP API endpoints.
 - [x] Tier 1: Multi-tenant schema isolation strictly enforced (`tenant_{slug}`).
 - [x] Tier 1: SqlGuardrailValidator DDL ban preserved on raw SQL endpoints; DDL strictly routed through Schema Designer.
-- [x] Tier 2: File size ceiling rule (Rule 2.6, <=800 lines) strictly enforced across all 30 modified/added source files.
-- [x] Tier 2: Zero browser `alert()` or `confirm()` dialogs in web-console.
+- [x] Tier 2: File size ceiling rule (Rule 2.6, <=800 lines) strictly enforced across all 21 modified/added source files.
+- [x] Tier 2: Zero browser `alert()` or `confirm()` dialogs across the web console.
 - [x] Tier 2: PostgreSQL error codes sanitized with user-friendly Persian descriptions and technical investigation details.
 
 ## 6. Risk Matrix & Rollback Strategy
 | Risk Description | Probability | Impact | Mitigation Strategy |
 |---|---|---|---|
-| PostgreSQL foreign key constraint violations on delete | Low | Medium | Configurable `ON DELETE` cascading rules (`CASCADE`, `SET NULL`, `RESTRICT`, `NO ACTION`) with Persian error mapping |
+| PostgreSQL composite primary key collisions | Low | Low | Enforced distinct constraint column definitions in SQL compiler |
 | Stale browser cache | Low | Low | Content-hashed Vite bundle filenames ensure immediate cache-busting |
 
 ### Rollback Strategy
