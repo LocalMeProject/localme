@@ -197,6 +197,7 @@ EXCLUDED_DIRS = {
     "obj",
     "bin",
     "target",
+    "wwwroot",
 }
 
 CODE_EXTENSIONS = {
@@ -276,7 +277,10 @@ def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6
         try:
             res = subprocess.run(["git", "diff", "--name-only", diff_base], capture_output=True, text=True, check=False, timeout=30)
             if res.returncode == 0:
-                files_to_scan = [f.strip() for f in res.stdout.splitlines() if f.strip() and os.path.exists(f.strip())]
+                files_to_scan = [
+                    f.strip() for f in res.stdout.splitlines()
+                    if f.strip() and os.path.exists(f.strip()) and not any(part in EXCLUDED_DIRS for part in f.strip().replace("\\", "/").split("/"))
+                ]
             else:
                 files_to_scan = [target_dir] if os.path.isfile(target_dir) else []
         except Exception:

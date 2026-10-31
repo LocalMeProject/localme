@@ -50,6 +50,36 @@ public class DbaasConsoleStudioTests
     }
 
     [Fact]
+    public async Task ProjectManagerService_CreateTableWithColumns_Succeeds()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تست ایجاد جدول با ستون", "test-studio-create-cols"));
+
+        string? capturedEvent = null;
+        string? capturedTable = null;
+        pm.OnTableEvent = (pId, table, evType, payload) =>
+        {
+            if (pId == proj.Id)
+            {
+                capturedEvent = evType;
+                capturedTable = table;
+            }
+        };
+
+        var columns = new List<TableColumnDefinition>
+        {
+            new("id", "uuid", true, false),
+            new("title", "text", false, false),
+            new("views", "integer", false, true, "0")
+        };
+
+        var created = await pm.CreateTableAsync(proj.Id, "catalog", columns);
+        Assert.True(created);
+        Assert.Equal("CREATE_TABLE", capturedEvent);
+        Assert.Equal("catalog", capturedTable);
+    }
+
+    [Fact]
     public async Task ProjectManagerService_Policies_ManageLifecycle()
     {
         var pm = new ProjectManagerService();

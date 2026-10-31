@@ -5,23 +5,22 @@ import {
   Plus,
   RefreshCw,
   ChevronRight,
-  Archive,
-  Download,
-  RotateCcw,
-  AlertTriangle,
-  CheckCircle2,
 } from 'lucide-react';
 
 import { TableDataGrid } from './database/TableDataGrid';
 import { SchemaDesigner } from './database/SchemaDesigner';
 import { SqlQueryRunner } from './database/SqlQueryRunner';
 import { SchemaDiagramView } from './database/SchemaDiagramView';
+import { DatabaseBackupsView } from './database/DatabaseBackupsView';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
 
 interface DatabaseViewProps {
   project: Project;
   onOpenCreateTableModal: () => void;
   activeSubView?: string;
   onSubViewChange?: (subView: string) => void;
+  lastCreatedTable?: string | null;
+  tableRefreshTrigger?: number;
 }
 
 export interface SnapshotItem {
@@ -38,6 +37,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   project,
   onOpenCreateTableModal,
   activeSubView,
+  lastCreatedTable,
+  tableRefreshTrigger,
 }) => {
   const [activeTab, setActiveTab] = useState<StudioTab>('grid');
   const [tables, setTables] = useState<string[]>([]);
@@ -58,6 +59,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
+  const [snapshotToRestore, setSnapshotToRestore] = useState<string | null>(null);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [backupError, setBackupError] = useState<string | null>(null);
 
@@ -135,10 +137,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     }
   };
 
-  const handleRestoreSnapshot = async (snapshotId: string) => {
-    if (!window.confirm(`آیا از بازیابی اسنپ‌شات ${snapshotId} اطمینان دارید؟ تمامی داده‌های فعلی بازنویسی خواهند شد.`)) {
-      return;
-    }
+  const handleRestoreSnapshot = (snapshotId: string) => {
+    setSnapshotToRestore(snapshotId);
+  };
+
+  const executeRestoreSnapshot = async (snapshotId: string) => {
+    setSnapshotToRestore(null);
     setRestoringSnapshotId(snapshotId);
     setBackupMessage(null);
     setBackupError(null);
@@ -151,7 +155,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         await fetchTables();
         await fetchSnapshots();
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         setBackupError(err.error || 'خطا در بازیابی اسنپ‌شات');
       }
     } catch (err) {
@@ -185,6 +189,15 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  useEffect(() => {
+    if (tableRefreshTrigger) {
+      fetchTables();
+      if (lastCreatedTable) {
+        setActiveTable(lastCreatedTable);
+      }
+    }
+  }, [tableRefreshTrigger, lastCreatedTable, fetchTables]);
 
   // Load Table Data
   const fetchTableData = useCallback(async (tableName: string, page = currentPage, sortCol = sortColumn, sortAsc = sortAscending) => {
@@ -458,27 +471,27 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     nullable: boolean,
     defaultVal: string
   ): Promise<boolean> => {
-    let ddl = `ALTER TABLE ${activeTable} ADD COLUMN ${name} ${type}`;
-    if (!nullable) ddl += ' NOT NULL';
-    if (defaultVal) ddl += ` DEFAULT ${defaultVal}`;
-    ddl += ';';
-
     try {
-      const res = await fetch(`/_baas/v1/${project.slug}/sql/execute`, {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${activeTable}/columns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sql: ddl }),
+        body: JSON.stringify({
+          name,
+          dataType: type,
+          isNullable: nullable,
+          defaultValue: defaultVal || null,
+        }),
       });
 
       if (res.ok) {
-        setSchemaSuccessMsg(`ستون ${name} با موفقیت به جدول افزوده شد.`);
+        setSchemaSuccessMsg(`ستون «${name}» با موفقیت به جدول افزوده شد.`);
         fetchTableSchema(activeTable);
         fetchTableData(activeTable);
         setTimeout(() => setSchemaSuccessMsg(null), 3000);
         return true;
       }
-      const err = await res.text();
-      alert(`خطا در افزودن ستون: ${err}`);
+      const err = await res.json().catch(() => ({}));
+      alert(`خطا در افزودن ستون: ${err.error || 'عملیات ناموفق بود'}`);
       return false;
     } catch (err) {
       alert(`خطا: ${String(err)}`);
@@ -488,7 +501,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
   // Delete Row
   const handleDeleteRow = async (rowId: string) => {
-    if (!confirm(`آیا از حذف این رکورد اطمینان دارید؟`)) return;
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
         method: 'DELETE',
@@ -496,7 +508,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       if (res.ok) {
         setTableRows((prev) => prev.filter((r) => String(r.id) !== String(rowId)));
       } else {
-        alert('حذف رکورد با خطا مواجه شد.');
+        const err = await res.json().catch(() => ({}));
+        alert(`حذف رکورد با خطا مواجه شد: ${err.error || res.statusText}`);
       }
     } catch (err) {
       alert(`خطا در حذف رکورد: ${String(err)}`);
@@ -556,44 +569,46 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Studio Header */}
-      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              پایگاه داده رابطه‌ای
-            </span>
-            <span className="text-xs text-slate-400 font-mono" dir="ltr">
-              prj_{project.slug}
-            </span>
+      {/* Top Studio Header - Exclusively on Table Grid View */}
+      {activeTab === 'grid' && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                پایگاه داده رابطه‌ای
+              </span>
+              <span className="text-xs text-slate-400 font-mono" dir="ltr">
+                prj_{project.slug}
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Database className="w-5 h-5 text-emerald-600" />
+              مدیریت پایگاه داده و جدول‌ها
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+              مشاهده و مدیریت ساختار داده‌ها، اجرای پرس‌وجوهای متنی و ویرایش مستقیم رکوردهای جدول در محیطی امن و ایزوله.
+            </p>
           </div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Database className="w-5 h-5 text-emerald-600" />
-            مدیریت پایگاه داده و جدول‌ها
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-            مشاهده و مدیریت ساختار داده‌ها، اجرای پرس‌وجوهای متنی و ویرایش مستقیم رکوردهای جدول در محیطی امن و ایزوله.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchTables}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3.5 py-1.5 transition"
-            title="بازخوانی فهرست جداول"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
-            <span>بازخوانی</span>
-          </button>
-          <button
-            onClick={onOpenCreateTableModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-1.5 transition shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>ایجاد جدول جدید</span>
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={fetchTables}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3.5 py-1.5 transition"
+              title="بازخوانی فهرست جداول"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
+              <span>بازخوانی</span>
+            </button>
+            <button
+              onClick={onOpenCreateTableModal}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-1.5 transition shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>ایجاد جدول جدید</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Table Selector & Toolbar in Grid View */}
       {activeTab === 'grid' && tables.length > 0 && (
@@ -618,118 +633,21 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
       {/* Main Studio Viewport */}
       {activeTab === 'backups' ? (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <Archive className="w-5 h-5 text-emerald-600" />
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">نسخه‌های پشتیبان و اسنپ‌شات‌های پایگاه داده</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  پشتیبان‌گیری خودکار ۳ روزه با قابلیت بازیابی در زمان (PITR) و دانلود مستقیم اسنپ‌شات ساختار و داده‌ها.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={fetchSnapshots}
-                disabled={isLoadingSnapshots}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium transition"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSnapshots ? 'animate-spin' : ''}`} />
-                <span>بازخوانی</span>
-              </button>
-              <button
-                onClick={handleCreateSnapshot}
-                disabled={isCreatingSnapshot}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs disabled:opacity-50"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{isCreatingSnapshot ? 'در حال تهیه اسنپ‌شات...' : 'تهیه اسنپ‌شات جدید'}</span>
-              </button>
-            </div>
-          </div>
-
-          {backupMessage && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{backupMessage}</span>
-            </div>
-          )}
-
-          {backupError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{backupError}</span>
-            </div>
-          )}
-
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-xs text-right">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-4">شناسه اسنپ‌شات</th>
-                  <th className="py-2.5 px-4">نوع عملیات</th>
-                  <th className="py-2.5 px-4">حجم تخمینی</th>
-                  <th className="py-2.5 px-4">وضعیت</th>
-                  <th className="py-2.5 px-4">زمان ثبت (UTC)</th>
-                  <th className="py-2.5 px-4 text-center">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {snapshots.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
-                      {isLoadingSnapshots ? 'در حال دریافت اطلاعات اسنپ‌شات‌ها...' : 'هیچ اسنپ‌شاتی برای این پروژه ثبت نشده است.'}
-                    </td>
-                  </tr>
-                ) : (
-                  snapshots.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/70 transition">
-                      <td className="py-2.5 px-4 font-mono font-medium text-slate-900" dir="ltr">
-                        {s.id}
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-700">{s.type}</td>
-                      <td className="py-2.5 px-4 font-mono text-slate-600" dir="ltr">
-                        {(s.sizeBytes / 1024).toFixed(1)} KB
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-slate-500" dir="ltr">
-                        {new Date(s.createdAtUtc).toLocaleString('fa-IR')}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <a
-                            href={`/_baas/v1/${project.slug}/db/snapshots/${s.id}/download`}
-                            download
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
-                          >
-                            <Download className="w-3 h-3" />
-                            <span>دانلود</span>
-                          </a>
-                          <button
-                            onClick={() => handleRestoreSnapshot(s.id)}
-                            disabled={restoringSnapshotId === s.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-medium transition disabled:opacity-50"
-                          >
-                            <RotateCcw className={`w-3 h-3 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
-                            <span>{restoringSnapshotId === s.id ? 'در حال بازیابی...' : 'بازیابی داده'}</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
+        <DatabaseBackupsView
+          projectSlug={project.slug}
+          snapshots={snapshots}
+          isLoadingSnapshots={isLoadingSnapshots}
+          isCreatingSnapshot={isCreatingSnapshot}
+          restoringSnapshotId={restoringSnapshotId}
+          backupMessage={backupMessage}
+          backupError={backupError}
+          onFetchSnapshots={fetchSnapshots}
+          onCreateSnapshot={handleCreateSnapshot}
+          onRestoreSnapshot={handleRestoreSnapshot}
+        />
+      ) : activeTab === 'grid' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left: Table Navigator Sidebar */}
+          {/* Left: Table Navigator Sidebar - Exclusively on Table Grid View */}
           <div className="lg:col-span-3 space-y-3">
             <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
@@ -771,72 +689,88 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             </div>
           </div>
 
-          {/* Right: Active Tab Workspace */}
+          {/* Right: Table Data Grid */}
           <div className="lg:col-span-9 space-y-4">
-            {activeTab === 'grid' && (
-              <TableDataGrid
-                activeTable={activeTable}
-                tableColumns={tableColumns}
-                filteredRows={filteredRows}
-                filterQuery={filterQuery}
-                onFilterQueryChange={setFilterQuery}
-                isLoadingData={isLoadingData}
-                gridError={gridError}
-                onRefresh={() => fetchTableData(activeTable)}
-                onDeleteRow={handleDeleteRow}
-                onInsertRow={handleInsertRow}
-                onUpdateRow={handleUpdateRow}
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalCount={totalRowCount}
-                onPageChange={handlePageChange}
-                sortColumn={sortColumn}
-                sortAscending={sortAscending}
-                onSortChange={handleSortChange}
-              />
-            )}
-
-            {activeTab === 'schema' && (
-              <SchemaDesigner
-                projectSlug={project.slug}
-                activeTable={activeTable}
-                schemaColumns={schemaColumns}
-                isLoadingSchema={isLoadingSchema}
-                schemaSuccessMsg={schemaSuccessMsg}
-                onAddColumn={handleAddColumn}
-                onDropColumn={handleDropColumn}
-                onAlterColumn={handleAlterColumn}
-                onDropTable={handleDropTable}
-                onTruncateTable={handleTruncateTable}
-                onRefreshSchema={() => fetchTableSchema(activeTable)}
-              />
-            )}
-
-            {activeTab === 'diagram' && (
-              <SchemaDiagramView
-                project={project}
-                tables={tables}
-                onSelectTable={(tbl) => {
-                  setActiveTable(tbl);
-                  setActiveTab('grid');
-                }}
-              />
-            )}
-
-            {activeTab === 'sql' && (
-              <SqlQueryRunner
-                sqlQuery={sqlQuery}
-                onSqlQueryChange={setSqlQuery}
-                onRunQuery={handleRunQuery}
-                isRunningQuery={isRunningQuery}
-                queryResults={queryResults}
-                queryHistory={queryHistory}
-                onApplySnippet={handleApplySnippet}
-              />
-            )}
+            <TableDataGrid
+              activeTable={activeTable}
+              tableColumns={tableColumns}
+              filteredRows={filteredRows}
+              filterQuery={filterQuery}
+              onFilterQueryChange={setFilterQuery}
+              isLoadingData={isLoadingData}
+              gridError={gridError}
+              onRefresh={() => fetchTableData(activeTable)}
+              onDeleteRow={handleDeleteRow}
+              onInsertRow={handleInsertRow}
+              onUpdateRow={handleUpdateRow}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={totalRowCount}
+              onPageChange={handlePageChange}
+              sortColumn={sortColumn}
+              sortAscending={sortAscending}
+              onSortChange={handleSortChange}
+            />
           </div>
         </div>
-      )}
+      ) : activeTab === 'schema' ? (
+        <div className="w-full">
+          <SchemaDesigner
+            projectSlug={project.slug}
+            activeTable={activeTable}
+            tables={tables}
+            onSelectTable={setActiveTable}
+            onOpenCreateTableModal={onOpenCreateTableModal}
+            schemaColumns={schemaColumns}
+            isLoadingSchema={isLoadingSchema}
+            schemaSuccessMsg={schemaSuccessMsg}
+            onAddColumn={handleAddColumn}
+            onDropColumn={handleDropColumn}
+            onAlterColumn={handleAlterColumn}
+            onDropTable={handleDropTable}
+            onTruncateTable={handleTruncateTable}
+            onRefreshSchema={() => fetchTableSchema(activeTable)}
+          />
+        </div>
+      ) : activeTab === 'diagram' ? (
+        <div className="w-full">
+          <SchemaDiagramView
+            project={project}
+            tables={tables}
+            onSelectTable={(tbl) => {
+              setActiveTable(tbl);
+              setActiveTab('grid');
+            }}
+          />
+        </div>
+      ) : activeTab === 'sql' ? (
+        <div className="w-full">
+          <SqlQueryRunner
+            sqlQuery={sqlQuery}
+            onSqlQueryChange={setSqlQuery}
+            onRunQuery={handleRunQuery}
+            isRunningQuery={isRunningQuery}
+            queryResults={queryResults}
+            queryHistory={queryHistory}
+            onApplySnippet={handleApplySnippet}
+          />
+        </div>
+      ) : null}
+
+      {/* Accessible Confirm Modal for Snapshot Restore */}
+      <ConfirmModal
+        isOpen={Boolean(snapshotToRestore)}
+        title="بازیابی اسنپ‌شات پایگاه داده"
+        message={`آیا از بازیابی اسنپ‌شات "${snapshotToRestore}" اطمینان دارید؟ تمامی داده‌های فعلی پایگاه داده بازنویسی خواهند شد.`}
+        confirmLabel="بازیابی اطلاعات"
+        isDanger={true}
+        onConfirm={() => {
+          if (snapshotToRestore) {
+            executeRestoreSnapshot(snapshotToRestore);
+          }
+        }}
+        onCancel={() => setSnapshotToRestore(null)}
+      />
     </div>
   );
 };
