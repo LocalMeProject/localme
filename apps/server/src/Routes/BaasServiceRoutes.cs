@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using LocalMe.Core.Database;
-using LocalMe.CoreDomain.Database;
 using LocalMe.Server.Middleware;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compute;
@@ -92,18 +91,125 @@ public static class BaasServiceRoutes
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
-            var jsonNode = JsonNode.Parse(body) as JsonObject ?? new JsonObject();
+            var parsed = JsonNode.Parse(body);
+
             try
             {
-                var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
-                return Results.Json(inserted);
+                if (parsed is JsonArray arr)
+                {
+                    var insertedList = new List<JsonObject>();
+                    foreach (var item in arr)
+                    {
+                        if (item is JsonObject row)
+                        {
+                            var ins = await pm.InsertRowAsync(projectId, table, row);
+                            insertedList.Add(ins);
+                        }
+                    }
+                    metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
+                    GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                    return Results.Json(insertedList);
+                }
+                else
+                {
+                    var jsonNode = parsed as JsonObject ?? new JsonObject();
+                    var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
+                    metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+                    GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                    return Results.Json(inserted);
+                }
             }
             catch (Npgsql.PostgresException pex) when (pex.SqlState == "42703")
             {
                 return Results.BadRequest(new { error = $"ستون درخواستی در جدول وجود ندارد: {pex.MessageText}", code = "COLUMN_NOT_FOUND" });
             }
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/rest/{table}/batch", async (string projectId, string table, JsonArray records, ProjectManagerService pm, UsageMeteringService metering) =>
+        {
+            var project = pm.GetProject(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(projectId, "database"))
+                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+
+            var insertedList = new List<JsonObject>();
+            foreach (var item in records)
+            {
+                if (item is JsonObject row)
+                {
+                    var ins = await pm.InsertRowAsync(projectId, table, row);
+                    insertedList.Add(ins);
+                }
+            }
+            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return Results.Json(insertedList);
+        });
+
+        // Real-Time CDC Table Events over Server-Sent Events (SSE)
+        app.MapGet("/_baas/v1/{projectId}/db/realtime", async (string projectId, HttpContext context, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+
+            context.Response.Headers.Append("Content-Type", "text/event-stream");
+            context.Response.Headers.Append("Cache-Control", "no-cache");
+            context.Response.Headers.Append("Connection", "keep-alive");
+
+            var tableFilter = context.Request.Query["table"].ToString();
+
+            void Handler(string pId, string tbl, string action, object? payload)
+            {
+                if (pId != projectId) return;
+                if (!string.IsNullOrEmpty(tableFilter) && !string.Equals(tableFilter, tbl, StringComparison.OrdinalIgnoreCase)) return;
+
+                var eventJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    projectId = pId,
+                    table = tbl,
+                    action,
+                    payload,
+                    timestamp = DateTimeOffset.UtcNow
+                });
+
+                var message = $"event: {action}\ndata: {eventJson}\n\n";
+                var bytes = System.Text.Encoding.UTF8.GetBytes(message);
+                try
+                {
+                    context.Response.Body.WriteAsync(bytes).AsTask().Wait();
+                    context.Response.Body.FlushAsync().Wait();
+                }
+                catch
+                {
+                    // Client disconnected
+                }
+            }
+
+            pm.OnTableEvent += Handler;
+
+            try
+            {
+                var initBytes = System.Text.Encoding.UTF8.GetBytes("event: connected\ndata: {\"status\":\"connected\"}\n\n");
+                await context.Response.Body.WriteAsync(initBytes);
+                await context.Response.Body.FlushAsync();
+
+                while (!context.RequestAborted.IsCancellationRequested)
+                {
+                    await Task.Delay(15000, context.RequestAborted);
+                    var pingBytes = System.Text.Encoding.UTF8.GetBytes(": keep-alive\n\n");
+                    await context.Response.Body.WriteAsync(pingBytes);
+                    await context.Response.Body.FlushAsync();
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Disconnected
+            }
+            finally
+            {
+                pm.OnTableEvent -= Handler;
+            }
+
+            return Results.Empty;
         });
 
         app.MapPatch("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
@@ -206,12 +312,12 @@ public static class BaasServiceRoutes
             var sql = json?["sql"]?.ToString() ?? body;
 
             var validation = SqlGuardrailValidator.ValidateDmlOnly(sql);
-            if (!validation.IsValid)
+            if (!validation.IsAllowed)
             {
                 return Results.Json(new
                 {
                     success = false,
-                    error = validation.ErrorMessage,
+                    error = validation.ViolationReason,
                     columns = Array.Empty<string>(),
                     rows = Array.Empty<object>(),
                     executionTimeMs = 0
@@ -242,6 +348,74 @@ public static class BaasServiceRoutes
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
             var removed = await pm.DeleteTableAsync(projectId, table);
             return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "Table not found" });
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/columns", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? "new_column";
+            var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "text";
+            var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
+            var defaultValue = body["defaultValue"]?.ToString();
+            var ok = await pm.AddColumnAsync(projectId, table, new TableColumnDefinition(name, dataType, false, isNullable, defaultValue));
+            return ok ? Results.Ok(new { success = true, column = name }) : Results.BadRequest(new { error = "Failed to add column" });
+        });
+
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var ok = await pm.DropColumnAsync(projectId, table, column);
+            return ok ? Results.Ok(new { success = true, column }) : Results.NotFound(new { error = "Failed to drop column" });
+        });
+
+        app.MapPatch("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var newName = body["newName"]?.ToString() ?? column;
+            var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "";
+            var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
+            var defaultValue = body["defaultValue"]?.ToString();
+            var ok = await pm.AlterColumnAsync(projectId, table, column, new TableColumnDefinition(newName, dataType, false, isNullable, defaultValue));
+            return ok ? Results.Ok(new { success = true, column = newName }) : Results.BadRequest(new { error = "Failed to alter column" });
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? $"idx_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var cols = body["columns"] is JsonArray arr ? arr.Select(x => x?.ToString() ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList() : new List<string>();
+            if (cols.Count == 0) return Results.BadRequest(new { error = "At least one column is required for an index." });
+            var isUnique = body["isUnique"]?.GetValue<bool>() ?? false;
+            var ok = await pm.CreateIndexAsync(projectId, table, name, cols, isUnique);
+            return ok ? Results.Ok(new { success = true, index = name }) : Results.BadRequest(new { error = "Failed to create index" });
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/truncate", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var ok = await pm.TruncateTableAsync(projectId, table);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return ok ? Results.Ok(new { success = true, table }) : Results.BadRequest(new { error = "Failed to truncate table" });
+        });
+
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var policies = await pm.GetPoliciesAsync(projectId, table);
+            return Results.Json(policies);
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? $"policy_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var cmd = body["command"]?.ToString() ?? "ALL";
+            var roles = body["roles"]?.ToString() ?? "public";
+            var usingExpr = body["usingExpression"]?.ToString() ?? "true";
+            var checkExpr = body["checkExpression"]?.ToString();
+            var policy = new TablePolicyDefinition(name, table, cmd, roles, usingExpr, checkExpr);
+            var ok = await pm.CreatePolicyAsync(projectId, table, policy);
+            return ok ? Results.Ok(new { success = true, policy = name }) : Results.BadRequest(new { error = "Failed to create policy" });
         });
 
         app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
@@ -564,12 +738,12 @@ public static class BaasServiceRoutes
             var sql = body["sql"]?.ToString() ?? body["query"]?.ToString() ?? "SELECT * FROM products LIMIT 50;";
 
             var validation = SqlGuardrailValidator.ValidateDmlOnly(sql);
-            if (!validation.IsValid)
+            if (!validation.IsAllowed)
             {
                 return Results.Json(new
                 {
                     success = false,
-                    error = validation.ErrorMessage,
+                    error = validation.ViolationReason,
                     columns = Array.Empty<string>(),
                     rows = Array.Empty<object>(),
                     executionTimeMs = 0

@@ -16,7 +16,11 @@ public enum QueryOperator
     ILike,
     In,
     IsNull,
-    IsNotNull
+    IsNotNull,
+    Contains,
+    ContainedBy,
+    TextSearch,
+    OrGroup
 }
 
 public sealed record QueryFilterNode(
