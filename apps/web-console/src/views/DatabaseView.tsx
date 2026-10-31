@@ -15,6 +15,7 @@ import {
 import { TableDataGrid } from './database/TableDataGrid';
 import { SchemaDesigner } from './database/SchemaDesigner';
 import { SqlQueryRunner } from './database/SqlQueryRunner';
+import { SchemaDiagramView } from './database/SchemaDiagramView';
 
 interface DatabaseViewProps {
   project: Project;
@@ -31,7 +32,7 @@ export interface SnapshotItem {
   createdAtUtc: string;
 }
 
-type StudioTab = 'grid' | 'schema' | 'sql' | 'backups';
+type StudioTab = 'grid' | 'schema' | 'diagram' | 'sql' | 'backups';
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   project,
@@ -47,6 +48,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   useEffect(() => {
     if (activeSubView === 'sql') setActiveTab('sql');
     else if (activeSubView === 'schema') setActiveTab('schema');
+    else if (activeSubView === 'diagram') setActiveTab('diagram');
     else if (activeSubView === 'backups') setActiveTab('backups');
     else if (activeSubView === 'grid') setActiveTab('grid');
   }, [activeSubView]);
@@ -65,6 +67,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const [gridError, setGridError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalRowCount, setTotalRowCount] = useState(0);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortAscending, setSortAscending] = useState(true);
 
   // Schema Designer State
   const [schemaColumns, setSchemaColumns] = useState<DatabaseColumn[]>([]);
@@ -180,15 +187,22 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   }, [fetchTables]);
 
   // Load Table Data
-  const fetchTableData = useCallback(async (tableName: string) => {
+  const fetchTableData = useCallback(async (tableName: string, page = currentPage, sortCol = sortColumn, sortAsc = sortAscending) => {
     if (!tableName) return;
     setIsLoadingData(true);
     setGridError(null);
     try {
-      const res = await fetch(`/_baas/v1/${project.slug}/rest/${tableName}?limit=50`);
+      const offset = (page - 1) * pageSize;
+      let url = `/_baas/v1/${project.slug}/rest/${tableName}?limit=${pageSize}&offset=${offset}`;
+      if (sortCol) {
+        url += `&order=${sortCol}.${sortAsc ? 'asc' : 'desc'}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
+        const countHeader = res.headers.get('X-Total-Count');
         const rows = (await res.json()) as Record<string, unknown>[];
         setTableRows(rows);
+        setTotalRowCount(countHeader ? Number(countHeader) : rows.length);
         if (rows.length > 0) {
           setTableColumns(Object.keys(rows[0]));
         } else {
@@ -217,7 +231,121 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     } finally {
       setIsLoadingData(false);
     }
-  }, [project.slug]);
+  }, [project.slug, pageSize, currentPage, sortColumn, sortAscending]);
+
+  const handleSortChange = (col: string) => {
+    const isSame = sortColumn === col;
+    const nextAsc = isSame ? !sortAscending : true;
+    setSortColumn(col);
+    setSortAscending(nextAsc);
+    fetchTableData(activeTable, currentPage, col, nextAsc);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchTableData(activeTable, newPage, sortColumn, sortAscending);
+  };
+
+  const handleUpdateRow = async (rowId: string, patch: Record<string, unknown>): Promise<boolean> => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        fetchTableData(activeTable, currentPage);
+        return true;
+      }
+      const err = await res.text();
+      alert(`خطا در ویرایش رکورد: ${err}`);
+      return false;
+    } catch (err) {
+      alert(`خطا در ارتباط با سرور: ${String(err)}`);
+      return false;
+    }
+  };
+
+  const handleDropColumn = async (columnName: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${activeTable}/columns/${columnName}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchTableSchema(activeTable);
+        fetchTableData(activeTable, currentPage);
+        return true;
+      }
+      const err = await res.json();
+      alert(`خطا در حذف ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      return false;
+    } catch (err) {
+      alert(`خطا: ${String(err)}`);
+      return false;
+    }
+  };
+
+  const handleAlterColumn = async (oldName: string, newName: string, type: string, nullable: boolean, defaultVal: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${activeTable}/columns/${oldName}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newName,
+          dataType: type,
+          isNullable: nullable,
+          defaultValue: defaultVal || null,
+        }),
+      });
+      if (res.ok) {
+        fetchTableSchema(activeTable);
+        fetchTableData(activeTable, currentPage);
+        return true;
+      }
+      const err = await res.json();
+      alert(`خطا در تغییر ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      return false;
+    } catch (err) {
+      alert(`خطا: ${String(err)}`);
+      return false;
+    }
+  };
+
+  const handleDropTable = async (tableName: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${tableName}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchTables();
+        return true;
+      }
+      const err = await res.json();
+      alert(`خطا در حذف جدول: ${err.error || 'ناموفق'}`);
+      return false;
+    } catch (err) {
+      alert(`خطا: ${String(err)}`);
+      return false;
+    }
+  };
+
+  const handleTruncateTable = async (tableName: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${tableName}/truncate`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        fetchTableData(tableName, 1);
+        return true;
+      }
+      const err = await res.json();
+      alert(`خطا در پاکسازی جدول: ${err.error || 'ناموفق'}`);
+      return false;
+    } catch (err) {
+      alert(`خطا: ${String(err)}`);
+      return false;
+    }
+  };
 
   // Load Table Schema
   const fetchTableSchema = useCallback(async (tableName: string) => {
@@ -657,16 +785,41 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                 onRefresh={() => fetchTableData(activeTable)}
                 onDeleteRow={handleDeleteRow}
                 onInsertRow={handleInsertRow}
+                onUpdateRow={handleUpdateRow}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={totalRowCount}
+                onPageChange={handlePageChange}
+                sortColumn={sortColumn}
+                sortAscending={sortAscending}
+                onSortChange={handleSortChange}
               />
             )}
 
             {activeTab === 'schema' && (
               <SchemaDesigner
+                projectSlug={project.slug}
                 activeTable={activeTable}
                 schemaColumns={schemaColumns}
                 isLoadingSchema={isLoadingSchema}
                 schemaSuccessMsg={schemaSuccessMsg}
                 onAddColumn={handleAddColumn}
+                onDropColumn={handleDropColumn}
+                onAlterColumn={handleAlterColumn}
+                onDropTable={handleDropTable}
+                onTruncateTable={handleTruncateTable}
+                onRefreshSchema={() => fetchTableSchema(activeTable)}
+              />
+            )}
+
+            {activeTab === 'diagram' && (
+              <SchemaDiagramView
+                project={project}
+                tables={tables}
+                onSelectTable={(tbl) => {
+                  setActiveTable(tbl);
+                  setActiveTab('grid');
+                }}
               />
             )}
 
