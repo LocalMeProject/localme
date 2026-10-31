@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Archive, RefreshCw, Plus, Download, RotateCcw } from 'lucide-react';
+import { Archive, RefreshCw, Plus, Download, RotateCcw, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { AlertModal } from '../../components/modals/AlertModal';
 
@@ -25,6 +25,8 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
   const [snapshotToRestore, setSnapshotToRestore] = useState<string | null>(null);
+  const [snapshotToDelete, setSnapshotToDelete] = useState<string | null>(null);
+  const [deletingSnapshotId, setDeletingSnapshotId] = useState<string | null>(null);
 
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
@@ -139,6 +141,45 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
     }
   };
 
+  const executeDeleteSnapshot = async (snapshotId: string) => {
+    setSnapshotToDelete(null);
+    setDeletingSnapshotId(snapshotId);
+    try {
+      const res = await fetch(`/_baas/v1/${projectSlug}/db/snapshots/${snapshotId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchSnapshots();
+        setAlertState({
+          isOpen: true,
+          title: 'حذف اسنپ‌شات موفق',
+          message: `اسنپ‌شات «${snapshotId}» با موفقیت حذف گردید.`,
+          type: 'success',
+        });
+      } else {
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در حذف اسنپ‌شات',
+          message: err?.error || 'حذف اسنپ‌شات با خطا مواجه شد.',
+          code: err?.code,
+          detail: err?.detail,
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارسال درخواست حذف اسنپ‌شات.',
+        detail: String(err),
+        type: 'error',
+      });
+    } finally {
+      setDeletingSnapshotId(null);
+    }
+  };
+
   return (
     <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
@@ -220,11 +261,20 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
                       </a>
                       <button
                         onClick={() => setSnapshotToRestore(s.id)}
-                        disabled={restoringSnapshotId === s.id}
+                        disabled={restoringSnapshotId === s.id || deletingSnapshotId === s.id}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-medium transition disabled:opacity-50"
                       >
                         <RotateCcw className={`w-3.5 h-3.5 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
                         <span>{restoringSnapshotId === s.id ? 'در حال بازیابی...' : 'بازیابی داده'}</span>
+                      </button>
+                      <button
+                        onClick={() => setSnapshotToDelete(s.id)}
+                        disabled={deletingSnapshotId === s.id || restoringSnapshotId === s.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-medium transition disabled:opacity-50"
+                        title="حذف دائم اسنپ‌شات"
+                      >
+                        <Trash2 className={`w-3.5 h-3.5 ${deletingSnapshotId === s.id ? 'animate-spin' : ''}`} />
+                        <span>{deletingSnapshotId === s.id ? 'در حال حذف...' : 'حذف'}</span>
                       </button>
                     </div>
                   </td>
@@ -248,6 +298,21 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
           }
         }}
         onCancel={() => setSnapshotToRestore(null)}
+      />
+
+      {/* Accessible Confirm Modal for Snapshot Deletion */}
+      <ConfirmModal
+        isOpen={Boolean(snapshotToDelete)}
+        title="حذف اسنپ‌شات پایگاه داده"
+        message={`آیا از حذف دائم اسنپ‌شات «${snapshotToDelete}» اطمینان دارید؟ این فایل پشتیبان به صورت غیرقابل بازگشت پاک خواهد شد.`}
+        confirmLabel="حذف دائم اسنپ‌شات"
+        isDanger={true}
+        onConfirm={() => {
+          if (snapshotToDelete) {
+            executeDeleteSnapshot(snapshotToDelete);
+          }
+        }}
+        onCancel={() => setSnapshotToDelete(null)}
       />
 
       {/* Feedback Alert Modal */}
