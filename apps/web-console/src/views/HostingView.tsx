@@ -8,6 +8,8 @@ import {
   Trash2,
   Link2,
 } from 'lucide-react';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface HostingViewProps {
   project: Project;
@@ -28,6 +30,20 @@ export const HostingView: React.FC<HostingViewProps> = ({
   const [isLoadingDeployments, setIsLoadingDeployments] = useState(false);
   const [isLoadingDomains, setIsLoadingDomains] = useState(false);
   const [verifyingDomain, setVerifyingDomain] = useState<string | null>(null);
+
+  // Accessible Modals State
+  const [domainToDelete, setDomainToDelete] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   // Real API: Fetch Domains
   const fetchDomains = useCallback(async () => {
@@ -120,29 +136,59 @@ export const HostingView: React.FC<HostingViewProps> = ({
         setDomains((prev) =>
           prev.map((d) => (d.domain === domainName ? { ...d, isVerified: true } : d))
         );
-        alert(`دامنه «${domainName}» با موفقیت تایید و گواهی امنیتی فعال گردید.`);
+        setAlertState({
+          isOpen: true,
+          title: 'تایید موفق دامنه',
+          message: `دامنه «${domainName}» با موفقیت تایید و گواهی امنیتی فعال گردید.`,
+          type: 'success',
+        });
       } else {
-        alert(data.message || `رکورد CNAME دامنه هنوز در شبکه DNS شناسایی نشده است.`);
+        setAlertState({
+          isOpen: true,
+          title: 'عدم تایید رکورد دامنه',
+          message: data.message || `رکورد CNAME دامنه هنوز در شبکه DNS شناسایی نشده است.`,
+          type: 'error',
+        });
       }
     } catch {
-      alert('خطا در بررسی رکورد DNS دامنه.');
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در بررسی رکورد DNS دامنه.',
+        type: 'error',
+      });
     } finally {
       setVerifyingDomain(null);
     }
   };
 
   // Real API: Delete Domain
-  const handleDeleteDomain = async (domainName: string) => {
-    if (!confirm(`آیا از حذف دامنه ${domainName} اطمینان دارید؟`)) return;
+  const handleDeleteDomain = (domainName: string) => {
+    setDomainToDelete(domainName);
+  };
+
+  const executeDeleteDomain = async (domainName: string) => {
+    setDomainToDelete(null);
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/hosting/domains/${domainName}`, {
         method: 'DELETE',
       });
       if (res.ok) {
         setDomains((prev) => prev.filter((d) => d.domain !== domainName));
+        setAlertState({
+          isOpen: true,
+          title: 'حذف دامنه موفق',
+          message: `دامنه «${domainName}» با موفقیت حذف گردید.`,
+          type: 'success',
+        });
       }
     } catch {
-      // ignore
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارسال درخواست حذف دامنه.',
+        type: 'error',
+      });
     }
   };
 
@@ -370,6 +416,28 @@ export const HostingView: React.FC<HostingViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Accessible Confirm Modal for Domain Deletion */}
+      <ConfirmModal
+        isOpen={Boolean(domainToDelete)}
+        title="حذف دامنه اختصاصی"
+        message={`آیا از حذف دامنه «${domainToDelete}» از تنظیمات هاستینگ اطمینان دارید؟`}
+        confirmLabel="حذف دامنه"
+        isDanger={true}
+        onConfirm={() => {
+          if (domainToDelete) executeDeleteDomain(domainToDelete);
+        }}
+        onCancel={() => setDomainToDelete(null)}
+      />
+
+      {/* Accessible Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

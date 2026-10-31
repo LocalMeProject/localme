@@ -1,32 +1,144 @@
-import React from 'react';
-import { Archive, RefreshCw, Plus, CheckCircle2, AlertTriangle, Download, RotateCcw } from 'lucide-react';
-import { SnapshotItem } from '../DatabaseView';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Archive, RefreshCw, Plus, Download, RotateCcw } from 'lucide-react';
+import { ConfirmModal } from '../../components/modals/ConfirmModal';
+import { AlertModal } from '../../components/modals/AlertModal';
+
+export interface SnapshotItem {
+  id: string;
+  type: string;
+  sizeBytes: number;
+  status: string;
+  createdAtUtc: string;
+}
 
 export interface DatabaseBackupsViewProps {
   projectSlug: string;
-  snapshots: SnapshotItem[];
-  isLoadingSnapshots: boolean;
-  isCreatingSnapshot: boolean;
-  restoringSnapshotId: string | null;
-  backupMessage: string | null;
-  backupError: string | null;
-  onFetchSnapshots: () => void;
-  onCreateSnapshot: () => void;
-  onRestoreSnapshot: (id: string) => void;
+  onRestoreCompleted?: () => void;
 }
 
 export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
   projectSlug,
-  snapshots,
-  isLoadingSnapshots,
-  isCreatingSnapshot,
-  restoringSnapshotId,
-  backupMessage,
-  backupError,
-  onFetchSnapshots,
-  onCreateSnapshot,
-  onRestoreSnapshot,
+  onRestoreCompleted,
 }) => {
+  const [snapshots, setSnapshots] = useState<SnapshotItem[]>([]);
+  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
+  const [snapshotToRestore, setSnapshotToRestore] = useState<string | null>(null);
+
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    detail?: string;
+    code?: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const fetchSnapshots = useCallback(async () => {
+    setIsLoadingSnapshots(true);
+    try {
+      const res = await fetch(`/_baas/v1/${projectSlug}/db/snapshots`);
+      if (res.ok) {
+        const data = await res.json();
+        setSnapshots(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to load snapshots:', err);
+    } finally {
+      setIsLoadingSnapshots(false);
+    }
+  }, [projectSlug]);
+
+  useEffect(() => {
+    fetchSnapshots();
+  }, [fetchSnapshots]);
+
+  const handleCreateSnapshot = async () => {
+    setIsCreatingSnapshot(true);
+    try {
+      const res = await fetch(`/_baas/v1/${projectSlug}/db/snapshots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'دستی فوری' }),
+      });
+      if (res.ok) {
+        await fetchSnapshots();
+        setAlertState({
+          isOpen: true,
+          title: 'تهیه اسنپ‌شات موفق',
+          message: 'اسنپ‌شات جدید پایگاه داده با موفقیت ایجاد گردید.',
+          type: 'success',
+        });
+      } else {
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در تهیه اسنپ‌شات',
+          message: err?.error || 'تهیه اسنپ‌شات با خطا مواجه شد.',
+          code: err?.code,
+          detail: err?.detail,
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در ارسال درخواست تهیه اسنپ‌شات.',
+        detail: String(err),
+        type: 'error',
+      });
+    } finally {
+      setIsCreatingSnapshot(false);
+    }
+  };
+
+  const executeRestoreSnapshot = async (snapshotId: string) => {
+    setSnapshotToRestore(null);
+    setRestoringSnapshotId(snapshotId);
+    try {
+      const res = await fetch(`/_baas/v1/${projectSlug}/db/snapshots/${snapshotId}/restore`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        await fetchSnapshots();
+        onRestoreCompleted?.();
+        setAlertState({
+          isOpen: true,
+          title: 'بازیابی موفق پایگاه داده',
+          message: `اسنپ‌شات «${snapshotId}» با موفقیت در پایگاه داده بازنویسی شد.`,
+          type: 'success',
+        });
+      } else {
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در بازیابی اسنپ‌شات',
+          message: err?.error || 'بازیابی اسنپ‌شات با خطا مواجه شد.',
+          code: err?.code,
+          detail: err?.detail,
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در اجرای بازیابی اسنپ‌شات.',
+        detail: String(err),
+        type: 'error',
+      });
+    } finally {
+      setRestoringSnapshotId(null);
+    }
+  };
+
   return (
     <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
@@ -41,7 +153,7 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={onFetchSnapshots}
+            onClick={fetchSnapshots}
             disabled={isLoadingSnapshots}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium transition"
           >
@@ -49,7 +161,7 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
             <span>بازخوانی</span>
           </button>
           <button
-            onClick={onCreateSnapshot}
+            onClick={handleCreateSnapshot}
             disabled={isCreatingSnapshot}
             className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs disabled:opacity-50"
           >
@@ -58,20 +170,6 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
           </button>
         </div>
       </div>
-
-      {backupMessage && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{backupMessage}</span>
-        </div>
-      )}
-
-      {backupError && (
-        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{backupError}</span>
-        </div>
-      )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-xs text-right">
@@ -117,15 +215,15 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
                         download
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
                       >
-                        <Download className="w-3 h-3" />
+                        <Download className="w-3.5 h-3.5" />
                         <span>دانلود</span>
                       </a>
                       <button
-                        onClick={() => onRestoreSnapshot(s.id)}
+                        onClick={() => setSnapshotToRestore(s.id)}
                         disabled={restoringSnapshotId === s.id}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-medium transition disabled:opacity-50"
                       >
-                        <RotateCcw className={`w-3 h-3 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
+                        <RotateCcw className={`w-3.5 h-3.5 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
                         <span>{restoringSnapshotId === s.id ? 'در حال بازیابی...' : 'بازیابی داده'}</span>
                       </button>
                     </div>
@@ -136,6 +234,32 @@ export const DatabaseBackupsView: React.FC<DatabaseBackupsViewProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Accessible Confirm Modal for Snapshot Restore */}
+      <ConfirmModal
+        isOpen={Boolean(snapshotToRestore)}
+        title="بازیابی اسنپ‌شات پایگاه داده"
+        message={`آیا از بازیابی اسنپ‌شات «${snapshotToRestore}» اطمینان دارید؟ تمامی داده‌های فعلی پایگاه داده بازنویسی خواهند شد.`}
+        confirmLabel="بازیابی اطلاعات"
+        isDanger={true}
+        onConfirm={() => {
+          if (snapshotToRestore) {
+            executeRestoreSnapshot(snapshotToRestore);
+          }
+        }}
+        onCancel={() => setSnapshotToRestore(null)}
+      />
+
+      {/* Feedback Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        detail={alertState.detail}
+        code={alertState.code}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

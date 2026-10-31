@@ -27,6 +27,13 @@ public interface ITenantDatabaseStore
     Task<bool> AlterColumnAsync(string projectSlug, string tableName, string oldColumnName, TableColumnDefinition newColumn, CancellationToken ct = default);
     Task<bool> CreateIndexAsync(string projectSlug, string tableName, string indexName, IReadOnlyList<string> columns, bool isUnique = false, CancellationToken ct = default);
     Task<bool> TruncateTableAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<IReadOnlyList<TableIndexDefinition>> GetIndexesAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<bool> DropIndexAsync(string projectSlug, string tableName, string indexName, CancellationToken ct = default);
+    Task<bool> RebuildIndexAsync(string projectSlug, string tableName, string indexName, CancellationToken ct = default);
+    Task<IReadOnlyList<TableRelationshipDefinition>> GetRelationshipsAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<bool> AddRelationshipAsync(string projectSlug, TableRelationshipDefinition relationship, CancellationToken ct = default);
+    Task<bool> DropRelationshipAsync(string projectSlug, string tableName, string constraintName, CancellationToken ct = default);
     Task<IReadOnlyList<TablePolicyDefinition>> GetPoliciesAsync(string projectSlug, string tableName, CancellationToken ct = default);
     Task<bool> CreatePolicyAsync(string projectSlug, string tableName, TablePolicyDefinition policy, CancellationToken ct = default);
+    Task<bool> DropPolicyAsync(string projectSlug, string tableName, string policyName, CancellationToken ct = default);
 }
