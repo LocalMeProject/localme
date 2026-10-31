@@ -136,7 +136,6 @@ export const Navigation: React.FC<NavigationProps> = ({
         { id: 'sql', label: 'ویرایشگر کوئری SQL', icon: <Code2 className="w-4 h-4" /> },
         { id: 'schema', label: 'طراحی ساختار جدول', icon: <Columns className="w-4 h-4" /> },
         { id: 'backups', label: 'پشتیبان‌گیری و اسنپ‌شات', icon: <Archive className="w-4 h-4" /> },
-        { id: 'config', label: 'اطلاعات اتصال', icon: <Key className="w-4 h-4" /> },
       ],
     },
     auth: {
