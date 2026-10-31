@@ -108,6 +108,8 @@ export default function App() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isDeployFunctionOpen, setIsDeployFunctionOpen] = useState(false);
   const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
+  const [lastCreatedTable, setLastCreatedTable] = useState<string | null>(null);
+  const [tableRefreshTrigger, setTableRefreshTrigger] = useState(0);
   const [isCreateBucketOpen, setIsCreateBucketOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddDomainOpen, setIsAddDomainOpen] = useState(false);
@@ -288,26 +290,19 @@ export default function App() {
   const handleCreateTable = async (tbl: { name: string; columns: DatabaseColumn[] }) => {
     if (!currentProject) return;
     try {
-      const colsSql = tbl.columns
-        .map((c) => {
-          let def = `"${c.name}" ${c.dataType}`;
-          if (c.isPrimaryKey) def += ' PRIMARY KEY';
-          if (!c.isNullable && !c.isPrimaryKey) def += ' NOT NULL';
-          if (c.defaultValue && c.defaultValue.trim()) def += ` DEFAULT ${c.defaultValue}`;
-          return def;
-        })
-        .join(', ');
-      const sql = `CREATE TABLE IF NOT EXISTS "${tbl.name}" (${colsSql});`;
-
-      const res = await fetch(`/_baas/v1/${currentProject.slug}/sql/execute`, {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/db/tables`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sql }),
+        body: JSON.stringify({ name: tbl.name, columns: tbl.columns }),
       });
 
       if (res.ok) {
         showToast(`جدول «${tbl.name}» با موفقیت ایجاد گردید.`);
-        setActiveSubView('grid');
+        setIsCreateTableOpen(false);
+        setLastCreatedTable(tbl.name);
+        setTableRefreshTrigger(Date.now());
+        const targetSubView = activeSubView === 'schema' ? 'schema' : 'grid';
+        navigate(`/panel/${currentProject.slug}/database/${targetSubView}`);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(`خطا در ایجاد جدول: ${err.error || res.statusText}`);
@@ -554,6 +549,8 @@ export default function App() {
                     onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
                     activeSubView={activeSubView}
                     onSubViewChange={handleSubViewChange}
+                    lastCreatedTable={lastCreatedTable}
+                    tableRefreshTrigger={tableRefreshTrigger}
                   />
                 )}
 
