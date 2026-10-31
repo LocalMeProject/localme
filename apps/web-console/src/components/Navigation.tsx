@@ -135,6 +135,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         { id: 'grid', label: 'جداول و داده‌ها', icon: <TableIcon className="w-4 h-4" /> },
         { id: 'sql', label: 'ویرایشگر کوئری SQL', icon: <Code2 className="w-4 h-4" /> },
         { id: 'schema', label: 'طراحی ساختار جدول', icon: <Columns className="w-4 h-4" /> },
+        { id: 'diagram', label: 'نمودار ارتباطی (ER)', icon: <Network className="w-4 h-4" /> },
         { id: 'backups', label: 'پشتیبان‌گیری و اسنپ‌شات', icon: <Archive className="w-4 h-4" /> },
       ],
     },

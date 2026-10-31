@@ -244,6 +244,74 @@ public static class BaasServiceRoutes
             return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "Table not found" });
         });
 
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/columns", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? "new_column";
+            var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "text";
+            var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
+            var defaultValue = body["defaultValue"]?.ToString();
+            var ok = await pm.AddColumnAsync(projectId, table, new TableColumnDefinition(name, dataType, false, isNullable, defaultValue));
+            return ok ? Results.Ok(new { success = true, column = name }) : Results.BadRequest(new { error = "Failed to add column" });
+        });
+
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var ok = await pm.DropColumnAsync(projectId, table, column);
+            return ok ? Results.Ok(new { success = true, column }) : Results.NotFound(new { error = "Failed to drop column" });
+        });
+
+        app.MapPatch("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var newName = body["newName"]?.ToString() ?? column;
+            var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "";
+            var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
+            var defaultValue = body["defaultValue"]?.ToString();
+            var ok = await pm.AlterColumnAsync(projectId, table, column, new TableColumnDefinition(newName, dataType, false, isNullable, defaultValue));
+            return ok ? Results.Ok(new { success = true, column = newName }) : Results.BadRequest(new { error = "Failed to alter column" });
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? $"idx_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var cols = body["columns"] is JsonArray arr ? arr.Select(x => x?.ToString() ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList() : new List<string>();
+            if (cols.Count == 0) return Results.BadRequest(new { error = "At least one column is required for an index." });
+            var isUnique = body["isUnique"]?.GetValue<bool>() ?? false;
+            var ok = await pm.CreateIndexAsync(projectId, table, name, cols, isUnique);
+            return ok ? Results.Ok(new { success = true, index = name }) : Results.BadRequest(new { error = "Failed to create index" });
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/truncate", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var ok = await pm.TruncateTableAsync(projectId, table);
+            GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+            return ok ? Results.Ok(new { success = true, table }) : Results.BadRequest(new { error = "Failed to truncate table" });
+        });
+
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var policies = await pm.GetPoliciesAsync(projectId, table);
+            return Results.Json(policies);
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var name = body["name"]?.ToString() ?? $"policy_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var cmd = body["command"]?.ToString() ?? "ALL";
+            var roles = body["roles"]?.ToString() ?? "public";
+            var usingExpr = body["usingExpression"]?.ToString() ?? "true";
+            var checkExpr = body["checkExpression"]?.ToString();
+            var policy = new TablePolicyDefinition(name, table, cmd, roles, usingExpr, checkExpr);
+            var ok = await pm.CreatePolicyAsync(projectId, table, policy);
+            return ok ? Results.Ok(new { success = true, policy = name }) : Results.BadRequest(new { error = "Failed to create policy" });
+        });
+
         app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
