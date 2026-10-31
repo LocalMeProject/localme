@@ -13,6 +13,8 @@ import {
   RefreshCw,
   Clock,
 } from 'lucide-react';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface EdgeFunctionsViewProps {
   project: Project;
@@ -46,6 +48,22 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   const [newEnvVal, setNewEnvVal] = useState('');
   const [newEnvSecret, setNewEnvSecret] = useState(true);
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
+
+  // Modal State for Accessible Alerts and Confirmations
+  const [funcToDelete, setFuncToDelete] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    detail?: string;
+    code?: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   // Real API: Fetch Functions
   const fetchFunctions = useCallback(async () => {
@@ -112,12 +130,29 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
             fn.id === selectedFunc.id ? { ...fn, script: editorCode } : fn
           )
         );
-        alert(`کد تابع «${selectedFunc.name}» با موفقیت در سرور ذخیره شد.`);
+        setAlertState({
+          isOpen: true,
+          title: 'ذخیره موفق کد تابع',
+          message: `کد تابع «${selectedFunc.name}» با موفقیت در سرور ذخیره شد.`,
+          type: 'success',
+        });
       } else {
-        alert('خطا در ذخیره کد تابع.');
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در ذخیره کد تابع',
+          message: err?.error || 'ذخیره کد تابع با خطا مواجه شد.',
+          type: 'error',
+        });
       }
-    } catch {
-      alert('خطا در برقراری ارتباط با سرور.');
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'برقراری ارتباط با سرور برای ذخیره تابع ناموفق بود.',
+        detail: String(err),
+        type: 'error',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -157,8 +192,12 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
   };
 
   // Real API: Delete Function
-  const handleDeleteFunc = async (slug: string) => {
-    if (!confirm(`آیا از حذف تابع "${slug}" اطمینان دارید؟`)) return;
+  const handleDeleteFunc = (slug: string) => {
+    setFuncToDelete(slug);
+  };
+
+  const executeDeleteFunc = async (slug: string) => {
+    setFuncToDelete(null);
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/functions/${slug}`, {
         method: 'DELETE',
@@ -170,9 +209,29 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
           setSelectedFunc(remaining[0] || null);
           setEditorCode(remaining[0]?.script || '');
         }
+        setAlertState({
+          isOpen: true,
+          title: 'حذف تابع موفق',
+          message: `تابع «${slug}» با موفقیت حذف گردید.`,
+          type: 'success',
+        });
+      } else {
+        const err = await res.json().catch(() => null);
+        setAlertState({
+          isOpen: true,
+          title: 'خطا در حذف تابع',
+          message: err?.error || 'حذف تابع با خطا مواجه شد.',
+          type: 'error',
+        });
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      setAlertState({
+        isOpen: true,
+        title: 'خطای ارتباط با سرور',
+        message: 'خطا در حذف تابع.',
+        detail: String(err),
+        type: 'error',
+      });
     }
   };
 
@@ -501,6 +560,29 @@ export const EdgeFunctionsView: React.FC<EdgeFunctionsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Accessible Confirm Modal for Deleting Function */}
+      <ConfirmModal
+        isOpen={Boolean(funcToDelete)}
+        title="حذف تابع ابری"
+        message={`آیا از حذف دائم تابع «${funcToDelete}» اطمینان دارید؟`}
+        confirmLabel="حذف تابع"
+        isDanger={true}
+        onConfirm={() => {
+          if (funcToDelete) executeDeleteFunc(funcToDelete);
+        }}
+        onCancel={() => setFuncToDelete(null)}
+      />
+
+      {/* Accessible Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        detail={alertState.detail}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

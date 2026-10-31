@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Table as TableIcon, Plus, Trash2 } from 'lucide-react';
 import { DatabaseColumn } from '../../types';
 
@@ -8,28 +8,37 @@ interface CreateTableModalProps {
   onCreate: (table: { name: string; columns: DatabaseColumn[] }) => void;
 }
 
+const DEFAULT_COLUMNS: DatabaseColumn[] = [
+  {
+    name: 'id',
+    dataType: 'BIGSERIAL',
+    isNullable: false,
+    defaultValue: '',
+    isPrimaryKey: true,
+  },
+  {
+    name: 'created_at',
+    dataType: 'TIMESTAMPTZ',
+    isNullable: false,
+    defaultValue: 'NOW()',
+    isPrimaryKey: false,
+  },
+];
+
 export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   isOpen,
   onClose,
   onCreate,
 }) => {
   const [tableName, setTableName] = useState('');
-  const [columns, setColumns] = useState<DatabaseColumn[]>([
-    {
-      name: 'id',
-      dataType: 'BIGSERIAL',
-      isNullable: false,
-      defaultValue: '',
-      isPrimaryKey: true,
-    },
-    {
-      name: 'created_at',
-      dataType: 'TIMESTAMPTZ',
-      isNullable: false,
-      defaultValue: 'NOW()',
-      isPrimaryKey: false,
-    },
-  ]);
+  const [columns, setColumns] = useState<DatabaseColumn[]>(DEFAULT_COLUMNS);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTableName('');
+      setColumns(DEFAULT_COLUMNS);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

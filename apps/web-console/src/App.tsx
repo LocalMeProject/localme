@@ -28,6 +28,7 @@ import { CreateBucketModal } from './components/modals/CreateBucketModal';
 import { AddUserModal } from './components/modals/AddUserModal';
 import { AddDomainModal } from './components/modals/AddDomainModal';
 import { TopupModal } from './components/modals/TopupModal';
+import { ConfirmModal } from './components/modals/ConfirmModal';
 
 const DEFAULT_PROJECTS: Project[] = [];
 
@@ -108,10 +109,13 @@ export default function App() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isDeployFunctionOpen, setIsDeployFunctionOpen] = useState(false);
   const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
+  const [lastCreatedTable, setLastCreatedTable] = useState<string | null>(null);
+  const [tableRefreshTrigger, setTableRefreshTrigger] = useState(0);
   const [isCreateBucketOpen, setIsCreateBucketOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddDomainOpen, setIsAddDomainOpen] = useState(false);
   const [isTopupOpen, setIsTopupOpen] = useState(false);
+  const [isConfirmDeleteProjectOpen, setIsConfirmDeleteProjectOpen] = useState(false);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -288,26 +292,19 @@ export default function App() {
   const handleCreateTable = async (tbl: { name: string; columns: DatabaseColumn[] }) => {
     if (!currentProject) return;
     try {
-      const colsSql = tbl.columns
-        .map((c) => {
-          let def = `"${c.name}" ${c.dataType}`;
-          if (c.isPrimaryKey) def += ' PRIMARY KEY';
-          if (!c.isNullable && !c.isPrimaryKey) def += ' NOT NULL';
-          if (c.defaultValue && c.defaultValue.trim()) def += ` DEFAULT ${c.defaultValue}`;
-          return def;
-        })
-        .join(', ');
-      const sql = `CREATE TABLE IF NOT EXISTS "${tbl.name}" (${colsSql});`;
-
-      const res = await fetch(`/_baas/v1/${currentProject.slug}/sql/execute`, {
+      const res = await fetch(`/_baas/v1/${currentProject.slug}/db/tables`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sql }),
+        body: JSON.stringify({ name: tbl.name, columns: tbl.columns }),
       });
 
       if (res.ok) {
         showToast(`جدول «${tbl.name}» با موفقیت ایجاد گردید.`);
-        setActiveSubView('grid');
+        setIsCreateTableOpen(false);
+        setLastCreatedTable(tbl.name);
+        setTableRefreshTrigger(Date.now());
+        const targetSubView = activeSubView === 'schema' ? 'schema' : 'grid';
+        navigate(`/panel/${currentProject.slug}/database/${targetSubView}`);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(`خطا در ایجاد جدول: ${err.error || res.statusText}`);
@@ -429,13 +426,18 @@ export default function App() {
   };
 
   // Real API: Delete Project
-  const handleDeleteProject = async () => {
+  const handleDeleteProject = () => {
     if (projects.length <= 1) {
       showToast('خطا: حذف تنها پروژه فعال مجاز نمی‌باشد.');
       return;
     }
     if (!currentProject) return;
-    if (!confirm(`آیا از حذف کامل پروژه «${currentProject.name}» اطمینان دارید؟`)) return;
+    setIsConfirmDeleteProjectOpen(true);
+  };
+
+  const executeDeleteProject = async () => {
+    setIsConfirmDeleteProjectOpen(false);
+    if (!currentProject) return;
 
     try {
       const res = await fetch(`/_baas/v1/projects/${currentProject.slug}`, {
@@ -554,6 +556,8 @@ export default function App() {
                     onOpenCreateTableModal={() => setIsCreateTableOpen(true)}
                     activeSubView={activeSubView}
                     onSubViewChange={handleSubViewChange}
+                    lastCreatedTable={lastCreatedTable}
+                    tableRefreshTrigger={tableRefreshTrigger}
                   />
                 )}
 
@@ -686,6 +690,18 @@ export default function App() {
         isOpen={isTopupOpen}
         onClose={() => setIsTopupOpen(false)}
         onTopup={handleTopup}
+      />
+
+      {/* Accessible Confirm Modal for Project Deletion */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteProjectOpen}
+        title="حذف کامل پروژه"
+        message={`آیا از حذف کامل پروژه «${currentProject?.name}» اطمینان دارید؟ تمامی داده‌ها، اسکیماها، فایل‌ها و توابع این پروژه برای همیشه نابود خواهند شد.`}
+        confirmLabel="حذف دائم پروژه"
+        isDanger={true}
+        requiredConfirmationText={currentProject?.slug}
+        onConfirm={executeDeleteProject}
+        onCancel={() => setIsConfirmDeleteProjectOpen(false)}
       />
     </div>
   );

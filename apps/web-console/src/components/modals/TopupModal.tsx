@@ -15,6 +15,7 @@ export const TopupModal: React.FC<TopupModalProps> = ({
   const [selectedToman, setSelectedToman] = useState<number>(50000);
   const [customToman, setCustomToman] = useState<string>('');
   const [gateway, setGateway] = useState<string>('ZARINPAL');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -23,18 +24,20 @@ export const TopupModal: React.FC<TopupModalProps> = ({
   const handleSelectQuick = (amount: number) => {
     setSelectedToman(amount);
     setCustomToman('');
+    setErrorMessage(null);
   };
 
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^0-9]/g, '');
     setCustomToman(val);
+    setErrorMessage(null);
     if (val) setSelectedToman(parseInt(val, 10));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedToman || selectedToman < 5000) {
-      alert('حداقل مبلغ افزایش اعتبار ۵٬۰۰۰ تومان است.');
+      setErrorMessage('حداقل مبلغ افزایش اعتبار ۵٬۰۰۰ تومان است.');
       return;
     }
 
@@ -107,6 +110,9 @@ export const TopupModal: React.FC<TopupModalProps> = ({
               dir="ltr"
               className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono text-sm"
             />
+            {errorMessage && (
+              <p className="text-xs text-rose-600 mt-1.5 font-medium">{errorMessage}</p>
+            )}
           </div>
 
           <div>

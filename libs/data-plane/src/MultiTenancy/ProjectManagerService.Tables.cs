@@ -226,9 +226,19 @@ public sealed partial class ProjectManagerService
         if (TenantDbStore != null)
         {
             var slug = ResolveProjectSlug(projectId);
-            return await TenantDbStore.CreateTableAsync(slug, tableName, columns);
+            var ok = await TenantDbStore.CreateTableAsync(slug, tableName, columns);
+            if (ok)
+            {
+                OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
+            }
+            return ok;
         }
-        return CreateTable(projectId, tableName);
+        var created = CreateTable(projectId, tableName);
+        if (created)
+        {
+            OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
+        }
+        return created;
     }
 
     public bool DeleteTable(string projectId, string tableName)
@@ -433,6 +443,76 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             return await TenantDbStore.CreatePolicyAsync(slug, tableName, policy);
+        }
+        return true;
+    }
+
+    public async Task<bool> DropPolicyAsync(string projectId, string tableName, string policyName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.DropPolicyAsync(slug, tableName, policyName);
+        }
+        return true;
+    }
+
+    public async Task<IReadOnlyList<TableIndexDefinition>> GetIndexesAsync(string projectId, string tableName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.GetIndexesAsync(slug, tableName);
+        }
+        return Array.Empty<TableIndexDefinition>();
+    }
+
+    public async Task<bool> DropIndexAsync(string projectId, string tableName, string indexName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.DropIndexAsync(slug, tableName, indexName);
+        }
+        return true;
+    }
+
+    public async Task<bool> RebuildIndexAsync(string projectId, string tableName, string indexName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.RebuildIndexAsync(slug, tableName, indexName);
+        }
+        return true;
+    }
+
+    public async Task<IReadOnlyList<TableRelationshipDefinition>> GetRelationshipsAsync(string projectId, string tableName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.GetRelationshipsAsync(slug, tableName);
+        }
+        return Array.Empty<TableRelationshipDefinition>();
+    }
+
+    public async Task<bool> AddRelationshipAsync(string projectId, TableRelationshipDefinition relationship)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.AddRelationshipAsync(slug, relationship);
+        }
+        return true;
+    }
+
+    public async Task<bool> DropRelationshipAsync(string projectId, string tableName, string constraintName)
+    {
+        if (TenantDbStore != null)
+        {
+            var slug = ResolveProjectSlug(projectId);
+            return await TenantDbStore.DropRelationshipAsync(slug, tableName, constraintName);
         }
         return true;
     }

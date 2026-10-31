@@ -5,31 +5,22 @@ import {
   Plus,
   RefreshCw,
   ChevronRight,
-  Archive,
-  Download,
-  RotateCcw,
-  AlertTriangle,
-  CheckCircle2,
 } from 'lucide-react';
 
 import { TableDataGrid } from './database/TableDataGrid';
 import { SchemaDesigner } from './database/SchemaDesigner';
 import { SqlQueryRunner } from './database/SqlQueryRunner';
 import { SchemaDiagramView } from './database/SchemaDiagramView';
+import { DatabaseBackupsView } from './database/DatabaseBackupsView';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface DatabaseViewProps {
   project: Project;
   onOpenCreateTableModal: () => void;
   activeSubView?: string;
   onSubViewChange?: (subView: string) => void;
-}
-
-export interface SnapshotItem {
-  id: string;
-  type: string;
-  sizeBytes: number;
-  status: string;
-  createdAtUtc: string;
+  lastCreatedTable?: string | null;
+  tableRefreshTrigger?: number;
 }
 
 type StudioTab = 'grid' | 'schema' | 'diagram' | 'sql' | 'backups';
@@ -38,6 +29,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   project,
   onOpenCreateTableModal,
   activeSubView,
+  lastCreatedTable,
+  tableRefreshTrigger,
 }) => {
   const [activeTab, setActiveTab] = useState<StudioTab>('grid');
   const [tables, setTables] = useState<string[]>([]);
@@ -53,14 +46,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     else if (activeSubView === 'grid') setActiveTab('grid');
   }, [activeSubView]);
 
-  // Snapshots / Backup State
-  const [snapshots, setSnapshots] = useState<SnapshotItem[]>([]);
-  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
-  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
-  const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
-  const [backupMessage, setBackupMessage] = useState<string | null>(null);
-  const [backupError, setBackupError] = useState<string | null>(null);
-
   // Table Data Grid State
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
   const [tableColumns, setTableColumns] = useState<string[]>([]);
@@ -68,7 +53,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [filterQuery, setFilterQuery] = useState('');
   const [gridError, setGridError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
   const [totalRowCount, setTotalRowCount] = useState(0);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortAscending, setSortAscending] = useState(true);
@@ -90,75 +75,23 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [isRunningQuery, setIsRunningQuery] = useState(false);
   const [queryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
 
-  const fetchSnapshots = useCallback(async () => {
-    setIsLoadingSnapshots(true);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`);
-      if (res.ok) {
-        const data = await res.json();
-        setSnapshots(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Failed to load snapshots:', err);
-    } finally {
-      setIsLoadingSnapshots(false);
-    }
-  }, [project.slug]);
+  // Accessible Alert Modal for error / investigation reporting
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    detail?: string;
+    code?: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
-  useEffect(() => {
-    if (activeTab === 'backups') {
-      fetchSnapshots();
-    }
-  }, [activeTab, fetchSnapshots]);
-
-  const handleCreateSnapshot = async () => {
-    setIsCreatingSnapshot(true);
-    setBackupMessage(null);
-    setBackupError(null);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'دستی فوری' }),
-      });
-      if (res.ok) {
-        setBackupMessage('اسنپ‌شات جدید با موفقیت ایجاد گردید.');
-        await fetchSnapshots();
-      } else {
-        const err = await res.json();
-        setBackupError(err.error || 'خطا در ایجاد اسنپ‌شات');
-      }
-    } catch (err) {
-      setBackupError(String(err));
-    } finally {
-      setIsCreatingSnapshot(false);
-    }
-  };
-
-  const handleRestoreSnapshot = async (snapshotId: string) => {
-    if (!window.confirm(`آیا از بازیابی اسنپ‌شات ${snapshotId} اطمینان دارید؟ تمامی داده‌های فعلی بازنویسی خواهند شد.`)) {
-      return;
-    }
-    setRestoringSnapshotId(snapshotId);
-    setBackupMessage(null);
-    setBackupError(null);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots/${snapshotId}/restore`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        setBackupMessage(`اسنپ‌شات ${snapshotId} با موفقیت بازیابی شد.`);
-        await fetchTables();
-        await fetchSnapshots();
-      } else {
-        const err = await res.json();
-        setBackupError(err.error || 'خطا در بازیابی اسنپ‌شات');
-      }
-    } catch (err) {
-      setBackupError(String(err));
-    } finally {
-      setRestoringSnapshotId(null);
-    }
+  const showAlert = (title: string, message: string, detail?: string, code?: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setAlertState({ isOpen: true, title, message, detail, code, type });
   };
 
   // Load Tables
@@ -185,6 +118,15 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  useEffect(() => {
+    if (tableRefreshTrigger) {
+      fetchTables();
+      if (lastCreatedTable) {
+        setActiveTable(lastCreatedTable);
+      }
+    }
+  }, [tableRefreshTrigger, lastCreatedTable, fetchTables]);
 
   // Load Table Data
   const fetchTableData = useCallback(async (tableName: string, page = currentPage, sortCol = sortColumn, sortAsc = sortAscending) => {
@@ -246,6 +188,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     fetchTableData(activeTable, newPage, sortColumn, sortAscending);
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    fetchTableData(activeTable, 1, sortColumn, sortAscending);
+  };
+
   const handleUpdateRow = async (rowId: string, patch: Record<string, unknown>): Promise<boolean> => {
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
@@ -257,11 +205,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.text();
-      alert(`خطا در ویرایش رکورد: ${err}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در ویرایش رکورد', err?.error || 'ویرایش رکورد در پایگاه داده ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا در ارتباط با سرور: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'برقراری ارتباط با سرور ناموفق بود.', String(err));
       return false;
     }
   };
@@ -276,11 +224,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در حذف ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در حذف ستون', err?.error || 'حذف ستون از جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف ستون.', String(err));
       return false;
     }
   };
@@ -302,11 +250,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در تغییر ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در تغییر ستون', err?.error || 'تغییر مشخصات ستون ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در تغییر ستون.', String(err));
       return false;
     }
   };
@@ -320,11 +268,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         await fetchTables();
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در حذف جدول: ${err.error || 'ناموفق'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در حذف جدول', err?.error || 'حذف جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف جدول.', String(err));
       return false;
     }
   };
@@ -338,11 +286,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(tableName, 1);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در پاکسازی جدول: ${err.error || 'ناموفق'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در پاکسازی جدول', err?.error || 'پاکسازی جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در پاکسازی جدول.', String(err));
       return false;
     }
   };
@@ -458,37 +406,36 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     nullable: boolean,
     defaultVal: string
   ): Promise<boolean> => {
-    let ddl = `ALTER TABLE ${activeTable} ADD COLUMN ${name} ${type}`;
-    if (!nullable) ddl += ' NOT NULL';
-    if (defaultVal) ddl += ` DEFAULT ${defaultVal}`;
-    ddl += ';';
-
     try {
-      const res = await fetch(`/_baas/v1/${project.slug}/sql/execute`, {
+      const res = await fetch(`/_baas/v1/${project.slug}/db/tables/${activeTable}/columns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sql: ddl }),
+        body: JSON.stringify({
+          name,
+          dataType: type,
+          isNullable: nullable,
+          defaultValue: defaultVal || null,
+        }),
       });
 
       if (res.ok) {
-        setSchemaSuccessMsg(`ستون ${name} با موفقیت به جدول افزوده شد.`);
+        setSchemaSuccessMsg(`ستون «${name}» با موفقیت به جدول افزوده شد.`);
         fetchTableSchema(activeTable);
         fetchTableData(activeTable);
         setTimeout(() => setSchemaSuccessMsg(null), 3000);
         return true;
       }
-      const err = await res.text();
-      alert(`خطا در افزودن ستون: ${err}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در افزودن ستون', err?.error || 'افزودن ستون به جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در افزودن ستون.', String(err));
       return false;
     }
   };
 
   // Delete Row
   const handleDeleteRow = async (rowId: string) => {
-    if (!confirm(`آیا از حذف این رکورد اطمینان دارید؟`)) return;
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}/${rowId}`, {
         method: 'DELETE',
@@ -496,33 +443,43 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       if (res.ok) {
         setTableRows((prev) => prev.filter((r) => String(r.id) !== String(rowId)));
       } else {
-        alert('حذف رکورد با خطا مواجه شد.');
+        const err = await res.json().catch(() => null);
+        showAlert('خطا در حذف رکورد', err?.error || 'حذف سطر از جدول با خطا مواجه شد.', err?.detail, err?.code);
       }
     } catch (err) {
-      alert(`خطا در حذف رکورد: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف رکورد.', String(err));
     }
   };
 
-  // Insert Row
-  const handleInsertRow = async (jsonText: string): Promise<boolean> => {
+  // Insert Record via structured form or json
+  const handleInsertRecord = async (
+    recordData: Record<string, unknown>
+  ): Promise<{ success: boolean; error?: string; code?: string; detail?: string }> => {
     try {
-      const parsed = JSON.parse(jsonText);
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(recordData),
       });
 
       if (res.ok) {
-        fetchTableData(activeTable);
-        return true;
+        fetchTableData(activeTable, 1);
+        return { success: true };
       }
-      const err = await res.text();
-      alert(`خطا در ثبت رکورد: ${err}`);
-      return false;
+
+      const body = await res.json().catch(() => null);
+      return {
+        success: false,
+        error: body?.error || 'خطا در ثبت رکورد در پایگاه داده',
+        code: body?.code,
+        detail: body?.detail,
+      };
     } catch (err) {
-      alert(`فرمت JSON نامعتبر است: ${String(err)}`);
-      return false;
+      return {
+        success: false,
+        error: 'خطا در برقراری ارتباط با سرور',
+        detail: String(err),
+      };
     }
   };
 
@@ -556,44 +513,46 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Studio Header */}
-      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              پایگاه داده رابطه‌ای
-            </span>
-            <span className="text-xs text-slate-400 font-mono" dir="ltr">
-              prj_{project.slug}
-            </span>
+      {/* Top Studio Header - Exclusively on Table Grid View */}
+      {activeTab === 'grid' && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                پایگاه داده رابطه‌ای
+              </span>
+              <span className="text-xs text-slate-400 font-mono" dir="ltr">
+                prj_{project.slug}
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Database className="w-5 h-5 text-emerald-600" />
+              مدیریت پایگاه داده و جدول‌ها
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+              مشاهده و مدیریت ساختار داده‌ها، اجرای پرس‌وجوهای متنی و ویرایش مستقیم رکوردهای جدول در محیطی امن و ایزوله.
+            </p>
           </div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Database className="w-5 h-5 text-emerald-600" />
-            مدیریت پایگاه داده و جدول‌ها
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-            مشاهده و مدیریت ساختار داده‌ها، اجرای پرس‌وجوهای متنی و ویرایش مستقیم رکوردهای جدول در محیطی امن و ایزوله.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchTables}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3.5 py-1.5 transition"
-            title="بازخوانی فهرست جداول"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
-            <span>بازخوانی</span>
-          </button>
-          <button
-            onClick={onOpenCreateTableModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-1.5 transition shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>ایجاد جدول جدید</span>
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={fetchTables}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium text-xs px-3.5 py-1.5 transition"
+              title="بازخوانی فهرست جداول"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTables ? 'animate-spin' : ''}`} />
+              <span>بازخوانی</span>
+            </button>
+            <button
+              onClick={onOpenCreateTableModal}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-1.5 transition shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>ایجاد جدول جدید</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Table Selector & Toolbar in Grid View */}
       {activeTab === 'grid' && tables.length > 0 && (
@@ -618,118 +577,13 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
       {/* Main Studio Viewport */}
       {activeTab === 'backups' ? (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <Archive className="w-5 h-5 text-emerald-600" />
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">نسخه‌های پشتیبان و اسنپ‌شات‌های پایگاه داده</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  پشتیبان‌گیری خودکار ۳ روزه با قابلیت بازیابی در زمان (PITR) و دانلود مستقیم اسنپ‌شات ساختار و داده‌ها.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={fetchSnapshots}
-                disabled={isLoadingSnapshots}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium transition"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSnapshots ? 'animate-spin' : ''}`} />
-                <span>بازخوانی</span>
-              </button>
-              <button
-                onClick={handleCreateSnapshot}
-                disabled={isCreatingSnapshot}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition shadow-xs disabled:opacity-50"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{isCreatingSnapshot ? 'در حال تهیه اسنپ‌شات...' : 'تهیه اسنپ‌شات جدید'}</span>
-              </button>
-            </div>
-          </div>
-
-          {backupMessage && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{backupMessage}</span>
-            </div>
-          )}
-
-          {backupError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{backupError}</span>
-            </div>
-          )}
-
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-xs text-right">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-4">شناسه اسنپ‌شات</th>
-                  <th className="py-2.5 px-4">نوع عملیات</th>
-                  <th className="py-2.5 px-4">حجم تخمینی</th>
-                  <th className="py-2.5 px-4">وضعیت</th>
-                  <th className="py-2.5 px-4">زمان ثبت (UTC)</th>
-                  <th className="py-2.5 px-4 text-center">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {snapshots.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
-                      {isLoadingSnapshots ? 'در حال دریافت اطلاعات اسنپ‌شات‌ها...' : 'هیچ اسنپ‌شاتی برای این پروژه ثبت نشده است.'}
-                    </td>
-                  </tr>
-                ) : (
-                  snapshots.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/70 transition">
-                      <td className="py-2.5 px-4 font-mono font-medium text-slate-900" dir="ltr">
-                        {s.id}
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-700">{s.type}</td>
-                      <td className="py-2.5 px-4 font-mono text-slate-600" dir="ltr">
-                        {(s.sizeBytes / 1024).toFixed(1)} KB
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-slate-500" dir="ltr">
-                        {new Date(s.createdAtUtc).toLocaleString('fa-IR')}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <a
-                            href={`/_baas/v1/${project.slug}/db/snapshots/${s.id}/download`}
-                            download
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition"
-                          >
-                            <Download className="w-3 h-3" />
-                            <span>دانلود</span>
-                          </a>
-                          <button
-                            onClick={() => handleRestoreSnapshot(s.id)}
-                            disabled={restoringSnapshotId === s.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-medium transition disabled:opacity-50"
-                          >
-                            <RotateCcw className={`w-3 h-3 ${restoringSnapshotId === s.id ? 'animate-spin' : ''}`} />
-                            <span>{restoringSnapshotId === s.id ? 'در حال بازیابی...' : 'بازیابی داده'}</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
+        <DatabaseBackupsView
+          projectSlug={project.slug}
+          onRestoreCompleted={fetchTables}
+        />
+      ) : activeTab === 'grid' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left: Table Navigator Sidebar */}
+          {/* Left: Table Navigator Sidebar - Exclusively on Table Grid View */}
           <div className="lg:col-span-3 space-y-3">
             <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
@@ -771,72 +625,86 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             </div>
           </div>
 
-          {/* Right: Active Tab Workspace */}
+          {/* Right: Table Data Grid */}
           <div className="lg:col-span-9 space-y-4">
-            {activeTab === 'grid' && (
-              <TableDataGrid
-                activeTable={activeTable}
-                tableColumns={tableColumns}
-                filteredRows={filteredRows}
-                filterQuery={filterQuery}
-                onFilterQueryChange={setFilterQuery}
-                isLoadingData={isLoadingData}
-                gridError={gridError}
-                onRefresh={() => fetchTableData(activeTable)}
-                onDeleteRow={handleDeleteRow}
-                onInsertRow={handleInsertRow}
-                onUpdateRow={handleUpdateRow}
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalCount={totalRowCount}
-                onPageChange={handlePageChange}
-                sortColumn={sortColumn}
-                sortAscending={sortAscending}
-                onSortChange={handleSortChange}
-              />
-            )}
-
-            {activeTab === 'schema' && (
-              <SchemaDesigner
-                projectSlug={project.slug}
-                activeTable={activeTable}
-                schemaColumns={schemaColumns}
-                isLoadingSchema={isLoadingSchema}
-                schemaSuccessMsg={schemaSuccessMsg}
-                onAddColumn={handleAddColumn}
-                onDropColumn={handleDropColumn}
-                onAlterColumn={handleAlterColumn}
-                onDropTable={handleDropTable}
-                onTruncateTable={handleTruncateTable}
-                onRefreshSchema={() => fetchTableSchema(activeTable)}
-              />
-            )}
-
-            {activeTab === 'diagram' && (
-              <SchemaDiagramView
-                project={project}
-                tables={tables}
-                onSelectTable={(tbl) => {
-                  setActiveTable(tbl);
-                  setActiveTab('grid');
-                }}
-              />
-            )}
-
-            {activeTab === 'sql' && (
-              <SqlQueryRunner
-                sqlQuery={sqlQuery}
-                onSqlQueryChange={setSqlQuery}
-                onRunQuery={handleRunQuery}
-                isRunningQuery={isRunningQuery}
-                queryResults={queryResults}
-                queryHistory={queryHistory}
-                onApplySnippet={handleApplySnippet}
-              />
-            )}
+            <TableDataGrid
+              activeTable={activeTable}
+              tableColumns={tableColumns}
+              schemaColumns={schemaColumns}
+              filteredRows={filteredRows}
+              filterQuery={filterQuery}
+              onFilterQueryChange={setFilterQuery}
+              isLoadingData={isLoadingData}
+              gridError={gridError}
+              onRefresh={() => fetchTableData(activeTable)}
+              onDeleteRow={handleDeleteRow}
+              onInsertRecord={handleInsertRecord}
+              onUpdateRow={handleUpdateRow}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalCount={totalRowCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              sortColumn={sortColumn}
+              sortAscending={sortAscending}
+              onSortChange={handleSortChange}
+            />
           </div>
         </div>
-      )}
+      ) : activeTab === 'schema' ? (
+        <div className="w-full">
+          <SchemaDesigner
+            projectSlug={project.slug}
+            activeTable={activeTable}
+            tables={tables}
+            onSelectTable={setActiveTable}
+            onOpenCreateTableModal={onOpenCreateTableModal}
+            schemaColumns={schemaColumns}
+            isLoadingSchema={isLoadingSchema}
+            schemaSuccessMsg={schemaSuccessMsg}
+            onAddColumn={handleAddColumn}
+            onDropColumn={handleDropColumn}
+            onAlterColumn={handleAlterColumn}
+            onDropTable={handleDropTable}
+            onTruncateTable={handleTruncateTable}
+            onRefreshSchema={() => fetchTableSchema(activeTable)}
+          />
+        </div>
+      ) : activeTab === 'diagram' ? (
+        <div className="w-full">
+          <SchemaDiagramView
+            project={project}
+            tables={tables}
+            onSelectTable={(tbl) => {
+              setActiveTable(tbl);
+              setActiveTab('grid');
+            }}
+          />
+        </div>
+      ) : activeTab === 'sql' ? (
+        <div className="w-full">
+          <SqlQueryRunner
+            sqlQuery={sqlQuery}
+            onSqlQueryChange={setSqlQuery}
+            onRunQuery={handleRunQuery}
+            isRunningQuery={isRunningQuery}
+            queryResults={queryResults}
+            queryHistory={queryHistory}
+            onApplySnippet={handleApplySnippet}
+          />
+        </div>
+      ) : null}
+
+      {/* Accessible Alert Modal for Database Operations */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        detail={alertState.detail}
+        code={alertState.code}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };
