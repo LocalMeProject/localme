@@ -125,11 +125,11 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                 var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(col.Name);
                 if (cleanCol.Equals("id", StringComparison.OrdinalIgnoreCase)) hasId = true;
 
-                var nullStr = col.IsNullable ? "NULL" : "NOT NULL";
+                var nullStr = col.IsPrimaryKey ? "" : (col.IsNullable ? "NULL" : "NOT NULL");
                 var pkStr = col.IsPrimaryKey ? "PRIMARY KEY" : "";
                 var defStr = string.IsNullOrWhiteSpace(col.DefaultValue) ? "" : $"DEFAULT {col.DefaultValue}";
 
-                defs.Add($@"""{cleanCol}"" {col.DataType} {nullStr} {pkStr} {defStr}".Trim());
+                defs.Add($@"""{cleanCol}"" {col.DataType} {nullStr} {pkStr} {defStr}".Trim().Replace("  ", " "));
             }
 
             if (!hasId)

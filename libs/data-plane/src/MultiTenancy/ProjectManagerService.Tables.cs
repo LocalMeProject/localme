@@ -226,9 +226,19 @@ public sealed partial class ProjectManagerService
         if (TenantDbStore != null)
         {
             var slug = ResolveProjectSlug(projectId);
-            return await TenantDbStore.CreateTableAsync(slug, tableName, columns);
+            var ok = await TenantDbStore.CreateTableAsync(slug, tableName, columns);
+            if (ok)
+            {
+                OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
+            }
+            return ok;
         }
-        return CreateTable(projectId, tableName);
+        var created = CreateTable(projectId, tableName);
+        if (created)
+        {
+            OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
+        }
+        return created;
     }
 
     public bool DeleteTable(string projectId, string tableName)
