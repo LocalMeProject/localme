@@ -68,6 +68,43 @@ public static class SqlAstQueryCompiler
                 continue;
             }
 
+            if (lKey == "or" && val.StartsWith('(') && val.EndsWith(')'))
+            {
+                var rawOrFilters = val[1..^1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var orNodes = new List<QueryFilterNode>();
+                foreach (var rf in rawOrFilters)
+                {
+                    var dotParts = rf.Split('.', 3);
+                    if (dotParts.Length >= 3)
+                    {
+                        var cCol = SanitizeIdentifier(dotParts[0]);
+                        var cOpStr = dotParts[1].ToLowerInvariant();
+                        var cVal = dotParts[2];
+                        var qOp = cOpStr switch
+                        {
+                            "eq" => QueryOperator.Equals,
+                            "neq" => QueryOperator.NotEquals,
+                            "gt" => QueryOperator.GreaterThan,
+                            "gte" => QueryOperator.GreaterThanOrEqual,
+                            "lt" => QueryOperator.LessThan,
+                            "lte" => QueryOperator.LessThanOrEqual,
+                            "like" => QueryOperator.Like,
+                            "ilike" => QueryOperator.ILike,
+                            "cs" => QueryOperator.Contains,
+                            "cd" => QueryOperator.ContainedBy,
+                            "fts" => QueryOperator.TextSearch,
+                            _ => QueryOperator.Equals
+                        };
+                        orNodes.Add(new QueryFilterNode(cCol, qOp, cVal));
+                    }
+                }
+                if (orNodes.Count > 0)
+                {
+                    filters.Add(new QueryFilterNode("or", QueryOperator.OrGroup, orNodes));
+                }
+                continue;
+            }
+
             // PostgREST operator parsing: col=op.value
             if (val.Contains('.'))
             {
@@ -105,6 +142,15 @@ public static class SqlAstQueryCompiler
                     case "in":
                         var items = opVal.Trim('(', ')').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         filters.Add(new QueryFilterNode(cleanCol, QueryOperator.In, items));
+                        break;
+                    case "cs":
+                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Contains, opVal));
+                        break;
+                    case "cd":
+                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.ContainedBy, opVal));
+                        break;
+                    case "fts":
+                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.TextSearch, opVal));
                         break;
                     case "is" when opVal.Equals("null", StringComparison.OrdinalIgnoreCase):
                         filters.Add(new QueryFilterNode(cleanCol, QueryOperator.IsNull, null));
@@ -303,6 +349,86 @@ public static class SqlAstQueryCompiler
                         }
                         if (inClauses.Count > 0)
                             filterClauses.Add($"{col} IN ({string.Join(", ", inClauses)})");
+                        break;
+                    }
+                    case QueryOperator.Contains:
+                    {
+                        var pName = $"@p{paramIdx++}";
+                        filterClauses.Add($"{col} @> {pName}::jsonb");
+                        parameters[pName] = filter.Value?.ToString();
+                        break;
+                    }
+                    case QueryOperator.ContainedBy:
+                    {
+                        var pName = $"@p{paramIdx++}";
+                        filterClauses.Add($"{col} <@ {pName}::jsonb");
+                        parameters[pName] = filter.Value?.ToString();
+                        break;
+                    }
+                    case QueryOperator.TextSearch:
+                    {
+                        var pName = $"@p{paramIdx++}";
+                        filterClauses.Add($"to_tsvector('simple', {col}::text) @@ plainto_tsquery('simple', {pName})");
+                        parameters[pName] = filter.Value?.ToString();
+                        break;
+                    }
+                    case QueryOperator.OrGroup when filter.Value is IEnumerable<QueryFilterNode> orNodes:
+                    {
+                        var subClauses = new List<string>();
+                        foreach (var subNode in orNodes)
+                        {
+                            var sCol = $"\"{subNode.Column}\"";
+                            var pName = $"@p{paramIdx++}";
+                            switch (subNode.Operator)
+                            {
+                                case QueryOperator.Equals:
+                                    subClauses.Add($"{sCol} = {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.NotEquals:
+                                    subClauses.Add($"{sCol} != {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.GreaterThan:
+                                    subClauses.Add($"{sCol} > {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.GreaterThanOrEqual:
+                                    subClauses.Add($"{sCol} >= {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.LessThan:
+                                    subClauses.Add($"{sCol} < {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.LessThanOrEqual:
+                                    subClauses.Add($"{sCol} <= {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.Like:
+                                    subClauses.Add($"{sCol} LIKE {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.ILike:
+                                    subClauses.Add($"{sCol} ILIKE {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.IsNull:
+                                    subClauses.Add($"{sCol} IS NULL");
+                                    break;
+                                case QueryOperator.IsNotNull:
+                                    subClauses.Add($"{sCol} IS NOT NULL");
+                                    break;
+                                default:
+                                    subClauses.Add($"{sCol} = {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                            }
+                        }
+                        if (subClauses.Count > 0)
+                        {
+                            filterClauses.Add($"({string.Join(" OR ", subClauses)})");
+                        }
                         break;
                     }
                 }
