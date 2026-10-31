@@ -644,4 +644,153 @@ public sealed class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             throw;
         }
     }
+
+    public async Task<bool> AddColumnAsync(string projectSlug, string tableName, TableColumnDefinition column, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+        var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(column.Name);
+        var nullability = column.IsNullable ? "NULL" : "NOT NULL";
+        var defaultExpr = !string.IsNullOrWhiteSpace(column.DefaultValue) ? $"DEFAULT {column.DefaultValue}" : "";
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ADD COLUMN ""{cleanCol}"" {column.DataType} {nullability} {defaultExpr};";
+        await cmd.ExecuteNonQueryAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> DropColumnAsync(string projectSlug, string tableName, string columnName, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+        var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(columnName);
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" DROP COLUMN IF EXISTS ""{cleanCol}"" CASCADE;";
+        await cmd.ExecuteNonQueryAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> AlterColumnAsync(string projectSlug, string tableName, string oldColumnName, TableColumnDefinition newColumn, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+        var oldCol = SqlAstQueryCompiler.SanitizeIdentifier(oldColumnName);
+        var newCol = SqlAstQueryCompiler.SanitizeIdentifier(newColumn.Name);
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+
+        // Rename if changed
+        if (!string.Equals(oldCol, newCol, StringComparison.OrdinalIgnoreCase))
+        {
+            await using var cmdRename = conn.CreateCommand();
+            cmdRename.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" RENAME COLUMN ""{oldCol}"" TO ""{newCol}"";";
+            await cmdRename.ExecuteNonQueryAsync(ct);
+        }
+
+        // Alter type if specified
+        if (!string.IsNullOrWhiteSpace(newColumn.DataType))
+        {
+            await using var cmdType = conn.CreateCommand();
+            cmdType.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" TYPE {newColumn.DataType} USING ""{newCol}""::{newColumn.DataType};";
+            await cmdType.ExecuteNonQueryAsync(ct);
+        }
+
+        // Alter nullability
+        await using var cmdNull = conn.CreateCommand();
+        cmdNull.CommandText = newColumn.IsNullable
+            ? $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" DROP NOT NULL;"
+            : $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" SET NOT NULL;";
+        await cmdNull.ExecuteNonQueryAsync(ct);
+
+        return true;
+    }
+
+    public async Task<bool> CreateIndexAsync(string projectSlug, string tableName, string indexName, IReadOnlyList<string> columns, bool isUnique = false, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+        var cleanIdx = SqlAstQueryCompiler.SanitizeIdentifier(indexName);
+        var cleanCols = string.Join(", ", columns.Select(c => $@"""{SqlAstQueryCompiler.SanitizeIdentifier(c)}"""));
+        var unique = isUnique ? "UNIQUE" : "";
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $@"CREATE {unique} INDEX IF NOT EXISTS ""{cleanIdx}"" ON ""{schema}"".""{cleanTable}"" ({cleanCols});";
+        await cmd.ExecuteNonQueryAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> TruncateTableAsync(string projectSlug, string tableName, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $@"TRUNCATE TABLE ""{schema}"".""{cleanTable}"" CASCADE;";
+        await cmd.ExecuteNonQueryAsync(ct);
+        return true;
+    }
+
+    public async Task<IReadOnlyList<TablePolicyDefinition>> GetPoliciesAsync(string projectSlug, string tableName, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT policyname, tablename, cmd, roles, qual, with_check
+            FROM pg_policies
+            WHERE schemaname = @schema AND tablename = @table;";
+        cmd.Parameters.AddWithValue("schema", schema);
+        cmd.Parameters.AddWithValue("table", cleanTable);
+
+        var list = new List<TablePolicyDefinition>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var pName = reader.GetString(0);
+            var tName = reader.GetString(1);
+            var pCmd = reader.GetString(2);
+            var pRoles = reader.IsDBNull(3) ? "public" : string.Join(", ", (string[])reader.GetValue(3));
+            var pQual = reader.IsDBNull(4) ? "true" : reader.GetString(4);
+            var pCheck = reader.IsDBNull(5) ? null : reader.GetString(5);
+
+            list.Add(new TablePolicyDefinition(pName, tName, pCmd, pRoles, pQual, pCheck));
+        }
+        return list;
+    }
+
+    public async Task<bool> CreatePolicyAsync(string projectSlug, string tableName, TablePolicyDefinition policy, CancellationToken ct = default)
+    {
+        var schema = GetSchemaName(projectSlug);
+        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
+        var cleanPolicy = SqlAstQueryCompiler.SanitizeIdentifier(policy.Name);
+        var cmd = policy.Command.ToUpperInvariant();
+        var usingClause = !string.IsNullOrWhiteSpace(policy.UsingExpression) ? $"USING ({policy.UsingExpression})" : "";
+        var checkClause = !string.IsNullOrWhiteSpace(policy.CheckExpression) ? $"WITH CHECK ({policy.CheckExpression})" : "";
+
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+
+        // Ensure RLS enabled on table
+        await using var enableCmd = conn.CreateCommand();
+        enableCmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ENABLE ROW LEVEL SECURITY;";
+        await enableCmd.ExecuteNonQueryAsync(ct);
+
+        // Create policy
+        await using var polCmd = conn.CreateCommand();
+        polCmd.CommandText = $@"
+            DROP POLICY IF EXISTS ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}"";
+            CREATE POLICY ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}""
+            FOR {cmd}
+            TO {policy.Roles}
+            {usingClause}
+            {checkClause};";
+        await polCmd.ExecuteNonQueryAsync(ct);
+        return true;
+    }
 }

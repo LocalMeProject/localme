@@ -22,4 +22,11 @@ public interface ITenantDatabaseStore
     Task<long> GetSchemaSizeBytesAsync(string projectSlug, CancellationToken ct = default);
     Task<JsonObject> ExportTenantDataAsync(string projectSlug, CancellationToken ct = default);
     Task<bool> RestoreTenantDataAsync(string projectSlug, JsonObject snapshotData, CancellationToken ct = default);
+    Task<bool> AddColumnAsync(string projectSlug, string tableName, TableColumnDefinition column, CancellationToken ct = default);
+    Task<bool> DropColumnAsync(string projectSlug, string tableName, string columnName, CancellationToken ct = default);
+    Task<bool> AlterColumnAsync(string projectSlug, string tableName, string oldColumnName, TableColumnDefinition newColumn, CancellationToken ct = default);
+    Task<bool> CreateIndexAsync(string projectSlug, string tableName, string indexName, IReadOnlyList<string> columns, bool isUnique = false, CancellationToken ct = default);
+    Task<bool> TruncateTableAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<IReadOnlyList<TablePolicyDefinition>> GetPoliciesAsync(string projectSlug, string tableName, CancellationToken ct = default);
+    Task<bool> CreatePolicyAsync(string projectSlug, string tableName, TablePolicyDefinition policy, CancellationToken ct = default);
 }
