@@ -12,7 +12,7 @@ import { SchemaDesigner } from './database/SchemaDesigner';
 import { SqlQueryRunner } from './database/SqlQueryRunner';
 import { SchemaDiagramView } from './database/SchemaDiagramView';
 import { DatabaseBackupsView } from './database/DatabaseBackupsView';
-import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { AlertModal } from '../components/modals/AlertModal';
 
 interface DatabaseViewProps {
   project: Project;
@@ -21,14 +21,6 @@ interface DatabaseViewProps {
   onSubViewChange?: (subView: string) => void;
   lastCreatedTable?: string | null;
   tableRefreshTrigger?: number;
-}
-
-export interface SnapshotItem {
-  id: string;
-  type: string;
-  sizeBytes: number;
-  status: string;
-  createdAtUtc: string;
 }
 
 type StudioTab = 'grid' | 'schema' | 'diagram' | 'sql' | 'backups';
@@ -53,15 +45,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     else if (activeSubView === 'backups') setActiveTab('backups');
     else if (activeSubView === 'grid') setActiveTab('grid');
   }, [activeSubView]);
-
-  // Snapshots / Backup State
-  const [snapshots, setSnapshots] = useState<SnapshotItem[]>([]);
-  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
-  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
-  const [restoringSnapshotId, setRestoringSnapshotId] = useState<string | null>(null);
-  const [snapshotToRestore, setSnapshotToRestore] = useState<string | null>(null);
-  const [backupMessage, setBackupMessage] = useState<string | null>(null);
-  const [backupError, setBackupError] = useState<string | null>(null);
 
   // Table Data Grid State
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
@@ -92,77 +75,23 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [isRunningQuery, setIsRunningQuery] = useState(false);
   const [queryHistory] = useState<DatabaseQueryHistoryItem[]>([]);
 
-  const fetchSnapshots = useCallback(async () => {
-    setIsLoadingSnapshots(true);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`);
-      if (res.ok) {
-        const data = await res.json();
-        setSnapshots(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Failed to load snapshots:', err);
-    } finally {
-      setIsLoadingSnapshots(false);
-    }
-  }, [project.slug]);
+  // Accessible Alert Modal for error / investigation reporting
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    detail?: string;
+    code?: string;
+    type: 'error' | 'success' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
-  useEffect(() => {
-    if (activeTab === 'backups') {
-      fetchSnapshots();
-    }
-  }, [activeTab, fetchSnapshots]);
-
-  const handleCreateSnapshot = async () => {
-    setIsCreatingSnapshot(true);
-    setBackupMessage(null);
-    setBackupError(null);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'دستی فوری' }),
-      });
-      if (res.ok) {
-        setBackupMessage('اسنپ‌شات جدید با موفقیت ایجاد گردید.');
-        await fetchSnapshots();
-      } else {
-        const err = await res.json();
-        setBackupError(err.error || 'خطا در ایجاد اسنپ‌شات');
-      }
-    } catch (err) {
-      setBackupError(String(err));
-    } finally {
-      setIsCreatingSnapshot(false);
-    }
-  };
-
-  const handleRestoreSnapshot = (snapshotId: string) => {
-    setSnapshotToRestore(snapshotId);
-  };
-
-  const executeRestoreSnapshot = async (snapshotId: string) => {
-    setSnapshotToRestore(null);
-    setRestoringSnapshotId(snapshotId);
-    setBackupMessage(null);
-    setBackupError(null);
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/db/snapshots/${snapshotId}/restore`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        setBackupMessage(`اسنپ‌شات ${snapshotId} با موفقیت بازیابی شد.`);
-        await fetchTables();
-        await fetchSnapshots();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        setBackupError(err.error || 'خطا در بازیابی اسنپ‌شات');
-      }
-    } catch (err) {
-      setBackupError(String(err));
-    } finally {
-      setRestoringSnapshotId(null);
-    }
+  const showAlert = (title: string, message: string, detail?: string, code?: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setAlertState({ isOpen: true, title, message, detail, code, type });
   };
 
   // Load Tables
@@ -270,11 +199,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.text();
-      alert(`خطا در ویرایش رکورد: ${err}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در ویرایش رکورد', err?.error || 'ویرایش رکورد در پایگاه داده ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا در ارتباط با سرور: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'برقراری ارتباط با سرور ناموفق بود.', String(err));
       return false;
     }
   };
@@ -289,11 +218,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در حذف ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در حذف ستون', err?.error || 'حذف ستون از جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف ستون.', String(err));
       return false;
     }
   };
@@ -315,11 +244,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(activeTable, currentPage);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در تغییر ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در تغییر ستون', err?.error || 'تغییر مشخصات ستون ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در تغییر ستون.', String(err));
       return false;
     }
   };
@@ -333,11 +262,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         await fetchTables();
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در حذف جدول: ${err.error || 'ناموفق'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در حذف جدول', err?.error || 'حذف جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف جدول.', String(err));
       return false;
     }
   };
@@ -351,11 +280,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         fetchTableData(tableName, 1);
         return true;
       }
-      const err = await res.json();
-      alert(`خطا در پاکسازی جدول: ${err.error || 'ناموفق'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در پاکسازی جدول', err?.error || 'پاکسازی جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در پاکسازی جدول.', String(err));
       return false;
     }
   };
@@ -490,11 +419,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         setTimeout(() => setSchemaSuccessMsg(null), 3000);
         return true;
       }
-      const err = await res.json().catch(() => ({}));
-      alert(`خطا در افزودن ستون: ${err.error || 'عملیات ناموفق بود'}`);
+      const err = await res.json().catch(() => null);
+      showAlert('خطا در افزودن ستون', err?.error || 'افزودن ستون به جدول ناموفق بود.', err?.detail, err?.code);
       return false;
     } catch (err) {
-      alert(`خطا: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در افزودن ستون.', String(err));
       return false;
     }
   };
@@ -508,34 +437,43 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       if (res.ok) {
         setTableRows((prev) => prev.filter((r) => String(r.id) !== String(rowId)));
       } else {
-        const err = await res.json().catch(() => ({}));
-        alert(`حذف رکورد با خطا مواجه شد: ${err.error || res.statusText}`);
+        const err = await res.json().catch(() => null);
+        showAlert('خطا در حذف رکورد', err?.error || 'حذف سطر از جدول با خطا مواجه شد.', err?.detail, err?.code);
       }
     } catch (err) {
-      alert(`خطا در حذف رکورد: ${String(err)}`);
+      showAlert('خطای ارتباط با سرور', 'خطا در حذف رکورد.', String(err));
     }
   };
 
-  // Insert Row
-  const handleInsertRow = async (jsonText: string): Promise<boolean> => {
+  // Insert Record via structured form or json
+  const handleInsertRecord = async (
+    recordData: Record<string, unknown>
+  ): Promise<{ success: boolean; error?: string; code?: string; detail?: string }> => {
     try {
-      const parsed = JSON.parse(jsonText);
       const res = await fetch(`/_baas/v1/${project.slug}/rest/${activeTable}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(recordData),
       });
 
       if (res.ok) {
-        fetchTableData(activeTable);
-        return true;
+        fetchTableData(activeTable, 1);
+        return { success: true };
       }
-      const err = await res.text();
-      alert(`خطا در ثبت رکورد: ${err}`);
-      return false;
+
+      const body = await res.json().catch(() => null);
+      return {
+        success: false,
+        error: body?.error || 'خطا در ثبت رکورد در پایگاه داده',
+        code: body?.code,
+        detail: body?.detail,
+      };
     } catch (err) {
-      alert(`فرمت JSON نامعتبر است: ${String(err)}`);
-      return false;
+      return {
+        success: false,
+        error: 'خطا در برقراری ارتباط با سرور',
+        detail: String(err),
+      };
     }
   };
 
@@ -635,15 +573,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       {activeTab === 'backups' ? (
         <DatabaseBackupsView
           projectSlug={project.slug}
-          snapshots={snapshots}
-          isLoadingSnapshots={isLoadingSnapshots}
-          isCreatingSnapshot={isCreatingSnapshot}
-          restoringSnapshotId={restoringSnapshotId}
-          backupMessage={backupMessage}
-          backupError={backupError}
-          onFetchSnapshots={fetchSnapshots}
-          onCreateSnapshot={handleCreateSnapshot}
-          onRestoreSnapshot={handleRestoreSnapshot}
+          onRestoreCompleted={fetchTables}
         />
       ) : activeTab === 'grid' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -694,6 +624,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             <TableDataGrid
               activeTable={activeTable}
               tableColumns={tableColumns}
+              schemaColumns={schemaColumns}
               filteredRows={filteredRows}
               filterQuery={filterQuery}
               onFilterQueryChange={setFilterQuery}
@@ -701,7 +632,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               gridError={gridError}
               onRefresh={() => fetchTableData(activeTable)}
               onDeleteRow={handleDeleteRow}
-              onInsertRow={handleInsertRow}
+              onInsertRecord={handleInsertRecord}
               onUpdateRow={handleUpdateRow}
               currentPage={currentPage}
               pageSize={pageSize}
@@ -757,19 +688,15 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         </div>
       ) : null}
 
-      {/* Accessible Confirm Modal for Snapshot Restore */}
-      <ConfirmModal
-        isOpen={Boolean(snapshotToRestore)}
-        title="بازیابی اسنپ‌شات پایگاه داده"
-        message={`آیا از بازیابی اسنپ‌شات "${snapshotToRestore}" اطمینان دارید؟ تمامی داده‌های فعلی پایگاه داده بازنویسی خواهند شد.`}
-        confirmLabel="بازیابی اطلاعات"
-        isDanger={true}
-        onConfirm={() => {
-          if (snapshotToRestore) {
-            executeRestoreSnapshot(snapshotToRestore);
-          }
-        }}
-        onCancel={() => setSnapshotToRestore(null)}
+      {/* Accessible Alert Modal for Database Operations */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        detail={alertState.detail}
+        code={alertState.code}
+        type={alertState.type}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

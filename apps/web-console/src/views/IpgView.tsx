@@ -26,6 +26,7 @@ export const IpgView: React.FC<IpgViewProps> = ({
   const [isSandbox, setIsSandbox] = useState(true);
   const [merchantId, setMerchantId] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoadingTx, setIsLoadingTx] = useState(false);
 
   // Simulator State
@@ -90,6 +91,7 @@ export const IpgView: React.FC<IpgViewProps> = ({
   // Real API: Save Config
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
     try {
       const res = await fetch(`/_baas/v1/${project.slug}/ipg/config`, {
         method: 'POST',
@@ -103,9 +105,12 @@ export const IpgView: React.FC<IpgViewProps> = ({
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        const err = await res.json().catch(() => null);
+        setSaveError(err?.error || 'خطا در ذخیره تنظیمات درگاه.');
       }
     } catch {
-      alert('خطا در ذخیره تنظیمات درگاه.');
+      setSaveError('خطا در برقراری ارتباط با سرور جهت ذخیره تنظیمات.');
     }
   };
 
@@ -236,6 +241,11 @@ export const IpgView: React.FC<IpgViewProps> = ({
             {saveSuccess && (
               <span className="text-xs text-emerald-700 font-medium mr-3">
                 تنظیمات با موفقیت ذخیره گردید.
+              </span>
+            )}
+            {saveError && (
+              <span className="text-xs text-rose-600 font-medium mr-3">
+                {saveError}
               </span>
             )}
           </form>

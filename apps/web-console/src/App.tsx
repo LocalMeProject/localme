@@ -28,6 +28,7 @@ import { CreateBucketModal } from './components/modals/CreateBucketModal';
 import { AddUserModal } from './components/modals/AddUserModal';
 import { AddDomainModal } from './components/modals/AddDomainModal';
 import { TopupModal } from './components/modals/TopupModal';
+import { ConfirmModal } from './components/modals/ConfirmModal';
 
 const DEFAULT_PROJECTS: Project[] = [];
 
@@ -114,6 +115,7 @@ export default function App() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddDomainOpen, setIsAddDomainOpen] = useState(false);
   const [isTopupOpen, setIsTopupOpen] = useState(false);
+  const [isConfirmDeleteProjectOpen, setIsConfirmDeleteProjectOpen] = useState(false);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -424,13 +426,18 @@ export default function App() {
   };
 
   // Real API: Delete Project
-  const handleDeleteProject = async () => {
+  const handleDeleteProject = () => {
     if (projects.length <= 1) {
       showToast('خطا: حذف تنها پروژه فعال مجاز نمی‌باشد.');
       return;
     }
     if (!currentProject) return;
-    if (!confirm(`آیا از حذف کامل پروژه «${currentProject.name}» اطمینان دارید؟`)) return;
+    setIsConfirmDeleteProjectOpen(true);
+  };
+
+  const executeDeleteProject = async () => {
+    setIsConfirmDeleteProjectOpen(false);
+    if (!currentProject) return;
 
     try {
       const res = await fetch(`/_baas/v1/projects/${currentProject.slug}`, {
@@ -683,6 +690,18 @@ export default function App() {
         isOpen={isTopupOpen}
         onClose={() => setIsTopupOpen(false)}
         onTopup={handleTopup}
+      />
+
+      {/* Accessible Confirm Modal for Project Deletion */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteProjectOpen}
+        title="حذف کامل پروژه"
+        message={`آیا از حذف کامل پروژه «${currentProject?.name}» اطمینان دارید؟ تمامی داده‌ها، اسکیماها، فایل‌ها و توابع این پروژه برای همیشه نابود خواهند شد.`}
+        confirmLabel="حذف دائم پروژه"
+        isDanger={true}
+        requiredConfirmationText={currentProject?.slug}
+        onConfirm={executeDeleteProject}
+        onCancel={() => setIsConfirmDeleteProjectOpen(false)}
       />
     </div>
   );
