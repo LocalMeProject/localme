@@ -104,7 +104,6 @@ public class Program
         builder.Services.AddSingleton<OtpAuthService>();
         builder.Services.AddSingleton<InternalServiceBridge>();
         builder.Services.AddSingleton<CaptchaService>();
-        builder.Services.AddSingleton<DynamicSqlHandler>();
         builder.Services.AddSingleton<JintScriptHost>();
         builder.Services.AddSingleton<PushNotificationService>();
         builder.Services.AddSingleton<MobileIapService>();
