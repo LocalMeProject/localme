@@ -1974,6 +1974,461 @@
         }
       }
     },
+    "/_baas/v1/{projectId}/rest/{table}/batch": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Insert multiple records in a single transactional batch",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Batch inserted records"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/realtime": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Subscribe to real-time CDC server-sent events for table changes",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Text event stream of table mutations",
+            "content": {
+              "text/event-stream": {}
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/snapshots": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List automated and manual point-in-time snapshots (3-day retention)",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of snapshot metadata"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Trigger an immediate point-in-time snapshot",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot successfully generated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/snapshots/{id}/download": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Stream and download snapshot SQL dump file",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot SQL dump stream",
+            "content": {
+              "application/sql": {}
+            }
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/snapshots/{id}/restore": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Restore tenant database to point-in-time snapshot state",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Database restoration complete"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/columns": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Add column to tenant schema table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column added"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/columns/{column}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Drop column from tenant schema table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "column",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column dropped"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Alter column in tenant schema table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "column",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column altered"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/indexes": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Create index on tenant table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Index created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/truncate": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Truncate table records",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table truncated"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/policies": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "List RLS policies for table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of RLS policies"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Create RLS policy on table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy created"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/{table}/policies/{policyName}": {
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Delete RLS policy from table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "policyName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy deleted"
+          }
+        }
+      }
+    },
     "/_baas/v1/{projectId}/storage/buckets": {
       "get": {
         "tags": [
