@@ -41,6 +41,7 @@ public static class BaasDatabaseSchemaRoutes
             try
             {
                 var created = await pm.CreateTableAsync(projectId, name, colDefs);
+                if (created) GatewayCacheMiddleware.InvalidateTag($"{projectId}:{name}");
                 return created ? Results.Ok(new { success = true, table = name }) : Results.Conflict(new { error = "جدول با این نام قبلاً ایجاد شده یا خطایی رخ داد" });
             }
             catch (Exception ex)
@@ -56,6 +57,7 @@ public static class BaasDatabaseSchemaRoutes
             try
             {
                 var removed = await pm.DeleteTableAsync(projectId, table);
+                if (removed) GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                 return removed ? Results.Ok(new { success = true, table }) : Results.NotFound(new { error = "جدول یافت نشد" });
             }
             catch (Exception ex)
@@ -75,6 +77,7 @@ public static class BaasDatabaseSchemaRoutes
             try
             {
                 var ok = await pm.AddColumnAsync(projectId, table, new TableColumnDefinition(name, dataType, false, isNullable, defaultValue));
+                if (ok) GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                 return ok ? Results.Ok(new { success = true, column = name }) : Results.BadRequest(new { error = "افزودن ستون ناموفق بود" });
             }
             catch (Exception ex)
@@ -90,6 +93,7 @@ public static class BaasDatabaseSchemaRoutes
             try
             {
                 var ok = await pm.DropColumnAsync(projectId, table, column);
+                if (ok) GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                 return ok ? Results.Ok(new { success = true, column }) : Results.NotFound(new { error = "حذف ستون ناموفق بود" });
             }
             catch (Exception ex)
@@ -109,6 +113,7 @@ public static class BaasDatabaseSchemaRoutes
             try
             {
                 var ok = await pm.AlterColumnAsync(projectId, table, column, new TableColumnDefinition(newName, dataType, false, isNullable, defaultValue));
+                if (ok) GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                 return ok ? Results.Ok(new { success = true, column = newName }) : Results.BadRequest(new { error = "تغییر ستون ناموفق بود" });
             }
             catch (Exception ex)

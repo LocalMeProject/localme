@@ -58,7 +58,7 @@ public static class SqlAstQueryCompiler
 
             if (lKey == "limit" && int.TryParse(val, out var parsedLimit))
             {
-                limit = Math.Clamp(parsedLimit, 1, 500);
+                limit = Math.Clamp(parsedLimit, 1, 10000);
                 continue;
             }
 
@@ -105,43 +105,52 @@ public static class SqlAstQueryCompiler
                 continue;
             }
 
-            // PostgREST operator parsing: col=op.value
+            // PostgREST operator parsing: col=op.value or col=not.op.value
             if (val.Contains('.'))
             {
                 var dotIdx = val.IndexOf('.');
                 var opPrefix = val[..dotIdx].ToLowerInvariant();
                 var opVal = val[(dotIdx + 1)..];
 
+                var isNegated = false;
+                if (opPrefix == "not" && opVal.Contains('.'))
+                {
+                    isNegated = true;
+                    var nextDot = opVal.IndexOf('.');
+                    opPrefix = opVal[..nextDot].ToLowerInvariant();
+                    opVal = opVal[(nextDot + 1)..];
+                }
+
                 var cleanCol = SanitizeIdentifier(lKey);
                 switch (opPrefix)
                 {
                     case "eq":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Equals, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotEquals : QueryOperator.Equals, opVal));
                         break;
                     case "neq":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.NotEquals, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.Equals : QueryOperator.NotEquals, opVal));
                         break;
                     case "gt":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.GreaterThan, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThanOrEqual : QueryOperator.GreaterThan, opVal));
                         break;
                     case "gte":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.GreaterThanOrEqual, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThan : QueryOperator.GreaterThanOrEqual, opVal));
                         break;
                     case "lt":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.LessThan, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThanOrEqual : QueryOperator.LessThan, opVal));
                         break;
                     case "lte":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.LessThanOrEqual, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThan : QueryOperator.LessThanOrEqual, opVal));
                         break;
                     case "like":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Like, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotLike : QueryOperator.Like, opVal));
                         break;
                     case "ilike":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.ILike, opVal));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotILike : QueryOperator.ILike, opVal));
                         break;
                     case "in":
                         var items = opVal.Trim('(', ')').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.In, items));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotIn : QueryOperator.In, items));
                         break;
                     case "cs":
                         filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Contains, opVal));
@@ -153,10 +162,10 @@ public static class SqlAstQueryCompiler
                         filters.Add(new QueryFilterNode(cleanCol, QueryOperator.TextSearch, opVal));
                         break;
                     case "is" when opVal.Equals("null", StringComparison.OrdinalIgnoreCase):
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.IsNull, null));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNotNull : QueryOperator.IsNull, null));
                         break;
                     case "is" when opVal.Equals("not_null", StringComparison.OrdinalIgnoreCase):
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.IsNotNull, null));
+                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNull : QueryOperator.IsNotNull, null));
                         break;
                     default:
                         filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Equals, val));
@@ -213,12 +222,15 @@ public static class SqlAstQueryCompiler
                             "lte" => QueryOperator.LessThanOrEqual,
                             "like" => QueryOperator.Like,
                             "ilike" => QueryOperator.ILike,
-                            "in" when opValNode is JsonArray arr => QueryOperator.In,
+                            "not_like" => QueryOperator.NotLike,
+                            "not_ilike" => QueryOperator.NotILike,
+                            "in" when opValNode is JsonArray => QueryOperator.In,
+                            "not_in" when opValNode is JsonArray => QueryOperator.NotIn,
                             "is_null" => QueryOperator.IsNull,
                             "is_not_null" => QueryOperator.IsNotNull,
                             _ => QueryOperator.Equals
                         };
-                        object? val = qOp == QueryOperator.In && opValNode is JsonArray inArr
+                        object? val = (qOp is QueryOperator.In or QueryOperator.NotIn) && opValNode is JsonArray inArr
                             ? inArr.Select(x => x?.ToString() ?? "").ToArray()
                             : opVal;
                         filters.Add(new QueryFilterNode(cleanCol, qOp, val));
@@ -249,7 +261,7 @@ public static class SqlAstQueryCompiler
         var limit = json["limit"]?.GetValue<int>() ?? 50;
         var offset = json["offset"]?.GetValue<int>() ?? 0;
 
-        return new SqlAstQuery(selectCols, filters, orderBy, orderAsc, Math.Clamp(limit, 1, 500), Math.Max(0, offset));
+        return new SqlAstQuery(selectCols, filters, orderBy, orderAsc, Math.Clamp(limit, 1, 10000), Math.Max(0, offset));
     }
 
     public static (string Sql, Dictionary<string, object?> Parameters) CompileToParameterizedSql(string tableName, SqlAstQuery query)
@@ -332,6 +344,20 @@ public static class SqlAstQueryCompiler
                         parameters[pName] = filter.Value;
                         break;
                     }
+                    case QueryOperator.NotLike:
+                    {
+                        var pName = $"@p{paramIdx++}";
+                        filterClauses.Add($"{col} NOT LIKE {pName}");
+                        parameters[pName] = filter.Value;
+                        break;
+                    }
+                    case QueryOperator.NotILike:
+                    {
+                        var pName = $"@p{paramIdx++}";
+                        filterClauses.Add($"{col} NOT ILIKE {pName}");
+                        parameters[pName] = filter.Value;
+                        break;
+                    }
                     case QueryOperator.IsNull:
                         filterClauses.Add($"{col} IS NULL");
                         break;
@@ -349,6 +375,23 @@ public static class SqlAstQueryCompiler
                         }
                         if (inClauses.Count > 0)
                             filterClauses.Add($"{col} IN ({string.Join(", ", inClauses)})");
+                        else
+                            filterClauses.Add("1=0");
+                        break;
+                    }
+                    case QueryOperator.NotIn when filter.Value is System.Collections.IEnumerable inValues and not string:
+                    {
+                        var inClauses = new List<string>();
+                        foreach (var inVal in inValues)
+                        {
+                            var inParam = $"@p{paramIdx++}";
+                            inClauses.Add(inParam);
+                            parameters[inParam] = inVal?.ToString();
+                        }
+                        if (inClauses.Count > 0)
+                            filterClauses.Add($"{col} NOT IN ({string.Join(", ", inClauses)})");
+                        else
+                            filterClauses.Add("1=1");
                         break;
                     }
                     case QueryOperator.Contains:
@@ -411,6 +454,14 @@ public static class SqlAstQueryCompiler
                                     break;
                                 case QueryOperator.ILike:
                                     subClauses.Add($"{sCol} ILIKE {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.NotLike:
+                                    subClauses.Add($"{sCol} NOT LIKE {pName}");
+                                    parameters[pName] = subNode.Value;
+                                    break;
+                                case QueryOperator.NotILike:
+                                    subClauses.Add($"{sCol} NOT ILIKE {pName}");
                                     parameters[pName] = subNode.Value;
                                     break;
                                 case QueryOperator.IsNull:

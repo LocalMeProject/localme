@@ -83,6 +83,21 @@ public sealed partial class PostgreSqlTenantSchemaStore
 
         try
         {
+            await using (var roleCmd = conn.CreateCommand())
+            {
+                roleCmd.Transaction = tx;
+                try
+                {
+                    roleCmd.CommandText = "SET LOCAL session_replication_role = 'replica';";
+                    await roleCmd.ExecuteNonQueryAsync(ct);
+                }
+                catch
+                {
+                    roleCmd.CommandText = "SET CONSTRAINTS ALL DEFERRED;";
+                    try { await roleCmd.ExecuteNonQueryAsync(ct); } catch { /* fallback */ }
+                }
+            }
+
             foreach (var (tblName, tableDataNode) in tablesObj)
             {
                 var cleanTbl = SqlAstQueryCompiler.SanitizeIdentifier(tblName);
@@ -136,7 +151,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
                             {
                                 var colsList = new List<string>();
                                 var paramList = new List<string>();
-                                var paramMap = new Dictionary<string, object?>();
+                                var paramBindings = new List<(string ParamName, object? Value, string DataType)>();
                                 var pIdx = 0;
 
                                 foreach (var (k, v) in rowData)
@@ -146,7 +161,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
                                     var p = $"@p{pIdx++}";
                                     paramList.Add(p);
                                     var dt = activeColMap.TryGetValue(cleanCol, out var d) ? d : "text";
-                                    paramMap[p] = ConvertToTypedValue(v?.ToString(), dt);
+                                    paramBindings.Add((p, v, dt));
                                 }
 
                                 if (colsList.Count > 0)
@@ -156,9 +171,12 @@ public sealed partial class PostgreSqlTenantSchemaStore
                                     insCmd.CommandText = $@"
                                         INSERT INTO ""{schema}"".""{cleanTbl}"" ({string.Join(", ", colsList)})
                                         VALUES ({string.Join(", ", paramList)});";
-                                    foreach (var (pk, pv) in paramMap)
+                                    foreach (var (pk, pv, pdt) in paramBindings)
                                     {
-                                        insCmd.Parameters.AddWithValue(pk, pv ?? DBNull.Value);
+                                        var pParam = insCmd.CreateParameter();
+                                        pParam.ParameterName = pk;
+                                        PostgreSqlValueConverter.BindParameter(pParam, pv, pdt);
+                                        insCmd.Parameters.Add(pParam);
                                     }
                                     await insCmd.ExecuteNonQueryAsync(ct);
                                 }

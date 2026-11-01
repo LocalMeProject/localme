@@ -104,6 +104,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
             ON UPDATE {onUpdate};";
 
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 
@@ -118,6 +119,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" DROP CONSTRAINT IF EXISTS ""{cleanConstraint}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 }

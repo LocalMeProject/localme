@@ -1,3 +1,18 @@
+async function handleFetchError(res: Response, defaultMsg: string): Promise<never> {
+  let errBody: Record<string, unknown> | null = null;
+  try {
+    errBody = (await res.json()) as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+  const msg = (errBody?.error as string) || (errBody?.detail as string) || `${defaultMsg}: ${res.status}`;
+  const error = new Error(msg) as Error & { status?: number; code?: string; detail?: string };
+  error.status = res.status;
+  error.code = errBody?.code as string | undefined;
+  error.detail = errBody?.detail as string | undefined;
+  throw error;
+}
+
 /**
  * Relational Database Query Builder (PostgREST style).
  */
@@ -113,7 +128,7 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     const search = new URLSearchParams(params).toString();
     const url = `${this.baseUrl}/_baas/v1/${this.projectSlug}/rest/${this.table}${search ? `?${search}` : ''}`;
     const res = await fetch(url, { headers: this.headers });
-    if (!res.ok) throw new Error(`Count failed: ${res.status}`);
+    if (!res.ok) await handleFetchError(res, 'Count failed');
     const countHeader = res.headers.get('X-Total-Count');
     if (countHeader) return Number(countHeader);
     const rows = (await res.json()) as unknown[];
@@ -124,7 +139,7 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
     const search = new URLSearchParams(this.queryParams).toString();
     const url = `${this.baseUrl}/_baas/v1/${this.projectSlug}/rest/${this.table}${search ? `?${search}` : ''}`;
     const res = await fetch(url, { headers: this.headers });
-    if (!res.ok) throw new Error(`Query failed: ${res.status}`);
+    if (!res.ok) await handleFetchError(res, 'Query failed');
     return (await res.json()) as T[];
   }
 
@@ -183,7 +198,7 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
       headers: this.headers,
       body: JSON.stringify(record),
     });
-    if (!res.ok) throw new Error(`Insert failed: ${res.status}`);
+    if (!res.ok) await handleFetchError(res, 'Insert failed');
     return (await res.json()) as T;
   }
 
@@ -199,7 +214,7 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
         headers: this.headers,
         body: JSON.stringify(chunk),
       });
-      if (!res.ok) throw new Error(`Batch insert failed: ${res.status}`);
+      if (!res.ok) await handleFetchError(res, 'Batch insert failed');
       const inserted = (await res.json()) as T[];
       results.push(...inserted);
     }
@@ -210,13 +225,14 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
   public update(patch: Partial<T>) {
     const { baseUrl, projectSlug, table, headers } = this;
     return {
-      async match(filter: { id: string | number }): Promise<T> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(filter.id))}`, {
+      async match(filter: Record<string, unknown> | { id: string | number }): Promise<T> {
+        const rowId = 'id' in filter ? filter.id : Object.values(filter)[0];
+        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(rowId))}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify(patch),
         });
-        if (!res.ok) throw new Error(`Update failed: ${res.status}`);
+        if (!res.ok) await handleFetchError(res, 'Update failed');
         return (await res.json()) as T;
       },
     };
@@ -229,7 +245,7 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
       headers: this.headers,
       body: JSON.stringify(record),
     });
-    if (!res.ok) throw new Error(`Upsert failed: ${res.status}`);
+    if (!res.ok) await handleFetchError(res, 'Upsert failed');
     return (await res.json()) as T;
   }
 
@@ -241,17 +257,18 @@ export class TableQueryBuilder<T = Record<string, unknown>> {
           method: 'DELETE',
           headers,
         });
-        if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+        if (!res.ok) await handleFetchError(res, 'Delete failed');
         return (await res.json()) as { success: boolean; rowId: string };
       })();
     }
     return {
-      async match(filter: { id: string | number }): Promise<{ success: boolean; rowId: string }> {
-        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(filter.id))}`, {
+      async match(filter: Record<string, unknown> | { id: string | number }): Promise<{ success: boolean; rowId: string }> {
+        const targetId = 'id' in filter ? filter.id : Object.values(filter)[0];
+        const res = await fetch(`${baseUrl}/_baas/v1/${projectSlug}/rest/${table}/${encodeURIComponent(String(targetId))}`, {
           method: 'DELETE',
           headers,
         });
-        if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+        if (!res.ok) await handleFetchError(res, 'Delete failed');
         return (await res.json()) as { success: boolean; rowId: string };
       },
     };

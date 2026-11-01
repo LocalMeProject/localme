@@ -11,10 +11,18 @@ using System.Text.RegularExpressions;
 /// </summary>
 public static class SqlGuardrailValidator
 {
-    private static readonly HashSet<string> ForbiddenDdlTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CREATE", "ALTER", "DROP", "TRUNCATE", "RENAME", "GRANT", "REVOKE", "COMMENT", "VACUUM", "REINDEX"
-    };
+    private static readonly (string Pattern, string Token)[] ForbiddenDdlChecks =
+    [
+        (@"\bCREATE\b", "CREATE"),
+        (@"\bALTER\b", "ALTER"),
+        (@"\bDROP\b", "DROP"),
+        (@"\bTRUNCATE\b", "TRUNCATE"),
+        (@"\bGRANT\b", "GRANT"),
+        (@"\bREVOKE\b", "REVOKE"),
+        (@"\bCOMMENT\s+ON\b", "COMMENT ON"),
+        (@"\bVACUUM\b", "VACUUM"),
+        (@"\bREINDEX\b", "REINDEX")
+    ];
 
     private static readonly string[] DangerousPatterns =
     [
@@ -33,6 +41,23 @@ public static class SqlGuardrailValidator
     ];
 
     /// <summary>
+    /// Strips comments and string literals so that keyword scanning does not trigger false positives
+    /// on legitimate text data or developer notes.
+    /// </summary>
+    public static string StripCommentsAndLiterals(string sql)
+    {
+        // 1. Strip block comments /* ... */
+        var s = Regex.Replace(sql, @"/\*.*?\*/", " ", RegexOptions.Singleline);
+        // 2. Strip line comments -- ...
+        s = Regex.Replace(s, @"--[^\r\n]*", " ");
+        // 3. Strip dollar-quoted strings: $tag$...$tag$ or $$...$$
+        s = Regex.Replace(s, @"\$([a-zA-Z0-9_]*)\$.*?\$\1\$", "''", RegexOptions.Singleline);
+        // 4. Strip standard single-quoted string literals: '...' (supporting escaped '' or \')
+        s = Regex.Replace(s, @"'(''|\\'|[^'])*'", "''");
+        return s;
+    }
+
+    /// <summary>
     /// Validates that the provided SQL statement is strictly read/write DML or plan inspection,
     /// and contains zero DDL, privilege tampering, or operating system escape attempts.
     /// </summary>
@@ -43,13 +68,12 @@ public static class SqlGuardrailValidator
             return (false, "دستور SQL نمی‌تواند خالی باشد.");
         }
 
-        var clean = sql.Trim();
+        var sanitized = StripCommentsAndLiterals(sql);
 
         // 1. Check for Forbidden DDL Tokens
-        foreach (var token in ForbiddenDdlTokens)
+        foreach (var (pattern, token) in ForbiddenDdlChecks)
         {
-            var pattern = $@"\b{token}\b";
-            if (Regex.IsMatch(clean, pattern, RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(sanitized, pattern, RegexOptions.IgnoreCase))
             {
                 return (false, $"تغییر در ساختار جداول ({token}) تنها از طریق بخش طراح ساختار (Schema Designer) مجاز می‌باشد.");
             }
@@ -58,7 +82,7 @@ public static class SqlGuardrailValidator
         // 2. Check for Dangerous Server Functions & System Catalog Tampering
         foreach (var danger in DangerousPatterns)
         {
-            if (Regex.IsMatch(clean, danger, RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(sanitized, danger, RegexOptions.IgnoreCase))
             {
                 return (false, "دسترسی به متادیتا، جداول سیستمی و توابع پرخطر سرور مسدود می‌باشد.");
             }
