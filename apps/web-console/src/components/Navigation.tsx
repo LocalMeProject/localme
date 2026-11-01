@@ -24,6 +24,7 @@ import {
   History,
   FileSpreadsheet,
   Link2,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -130,8 +131,9 @@ export const Navigation: React.FC<NavigationProps> = ({
       ],
     },
     database: {
-      title: 'پایگاه داده رابطه‌ای',
+      title: 'پایگاه داده',
       items: [
+        { id: 'dashboard', label: 'داشبورد پایگاه داده', icon: <LayoutDashboard className="w-4 h-4" /> },
         { id: 'grid', label: 'جداول و داده‌ها', icon: <TableIcon className="w-4 h-4" /> },
         { id: 'sql', label: 'ویرایشگر کوئری SQL', icon: <Code2 className="w-4 h-4" /> },
         { id: 'schema', label: 'طراحی ساختار جدول', icon: <Columns className="w-4 h-4" /> },
@@ -329,14 +331,14 @@ export const Navigation: React.FC<NavigationProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
           {currentSubGroup.items.map((sub) => {
             const isActive = activeSubView === sub.id;
             return (
               <button
                 key={sub.id}
                 onClick={() => onSubViewChange && onSubViewChange(sub.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition text-right ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition text-right ${
                   isActive
                     ? 'bg-white text-emerald-700 font-semibold shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
