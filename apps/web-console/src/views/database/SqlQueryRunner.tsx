@@ -238,6 +238,16 @@ export const SqlQueryRunner: React.FC<SqlQueryRunnerProps> = ({
       </div>
 
       {/* Query Execution Output */}
+      {!queryResults && !isRunningQuery && (
+        <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed border-slate-200 space-y-1.5">
+          <FileCode className="w-6 h-6 text-slate-300 mx-auto" />
+          <p className="font-medium text-slate-600">پرس‌وجو آماده اجرا است</p>
+          <p className="text-[11px] text-slate-400">
+            برای اجرای کوئری روی دکمه «اجرای پرس‌وجو» کلیک کنید یا کلید <kbd className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[10px]">Ctrl+Enter</kbd> را فشار دهید.
+          </p>
+        </div>
+      )}
+
       {queryResults && (
         <div className="space-y-3">
           {queryResults.error ? (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Project, DatabaseColumn, DatabaseQueryHistoryItem } from '../types';
 import {
   Database,
@@ -7,6 +8,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+import { DatabaseDashboardView } from './database/DatabaseDashboardView';
 import { TableDataGrid } from './database/TableDataGrid';
 import { SchemaDesigner } from './database/SchemaDesigner';
 import { SqlQueryRunner } from './database/SqlQueryRunner';
@@ -23,28 +25,42 @@ interface DatabaseViewProps {
   tableRefreshTrigger?: number;
 }
 
-type StudioTab = 'grid' | 'schema' | 'diagram' | 'sql' | 'backups';
+type StudioTab = 'dashboard' | 'grid' | 'schema' | 'diagram' | 'sql' | 'backups';
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   project,
   onOpenCreateTableModal,
   activeSubView,
+  onSubViewChange,
   lastCreatedTable,
   tableRefreshTrigger,
 }) => {
-  const [activeTab, setActiveTab] = useState<StudioTab>('grid');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<StudioTab>('dashboard');
   const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string>('');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
 
   // Sync with Level 2 sidebar subview
   useEffect(() => {
-    if (activeSubView === 'sql') setActiveTab('sql');
+    if (activeSubView === 'dashboard') setActiveTab('dashboard');
+    else if (activeSubView === 'sql') setActiveTab('sql');
     else if (activeSubView === 'schema') setActiveTab('schema');
     else if (activeSubView === 'diagram') setActiveTab('diagram');
     else if (activeSubView === 'backups') setActiveTab('backups');
     else if (activeSubView === 'grid') setActiveTab('grid');
+    else setActiveTab('dashboard');
   }, [activeSubView]);
+
+  // Sync URL search param 'table' with activeTable
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tableParam = params.get('table');
+    if (tableParam && tableParam !== activeTable) {
+      setActiveTable(tableParam);
+    }
+  }, [location.search, activeTable]);
 
   // Table Data Grid State
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
@@ -102,9 +118,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       if (res.ok) {
         const tableList = (await res.json()) as string[];
         setTables(tableList);
-        if (tableList.length > 0 && (!activeTable || !tableList.includes(activeTable))) {
-          setActiveTable(tableList[0]);
-        }
+        setActiveTable((prev) => {
+          const tableParam = new URLSearchParams(window.location.search).get('table');
+          if (tableParam && tableList.includes(tableParam)) return tableParam;
+          if (prev && tableList.includes(prev)) return prev;
+          return tableList.length > 0 ? tableList[0] : '';
+        });
       } else {
         setTables([]);
       }
@@ -113,7 +132,25 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     } finally {
       setIsLoadingTables(false);
     }
-  }, [project.slug, activeTable]);
+  }, [project.slug]);
+
+  const handleSelectTable = (tbl: string) => {
+    setActiveTable(tbl);
+    if (activeTab === 'grid') {
+      navigate(`/panel/${project.slug}/database/grid?table=${encodeURIComponent(tbl)}`, { replace: true });
+    }
+  };
+
+  const handleNavigateToSubView = (subView: string, table?: string) => {
+    onSubViewChange?.(subView);
+    setActiveTab(subView as StudioTab);
+    if (table) {
+      setActiveTable(table);
+      navigate(`/panel/${project.slug}/database/${subView}?table=${encodeURIComponent(table)}`);
+    } else {
+      navigate(`/panel/${project.slug}/database/${subView}`);
+    }
+  };
 
   useEffect(() => {
     fetchTables();
@@ -337,7 +374,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     if (activeTable) {
       fetchTableData(activeTable);
       fetchTableSchema(activeTable);
-      setSqlQuery(`SELECT * FROM ${activeTable} LIMIT 50;`);
+      setSqlQuery((prev) => (!prev.trim() ? `SELECT * FROM ${activeTable} LIMIT 50;` : prev));
     }
   }, [activeTable, fetchTableData, fetchTableSchema]);
 
@@ -517,14 +554,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       {activeTab === 'grid' && (
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                پایگاه داده رابطه‌ای
-              </span>
-              <span className="text-xs text-slate-400 font-mono" dir="ltr">
-                prj_{project.slug}
-              </span>
-            </div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Database className="w-5 h-5 text-emerald-600" />
               مدیریت پایگاه داده و جدول‌ها
@@ -561,7 +590,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             <span className="text-xs text-slate-500 font-medium">جدول جاری:</span>
             <select
               value={activeTable}
-              onChange={(e) => setActiveTable(e.target.value)}
+              onChange={(e) => handleSelectTable(e.target.value)}
               className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono text-emerald-700 font-semibold focus:outline-none focus:border-emerald-500 shadow-xs"
               dir="ltr"
             >
@@ -576,7 +605,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       )}
 
       {/* Main Studio Viewport */}
-      {activeTab === 'backups' ? (
+      {activeTab === 'dashboard' ? (
+        <DatabaseDashboardView
+          project={project}
+          tables={tables}
+          isLoadingTables={isLoadingTables}
+          onRefreshTables={fetchTables}
+          onOpenCreateTableModal={onOpenCreateTableModal}
+          onNavigateToSubView={handleNavigateToSubView}
+        />
+      ) : activeTab === 'backups' ? (
         <DatabaseBackupsView
           projectSlug={project.slug}
           onRestoreCompleted={fetchTables}
@@ -608,7 +646,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                   tables.map((tbl) => (
                     <button
                       key={tbl}
-                      onClick={() => setActiveTable(tbl)}
+                      onClick={() => handleSelectTable(tbl)}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition text-left ${
                         activeTable === tbl
                           ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold shadow-xs'
@@ -678,6 +716,8 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             onSelectTable={(tbl) => {
               setActiveTable(tbl);
               setActiveTab('grid');
+              onSubViewChange?.('grid');
+              navigate(`/panel/${project.slug}/database/grid?table=${encodeURIComponent(tbl)}`);
             }}
           />
         </div>

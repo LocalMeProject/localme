@@ -209,4 +209,28 @@ public class DbaasConsoleStudioTests
         var upserted = await pm.UpsertRowAsync(proj.Id, "tokens", "id", row);
         Assert.NotNull(upserted);
     }
+
+    [Fact]
+    public async Task ProjectManagerService_ConcurrentTenantSchemaOperations_DoNotThrowConcurrencyException()
+    {
+        var pm = new ProjectManagerService();
+        var proj = pm.CreateProject(new CreateProjectRequest("تست همزمانی اسکیما", "test-concurrent-schema"));
+
+        await pm.CreateTableAsync(proj.Id, "concurrency_test");
+
+        // Fire 10 concurrent operations (tables, schema, columns)
+        var tasks = new List<Task>();
+        for (int i = 0; i < 10; i++)
+        {
+            tasks.Add(Task.Run(async () =>
+            {
+                var tables = await pm.GetProjectTableNamesAsync(proj.Id);
+                Assert.Contains("concurrency_test", tables);
+                var cols = await pm.GetTableColumnsAsync(proj.Id, "concurrency_test");
+                Assert.NotEmpty(cols);
+            }));
+        }
+
+        await Task.WhenAll(tasks);
+    }
 }
