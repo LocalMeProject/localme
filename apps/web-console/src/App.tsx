@@ -34,7 +34,7 @@ const DEFAULT_PROJECTS: Project[] = [];
 
 const DEFAULT_SUB_VIEWS: Record<TabId, string> = {
   overview: 'overview',
-  database: 'grid',
+  database: 'dashboard',
   auth: 'users',
   storage: 'buckets',
   functions: 'list',
@@ -81,7 +81,7 @@ export default function App() {
   };
 
   const activeTab: TabId = mapToTabId(rawTab);
-  const [activeSubView, setActiveSubView] = useState<string>('grid');
+  const [activeSubView, setActiveSubView] = useState<string>('dashboard');
 
   // Sync activeSubView with initial route
   useEffect(() => {
@@ -90,13 +90,14 @@ export default function App() {
       if (lower === 'sqleditor' || lower === 'sql') setActiveSubView('sql');
       else if (lower === 'schema') setActiveSubView('schema');
       else if (lower === 'tables' || lower === 'grid') setActiveSubView('grid');
+      else if (lower === 'dashboard') setActiveSubView('dashboard');
       else setActiveSubView(lower);
     } else if (rawTab) {
       const lower = rawTab.toLowerCase();
       if (lower === 'sqleditor' || lower === 'sql') setActiveSubView('sql');
       else if (lower === 'schema') setActiveSubView('schema');
       else if (lower === 'tables' || lower === 'grid') setActiveSubView('grid');
-      else setActiveSubView(DEFAULT_SUB_VIEWS[activeTab] || 'grid');
+      else setActiveSubView(DEFAULT_SUB_VIEWS[activeTab] || 'dashboard');
     }
   }, [rawTab, rawSub, activeTab]);
 
