@@ -1767,6 +1767,210 @@
             "description": "Inserted row"
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Upsert row in tenant relational table",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "on_conflict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upserted row"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/rest/{table}/{rowId}": {
+      "patch": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Update row in tenant relational table by rowId",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated row"
+          },
+          "404": {
+            "description": "Row not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Delete row from tenant relational table by rowId",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Row deleted successfully"
+          },
+          "404": {
+            "description": "Row not found"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/rest/{table}/query": {
+      "post": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Execute structured JSON AST query",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Query result with columns, rows, total count, latency"
+          }
+        }
+      }
+    },
+    "/_baas/v1/{projectId}/db/tables/overview": {
+      "get": {
+        "tags": [
+          "Dynamic Relational Database"
+        ],
+        "summary": "Consolidated table overview and statistics",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of TableOverviewItem"
+          }
+        }
       }
     },
     "/_baas/v1/{projectId}/db/tables": {

@@ -159,7 +159,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                     value={col.dataType}
                     onChange={(e) => handleUpdateColumn(idx, { dataType: e.target.value })}
                     dir="ltr"
-                    className="w-1/3 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-1/4 px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 font-mono text-xs focus:outline-none focus:border-emerald-500"
                   >
                     <option value="BIGSERIAL">BIGSERIAL</option>
                     <option value="VARCHAR(255)">VARCHAR(255)</option>
@@ -169,7 +169,29 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                     <option value="BOOLEAN">BOOLEAN</option>
                     <option value="JSONB">JSONB</option>
                     <option value="TIMESTAMPTZ">TIMESTAMPTZ</option>
+                    <option value="UUID">UUID</option>
+                    <option value="NUMERIC">NUMERIC</option>
+                    <option value="DOUBLE PRECISION">DOUBLE PRECISION</option>
                   </select>
+
+                  <input
+                    type="text"
+                    placeholder="پیش‌فرض"
+                    value={col.defaultValue || ''}
+                    onChange={(e) => handleUpdateColumn(idx, { defaultValue: e.target.value })}
+                    dir="ltr"
+                    className="w-1/4 px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+
+                  <label className="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={col.isNullable}
+                      onChange={(e) => handleUpdateColumn(idx, { isNullable: e.target.checked })}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Null</span>
+                  </label>
 
                   <label className="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer">
                     <input

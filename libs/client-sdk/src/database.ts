@@ -4,7 +4,24 @@ import type {
   TableRelationshipDefinition,
   TablePolicyDefinition,
   DatabaseSnapshotMeta,
+  TableOverviewItem,
+  TableColumnMeta,
 } from './types';
+
+async function handleFetchError(res: Response, defaultMsg: string): Promise<never> {
+  let errBody: Record<string, unknown> | null = null;
+  try {
+    errBody = (await res.json()) as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+  const msg = (errBody?.error as string) || (errBody?.detail as string) || `${defaultMsg}: ${res.status}`;
+  const error = new Error(msg) as Error & { status?: number; code?: string; detail?: string };
+  error.status = res.status;
+  error.code = errBody?.code as string | undefined;
+  error.detail = errBody?.detail as string | undefined;
+  throw error;
+}
 
 /**
  * Sovereign DBaaS Administrative & DDL Client.
@@ -16,10 +33,45 @@ export class DatabaseClient {
     private readonly headers: Record<string, string>
   ) {}
 
+  public async getTablesOverview(): Promise<TableOverviewItem[]> {
+    const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/db/tables/overview`, { headers: this.headers });
+    if (!res.ok) await handleFetchError(res, 'Get tables overview failed');
+    return (await res.json()) as TableOverviewItem[];
+  }
+
   public async listTables(): Promise<string[]> {
     const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/db/tables`, { headers: this.headers });
-    if (!res.ok) throw new Error(`List tables failed: ${res.status}`);
+    if (!res.ok) await handleFetchError(res, 'List tables failed');
     return (await res.json()) as string[];
+  }
+
+  public async addColumn(table: string, column: Partial<TableColumnMeta> & { name: string; dataType: string }): Promise<{ success: boolean; column: string }> {
+    const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/db/tables/${encodeURIComponent(table)}/columns`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(column),
+    });
+    if (!res.ok) await handleFetchError(res, 'Add column failed');
+    return (await res.json()) as { success: boolean; column: string };
+  }
+
+  public async dropColumn(table: string, columnName: string): Promise<{ success: boolean; column: string }> {
+    const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/db/tables/${encodeURIComponent(table)}/columns/${encodeURIComponent(columnName)}`, {
+      method: 'DELETE',
+      headers: this.headers,
+    });
+    if (!res.ok) await handleFetchError(res, 'Drop column failed');
+    return (await res.json()) as { success: boolean; column: string };
+  }
+
+  public async alterColumn(table: string, columnName: string, newColumn: Partial<TableColumnMeta> & { newName?: string }): Promise<{ success: boolean; column: string }> {
+    const res = await fetch(`${this.baseUrl}/_baas/v1/${this.projectSlug}/db/tables/${encodeURIComponent(table)}/columns/${encodeURIComponent(columnName)}`, {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify(newColumn),
+    });
+    if (!res.ok) await handleFetchError(res, 'Alter column failed');
+    return (await res.json()) as { success: boolean; column: string };
   }
 
   public async createTable(name: string): Promise<{ success: boolean; table: string }> {

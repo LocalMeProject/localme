@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   RefreshCw,
@@ -15,12 +15,15 @@ import {
   Check,
   X,
   Key,
+  Sparkles,
+  Radio,
 } from 'lucide-react';
 import { DatabaseColumn } from '../../types';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { InsertRecordModal } from './InsertRecordModal';
 
 interface TableDataGridProps {
+  projectSlug?: string;
   activeTable: string;
   tableColumns: string[];
   schemaColumns?: DatabaseColumn[];
@@ -46,6 +49,7 @@ interface TableDataGridProps {
 }
 
 export const TableDataGrid: React.FC<TableDataGridProps> = ({
+  projectSlug,
   activeTable,
   tableColumns,
   schemaColumns,
@@ -69,12 +73,25 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   onSortChange,
 }) => {
   const [isInsertOpen, setIsInsertOpen] = useState(false);
+  const [isLiveSyncActive, setIsLiveSyncActive] = useState(false);
+  const [isGeneratingSamples, setIsGeneratingSamples] = useState(false);
 
   // Deletion state
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; col: string; value: string } | null>(null);
+
+  useEffect(() => {
+    if (!isLiveSyncActive || !projectSlug || !activeTable) return;
+    const sse = new EventSource(`/_baas/v1/${projectSlug}/db/realtime?table=${encodeURIComponent(activeTable)}`);
+    sse.onmessage = () => {
+      onRefresh();
+    };
+    return () => {
+      sse.close();
+    };
+  }, [isLiveSyncActive, projectSlug, activeTable, onRefresh]);
 
   const effectiveColumns: DatabaseColumn[] = schemaColumns && schemaColumns.length > 0
     ? schemaColumns
@@ -96,22 +113,69 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
     return { success: false, error: 'اکشن ثبت رکورد تعریف نشده است.' };
   };
 
+  const handleGenerateSampleData = async () => {
+    if (!onInsertRecord || !activeTable || effectiveColumns.length === 0) return;
+    setIsGeneratingSamples(true);
+    try {
+      const sampleRows: Record<string, unknown>[] = [1, 2, 3].map((idx) => {
+        const row: Record<string, unknown> = {};
+        for (const col of effectiveColumns) {
+          const dt = (col.dataType || '').toLowerCase();
+          if (col.isPrimaryKey && (dt.includes('serial') || dt.includes('bigserial'))) {
+            continue;
+          }
+          if (col.isPrimaryKey) {
+            row[col.name] = dt.includes('uuid') ? crypto.randomUUID() : `sample_${idx}`;
+          } else if (dt.includes('int') || dt.includes('serial')) {
+            row[col.name] = idx * 10;
+          } else if (dt.includes('num') || dt.includes('dec') || dt.includes('float') || dt.includes('double')) {
+            row[col.name] = Number((idx * 15.5).toFixed(2));
+          } else if (dt.includes('bool')) {
+            row[col.name] = idx % 2 === 1;
+          } else if (dt.includes('json')) {
+            row[col.name] = { tag: `sample-${idx}`, active: true };
+          } else if (dt.includes('time') || dt.includes('date')) {
+            row[col.name] = new Date().toISOString();
+          } else {
+            row[col.name] = `${col.name}_${idx}`;
+          }
+        }
+        return row;
+      });
+
+      for (const row of sampleRows) {
+        await onInsertRecord(row);
+      }
+      onRefresh();
+    } catch {
+      // ignore
+    } finally {
+      setIsGeneratingSamples(false);
+    }
+  };
+
   const handleSaveCell = async () => {
     if (!editingCell || !onUpdateRow) {
       setEditingCell(null);
       return;
     }
     const { rowId, col, value } = editingCell;
+    const colDef = effectiveColumns.find((c) => c.name.toLowerCase() === col.toLowerCase());
+    const dt = (colDef?.dataType || '').toLowerCase();
+    const isTextCol = dt.includes('char') || dt.includes('text') || dt.includes('uuid');
+
     let parsedVal: unknown = value;
     try {
       if (value.startsWith('{') || value.startsWith('[')) {
         parsedVal = JSON.parse(value);
-      } else if (!isNaN(Number(value)) && value.trim() !== '') {
-        parsedVal = Number(value);
       } else if (value === 'true' || value === 'false') {
         parsedVal = value === 'true';
       } else if (value === 'null') {
         parsedVal = null;
+      } else if (!isTextCol && !isNaN(Number(value)) && value.trim() !== '' && !(value.startsWith('0') && value.length > 1 && !value.includes('.'))) {
+        parsedVal = Number(value);
+      } else {
+        parsedVal = value;
       }
     } catch {
       parsedVal = value;
@@ -180,6 +244,21 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin' : ''}`} />
           </button>
+
+          {projectSlug && (
+            <button
+              onClick={() => setIsLiveSyncActive(!isLiveSyncActive)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border font-medium text-xs px-2.5 py-1.5 transition ${
+                isLiveSyncActive
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+              title={isLiveSyncActive ? 'همگام‌سازی زنده فعال است (SSE)' : 'فعال‌سازی همگام‌سازی زنده (CDC)'}
+            >
+              <Radio className={`w-3.5 h-3.5 ${isLiveSyncActive ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">همگام‌سازی زنده</span>
+            </button>
+          )}
 
           <div className="flex items-center gap-1 border-r border-slate-200 pr-2 mr-1">
             <button
@@ -283,12 +362,38 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
                     className="py-12 text-center text-slate-400 font-sans text-xs"
                     dir="rtl"
                   >
-                    {activeTable ? 'هیچ داده‌ای در این جدول یافت نشد.' : 'ابتدا یک جدول را انتخاب کنید.'}
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <p className="text-slate-500 font-medium">
+                        {activeTable ? 'هیچ داده‌ای در این جدول یافت نشد.' : 'ابتدا یک جدول را انتخاب کنید.'}
+                      </p>
+                      {activeTable && onInsertRecord && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsInsertOpen(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-medium transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>ثبت رکورد جدید</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleGenerateSampleData}
+                            disabled={isGeneratingSamples}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-medium transition"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                            <span>{isGeneratingSamples ? 'در حال تولید...' : 'تولید داده‌های نمونه'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredRows.map((row, idx) => {
-                  const rowId = String(row.id ?? idx);
+                  const pkCol = effectiveColumns.find((c) => c.isPrimaryKey)?.name || 'id';
+                  const rowId = String(row[pkCol] ?? row.id ?? idx);
                   return (
                     <tr
                       key={rowId}
@@ -341,7 +446,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
                           <td
                             key={col}
                             onDoubleClick={() => {
-                              if (onUpdateRow && col !== 'id') {
+                              if (onUpdateRow && col !== pkCol) {
                                 setEditingCell({ rowId, col, value: displayVal });
                               }
                             }}
@@ -356,7 +461,7 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
                                   displayVal
                                 )}
                               </span>
-                              {onUpdateRow && col !== 'id' && (
+                              {onUpdateRow && col !== pkCol && (
                                 <button
                                   onClick={() =>
                                     setEditingCell({ rowId, col, value: displayVal })

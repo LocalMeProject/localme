@@ -12,7 +12,6 @@ using LocalMe.DataPlane.Admin;
 using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compute;
-using LocalMe.DataPlane.DynamicSql;
 using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
 using LocalMe.DataPlane.Storage;

@@ -47,70 +47,36 @@ export const DatabaseDashboardView: React.FC<DatabaseDashboardViewProps> = ({
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'ts' | 'curl'>('ts');
 
-  // Load summary stats for tables (column counts and row estimates)
+  // Load summary stats for tables via high-performance consolidated overview endpoint
   useEffect(() => {
-    if (tables.length === 0) {
-      setTableSummaries({});
-      return;
-    }
-
     let isMounted = true;
     const fetchSummaries = async () => {
       setIsLoadingSummaries(true);
-      const results: Record<string, TableSummaryItem> = {};
-
-      await Promise.all(
-        tables.map(async (table) => {
-          try {
-            const [schemaRes, countRes] = await Promise.all([
-              fetch(`/_baas/v1/${project.slug}/db/schema?table=${encodeURIComponent(table)}`),
-              fetch(`/_baas/v1/${project.slug}/rest/${encodeURIComponent(table)}?limit=1`),
-            ]);
-
-            let columnCount = 0;
-            let primaryKey: string | undefined;
-            if (schemaRes.ok) {
-              const cols = await schemaRes.json();
-              if (Array.isArray(cols)) {
-                columnCount = cols.length;
-                const pk = cols.find(
-                  (c: { isPrimaryKey?: boolean; IsPrimaryKey?: boolean; name?: string; Name?: string }) =>
-                    c.isPrimaryKey || c.IsPrimaryKey || c.name === 'id' || c.Name === 'id'
-                );
-                if (pk) primaryKey = String(pk.name || pk.Name || 'id');
-              }
+      try {
+        const res = await fetch(`/_baas/v1/${project.slug}/db/tables/overview`);
+        if (res.ok) {
+          const data = await res.json();
+          const results: Record<string, TableSummaryItem> = {};
+          if (Array.isArray(data)) {
+            for (const item of data) {
+              results[item.name] = {
+                name: item.name,
+                columnCount: item.columnCount ?? 0,
+                rowCount: item.estimatedRowCount ?? 0,
+                primaryKey: item.primaryKey ?? undefined,
+              };
             }
-
-            let rowCount = 0;
-            if (countRes.ok) {
-              const countHeader = countRes.headers.get('X-Total-Count');
-              if (countHeader) {
-                rowCount = parseInt(countHeader, 10) || 0;
-              } else {
-                const rows = await countRes.json();
-                if (Array.isArray(rows)) rowCount = rows.length;
-              }
-            }
-
-            results[table] = {
-              name: table,
-              columnCount,
-              rowCount,
-              primaryKey,
-            };
-          } catch {
-            results[table] = {
-              name: table,
-              columnCount: 0,
-              rowCount: 0,
-            };
           }
-        })
-      );
-
-      if (isMounted) {
-        setTableSummaries(results);
-        setIsLoadingSummaries(false);
+          if (isMounted) {
+            setTableSummaries(results);
+          }
+        }
+      } catch {
+        // Fallback gracefully
+      } finally {
+        if (isMounted) {
+          setIsLoadingSummaries(false);
+        }
       }
     };
 
@@ -220,7 +186,7 @@ const { data, error } = await localme
           <div>
             <div className="text-[11px] font-medium text-slate-500">موتور ذخیره‌سازی</div>
             <div className="text-xs font-bold text-slate-800 font-mono mt-1" dir="ltr">
-              PostgreSQL 16 Multi-Tenant
+              PostgreSQL 18.1 Multi-Tenant
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
               prj_{project.slug}
