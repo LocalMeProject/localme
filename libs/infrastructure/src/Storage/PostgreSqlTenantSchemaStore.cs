@@ -17,6 +17,21 @@ using NpgsqlTypes;
 public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 {
     private readonly NpgsqlDataSource _dataSource;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredTenantSchemas = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim _schemaInitLock = new(1, 1);
+    private static volatile bool _authFunctionsEnsured;
+
+    public static void InvalidateTenantSchemaCache(string? projectSlug = null)
+    {
+        if (string.IsNullOrWhiteSpace(projectSlug))
+        {
+            _ensuredTenantSchemas.Clear();
+        }
+        else
+        {
+            _ensuredTenantSchemas.TryRemove(projectSlug, out _);
+        }
+    }
 
     public PostgreSqlTenantSchemaStore(NpgsqlDataSource dataSource)
     {
@@ -64,35 +79,78 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 
     public async Task EnsureTenantSchemaAsync(string projectSlug, CancellationToken ct = default)
     {
-        var schema = GetSchemaName(projectSlug);
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
-            DO $$ BEGIN
-                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
-                    CREATE ROLE authenticated NOLOGIN;
-                END IF;
-                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
-                    CREATE ROLE anon NOLOGIN;
-                END IF;
-            END $$;
+        if (_ensuredTenantSchemas.ContainsKey(projectSlug))
+        {
+            return;
+        }
 
-            CREATE SCHEMA IF NOT EXISTS auth;
-            CREATE OR REPLACE FUNCTION auth.uid() RETURNS text AS $$
-                SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '');
-            $$ LANGUAGE sql STABLE;
+        await _schemaInitLock.WaitAsync(ct);
+        try
+        {
+            if (_ensuredTenantSchemas.ContainsKey(projectSlug))
+            {
+                return;
+            }
 
-            CREATE OR REPLACE FUNCTION auth.role() RETURNS text AS $$
-                SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
-            $$ LANGUAGE sql STABLE;
+            await using var conn = await _dataSource.OpenConnectionAsync(ct);
 
-            CREATE SCHEMA IF NOT EXISTS ""{schema}"";
-            CREATE TABLE IF NOT EXISTS ""{schema}"".""_schema_migrations"" (
-                id SERIAL PRIMARY KEY,
-                sql_statement TEXT NOT NULL,
-                executed_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );";
-        await cmd.ExecuteNonQueryAsync(ct);
+            if (!_authFunctionsEnsured)
+            {
+                try
+                {
+                    await using var authCmd = conn.CreateCommand();
+                    authCmd.CommandText = @"
+                        DO $$ BEGIN
+                            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+                                CREATE ROLE authenticated NOLOGIN;
+                            END IF;
+                            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+                                CREATE ROLE anon NOLOGIN;
+                            END IF;
+                        END $$;
+
+                        CREATE SCHEMA IF NOT EXISTS auth;
+                        CREATE OR REPLACE FUNCTION auth.uid() RETURNS text AS $$
+                            SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '');
+                        $$ LANGUAGE sql STABLE;
+
+                        CREATE OR REPLACE FUNCTION auth.role() RETURNS text AS $$
+                            SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
+                        $$ LANGUAGE sql STABLE;";
+                    await authCmd.ExecuteNonQueryAsync(ct);
+                    _authFunctionsEnsured = true;
+                }
+                catch (PostgresException pex) when (pex.SqlState == "XX000" || pex.SqlState == "55P03" || pex.SqlState == "23505" || pex.MessageText.Contains("tuple concurrently updated", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Global auth functions concurrently updated/ensured by another transaction
+                    _authFunctionsEnsured = true;
+                }
+            }
+
+            var schema = GetSchemaName(projectSlug);
+            try
+            {
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = $@"
+                    CREATE SCHEMA IF NOT EXISTS ""{schema}"";
+                    CREATE TABLE IF NOT EXISTS ""{schema}"".""_schema_migrations"" (
+                        id SERIAL PRIMARY KEY,
+                        sql_statement TEXT NOT NULL,
+                        executed_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );";
+                await cmd.ExecuteNonQueryAsync(ct);
+                _ensuredTenantSchemas[projectSlug] = true;
+            }
+            catch (PostgresException pex) when (pex.SqlState == "XX000" || pex.SqlState == "55P03" || pex.SqlState == "23505" || pex.MessageText.Contains("tuple concurrently updated", StringComparison.OrdinalIgnoreCase))
+            {
+                // Concurrently initialized by another transaction
+                _ensuredTenantSchemas[projectSlug] = true;
+            }
+        }
+        finally
+        {
+            _schemaInitLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<string>> GetTableNamesAsync(string projectSlug, CancellationToken ct = default)
