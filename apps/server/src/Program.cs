@@ -59,11 +59,12 @@ public class Program
 
         Console.WriteLine($"[LocalMe] Booting multi-tenant BaaS platform. Node role: {nodeRole} (WebRoot: {builder.Environment.WebRootPath})");
 
-        var configService = new PlatformConfigurationService();
+        var configService = new PlatformConfigurationService(webRootPath: builder.Environment.WebRootPath);
         var logBuffer = new PlatformLogBuffer(configService);
         builder.Logging.ClearProviders();
         builder.Logging.AddProvider(logBuffer);
         builder.Services.AddSingleton(configService);
+        builder.Services.AddSingleton(configService.Discovery);
         builder.Services.AddSingleton(logBuffer);
 
         // Register Core Subsystems
@@ -127,6 +128,7 @@ public class Program
 
         app.UseWebSockets();
         app.UseMiddleware<GatewayCacheMiddleware>();
+        app.UseMiddleware<SecurityRobotsMiddleware>();
 
         // Multi-Tenant Edge Middleware: Subdomains (*.localme.ir) & Custom Domains
         app.Use(async (context, next) =>
@@ -243,7 +245,7 @@ public class Program
                 <head>
                   <meta charset="utf-8">
                   <meta name="viewport" content="width=device-width, initial-scale=1">
-                  <title>{{project.Name}} - میزبانی ابری لوکال‌می</title>
+                  <title>{{project.Name}} - میزبانی ابری لوکال می</title>
                   <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
                     .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; max-width: 540px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
@@ -257,7 +259,7 @@ public class Program
                   <div class="card">
                     <div class="badge">گواهینامه امنیتی SSL فعال است</div>
                     <h1>{{project.Name}}</h1>
-                    <p>این دامنه با موفقیت به پلتفرم ابری متصل شده و زیرساخت میزبانی لبه فعال می‌باشد.</p>
+                    <p>این دامنه با موفقیت به پلتفرم ابری متصل شده و زیرساخت میزبانی لبه فعال می باشد.</p>
                     <div class="details">Host: {{host}}<br>Project: {{project.Slug}}<br>Status: Edge Ready</div>
                   </div>
                 </body>
@@ -324,6 +326,50 @@ public class Program
         // Superadmin & Operator Portal (/admin/*)
         app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
         app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
+
+        // 13. Dynamic SEO & Machine-Readable Discoverability
+        app.MapGet("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
+        {
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var txt = DynamicDiscoveryService.GenerateRobotsTxt(cfg.GetConfig());
+            return Results.Content(txt, "text/plain; charset=utf-8");
+        });
+
+        app.MapGet("/sitemap.xml", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
+        {
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var xml = DynamicDiscoveryService.GenerateSitemapXml(cfg.GetConfig(), env.WebRootPath);
+            return Results.Content(xml, "application/xml; charset=utf-8");
+        });
+
+        app.MapGet("/llms.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
+        {
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var txt = DynamicDiscoveryService.GenerateLlmsTxt(cfg.GetConfig());
+            return Results.Content(txt, "text/plain; charset=utf-8");
+        });
+
+        // Developer FAQ & Benchmarks
+        app.MapGet("/faq", () => Results.File(Path.Combine(app.Environment.WebRootPath, "faq.html"), "text/html; charset=utf-8"));
+        app.MapGet("/benchmarks", () => Results.File(Path.Combine(app.Environment.WebRootPath, "benchmarks.html"), "text/html; charset=utf-8"));
+
+        // Decoupled Feature Pillar Pages (/features/{name})
+        app.MapGet("/features/{name}", (string name) =>
+        {
+            var path = Path.Combine(app.Environment.WebRootPath, "features", $"{name}.html");
+            return File.Exists(path)
+                ? Results.File(path, "text/html; charset=utf-8")
+                : Results.NotFound();
+        });
+
+        // Strategic Comparison Pages (/compare/{target})
+        app.MapGet("/compare/{target}", (string target) =>
+        {
+            var path = Path.Combine(app.Environment.WebRootPath, "compare", $"{target}.html");
+            return File.Exists(path)
+                ? Results.File(path, "text/html; charset=utf-8")
+                : Results.NotFound();
+        });
 
         // Fallback to landing
         app.MapFallbackToFile("index.html");

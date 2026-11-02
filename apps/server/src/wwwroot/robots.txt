@@ -1,0 +1,56 @@
+# robots.txt for لوکال می (https://localme.ir)
+User-agent: *
+Allow: /
+Allow: /docs
+Allow: /features/
+Allow: /compare/
+Allow: /faq
+Allow: /benchmarks
+Allow: /llms.txt
+
+# Disallow Internal Apps, Dashboards & Authentication
+Disallow: /auth
+Disallow: /auth/
+Disallow: /panel
+Disallow: /panel/
+Disallow: /console
+Disallow: /console/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /_baas/
+Disallow: /api/
+
+# Search Engine Crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# Generative AI & Answer Engine Crawlers (AEO / GEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Sitemap Location
+Sitemap: https://localme.ir/sitemap.xml

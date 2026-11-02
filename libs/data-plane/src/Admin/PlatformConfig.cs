@@ -19,8 +19,8 @@ public sealed class PlatformConfig
 
     // 2. Operational & Platform Variables
     public bool MaintenanceMode { get; set; }
-    public string MaintenanceMessage { get; set; } = "سامانه در حال به‌روزرسانی زیرساختی می‌باشد. لطفاً دقایقی دیگر مراجعه فرمایید.";
-    public string PlatformName { get; set; } = "لوکال‌می (LocalMe)";
+    public string MaintenanceMessage { get; set; } = "سامانه در حال به روزرسانی زیرساختی می باشد. لطفا دقایقی دیگر مراجعه فرمایید.";
+    public string PlatformName { get; set; } = "لوکال می";
     public string DefaultRegion { get; set; } = "ir-thr-milad1";
     public string SovereignEgressNat { get; set; } = "2.180.12.94 (Static Domestic NAT Active)";
     public string SystemBroadcastMessage { get; set; } = "";
@@ -63,6 +63,15 @@ public sealed class PlatformConfig
     public string LoggingGranularity { get; set; } = "Standard"; // Verbose, Standard, Minimal
     public bool IsPlatformLoggingActive { get; set; } = true;
     public bool ConsoleLoggingEnabled { get; set; } = true;
+
+    // 9. SEO & Automated Machine-Readable Discoverability Variables
+    public bool SeoRobotsIndexingEnabled { get; set; } = true;
+    public bool SeoDynamicSitemapEnabled { get; set; } = true;
+    public bool SeoAiEngineDiscoveryEnabled { get; set; } = true;
+    public string SeoBaseUrl { get; set; } = "https://localme.ir";
+    public string SeoDisallowedPaths { get; set; } = "/_baas/, /auth, /panel, /console, /admin, /projects, /dashboard";
+    public string SeoAdditionalSitemapPaths { get; set; } = "";
+    public string SeoSiteDescription { get; set; } = "لوکال می پلتفرم ابری و بک اند یکپارچه بومی ایران برای توسعه دهندگان موبایل و فرانت اند";
 
     // Audit Metadata
     public DateTimeOffset LastUpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
@@ -112,6 +121,13 @@ public sealed class PlatformConfig
             LoggingGranularity = LoggingGranularity,
             IsPlatformLoggingActive = IsPlatformLoggingActive,
             ConsoleLoggingEnabled = ConsoleLoggingEnabled,
+            SeoRobotsIndexingEnabled = SeoRobotsIndexingEnabled,
+            SeoDynamicSitemapEnabled = SeoDynamicSitemapEnabled,
+            SeoAiEngineDiscoveryEnabled = SeoAiEngineDiscoveryEnabled,
+            SeoBaseUrl = SeoBaseUrl,
+            SeoDisallowedPaths = SeoDisallowedPaths,
+            SeoAdditionalSitemapPaths = SeoAdditionalSitemapPaths,
+            SeoSiteDescription = SeoSiteDescription,
             LastUpdatedAtUtc = LastUpdatedAtUtc,
             LastUpdatedBy = LastUpdatedBy
         };

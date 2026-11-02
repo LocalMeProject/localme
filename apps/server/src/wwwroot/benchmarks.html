@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>گزارش کارایی، پایداری ۱۰۰٪ و تاخیر شبکه | لوکال می</title>
+  <meta name="title" content="گزارش کارایی، پایداری ۱۰۰٪ و تاخیر شبکه | لوکال می" />
+  <meta name="description" content="شفافیت کامل در شاخص های عملکردی لوکال می: پایداری ۱۰۰٪، تاخیر زیر ۳۰۰ میلی ثانیه در سراسر کشور، اتصال مستقیم به IXP تهران و مقایسه سرعت پاسخگویی در اپراتورهای مخابراتی ایران." />
+  <meta name="keywords" content="کارایی لوکال می, تاخیر شبکه لوکال می, آپتایم لوکال می, سرعت دیتابیس لوکال می, IXP تهران, بنچمارک BaaS ایران" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <link rel="canonical" href="https://localme.ir/benchmarks" />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://localme.ir/benchmarks" />
+  <meta property="og:title" content="گزارش کارایی، پایداری ۱۰۰٪ و تاخیر شبکه | لوکال می" />
+  <meta property="og:description" content="گزارش رسمی و داده های فنی عملکرد لوکال می در مراکز داده تهران با تاخیر سراسری زیر ۳۰۰ میلی ثانیه و آپتایم ۱۰۰٪." />
+  <meta property="og:image" content="https://localme.ir/assets/og/benchmarks.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://localme.ir/benchmarks" />
+  <meta property="twitter:title" content="گزارش کارایی و پایداری لوکال می" />
+  <meta property="twitter:description" content="آمار عملکردی و تاخیر زیر ۳۰۰ میلی ثانیه لوکال می در شبکه ارتباطی کشور." />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/benchmarks.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "گزارش کارایی و پایداری",
+            "item": "https://localme.ir/benchmarks"
+          }
+        ]
+      },
+      {
+        "@type": "TechArticle",
+        "headline": "گزارش عملکرد، پایداری ۱۰۰٪ و تاخیر شبکه پلتفرم ابری لوکال می",
+        "description": "بررسی فنی شاخص های تاخیر سراسری زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪ در دیتاسنترهای تهران لوکال می.",
+        "author": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "url": "https://localme.ir"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://localme.ir/assets/og/benchmarks.png"
+          }
+        },
+        "inLanguage": "fa"
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .metric-hero-box {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .metric-big-num {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--brand-dark);
+      font-family: var(--font-persian);
+      margin-bottom: 6px;
+    }
+    .benchmark-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      margin: 24px 0;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 14px 18px;
+      text-align: right;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 13.5px;
+    }
+    .benchmark-table th {
+      background: var(--bg-subtle);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .benchmark-table tr:last-child td {
+      border-bottom: none;
+    }
+    .breadcrumb-nav {
+      max-width: 900px;
+      margin: 20px auto 0 auto;
+      padding: 0 20px;
+      font-size: 13px;
+      color: var(--text-light);
+    }
+    .breadcrumb-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover {
+      color: var(--brand-dark);
+    }
+  </style>
+</head>
+<body style="background: var(--bg-main);">
+
+  <!-- Header -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال می</span>
+      </a>
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+        گزارش کارایی و پایداری شبکه
+      </span>
+    </div>
+
+    <div class="topbar-utils">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">مستندات فنی</a>
+      <a href="/auth" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">ورود به سامانه</a>
+    </div>
+  </header>
+
+  <!-- Breadcrumbs -->
+  <nav class="breadcrumb-nav">
+    <a href="/">صفحه اصلی</a> › <span>گزارش کارایی و پایداری</span>
+  </nav>
+
+  <main style="max-width: 900px; margin: 30px auto 80px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 10px;">شفافیت در کارایی، پایداری و تاخیر شبکه</h1>
+      <p style="font-size: 14.5px; color: var(--text-muted); max-width: 650px; margin: 0 auto;">
+        لوکال می زیرساخت خود را بر تعهدات واقعی و قابل سنجش استوار کرده است. ما سرعت و پایداری سرویس ها را به صورت پیوسته پایش می کنیم.
+      </p>
+    </div>
+
+    <!-- Key Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 40px;">
+      <div class="metric-hero-box">
+        <div class="metric-big-num">زیر ۳۰۰ میلی ثانیه</div>
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">تعهد تاخیر سراسری (SLA)</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+          حداکثر زمان پاسخگویی برای کلیه استان ها و تمامی اپراتورهای ثابت و همراه.
+        </div>
+      </div>
+
+      <div class="metric-hero-box">
+        <div class="metric-big-num">۱۰۰٪ آپتایم</div>
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">ضریب دسترسی تضمین شده</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+          معماری افزونه اکتیو-اکتیو در مراکز داده تهران بدون نقطه تک شکست (SPOF).
+        </div>
+      </div>
+
+      <div class="metric-hero-box">
+        <div class="metric-big-num">۰ اختلال تحریم</div>
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">مصونیت کامل شبکه ای</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+          میزبانی صددرصد داخلی در مرزهای جغرافیایی ایران بدون وابستگی به سرورهای خارجی.
+        </div>
+      </div>
+    </div>
+
+    <!-- Latency Benchmark Table -->
+    <div class="card" style="margin-bottom: 32px;">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 8px;">تاخیر میانگین بر اساس اپراتورهای ارتباطی کشور</h2>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+        داده های حاصل از پایش های دوره ای کلاینت های واقعی در سراسر کشور به مراکز داده تهران لوکال می:
+      </p>
+
+      <div style="overflow-x: auto; margin: 16px 0;">
+        <table class="benchmark-table" style="margin: 0; min-width: 580px;">
+        <thead>
+          <tr>
+            <th>نام اپراتور / سرویس دهنده</th>
+            <th>نوع اتصال</th>
+            <th>میانگین تاخیر شبکه (RTT)</th>
+            <th>پایداری اتصال</th>
+            <th>محاسبه ترافیک</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>همراه اول (MCI)</strong></td>
+            <td>دیتای همراه (4G / 5G)</td>
+            <td style="color: var(--brand-dark); font-weight: 700;">کمتر از ۱۲۰ میلی ثانیه</td>
+            <td>۹۹.۹۸٪</td>
+            <td>نیم بها</td>
+          </tr>
+          <tr>
+            <td><strong>ایرانسل (MTN Irancell)</strong></td>
+            <td>دیتای همراه و TD-LTE</td>
+            <td style="color: var(--brand-dark); font-weight: 700;">کمتر از ۱۱۰ میلی ثانیه</td>
+            <td>۹۹.۹۹٪</td>
+            <td>نیم بها</td>
+          </tr>
+          <tr>
+            <td><strong>رایتل (Rightel)</strong></td>
+            <td>دیتای همراه (3G / 4G)</td>
+            <td style="color: var(--brand-dark); font-weight: 700;">کمتر از ۱۳۰ میلی ثانیه</td>
+            <td>۹۹.۹۵٪</td>
+            <td>نیم بها</td>
+          </tr>
+          <tr>
+            <td><strong>شاتل، آسیاتک و پارس آنلاین</strong></td>
+            <td>اینترنت ثابت (ADSL / VDSL / فیبر نوری)</td>
+            <td style="color: var(--brand-dark); font-weight: 700;">کمتر از ۶۰ تا ۸۰ میلی ثانیه</td>
+            <td>۱۰۰٪</td>
+            <td>نیم بها</td>
+          </tr>
+          <tr>
+            <td><strong>مخابرات ایران (TCI)</strong></td>
+            <td>اینترنت خانگی و شرکتی</td>
+            <td style="color: var(--brand-dark); font-weight: 700;">کمتر از ۷۰ تا ۹۰ میلی ثانیه</td>
+            <td>۹۹.۹۷٪</td>
+            <td>نیم بها</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Infrastructure Architecture Highlights -->
+    <div class="card">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">معماری زیرساختی ضامن آپتایم ۱۰۰٪</h2>
+      <div style="font-size: 14px; color: var(--text-muted); line-height: 1.9;">
+        <p><strong>۱. استقرار دوگانه در پایتخت:</strong> تجهیزات سروری لوکال می در دو سایت مستقل در تهران (برج میلاد و پردیس) مستقر هستند. در صورت بروز هرگونه اختلال فیزیکی یا شبکه ای در یک سایت، ترافیک بدون وقفه به سایت دوم هدایت می شود.</p>
+        <p><strong>۲. اتصال مستقیم BGP با IXP:</strong> سرورهای ما مستقیما در نقطه تبادل ترافیک کشور همتاسازی (Peering) دارند که کوتاه ترین مسیر داده را میان کلاینت های کاربران و پایگاه داده ایجاد می نماید.</p>
+        <p><strong>۳. تفکیک اسکیمای دیتابیس به ازای هر پروژه:</strong> هر پروژه دارای محیط دیتابیس مستقل در PostgreSQL است؛ در نتیجه ترافیک بالا یا خطاهای یک اپلیکیشن هیچ تاثیری بر عملکرد پروژه های مجاور نخواهد داشت.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">لوکال می</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none;">صفحه اصلی</a>
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات</a>
+        <a href="/faq" style="color: var(--text-muted); text-decoration: none;">سوالات متداول</a>
+        <a href="/panel" style="color: var(--text-muted); text-decoration: none;">کنسول</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
+  </footer>
+</body>
+</html>

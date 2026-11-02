@@ -166,7 +166,15 @@ function initAdminNav() {
         PlatformLogLevel: document.getElementById('adm-log-level')?.value || 'Information',
         LoggingGranularity: document.getElementById('adm-log-granularity')?.value || 'Standard',
         IsPlatformLoggingActive: !!document.getElementById('adm-log-platform-active')?.checked,
-        ConsoleLoggingEnabled: !!document.getElementById('adm-log-console-enabled')?.checked
+        ConsoleLoggingEnabled: !!document.getElementById('adm-log-console-enabled')?.checked,
+
+        SeoBaseUrl: document.getElementById('adm-seo-base-url')?.value?.trim() || 'https://localme.ir',
+        SeoDisallowedPaths: document.getElementById('adm-seo-disallowed')?.value?.trim() || '/_baas/, /auth, /panel, /console, /admin, /projects, /dashboard',
+        SeoAdditionalSitemapPaths: document.getElementById('adm-seo-extra-sitemap')?.value?.trim() || '',
+        SeoSiteDescription: document.getElementById('adm-seo-site-desc')?.value?.trim() || 'لوکال می پلتفرم ابری و بک اند یکپارچه بومی ایران برای توسعه دهندگان موبایل و فرانت اند',
+        SeoRobotsIndexingEnabled: !!document.getElementById('adm-seo-robots-active')?.checked,
+        SeoDynamicSitemapEnabled: !!document.getElementById('adm-seo-sitemap-active')?.checked,
+        SeoAiEngineDiscoveryEnabled: !!document.getElementById('adm-seo-ai-active')?.checked
       };
 
       try {
@@ -588,6 +596,18 @@ async function loadAdminPricing() {
       if (logPlat) logPlat.checked = c.isPlatformLoggingActive !== false;
       const logConsole = document.getElementById('adm-log-console-enabled');
       if (logConsole) logConsole.checked = c.consoleLoggingEnabled !== false;
+
+      // Category 9: SEO & Discoverability
+      setVal('adm-seo-base-url', c.seoBaseUrl || 'https://localme.ir');
+      setVal('adm-seo-disallowed', c.seoDisallowedPaths || '/_baas/, /auth, /panel, /console, /admin, /projects, /dashboard');
+      setVal('adm-seo-extra-sitemap', c.seoAdditionalSitemapPaths || '');
+      setVal('adm-seo-site-desc', c.seoSiteDescription || 'لوکال می پلتفرم ابری و بک اند یکپارچه بومی ایران برای توسعه دهندگان موبایل و فرانت اند');
+      const seoRobots = document.getElementById('adm-seo-robots-active');
+      if (seoRobots) seoRobots.checked = c.seoRobotsIndexingEnabled !== false;
+      const seoSitemap = document.getElementById('adm-seo-sitemap-active');
+      if (seoSitemap) seoSitemap.checked = c.seoDynamicSitemapEnabled !== false;
+      const seoAi = document.getElementById('adm-seo-ai-active');
+      if (seoAi) seoAi.checked = c.seoAiEngineDiscoveryEnabled !== false;
     }
   } catch (err) {
     console.warn('Config load error:', err);

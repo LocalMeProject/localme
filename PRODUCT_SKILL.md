@@ -44,6 +44,23 @@ This is the **tailored operating skill** for this product monorepo. Agents worki
    - **Stream-First Payloads**: Operations handling dynamic or unbounded datasets (database snapshots, batch exports, large query results) must stream directly through IO primitives (`Utf8JsonWriter`, `PipeWriter`, `FileStream`) rather than materializing large contiguous JSON strings or intermediate DOMs in the Large Object Heap (LOH).
    - **Defensive Resource Caps**: Query limits, transaction timeouts (5s statement, 2s lock), and connection pool multiplexing must remain strictly enforced to guarantee sub-8ms p95 SLAs on shared nodes.
 
+### Section 2.2: Brand Identity, SLA & Launch Scope Invariants
+1. **Brand Representation («لوکال می»)**:
+   - Always write the brand name in Persian as **«لوکال می»** with a standard ASCII space (`\u0020`).
+   - Using half-spaces (Zero-Width Non-Joiner / ZWNJ `\u200c`) is strictly forbidden across all metadata, UI text, documentation, and SEO assets.
+   - In Persian prose and marketing, use «لوکال می» rather than the Latin "LocalMe".
+2. **Latency & Uptime SLA**:
+   - Official SLA: **Sub-300ms** response time nationwide across MCI, Irancell, Rightel, and fixed broadband.
+   - Availability: **100% Uptime** backed by domestic Tehran datacenters and direct National Information Network (IXP) peering.
+   - Never claim sub-10ms latency in public copy.
+3. **Audience Framing**:
+   - Primary focus: Mobile developers (Flutter, React Native, Android Kotlin, iOS Swift).
+   - Comprehensive support: All frontend developers (React, Vue, Next.js, Web apps).
+   - Core value proposition: The sovereign Iranian Supabase/Firebase alternative.
+4. **Launch Feature Boundary**:
+   - Only promote the 5 launch offerings: (1) Database, (2) Simple Auth & User Management (without OTP), (3) Storage, (4) Edge Functions, (5) Ambient Project Telemetry.
+   - SMS/OTP and marketplace IAP validations are strictly out-of-scope for launch SEO and landing pages.
+
 ---
 
 ## 3. High-Velocity Single-Turn Ingestion Mandate (P0)
