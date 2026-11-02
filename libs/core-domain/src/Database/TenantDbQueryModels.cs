@@ -14,7 +14,10 @@ public enum QueryOperator
     LessThanOrEqual,
     Like,
     ILike,
+    NotLike,
+    NotILike,
     In,
+    NotIn,
     IsNull,
     IsNotNull,
     Contains,
@@ -51,4 +54,12 @@ public sealed record TenantDbQueryResult(
     JsonArray Rows,
     int TotalCount,
     long LatencyMs
+);
+
+public sealed record TableOverviewItem(
+    string Name,
+    string? PrimaryKey,
+    int ColumnCount,
+    long EstimatedRowCount,
+    DateTimeOffset? LastModifiedUtc
 );

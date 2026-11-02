@@ -8,13 +8,30 @@ using LocalMe.Core.Database;
 using LocalMe.DataPlane.MultiTenancy;
 using Xunit;
 
-public class DbaasConsoleStudioTests
+public class DbaasConsoleStudioTests : IClassFixture<PostgreSqlTestFixture>
 {
+    private readonly PostgreSqlTestFixture _fixture;
+
+    public DbaasConsoleStudioTests(PostgreSqlTestFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    private (ProjectManagerService pm, BaasProject project) CreateTestContext(string projectName = "تست استودیو")
+    {
+        var pm = new ProjectManagerService
+        {
+            TenantDbStore = _fixture.Store
+        };
+        var slug = _fixture.CreateProjectSlug();
+        var proj = pm.CreateProject(new CreateProjectRequest(projectName, slug));
+        return (pm, proj);
+    }
+
     [Fact]
     public async Task ProjectManagerService_AddAndDropColumn_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست استودیو", "test-studio-cols"));
+        var (pm, proj) = CreateTestContext("تست استودیو");
 
         await pm.CreateTableAsync(proj.Id, "articles");
         var added = await pm.AddColumnAsync(proj.Id, "articles", new TableColumnDefinition("views_count", "integer", false, true, "0"));
@@ -27,8 +44,7 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_AlterColumn_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست استودیو تغییر ستون", "test-studio-alter"));
+        var (pm, proj) = CreateTestContext("تست استودیو تغییر ستون");
 
         await pm.CreateTableAsync(proj.Id, "inventory");
         var altered = await pm.AlterColumnAsync(proj.Id, "inventory", "created_at_utc", new TableColumnDefinition("registered_at", "timestamptz", false, true));
@@ -38,8 +54,7 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_CreateIndexAndTruncate_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست ایندکس", "test-studio-idx"));
+        var (pm, proj) = CreateTestContext("تست ایندکس");
 
         await pm.CreateTableAsync(proj.Id, "logs");
         var idxCreated = await pm.CreateIndexAsync(proj.Id, "logs", "idx_logs_time", new List<string> { "created_at_utc" });
@@ -52,8 +67,7 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_CreateTableWithColumns_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست ایجاد جدول با ستون", "test-studio-create-cols"));
+        var (pm, proj) = CreateTestContext("تست ایجاد جدول با ستون");
 
         string? capturedEvent = null;
         string? capturedTable = null;
@@ -82,10 +96,11 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_Policies_ManageLifecycle()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست پالیسی", "test-studio-rls"));
+        var (pm, proj) = CreateTestContext("تست پالیسی");
 
         await pm.CreateTableAsync(proj.Id, "documents");
+        await pm.AddColumnAsync(proj.Id, "documents", new TableColumnDefinition("user_id", "text", false, true));
+
         var policy = new TablePolicyDefinition("user_read_own", "documents", "SELECT", "authenticated", "auth.uid() = user_id");
         var created = await pm.CreatePolicyAsync(proj.Id, "documents", policy);
         Assert.True(created);
@@ -97,10 +112,11 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_Indexes_ManageLifecycle()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست چرخه شاخص‌ها", "test-studio-indexes"));
+        var (pm, proj) = CreateTestContext("تست چرخه شاخص‌ها");
 
         await pm.CreateTableAsync(proj.Id, "products");
+        await pm.AddColumnAsync(proj.Id, "products", new TableColumnDefinition("sku", "text", false, true));
+
         var created = await pm.CreateIndexAsync(proj.Id, "products", "idx_products_sku", new List<string> { "sku" }, isUnique: true);
         Assert.True(created);
 
@@ -114,11 +130,11 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_Relationships_ManageLifecycle()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست روابط جداول", "test-studio-relationships"));
+        var (pm, proj) = CreateTestContext("تست روابط جداول");
 
         await pm.CreateTableAsync(proj.Id, "authors");
         await pm.CreateTableAsync(proj.Id, "posts");
+        await pm.AddColumnAsync(proj.Id, "posts", new TableColumnDefinition("author_id", "varchar", false, true));
 
         var rel = new TableRelationshipDefinition(
             ConstraintName: "fk_posts_author",
@@ -140,12 +156,20 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_Insert_SupportsCustomNumericTypes()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست مقادیر عددی", "test-studio-types"));
+        var (pm, proj) = CreateTestContext("تست مقادیر عددی");
 
-        await pm.CreateTableAsync(proj.Id, "metrics");
+        var cols = new List<TableColumnDefinition>
+        {
+            new("id", "varchar", true, false),
+            new("counter", "bigint", false, true),
+            new("ratio", "double precision", false, true),
+            new("is_active", "boolean", false, true)
+        };
+
+        await pm.CreateTableAsync(proj.Id, "metrics", cols);
         var row = new JsonObject
         {
+            ["id"] = "metric_001",
             ["counter"] = 9999999999L,
             ["ratio"] = 3.14159,
             ["is_active"] = true
@@ -154,13 +178,13 @@ public class DbaasConsoleStudioTests
         var inserted = await pm.InsertRowAsync(proj.Id, "metrics", row);
         Assert.NotNull(inserted);
         Assert.True(inserted.ContainsKey("id"));
+        Assert.Equal(9999999999L, inserted["counter"]?.GetValue<long>());
     }
 
     [Fact]
     public async Task ProjectManagerService_CompositePrimaryKey_TableCreation_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست کلید مرکب", "test-composite-pk"));
+        var (pm, proj) = CreateTestContext("تست کلید مرکب");
 
         var columns = new List<TableColumnDefinition>
         {
@@ -176,8 +200,7 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_DatabaseSnapshots_CreateAndDelete_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست چرخه اسنپ‌شات", "test-snapshot-lifecycle"));
+        var (pm, proj) = CreateTestContext("تست چرخه اسنپ‌شات");
 
         await pm.CreateTableAsync(proj.Id, "configs");
         var snapshot = await pm.CreateDatabaseSnapshotAsync(proj.Id, "تست خودکار");
@@ -197,8 +220,7 @@ public class DbaasConsoleStudioTests
     [Fact]
     public async Task ProjectManagerService_Upsert_KeyOnlyPayload_Succeeds()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست آپسرت فقط کلید", "test-upsert-keyonly"));
+        var (pm, proj) = CreateTestContext("تست آپسرت فقط کلید");
 
         await pm.CreateTableAsync(proj.Id, "tokens");
         var row = new JsonObject
@@ -208,13 +230,13 @@ public class DbaasConsoleStudioTests
 
         var upserted = await pm.UpsertRowAsync(proj.Id, "tokens", "id", row);
         Assert.NotNull(upserted);
+        Assert.Equal("tok_primary_123", upserted["id"]?.ToString());
     }
 
     [Fact]
     public async Task ProjectManagerService_ConcurrentTenantSchemaOperations_DoNotThrowConcurrencyException()
     {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("تست همزمانی اسکیما", "test-concurrent-schema"));
+        var (pm, proj) = CreateTestContext("تست همزمانی اسکیما");
 
         await pm.CreateTableAsync(proj.Id, "concurrency_test");
 

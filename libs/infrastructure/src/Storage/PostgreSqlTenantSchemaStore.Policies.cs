@@ -89,6 +89,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
             {usingClause}
             {checkClause};";
         await polCmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 
@@ -103,6 +104,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DROP POLICY IF EXISTS ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}"";";
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 }

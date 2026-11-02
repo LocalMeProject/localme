@@ -29,6 +29,7 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
   const [newPolicyCmd, setNewPolicyCmd] = useState('ALL');
   const [newPolicyRole, setNewPolicyRole] = useState('authenticated');
   const [newPolicyUsing, setNewPolicyUsing] = useState('true');
+  const [newPolicyCheck, setNewPolicyCheck] = useState('');
 
   const fetchPolicies = useCallback(async () => {
     if (!activeTable) return;
@@ -62,12 +63,14 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
           command: newPolicyCmd,
           roles: newPolicyRole,
           usingExpression: newPolicyUsing,
+          checkExpression: newPolicyCheck.trim() ? newPolicyCheck.trim() : undefined,
         }),
       });
       if (res.ok) {
         setIsAddingPolicy(false);
         setNewPolicyName('');
         setNewPolicyUsing('true');
+        setNewPolicyCheck('');
         fetchPolicies();
       }
     } catch (err) {
@@ -111,7 +114,7 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
           onSubmit={handleCreatePolicy}
           className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div>
               <label className="block text-slate-600 text-[11px] mb-1">نام قاعده (Policy Name)</label>
               <input
@@ -162,6 +165,17 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
                 className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-mono"
               />
             </div>
+            <div>
+              <label className="block text-slate-600 text-[11px] mb-1">شرط اعتبارسنجی (WITH CHECK)</label>
+              <input
+                type="text"
+                value={newPolicyCheck}
+                onChange={(e) => setNewPolicyCheck(e.target.value)}
+                placeholder="اختیاری (برای INSERT/UPDATE)"
+                dir="ltr"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-mono"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button
@@ -186,7 +200,7 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
           <div className="text-center py-4 text-xs text-slate-400">در حال دریافت قوانین امنیتی...</div>
         ) : policies.length === 0 ? (
           <div className="text-center py-4 text-xs text-slate-400">
-            هیچ قاعده RLS فعالی برای جدول {activeTable} ثبت نشده است. (دسترسی پیش‌فرض فعال است)
+            هیچ قاعده RLS فعالی برای جدول {activeTable} ثبت نشده است. (در صورت فعال‌سازی RLS، عدم وجود قاعده به معنی مسدودیت پیش‌فرض - Default-Deny دسترسی است)
           </div>
         ) : (
           policies.map((p) => (
@@ -195,13 +209,16 @@ export const SchemaPoliciesSection: React.FC<SchemaPoliciesSectionProps> = ({
               className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between font-mono text-xs"
               dir="ltr"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="font-bold text-slate-900">{p.name}</span>
                 <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px]">
                   {p.command}
                 </span>
                 <span className="text-slate-500 text-[11px]">TO {p.roles}</span>
                 <span className="text-slate-600 text-[11px]">USING ({p.usingExpression})</span>
+                {p.checkExpression && (
+                  <span className="text-slate-600 text-[11px]">CHECK ({p.checkExpression})</span>
+                )}
               </div>
               <button
                 type="button"

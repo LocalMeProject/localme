@@ -217,6 +217,21 @@ export interface TableColumnMeta {
   defaultValue?: string;
 }
 
+export interface TableOverviewItem {
+  name: string;
+  primaryKey?: string;
+  columnCount: number;
+  estimatedRowCount: number;
+  lastModifiedUtc?: string;
+}
+
+export interface DbaasError {
+  success: boolean;
+  error: string;
+  code?: string;
+  detail?: string;
+}
+
 export interface DatabaseSnapshotMeta {
   id: string;
   type: string;

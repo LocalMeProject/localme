@@ -320,7 +320,22 @@ public static class BaasDatabaseRoutes
             }
         });
 
-        // 10. List Tables
+        // 10. Table Overview (Consolidated Catalog & Statistics)
+        app.MapGet("/_baas/v1/{projectId}/db/tables/overview", async (string projectId, ProjectManagerService pm) =>
+        {
+            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            try
+            {
+                var overview = await pm.GetTablesOverviewAsync(projectId);
+                return Results.Json(overview);
+            }
+            catch (Exception ex)
+            {
+                return FormatDbError(ex);
+            }
+        });
+
+        // 10.1 List Tables
         app.MapGet("/_baas/v1/{projectId}/db/tables", async (string projectId, ProjectManagerService pm) =>
         {
             if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");

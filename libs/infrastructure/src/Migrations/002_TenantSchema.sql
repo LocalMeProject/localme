@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS auth.refresh_tokens (
 );
 
 -- Helper functions for PostgreSQL RLS Policies
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS $$
-    SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::UUID;
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS TEXT AS $$
+    SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '');
 $$ LANGUAGE SQL STABLE;
 
 CREATE OR REPLACE FUNCTION auth.role() RETURNS TEXT AS $$

@@ -404,14 +404,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           latencyMs: latency,
           rowCount: count,
         });
-
-        if (
-          sqlQuery.toUpperCase().includes('CREATE TABLE') ||
-          sqlQuery.toUpperCase().includes('DROP TABLE') ||
-          sqlQuery.toUpperCase().includes('ALTER TABLE')
-        ) {
-          fetchTables();
-        }
       } else {
         const errData = await res.json().catch(() => null);
         const errMsg = errData?.error || (await res.text()) || 'خطا در اجرای کوئری';
@@ -522,21 +514,37 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
   // Quick SQL Snippets
   const handleApplySnippet = (type: string) => {
+    const tbl = activeTable || 'records';
+    const nonPkCols = schemaColumns.filter((c) => !c.isPrimaryKey);
+    const pkCol = schemaColumns.find((c) => c.isPrimaryKey)?.name || 'id';
+
     switch (type) {
       case 'select':
-        setSqlQuery(`SELECT * FROM ${activeTable || 'records'} ORDER BY id DESC LIMIT 50;`);
+        setSqlQuery(`SELECT * FROM "${tbl}" ORDER BY "${pkCol}" DESC LIMIT 50;`);
         break;
-      case 'insert':
-        setSqlQuery(`INSERT INTO ${activeTable || 'records'} (title, status, created_at)\nVALUES ('عنوان نمونه', 'ACTIVE', NOW())\nRETURNING *;`);
+      case 'insert': {
+        const targetCols = nonPkCols.length > 0 ? nonPkCols.slice(0, 3) : [{ name: 'data', dataType: 'text' }];
+        const colNames = targetCols.map((c) => `"${c.name}"`).join(', ');
+        const colValues = targetCols.map((c) => {
+          const dt = (c.dataType || '').toLowerCase();
+          if (dt.includes('int') || dt.includes('numeric') || dt.includes('serial')) return '1';
+          if (dt.includes('bool')) return 'true';
+          if (dt.includes('json')) return '\'{"key": "val"}\'';
+          return '\'نمونه\'';
+        }).join(', ');
+        setSqlQuery(`INSERT INTO "${tbl}" (${colNames})\nVALUES (${colValues})\nRETURNING *;`);
         break;
-      case 'update':
-        setSqlQuery(`UPDATE ${activeTable || 'records'} SET status = 'INACTIVE' WHERE id = 1 RETURNING *;`);
+      }
+      case 'update': {
+        const firstCol = nonPkCols[0]?.name || 'updated_at';
+        setSqlQuery(`UPDATE "${tbl}"\nSET "${firstCol}" = 'مقدار جدید'\nWHERE "${pkCol}" = '1'\nRETURNING *;`);
         break;
+      }
       case 'delete':
-        setSqlQuery(`DELETE FROM ${activeTable || 'records'} WHERE id = 0 RETURNING *;`);
+        setSqlQuery(`DELETE FROM "${tbl}"\nWHERE "${pkCol}" = '0'\nRETURNING *;`);
         break;
       case 'explain':
-        setSqlQuery(`EXPLAIN ANALYZE\nSELECT * FROM ${activeTable || 'records'} WHERE id > 0;`);
+        setSqlQuery(`EXPLAIN ANALYZE\nSELECT * FROM "${tbl}"\nORDER BY "${pkCol}" DESC\nLIMIT 50;`);
         break;
     }
   };
@@ -666,6 +674,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           {/* Right: Table Data Grid */}
           <div className="lg:col-span-9 space-y-4">
             <TableDataGrid
+              projectSlug={project.slug}
               activeTable={activeTable}
               tableColumns={tableColumns}
               schemaColumns={schemaColumns}

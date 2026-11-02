@@ -39,6 +39,10 @@ This is the **tailored operating skill** for this product monorepo. Agents worki
 1. **Zero Direct Datastore Access**: Direct PostgreSQL connection strings, credentials, and connection URI panels are strictly forbidden from being displayed, logged, or exposed in developer portals or client SDKs. All operations route exclusively through authenticated LocalMe gateway routes (`/_baas/v1/*`).
 2. **Strict SQL Runner Guardrails**: The raw SQL execution engine (`/_baas/v1/{projectId}/sql/execute` and `/db/sql`) enforces strict DML-only execution. All DDL operations (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `RENAME`) are blocked at the gateway and reserved exclusively for Schema Designer endpoints.
 3. **Automated Snapshot Lifecycle**: Tenant database snapshots enforce a 3-day retention policy (`RetentionDays = 3`, configurable by system administrators). Expired snapshot records and disk assets must be automatically pruned.
+4. **Bounded-Resource & High-Throughput Architecture (1M+ req/day on limited RAM)**:
+   - **Bounded Metadata Caching**: In-memory caches (such as tenant schema metadata, auth keys, and table lookups) must strictly employ bounded caching primitives (`IMemoryCache` / `MemoryCache` with `SizeLimit` and sliding/absolute TTL eviction). Unbounded `ConcurrentDictionary` storage for tenant assets is strictly forbidden.
+   - **Stream-First Payloads**: Operations handling dynamic or unbounded datasets (database snapshots, batch exports, large query results) must stream directly through IO primitives (`Utf8JsonWriter`, `PipeWriter`, `FileStream`) rather than materializing large contiguous JSON strings or intermediate DOMs in the Large Object Heap (LOH).
+   - **Defensive Resource Caps**: Query limits, transaction timeouts (5s statement, 2s lock), and connection pool multiplexing must remain strictly enforced to guarantee sub-8ms p95 SLAs on shared nodes.
 
 ---
 

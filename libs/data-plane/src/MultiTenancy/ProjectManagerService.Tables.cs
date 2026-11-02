@@ -16,6 +16,24 @@ public sealed partial class ProjectManagerService
     private string ResolveProjectSlug(string projectId) =>
         _projects.TryGetValue(projectId, out var p) ? p.Slug : projectId;
 
+    public async Task<IReadOnlyList<TableOverviewItem>> GetTablesOverviewAsync(string projectId)
+    {
+        var slug = ResolveProjectSlug(projectId);
+        if (TenantDbStore != null)
+        {
+            return await TenantDbStore.GetTablesOverviewAsync(slug);
+        }
+
+        var tables = _projectTables.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<JsonObject>>());
+        var list = new List<TableOverviewItem>();
+        foreach (var (tbl, rows) in tables)
+        {
+            var colsCount = rows.Count > 0 && rows[0] is JsonObject obj ? obj.Count : 1;
+            list.Add(new TableOverviewItem(tbl, "id", colsCount, rows.Count, DateTimeOffset.UtcNow));
+        }
+        return list;
+    }
+
     // Project Scoped Relational Data & Dynamic Table Operations
     public JsonArray QueryTable(string projectId, string table, int limit = 50, string? filterCol = null, string? filterVal = null)
     {

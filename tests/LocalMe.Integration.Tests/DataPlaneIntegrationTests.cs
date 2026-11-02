@@ -3,8 +3,8 @@ namespace LocalMe.Integration.Tests;
 using System.Text.Json.Nodes;
 using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Compute;
-using LocalMe.DataPlane.DynamicSql;
 using LocalMe.DataPlane.Finance;
+using LocalMe.DataPlane.MultiTenancy;
 using Xunit;
 
 public class DataPlaneIntegrationTests
@@ -94,12 +94,13 @@ public class DataPlaneIntegrationTests
     }
 
     [Fact]
-    public void DynamicSqlHandler_QueriesAndInsertsIsolatedData()
+    public void ProjectManagerService_QueriesAndInsertsIsolatedData()
     {
-        var handler = new DynamicSqlHandler();
+        var pm = new ProjectManagerService();
+        var projectId = "p_test_project";
 
         // 1. Clean initial state
-        var initialProducts = handler.QueryTable("products");
+        var initialProducts = pm.QueryTable(projectId, "products");
         Assert.Empty(initialProducts);
 
         // 2. Insert new records
@@ -111,11 +112,11 @@ public class DataPlaneIntegrationTests
             ["category"] = "Tablets"
         };
 
-        var inserted = handler.InsertRow("products", newRecord);
+        var inserted = pm.InsertRow(projectId, "products", newRecord);
         Assert.NotNull(inserted["id"]);
 
         // 3. Filter query
-        var queryResult = handler.QueryTable("products", limit: 10, filterCol: "category", filterVal: "Tablets");
+        var queryResult = pm.QueryTable(projectId, "products", limit: 10, filterCol: "category", filterVal: "Tablets");
         Assert.Single(queryResult);
         Assert.Equal("تبلت آیپد پرو M4", queryResult[0]?["title"]?.ToString());
     }

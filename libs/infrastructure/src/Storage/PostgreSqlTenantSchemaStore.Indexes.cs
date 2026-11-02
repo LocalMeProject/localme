@@ -70,6 +70,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"CREATE {unique} INDEX IF NOT EXISTS ""{cleanIdx}"" ON ""{schema}"".""{cleanTable}"" ({cleanCols});";
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 
@@ -83,6 +84,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DROP INDEX IF EXISTS ""{schema}"".""{cleanIdx}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 
@@ -96,6 +98,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"REINDEX INDEX ""{schema}"".""{cleanIdx}"";";
         await cmd.ExecuteNonQueryAsync(ct);
+        InvalidateTenantSchemaCache(projectSlug);
         return true;
     }
 }

@@ -9,6 +9,7 @@ using LocalMe.Core.Database;
 public interface ITenantDatabaseStore
 {
     Task EnsureTenantSchemaAsync(string projectSlug, CancellationToken ct = default);
+    Task<IReadOnlyList<TableOverviewItem>> GetTablesOverviewAsync(string projectSlug, CancellationToken ct = default);
     Task<IReadOnlyList<string>> GetTableNamesAsync(string projectSlug, CancellationToken ct = default);
     Task<IReadOnlyList<TableColumnDefinition>> GetTableSchemaAsync(string projectSlug, string tableName, CancellationToken ct = default);
     Task<bool> CreateTableAsync(string projectSlug, string tableName, IReadOnlyList<TableColumnDefinition>? columns = null, CancellationToken ct = default);
