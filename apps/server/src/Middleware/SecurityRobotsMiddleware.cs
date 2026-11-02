@@ -26,6 +26,7 @@ public sealed class SecurityRobotsMiddleware
         if (DynamicDiscoveryService.IsPrivateControlPath(path))
         {
             context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet";
+            context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
         }
 
         await _next(context);

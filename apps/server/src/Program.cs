@@ -328,21 +328,24 @@ public class Program
         app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
 
         // 13. Dynamic SEO & Machine-Readable Discoverability
-        app.MapGet("/robots.txt", (PlatformConfigurationService cfg) =>
+        app.MapGet("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
         {
-            var txt = cfg.Discovery.GenerateRobotsTxt(cfg.GetConfig());
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var txt = DynamicDiscoveryService.GenerateRobotsTxt(cfg.GetConfig());
             return Results.Content(txt, "text/plain; charset=utf-8");
         });
 
-        app.MapGet("/sitemap.xml", (PlatformConfigurationService cfg, IWebHostEnvironment env) =>
+        app.MapGet("/sitemap.xml", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
         {
-            var xml = cfg.Discovery.GenerateSitemapXml(cfg.GetConfig(), env.WebRootPath);
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var xml = DynamicDiscoveryService.GenerateSitemapXml(cfg.GetConfig(), env.WebRootPath);
             return Results.Content(xml, "application/xml; charset=utf-8");
         });
 
-        app.MapGet("/llms.txt", (PlatformConfigurationService cfg) =>
+        app.MapGet("/llms.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
         {
-            var txt = cfg.Discovery.GenerateLlmsTxt(cfg.GetConfig());
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var txt = DynamicDiscoveryService.GenerateLlmsTxt(cfg.GetConfig());
             return Results.Content(txt, "text/plain; charset=utf-8");
         });
 
