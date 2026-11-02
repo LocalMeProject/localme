@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سوالات متداول توسعه دهندگان | لوکال می</title>
+  <meta name="title" content="سوالات متداول توسعه دهندگان | لوکال می" />
+  <meta name="description" content="پاسخ های تخصصی به پرتکرارترین پرسش های فنی پیرامون پلتفرم ابری لوکال می: پایگاه داده چندمستاجره، احراز هویت، ذخیره سازی ابری S3، توابع لبه، تاخیر زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪." />
+  <meta name="keywords" content="سوالات متداول لوکال می, پشتیبانی لوکال می, BaaS ایران, پایگاه داده ابری, امنیت RLS, تاخیر شبکه ایران, جایگزین فایربیس" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <link rel="canonical" href="https://localme.ir/faq" />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://localme.ir/faq" />
+  <meta property="og:title" content="سوالات متداول توسعه دهندگان | لوکال می" />
+  <meta property="og:description" content="پاسخ های تخصصی به پرسش های فنی پیرامون پایگاه داده، احراز هویت، فضای ابری S3، توابع لبه و پایداری لوکال می." />
+  <meta property="og:image" content="https://localme.ir/assets/og/faq.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://localme.ir/faq" />
+  <meta property="twitter:title" content="سوالات متداول توسعه دهندگان | لوکال می" />
+  <meta property="twitter:description" content="مرکز پاسخ به سوالات معماری، پایگاه داده، توابع لبه و تله متری در لوکال می." />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/faq.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "سوالات متداول",
+            "item": "https://localme.ir/faq"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "لوکال می دقیقا چه خدماتی ارائه می دهد؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "لوکال می یک پلتفرم چندمستاجره Backend-as-a-Service (BaaS) بومی ایران است که ۵ سرویس کلیدی شامل پایگاه داده PostgreSQL با RLS، احراز هویت و مدیریت کاربران، ذخیره سازی ابری فایل سازگار با S3، توابع بدون سرور لبه (Edge Functions) و تله متری پایش پروژه را به صورت کاملا آماده در اختیار توسعه دهندگان موبایل و وب قرار می دهد."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "تعهد سطح خدمت (SLA) لوکال می در مورد تاخیر و پایداری چیست؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "لوکال می تاخیر پاسخگویی سراسری زیر ۳۰۰ میلی ثانیه در کلیه اپراتورهای اینترنت کشور و ضریب پایداری ۱۰۰٪ با معماری چندمرکزی در مراکز داده تهران را تضمین می کند."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "آیا پایگاه داده لوکال می امنیت داده های چندمستاجره را تضمین می کند؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "بله، هر پروژه در لوکال می دارای اسکیمای دیتابیس کاملا مجزا در PostgreSQL است و سیاست های دسترسی سطری (Row-Level Security) از هرگونه تداخل یا نشت اطلاعات بین پروژه ها یا کاربران جلوگیری می کند."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "آیا ترافیک کاربران در لوکال می نیم بها محاسبه می شود؟",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "بله، به دلیل استقرار کامل سرورها در دیتاسنترهای داخلی و اتصال مستقیم به IXP تهران، ترافیک کلیه کاربران طبق مصوبات سازمان تنظیم مقررات به صورت نیم بها محاسبه می گردد."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .faq-item {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      transition: all 140ms ease;
+    }
+    .faq-item:hover {
+      border-color: var(--brand-primary);
+    }
+    .faq-question {
+      padding: 18px 22px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    .faq-answer {
+      padding: 0 22px 18px 22px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.8;
+      border-top: 1px solid var(--bg-subtle);
+      margin-top: 4px;
+      padding-top: 12px;
+    }
+    .breadcrumb-nav {
+      max-width: 900px;
+      margin: 20px auto 0 auto;
+      padding: 0 20px;
+      font-size: 13px;
+      color: var(--text-light);
+    }
+    .breadcrumb-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover {
+      color: var(--brand-dark);
+    }
+  </style>
+</head>
+<body style="background: var(--bg-main);">
+
+  <!-- Header -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال می</span>
+      </a>
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+        سوالات متداول توسعه دهندگان
+      </span>
+    </div>
+
+    <div class="topbar-utils">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">مستندات فنی</a>
+      <a href="/auth" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">ورود به سامانه</a>
+    </div>
+  </header>
+
+  <!-- Breadcrumbs -->
+  <nav class="breadcrumb-nav">
+    <a href="/">صفحه اصلی</a> › <span>سوالات متداول</span>
+  </nav>
+
+  <!-- Main Container -->
+  <main style="max-width: 900px; margin: 30px auto 80px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 10px;">مرکز سوالات متداول توسعه دهندگان</h1>
+      <p style="font-size: 14.5px; color: var(--text-muted); max-width: 600px; margin: 0 auto 24px auto;">
+        پاسخ های جامع و شفاف به پرسش های فنی پیرامون معماری ابری، امنیت، پایگاه داده و تعهدات سرویس های لوکال می
+      </p>
+
+      <div style="max-width: 500px; margin: 0 auto;">
+        <input type="text" id="faq-search" class="input-field" placeholder="جستجو در سوالات متداول..." style="font-size: 14px; padding: 10px 14px;" oninput="searchFaq(this.value)" />
+      </div>
+    </div>
+
+    <div id="faq-list">
+      <!-- 1 -->
+      <details class="faq-item" open>
+        <summary class="faq-question">
+          لوکال می دقیقا چه مشکلی را برای توسعه دهندگان حل می کند؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          توسعه دهندگان فرانت اند و موبایل برای ساخت هر پروژه به سرور، دیتابیس، سیستم احراز هویت، ذخیره سازی فایل و توابع اجرایی نیاز دارند. مدیریت این زیرساخت ها نیازمند دانش عمیق دواپس، پیکربندی های مداوم و نگهداری سرور است. لوکال می تمامی این سرویس ها را به عنوان یک پلتفرم آماده Backend-as-a-Service (BaaS) ابری با سرورهای پایدار در تهران ارائه می دهد تا شما تنها با چند خط کد در کلاینت، اپلیکیشن خود را راه اندازی کنید.
+        </div>
+      </details>
+
+      <!-- 2 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          تعهد سطح خدمت (SLA) در مورد پایداری و تاخیر شبکه چگونه است؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          لوکال می آپتایم ۱۰۰٪ را برای تمامی سرویس های پلتفرم تضمین می کند. زیرساخت ما در دو دیتاسنتر مستقل در تهران به صورت اکتیو-اکتیو مستقر بوده و به صورت مستقیم به شبکه تبادل ترافیک ملی (IXP) متصل است. تاخیر شبکه در تمام استان ها و روی تمامی اپراتورهای همراه اول، ایرانسل، رایتل و شرکت های اینترنت ثابت زیر ۳۰۰ میلی ثانیه می باشد.
+        </div>
+      </details>
+
+      <!-- 3 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          پایگاه داده لوکال می بر چه اساسی طراحی شده و امنیت آن چگونه تامین می شود؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          پایگاه داده لوکال می بر بستر قدرتمند PostgreSQL 18 بنا شده است. هر پروژه دارای اسکیمای دیتابیس کاملا ایزوله اختصاصی است و هیچ امکانی برای خواندن یا نوشتن اطلاعات یک پروژه در پروژه دیگر وجود ندارد. همچنین با پشتیبانی از Row-Level Security (RLS)، توسعه دهنده می تواند قوانین امنیتی دقیق تعیین کند تا هر کاربر فقط به سطرها و رکوردهای مجاز خود دسترسی داشته باشد.
+        </div>
+      </details>
+
+      <!-- 4 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          احراز هویت کاربران در لوکال می به چه صورتی انجام می شود؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          سرویس احراز هویت لوکال می امکان ثبت نام و ورود امن با استفاده از ایمیل یا نام کاربری و رمز عبور را فراهم می کند. کلمات عبور با الگوریتم های رمزنگاری قوی هش شده و پس از اعتبارسنجی، توکن های JWT استاندارد صادر می شوند که مدیریت نشست ها و احراز هویت را در اپلیکیشن تسهیل می کند.
+        </div>
+      </details>
+
+      <!-- 5 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          ذخیره سازی ابری فایل ها در لوکال می با چه استانداردی کار می کند؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          سرویس ذخیره سازی فایل لوکال می کاملا سازگار با پروتکل Amazon S3 طراحی شده است. شما می توانید تصاویر، ویدیوها، اسناد و فایل های حجیم را در باکت های اختصاصی آپلود کرده و از قابلیت صدور دسترسی های موقت زمان دار (Presigned URLs) و CDN داخلی برای تحویل پرسرعت استفاده نمایید.
+        </div>
+      </details>
+
+      <!-- 6 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          توابع بدون سرور (Edge Functions) چه کاربردی دارند؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          با استفاده از توابع ابری لبه، می توانید منطق های تجاری، محاسبات پیچیده، اعتبارسنجی های اختصاصی و ادغام با سایر وب سرویس ها را بدون نیاز به راه اندازی سرور مجزا اجرا نمایید. کدهای شما در محیطی امن و ایزوله با کمترین تاخیر پردازش می شوند.
+        </div>
+      </details>
+
+      <!-- 7 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          سامانه تله متری پروژه ها چه اطلاعاتی در اختیار توسعه دهنده قرار می دهد؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          تله متری لوکال می به صورت پیش فرض برای هر پروژه فعال است و زمان پاسخگویی درخواست ها، تعداد کوئری های موفق و ناموفق، حجم ترافیک مصرفی و خطاهای برنامه را پایش کرده و به صورت نمودارهای بصری در کنسول توسعه دهندگان نمایش می دهد.
+        </div>
+      </details>
+
+      <!-- 8 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          لوکال می چگونه از اپلیکیشن ها در برابر تحریم های بین المللی محافظت می کند؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          تمامی سرورها، ذخیره سازها و پردازشگرهای لوکال می در داخل مرزهای جغرافیایی کشور و تحت مالکیت دیتاسنترهای تهران قرار دارند. به همین دلیل هرگونه مسدودسازی، تحریم دامنه یا قطع دسترسی از خارج از کشور، تاثیری بر دسترسی کاربران به اپلیکیشن شما نخواهد داشت.
+        </div>
+      </details>
+
+      <!-- 9 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          آیا امکان مهاجرت از فایربیس یا سوپابیس به لوکال می وجود دارد؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          بله، به دلیل معماری داده های رابطه ای و مستندات گام به گام در لوکال می، شما می توانید جداول و فایل های خود را به سادگی به لوکال می منتقل کرده و کدهای کلاینت را با SDK های لوکال می جایگزین کنید.
+        </div>
+      </details>
+
+      <!-- 10 -->
+      <details class="faq-item">
+        <summary class="faq-question">
+          چه زبان ها و فریم ورک هایی توسط SDK لوکال می پشتیبانی می شوند؟
+          <span>▾</span>
+        </summary>
+        <div class="faq-answer">
+          لوکال می دارای کتابخانه های کلاینت رسمی برای فلاتر (Dart)، ری اکت نیتیو (TypeScript)، وب (جاوااسکریپت و تایپ اسکریپت)، اندروید (Kotlin) و iOS (Swift) است. همچنین اندپوینت های استاندارد REST API امکان اتصال با هر فریم ورک دیگری را فراهم می سازد.
+        </div>
+      </details>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">لوکال می</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none;">صفحه اصلی</a>
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات</a>
+        <a href="/benchmarks" style="color: var(--text-muted); text-decoration: none;">کارایی</a>
+        <a href="/panel" style="color: var(--text-muted); text-decoration: none;">کنسول</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
+  </footer>
+
+  <script>
+    function searchFaq(query) {
+      var q = (query || '').toLowerCase().trim();
+      var items = document.querySelectorAll('.faq-item');
+      items.forEach(function(item) {
+        var text = item.textContent.toLowerCase();
+        if (!q || text.indexOf(q) !== -1) {
+          item.style.display = '';
+          if (q) item.open = true;
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

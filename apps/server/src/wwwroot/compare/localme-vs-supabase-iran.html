@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مقایسه لوکال می و سوپابیس خودمیزبان در ایران | لوکال می</title>
+  <meta name="title" content="مقایسه لوکال می و سوپابیس خودمیزبان در ایران | لوکال می" />
+  <meta name="description" content="مقایسه فنی پلتفرم مدیریت شده لوکال می با اجرای دستی سوپابیس (Self-Hosted Supabase) روی سرور مجازی در ایران: هزینه های نگهداری، کانفیگ داکر، پشتیبان گیری، امنیت و آپتایم." />
+  <meta name="keywords" content="مقایسه سوپابیس و لوکال می, سوپابیس در ایران, جایگزین سوپابیس, نصب سوپابیس روی سرور ایران, BaaS ابری ایران, لوکال می" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <link rel="canonical" href="https://localme.ir/compare/localme-vs-supabase-iran" />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://localme.ir/compare/localme-vs-supabase-iran" />
+  <meta property="og:title" content="مقایسه لوکال می و سوپابیس خودمیزبان در ایران | لوکال می" />
+  <meta property="og:description" content="چرا استفاده از پلتفرم مدیریت شده لوکال می به صرفه تر و مطمئن تر از نگهداری سرور شخصی سوپابیس است؟" />
+  <meta property="og:image" content="https://localme.ir/assets/og/compare-supabase.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://localme.ir/compare/localme-vs-supabase-iran" />
+  <meta property="twitter:title" content="لوکال می در برابر سوپابیس خودمیزبان" />
+  <meta property="twitter:description" content="تحلیل هزینه های دواپس، نگهداری و پایداری در ایران." />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/compare-supabase.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "مقایسه",
+            "item": "https://localme.ir/compare/localme-vs-supabase-iran"
+          }
+        ]
+      },
+      {
+        "@type": "TechArticle",
+        "headline": "مقایسه فنی لوکال می با سوپابیس خودمیزبان روی سرور مجازی",
+        "description": "بررسی مقایسه ای هزینه های نگهداری سرور، پشتیبان گیری دیتابیس و مدیریت منابع سوپابیس با لوکال می.",
+        "author": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "url": "https://localme.ir"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://localme.ir/assets/og/compare-supabase.png"
+          }
+        },
+        "inLanguage": "fa"
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .breadcrumb-nav { max-width: 900px; margin: 20px auto 0 auto; padding: 0 20px; font-size: 13px; color: var(--text-light); }
+    .breadcrumb-nav a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb-nav a:hover { color: var(--brand-dark); }
+    .comp-table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color); margin: 24px 0; }
+    .comp-table th, .comp-table td { padding: 14px 18px; text-align: right; border-bottom: 1px solid var(--border-color); font-size: 13.5px; }
+    .comp-table th { background: var(--bg-subtle); font-weight: 700; color: var(--text-main); }
+    .comp-table tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body style="background: var(--bg-main);">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال می</span>
+      </a>
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+        بررسی و مقایسه فنی
+      </span>
+    </div>
+    <div class="topbar-utils">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">مستندات</a>
+      <a href="/auth" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">شروع ساخت پروژه</a>
+    </div>
+  </header>
+
+  <nav class="breadcrumb-nav">
+    <a href="/">صفحه اصلی</a> › <span>مقایسه با سوپابیس خودمیزبان در ایران</span>
+  </nav>
+
+  <main style="max-width: 900px; margin: 30px auto 80px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 12px;">لوکال می در برابر سوپابیس خودمیزبان (Self-Hosted)</h1>
+      <p style="font-size: 15px; color: var(--text-muted); max-width: 700px; margin: 0 auto; line-height: 1.8;">
+        چالش های راه اندازی بیش از ۱۰ کانتینر داکر، نگهداری سرور مجازی و پشتیبان گیری در مقایسه با پلتفرم ابری کاملا مدیریت شده
+      </p>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">جدول مقایسه ویژگی های عملیاتی</h2>
+      
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>شاخص عملیاتی و فنی</th>
+            <th>لوکال می (پلتفرم ابری مدیریت شده)</th>
+            <th>سوپابیس خودمیزبان (Self-Hosted VPS)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>زمان و هزینه راه اندازی</strong></td>
+            <td style="color: var(--brand-dark); font-weight: 700;">فوری (زیر ۳۰ ثانیه در کنسول)</td>
+            <td style="color: #dc2626;">نیازمند چندین ساعت کانفیگ داکر و سرور</td>
+          </tr>
+          <tr>
+            <td><strong>نگهداری سرور و دواپس (DevOps)</strong></td>
+            <td style="color: var(--brand-dark); font-weight: 700;">صفر (کاملا خودکار توسط پلتفرم)</td>
+            <td style="color: #dc2626;">مدیریت آپدیت داکر، وصله های امنیتی و رم</td>
+          </tr>
+          <tr>
+            <td><strong>پایداری و آپتایم</strong></td>
+            <td style="color: var(--brand-dark); font-weight: 700;">۱۰۰٪ آپتایم با استقرار در ۲ دیتاسنتر</td>
+            <td>وابسته به سلامت یک سرور مجازی (SPOF)</td>
+          </tr>
+          <tr>
+            <td><strong>پشتیبان گیری (Backup) خودکار</strong></td>
+            <td style="color: var(--brand-dark); font-weight: 700;">پشتیبان گیری مداوم چندمرکزی</td>
+            <td>نیازمند اسکریپت نویسی و فضای ذخیره جدا</td>
+          </tr>
+          <tr>
+            <td><strong>تعهد تاخیر سراسری (SLA)</strong></td>
+            <td style="color: var(--brand-dark); font-weight: 700;">زیر ۳۰۰ میلی ثانیه تضمین شده</td>
+            <td>وابسته به کیفیت شبکه دیتاسنتر منتخب</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Details -->
+    <div class="card">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">آیا خودمیزبانی سوپابیس برای تیم های ایرانی به صرفه است؟</h2>
+      <div style="font-size: 14px; color: var(--text-muted); line-height: 1.9;">
+        <p>
+          نصب نسخه منبع باز سوپابیس روی سرور مجازی داخلی در ابتدا وسوسه انگیز به نظر می رسد؛ اما نگهداری پایدار آن نیازمند اجرای همزمان کانتینرهای PostgreSQL، GoTrue، PostgREST، Kong، Storage و Realtime است. هر بار قطعی شبکه یا کمبود رم در سرور مجازی می تواند کل دیتابیس اپلیکیشن را با اختلال مواجه کند.
+        </p>
+        <p>
+          لوکال می این دغدغه ها را کاملا حذف کرده است. شما بدون نیاز به خرید سرور مجازی، کانفیگ لینوکس و استرس پشتیبان گیری، مستقیما به پایگاه داده ابری چندمستاجره و پرسرعت دسترسی دارید و تنها بر روی کدنویسی اپلیکیشن خود تمرکز می کنید.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">لوکال می</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none;">صفحه اصلی</a>
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات</a>
+        <a href="/faq" style="color: var(--text-muted); text-decoration: none;">سوالات متداول</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
+  </footer>
+</body>
+</html>

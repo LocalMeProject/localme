@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>احراز هویت و مدیریت کاربران | لوکال می</title>
+  <meta name="title" content="احراز هویت و مدیریت کاربران | لوکال می" />
+  <meta name="description" content="سرویس احراز هویت توکن محور JWT و مدیریت کاربران در پلتفرم لوکال می: ثبت نام و ورود امن با نام کاربری و ایمیل، کنترل نشست ها و امنیت داده های توسعه دهندگان در مراکز داده تهران." />
+  <meta name="keywords" content="احراز هویت ابری, مدیریت کاربران فلاتر, لاگین ری اکت نیتیو, توکن JWT, احراز هویت BaaS, لوکال می" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <link rel="canonical" href="https://localme.ir/features/auth" />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://localme.ir/features/auth" />
+  <meta property="og:title" content="احراز هویت و مدیریت کاربران | لوکال می" />
+  <meta property="og:description" content="سامانه یکپارچه احراز هویت کاربران با توکن JWT و اعتبارسنجی سمت کلاینت و سرور در لوکال می." />
+  <meta property="og:image" content="https://localme.ir/assets/og/auth.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://localme.ir/features/auth" />
+  <meta property="twitter:title" content="احراز هویت و مدیریت کاربران | لوکال می" />
+  <meta property="twitter:description" content="ورود و ثبت نام امن با توکن های معتبر JWT و کنترل نشست ها در لوکال می." />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/auth.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "امکانات",
+            "item": "https://localme.ir/#services"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "احراز هویت و مدیریت کاربران",
+            "item": "https://localme.ir/features/auth"
+          }
+        ]
+      },
+      {
+        "@type": "TechArticle",
+        "headline": "سرویس احراز هویت و مدیریت کاربران لوکال می",
+        "description": "راهنمای معماری سیستم احراز هویت، توکن های JWT و مدیریت دسترسی کاربران در لوکال می.",
+        "author": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "url": "https://localme.ir"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://localme.ir/assets/og/auth.png"
+          }
+        },
+        "inLanguage": "fa"
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .breadcrumb-nav { max-width: 900px; margin: 20px auto 0 auto; padding: 0 20px; font-size: 13px; color: var(--text-light); }
+    .breadcrumb-nav a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb-nav a:hover { color: var(--brand-dark); }
+    .code-box { background: #0f172a; border-radius: 8px; padding: 18px; color: #e2e8f0; font-family: monospace; font-size: 13.5px; direction: ltr; overflow-x: auto; margin: 16px 0; border: 1px solid #334155; }
+    .feature-point { display: flex; gap: 14px; margin-bottom: 20px; }
+    .feature-point-icon { width: 36px; height: 36px; border-radius: 8px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+  </style>
+</head>
+<body style="background: var(--bg-main);">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال می</span>
+      </a>
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+        احراز هویت و مدیریت کاربران
+      </span>
+    </div>
+    <div class="topbar-utils">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">مستندات احراز هویت</a>
+      <a href="/auth" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">شروع رایگان</a>
+    </div>
+  </header>
+
+  <nav class="breadcrumb-nav">
+    <a href="/">صفحه اصلی</a> › <a href="/#services">امکانات</a> › <span>احراز هویت و مدیریت کاربران</span>
+  </nav>
+
+  <main style="max-width: 900px; margin: 30px auto 80px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 12px;">احراز هویت ایمن، سبک و توکن محور برای اپلیکیشن ها</h1>
+      <p style="font-size: 15px; color: var(--text-muted); max-width: 700px; margin: 0 auto; line-height: 1.8;">
+        بدون نیاز به پیاده سازی دیتابیس جداگانه برای کاربران یا هش کردن دستی پسوردها، کاربران خود را با توکن های امن استاندارد JWT در لوکال می مدیریت کنید.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">امکانات کلیدی سرویس احراز هویت</h2>
+      
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">ثبت نام و ورود با نام کاربری و ایمیل</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            پشتیبانی از ورود امن، بازیابی اعتبار، هشینگ چندلایه کلمات عبور و جلوگیری از حملات Brute-Force.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">صدور توکن های استاندارد JWT با قابلیت ابطال</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            توکن های دسترسی با امضای دیجیتال و امکان مدیریت نشست ها در اپلیکیشن های موبایل و وب.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">اتصال خودکار به قوانین امنیتی دیتابیس (RLS Integration)</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            شناسه کاربر لاگین شده مستقیما در کوئری های دیتابیس تزریق می شود تا دسترسی فقط به رکوردهای مجاز محدود گردد.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 8px;">نمونه کدهای ورود و ثبت نام در کلاینت</h2>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+        فراخوانی متدهای آماده احراز هویت با چند خط کد ساده:
+      </p>
+
+      <div style="font-size: 13px; font-weight: 700; color: var(--brand-dark); margin-top: 12px;">کد Dart در فلاتر:</div>
+      <div class="code-box">// ورود کاربر با ایمیل و رمز عبور
+final session = await client.auth.signInWithPassword(
+  username: 'user@example.ir',
+  password: 'StrongPassword123!',
+);
+
+if (session.isAuthenticated) {
+  print('کاربر با شناسه ${session.user.id} وارد شد');
+}</div>
+
+      <div style="font-size: 13px; font-weight: 700; color: var(--brand-dark); margin-top: 16px;">کد TypeScript در وب و React Native:</div>
+      <div class="code-box">// ثبت نام کاربر جدید
+const { user, token } = await client.auth.signUp({
+  username: 'frontend_dev',
+  email: 'dev@company.ir',
+  password: 'SuperSecretPassword'
+});
+
+console.log('ثبت نام با موفقیت انجام شد:', user.id);</div>
+    </div>
+  </main>
+
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">لوکال می</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none;">صفحه اصلی</a>
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات</a>
+        <a href="/faq" style="color: var(--text-muted); text-decoration: none;">سوالات متداول</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
+  </footer>
+</body>
+</html>

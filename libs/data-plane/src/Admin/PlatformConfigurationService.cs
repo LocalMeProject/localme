@@ -12,20 +12,29 @@ public sealed class PlatformConfigurationService
     private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
     private readonly object _syncLock = new();
     private readonly PricingCatalog _pricing;
+    private readonly DynamicDiscoveryService _discoveryService = new();
     private readonly string _storagePath;
     private PlatformConfig _currentConfig;
 
-    public PlatformConfigurationService(PricingCatalog? pricing = null, string? storagePath = null)
+    public PlatformConfigurationService(PricingCatalog? pricing = null, string? storagePath = null, string? webRootPath = null)
     {
         _pricing = pricing ?? new PricingCatalog();
         _storagePath = storagePath ?? Path.Combine(AppContext.BaseDirectory, "platform_config.json");
+        WebRootPath = webRootPath;
         _currentConfig = LoadPersistedConfig() ?? new PlatformConfig();
 
         // Sync initial state to pricing catalog
         SyncToPricingCatalog(_currentConfig);
+
+        if (!string.IsNullOrEmpty(WebRootPath))
+        {
+            DynamicDiscoveryService.SyncToWebRoot(_currentConfig, WebRootPath);
+        }
     }
 
     public PricingCatalog Pricing => _pricing;
+    public DynamicDiscoveryService Discovery => _discoveryService;
+    public string? WebRootPath { get; set; }
 
     public PlatformConfig GetConfig()
     {
@@ -45,6 +54,11 @@ public sealed class PlatformConfigurationService
             _currentConfig = updated.Clone();
             SyncToPricingCatalog(_currentConfig);
             PersistConfig(_currentConfig);
+
+            if (!string.IsNullOrEmpty(WebRootPath))
+            {
+                DynamicDiscoveryService.SyncToWebRoot(_currentConfig, WebRootPath);
+            }
 
             return _currentConfig.Clone();
         }
