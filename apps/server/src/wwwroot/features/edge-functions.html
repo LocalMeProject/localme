@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>توابع بدون سرور لبه (Edge Functions) | لوکال می</title>
+  <meta name="title" content="توابع بدون سرور لبه (Edge Functions) | لوکال می" />
+  <meta name="description" content="اجرای کدهای محاسباتی تجاری در محیط سرورلس کم تاخیر و ایزوله لوکال می در مراکز داده تهران بدون نیاز به نگهداری سرور اختصاصی و زیرساخت های سنگین." />
+  <meta name="keywords" content="توابع لبه, سرورلس ایران, Edge Functions, فایربیس کلاد فانکشن, توابع ابری لوکال می, سرورلس فلاتر" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="Persian" />
+  <link rel="canonical" href="https://localme.ir/features/edge-functions" />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://localme.ir/features/edge-functions" />
+  <meta property="og:title" content="توابع بدون سرور لبه (Edge Functions) | لوکال می" />
+  <meta property="og:description" content="اجرای کدهای تجاری و محاسباتی در محیط سرورلس ایزوله و پرسرعت لوکال می با تاخیر زیر ۳۰۰ میلی ثانیه." />
+  <meta property="og:image" content="https://localme.ir/assets/og/edge-functions.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fa_IR" />
+  <meta property="og:site_name" content="لوکال می" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://localme.ir/features/edge-functions" />
+  <meta property="twitter:title" content="توابع سرورلس لبه | لوکال می" />
+  <meta property="twitter:description" content="محاسبات ابری بدون سرور با زمان پاسخ فوق سریع در دیتاسنترهای تهران لوکال می." />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/edge-functions.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "امکانات",
+            "item": "https://localme.ir/#services"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "توابع لبه بدون سرور",
+            "item": "https://localme.ir/features/edge-functions"
+          }
+        ]
+      },
+      {
+        "@type": "TechArticle",
+        "headline": "محیط محاسباتی سرورلس Edge Functions لوکال می",
+        "description": "راهنمای استقرار و فراخوانی توابع بدون سرور لبه در دیتاسنترهای تهران با لوکال می.",
+        "author": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "url": "https://localme.ir"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://localme.ir/assets/og/edge-functions.png"
+          }
+        },
+        "inLanguage": "fa"
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .breadcrumb-nav { max-width: 900px; margin: 20px auto 0 auto; padding: 0 20px; font-size: 13px; color: var(--text-light); }
+    .breadcrumb-nav a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb-nav a:hover { color: var(--brand-dark); }
+    .code-box { background: #0f172a; border-radius: 8px; padding: 18px; color: #e2e8f0; font-family: monospace; font-size: 13.5px; direction: ltr; overflow-x: auto; margin: 16px 0; border: 1px solid #334155; }
+    .feature-point { display: flex; gap: 14px; margin-bottom: 20px; }
+    .feature-point-icon { width: 36px; height: 36px; border-radius: 8px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+  </style>
+</head>
+<body style="background: var(--bg-main);">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+        <span class="brand-badge">LM</span>
+        <span class="brand-title">لوکال می</span>
+      </a>
+      <span style="font-size: 13px; color: var(--text-muted); border-right: 1px solid var(--border-color); padding-right: 12px; margin-right: 4px;">
+        توابع ابری بدون سرور (Edge Functions)
+      </span>
+    </div>
+    <div class="topbar-utils">
+      <a href="/docs" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">مستندات توابع</a>
+      <a href="/auth" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">شروع رایگان</a>
+    </div>
+  </header>
+
+  <nav class="breadcrumb-nav">
+    <a href="/">صفحه اصلی</a> › <a href="/#services">امکانات</a> › <span>توابع لبه</span>
+  </nav>
+
+  <main style="max-width: 900px; margin: 30px auto 80px auto; padding: 0 20px;">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h1 style="font-size: 28px; font-weight: 900; margin-bottom: 12px;">منطق تجاری برنامه را در لبه شبکه بدون سرور اجرا کنید</h1>
+      <p style="font-size: 15px; color: var(--text-muted); max-width: 700px; margin: 0 auto; line-height: 1.8;">
+        بدون اتلاف وقت برای تنظیمات سرور لینوکس، کدهای محاسباتی و ادغام های سفارشی را با زمان شروع زیر ۱۰ میلی ثانیه در محیط سرورلس لوکال می اجرا نمایید.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">قابلیت های توابع لبه لوکال می</h2>
+      
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">شروع سریع بدون تاخیر سرما (Instant Cold-Start)</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            محیط محاسباتی سبک لوکال می در چند میلی ثانیه فعال شده و درخواست های شما را بی درنگ پاسخ می دهد.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">ایزولاسیون کامل حافظه و زمان اجرا</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            سندباکس امن برای هر اجرا با کنترل سقف مصرف رم و زمان تایم اوت جهت تضمین سلامت پایدار پلتفرم.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-point">
+        <div class="feature-point-icon">✓</div>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">دسترسی مستقیم به داده های پروژه</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.7;">
+            توابع لبه دسترسی درون شبکه ای بسیار سریع به جداول پایگاه داده و ذخیره ساز S3 همان پروژه دارند.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 8px;">نمونه فراخوانی تابع از کلاینت</h2>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+        فراخوانی توابع با ارسال پارامترها و دریافت نتایج JSON:
+      </p>
+
+      <div style="font-size: 13px; font-weight: 700; color: var(--brand-dark); margin-top: 12px;">کد Dart در فلاتر:</div>
+      <div class="code-box">// فراخوانی تابع محاسبه تخفیف و صدور فاکتور
+final response = await client.functions.invoke(
+  'process-checkout',
+  body: {
+    'cart_id': 'cart_84920',
+    'coupon': 'NOROOZ1405'
+  },
+);
+
+print('وضعیت محاسبه: ${response.data['status']}');</div>
+
+      <div style="font-size: 13px; font-weight: 700; color: var(--brand-dark); margin-top: 16px;">کد TypeScript در وب:</div>
+      <div class="code-box">// فراخوانی از فرانت اند وب
+const { data, error } = await client.functions.invoke('generate-report', {
+  body: { period: 'monthly' }
+});</div>
+    </div>
+  </main>
+
+  <footer style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 32px 24px; text-align: center; font-size: 13.5px; color: var(--text-muted);">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="brand-badge">LM</span>
+        <span style="font-weight: 700; color: var(--text-main);">لوکال می</span>
+      </div>
+      <div style="display: flex; gap: 20px; font-size: 13px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none;">صفحه اصلی</a>
+        <a href="/docs" style="color: var(--text-muted); text-decoration: none;">مستندات</a>
+        <a href="/faq" style="color: var(--text-muted); text-decoration: none;">سوالات متداول</a>
+      </div>
+      <div>تمامی حقوق محفوظ است • ۱۴۰۵</div>
+    </div>
+  </footer>
+</body>
+</html>

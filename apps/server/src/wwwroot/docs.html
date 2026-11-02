@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>مستندات جامع فنی و راهنمای توسعه دهندگان | LocalMe BaaS</title>
-  <meta name="title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | LocalMe BaaS" />
-  <meta name="description" content="مستندات فنی، راهنمای API و نمونه کدهای کلاینت SDK فلاتر، ری اکت نیتیو و وب در لوکال می: احراز هویت با شماره موبایل، اعتبارسنجی خرید کافه بازار و مایکت، پوش نوتیفیکیشن، ذخیره سازی ابری و اتصال درگاه پرداخت شتاب." />
-  <meta name="keywords" content="مستندات لوکال می, SDK فلاتر ایران, SDK ری اکت نیتیو, API احراز هویت پیامکی, اعتبارسنجی خرید کافه بازار, تایید خرید مایکت, مستندات BaaS ایران, API درگاه شتاب" />
+  <title>مستندات جامع فنی و راهنمای توسعه دهندگان | لوکال می</title>
+  <meta name="title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | لوکال می" />
+  <meta name="description" content="مستندات فنی، راهنمای API و نمونه کدهای کلاینت SDK فلاتر، ری اکت نیتیو و وب در لوکال می: پایگاه داده چندمستاجره، احراز هویت توکن محور، ذخیره سازی ابری S3، توابع بدون سرور لبه و تله متری." />
+  <meta name="keywords" content="مستندات لوکال می, SDK فلاتر ایران, SDK ری اکت نیتیو, پایگاه داده ابری, احراز هویت توکن محور, ذخیره سازی ابری S3, توابع لبه, مستندات BaaS ایران" />
   <meta name="robots" content="index, follow" />
   <meta name="language" content="Persian" />
   <link rel="canonical" href="https://localme.ir/docs" />
@@ -14,40 +14,63 @@
   <!-- OpenGraph -->
   <meta property="og:type" content="article" />
   <meta property="og:url" content="https://localme.ir/docs" />
-  <meta property="og:title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | LocalMe BaaS" />
+  <meta property="og:title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | لوکال می" />
   <meta property="og:description" content="راهنمای کامل اتصال اپلیکیشن های موبایل و وب به زیرساخت ابری لوکال می به همراه نمونه کدهای کاربردی و مستندات API." />
-  <meta property="og:image" content="https://localme.ir/favicon.ico" />
+  <meta property="og:image" content="https://localme.ir/assets/og/docs.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:locale" content="fa_IR" />
-  <meta property="og:site_name" content="لوکال می (LocalMe)" />
+  <meta property="og:site_name" content="لوکال می" />
 
   <!-- Twitter -->
-  <meta property="twitter:card" content="summary" />
+  <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://localme.ir/docs" />
-  <meta property="twitter:title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | LocalMe BaaS" />
+  <meta property="twitter:title" content="مستندات جامع فنی و راهنمای توسعه دهندگان | لوکال می" />
   <meta property="twitter:description" content="مستندات کامل راه اندازی، کتابخانه های SDK موبایل و وب و اندپوینت های API در پلتفرم لوکال می." />
-  <meta property="twitter:image" content="https://localme.ir/favicon.ico" />
+  <meta property="twitter:image" content="https://localme.ir/assets/og/docs.png" />
 
-  <!-- Schema.org TechArticle -->
+  <!-- Schema.org TechArticle & Breadcrumbs -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "مستندات فنی و راهنمای جامع پلتفرم ابری لوکال می",
-    "description": "راهنمای کامل توسعه دهندگان برای استفاده از خدمات پایگاه داده ابری، احراز هویت پیامکی، اعتبارسنجی خریدهای بازار و مایکت، اعلان پوش و ذخیره سازی فایل.",
-    "author": {
-      "@type": "Organization",
-      "name": "LocalMe Project",
-      "url": "https://localme.ir"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "LocalMe",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://localme.ir/favicon.ico"
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "headline": "مستندات فنی و راهنمای جامع پلتفرم ابری لوکال می",
+        "description": "راهنمای کامل توسعه دهندگان برای استفاده از خدمات پایگاه داده چندمستاجره، احراز هویت توکن محور، ذخیره سازی ابری S3، توابع لبه و تله متری.",
+        "author": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "url": "https://localme.ir"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "لوکال می",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://localme.ir/assets/og/docs.png"
+          }
+        },
+        "inLanguage": "fa"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "صفحه اصلی",
+            "item": "https://localme.ir/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "مستندات جامع فنی",
+            "item": "https://localme.ir/docs"
+          }
+        ]
       }
-    },
-    "inLanguage": "fa"
+    ]
   }
   </script>
 
