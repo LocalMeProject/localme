@@ -1,56 +1,141 @@
-# robots.txt for لوکال می (https://localme.ir)
-User-agent: *
+﻿User-agent: *
 Allow: /
-Allow: /docs
-Allow: /features/
-Allow: /compare/
-Allow: /faq
-Allow: /benchmarks
-Allow: /llms.txt
-
-# Disallow Internal Apps, Dashboards & Authentication
-Disallow: /auth
-Disallow: /auth/
-Disallow: /panel
-Disallow: /panel/
-Disallow: /console
-Disallow: /console/
-Disallow: /admin
-Disallow: /admin/
 Disallow: /_baas/
-Disallow: /api/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
-# Search Engine Crawlers
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: YandexBot
-Allow: /
-
-# Generative AI & Answer Engine Crawlers (AEO / GEO)
 User-agent: GPTBot
 Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
 User-agent: Google-Extended
 Allow: /
-
-User-agent: Amazonbot
-Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
 
-# Sitemap Location
+User-agent: CCBot
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: Amazonbot
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: cohere-ai
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /_baas/
+Disallow: /auth
+Disallow: /panel
+Disallow: /console
+Disallow: /admin
+Disallow: /projects
+Disallow: /dashboard
+
 Sitemap: https://localme.ir/sitemap.xml

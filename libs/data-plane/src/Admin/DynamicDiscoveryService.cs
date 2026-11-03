@@ -18,7 +18,8 @@ public sealed class DynamicDiscoveryService
     {
         "auth.html",
         "panel.html",
-        "admin.html"
+        "admin.html",
+        "404.html"
     };
 
     private static readonly char[] PathDelimiters = new[] { ',', '\n', '\r' };
@@ -27,13 +28,17 @@ public sealed class DynamicDiscoveryService
     {
         "GPTBot",
         "ChatGPT-User",
+        "OAI-SearchBot",
         "ClaudeBot",
+        "Claude-Web",
         "PerplexityBot",
         "Google-Extended",
         "Applebot-Extended",
         "CCBot",
         "Amazonbot",
-        "cohere-ai"
+        "Meta-ExternalAgent",
+        "cohere-ai",
+        "DuckAssistBot"
     };
 
     private static readonly string[] PrivateControlPrefixes = new[]
@@ -269,18 +274,96 @@ public sealed class DynamicDiscoveryService
         sb.AppendLine("- REST API برای یکپارچه سازی با هر محیط توسعه نرم افزار");
         sb.AppendLine();
         sb.AppendLine("## مستندات و پیوندهای کلیدی");
-        sb.Append("- صفحه اصلی: ").Append(baseUrl).AppendLine("/");
-        sb.Append("- مستندات جامع توسعه دهندگان: ").Append(baseUrl).AppendLine("/docs");
-        sb.Append("- پایگاه داده: ").Append(baseUrl).AppendLine("/features/database");
-        sb.Append("- احراز هویت: ").Append(baseUrl).AppendLine("/features/auth");
-        sb.Append("- ذخیره سازی ابری: ").Append(baseUrl).AppendLine("/features/storage");
-        sb.Append("- توابع لبه: ").Append(baseUrl).AppendLine("/features/edge-functions");
-        sb.Append("- تله متری و مانیتورینگ: ").Append(baseUrl).AppendLine("/features/telemetry");
-        sb.Append("- مقایسه لوکال می با فایربیس در ایران: ").Append(baseUrl).AppendLine("/compare/localme-vs-firebase-iran");
-        sb.Append("- مقایسه لوکال می با سوپابیس در ایران: ").Append(baseUrl).AppendLine("/compare/localme-vs-supabase-iran");
-        sb.Append("- سوالات متداول توسعه دهندگان: ").Append(baseUrl).AppendLine("/faq");
-        sb.Append("- گزارش کارایی و تاخیر شبکه: ").Append(baseUrl).AppendLine("/benchmarks");
-        sb.Append("- کنسول مدیریت پروژه ها: ").Append(baseUrl).AppendLine("/panel");
+        sb.Append("- [صفحه اصلی](").Append(baseUrl).AppendLine("/): معرفی زیرساخت و امکانات پلتفرم ابری لوکال می");
+        sb.Append("- [مستندات جامع توسعه دهندگان](").Append(baseUrl).AppendLine("/docs): مستندات فنی و راهنمای کامل SDK ها");
+        sb.Append("- [پایگاه داده چندمستاجره](").Append(baseUrl).AppendLine("/features/database): راهنمای پایگاه داده PostgreSQL با ایزولاسیون اسکیما");
+        sb.Append("- [احراز هویت و مدیریت کاربران](").Append(baseUrl).AppendLine("/features/auth): احراز هویت توکن محور JWT و مدیریت کاربران");
+        sb.Append("- [ذخیره سازی ابری فایل](").Append(baseUrl).AppendLine("/features/storage): آبجکت استوریج سازگار با پروتکل S3 در تهران");
+        sb.Append("- [توابع سرورلس لبه](").Append(baseUrl).AppendLine("/features/edge-functions): اجرای منطق تجاری در لبه شبکه بدون سرور");
+        sb.Append("- [تله متری و پایش پروژه](").Append(baseUrl).AppendLine("/features/telemetry): پایش و لاگ های بلادرنگ سلامت اپلیکیشن");
+        sb.Append("- [مقایسه لوکال می با فایربیس](").Append(baseUrl).AppendLine("/compare/localme-vs-firebase-iran): تحلیل وضعیت تحریم و تاخیر شبکه در ایران");
+        sb.Append("- [مقایسه لوکال می با سوپابیس](").Append(baseUrl).AppendLine("/compare/localme-vs-supabase-iran): مقایسه پلتفرم مدیریت شده با استقرار خودمیزبان");
+        sb.Append("- [سوالات متداول توسعه دهندگان](").Append(baseUrl).AppendLine("/faq): پاسخ های تخصصی به پرسش های متداول فنی");
+        sb.Append("- [گزارش کارایی و تاخیر شبکه](").Append(baseUrl).AppendLine("/benchmarks): گزارش آپتایم ۱۰۰٪ و تاخیر زیر ۳۰۰ میلی ثانیه");
+        sb.Append("- [قوانین و تعهدات سرویس](").Append(baseUrl).AppendLine("/terms): قوانین و مقررات، شرایط استفاده و تعهدات SLA");
+        sb.Append("- [سیاست حفظ حریم خصوصی](").Append(baseUrl).AppendLine("/privacy): حریم خصوصی و امنیت داده های کاربران");
+        sb.AppendLine();
+        sb.AppendLine("## Optional");
+        sb.Append("- [متن کامل مستندات فنی](").Append(baseUrl).AppendLine("/llms-full.txt): مستندات جامع، راهنمای API و نمونه کدهای توسعه دهندگان به صورت یکپارچه");
+
+        return sb.ToString();
+    }
+
+    public static string GenerateLlmsFullTxt(PlatformConfig config, string? webRootPath = null)
+    {
+        return BuildLlmsFullTxt(config, webRootPath);
+    }
+
+    public static string BuildLlmsFullTxt(PlatformConfig config, string? webRootPath = null)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        var baseUrl = (config.SeoBaseUrl ?? "https://localme.ir").TrimEnd('/');
+        var sb = new StringBuilder();
+
+        sb.AppendLine("# مستندات فنی جامع و راهنمای کامل پلتفرم ابری لوکال می (LocalMe Full Documentation)");
+        sb.AppendLine();
+        sb.AppendLine("> لوکال می پلتفرم ابری چندمستاجره Backend-as-a-Service (BaaS) بومی ایران است که خدمات پایگاه داده رابطه ای با RLS، احراز هویت توکن محور JWT، ذخیره سازی ابری فایل سازگار با S3، توابع سرورلس لبه و تله متری را در مراکز داده تهران با تاخیر زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪ ارائه می دهد.");
+        sb.AppendLine();
+        sb.AppendLine("## ۱. ساختار دسترسی و کلیدهای API");
+        sb.AppendLine("درخواست های ارسالی از کلاینت ها با هدرهای زیر تایید می شوند:");
+        sb.AppendLine("- `X-Service-Key`: کلید تفکیک شده اختصاصی هر سرویس با الگوی `lm_[service]_[project]_[id]`");
+        sb.AppendLine("- `Authorization: Bearer <token>`: توکن اعتبارسنجی احراز هویت JWT کاربر");
+        sb.AppendLine("- `Accept: application/json`: ساختار تبادل داده پیش فرض");
+        sb.AppendLine();
+        sb.AppendLine("## ۲. سرویس پایگاه داده رابطه ای (Database)");
+        sb.AppendLine("- موتور دیتابیس: PostgreSQL 18.1 چندمستاجره با تفکیک اسکیمای اختصاصی برای هر پروژه");
+        sb.AppendLine("- کوئری مستقیم JSON از فرانت اند و کلاینت های موبایل بدون نیاز به کدنویسی بک اند");
+        sb.AppendLine("- امنیت در سطح سطر (Row-Level Security): تفکیک قطعی داده های هر کاربر و پروژه با سیاست های امنیتی");
+        sb.AppendLine("- اندپوینت ها:");
+        sb.Append("  - `GET ").Append(baseUrl).AppendLine("/_baas/v1/{project}/rest/{table}`: دریافت رکوردهای جدول با فیلتر");
+        sb.Append("  - `POST ").Append(baseUrl).AppendLine("/_baas/v1/{project}/rest/{table}`: ایجاد رکورد جدید");
+        sb.Append("  - `PATCH ").Append(baseUrl).AppendLine("/_baas/v1/{project}/rest/{table}/{id}`: بروزرسانی سطر");
+        sb.Append("  - `DELETE ").Append(baseUrl).AppendLine("/_baas/v1/{project}/rest/{table}/{id}`: حذف رکورد");
+        sb.AppendLine();
+        sb.AppendLine("## ۳. سرویس احراز هویت (Auth & Users)");
+        sb.AppendLine("- احراز هویت پیامکی با کد یکبار مصرف (SMS OTP) بومی ایران");
+        sb.AppendLine("- ورود و ثبت نام با ایمیل و نام کاربری با توکن های امن JWT");
+        sb.AppendLine("- اندپوینت ها:");
+        sb.Append("  - `POST ").Append(baseUrl).AppendLine("/_baas/v1/{project}/auth/otp/request`: درخواست ارسال پیامک کد تایید");
+        sb.Append("  - `POST ").Append(baseUrl).AppendLine("/_baas/v1/{project}/auth/otp/verify`: اعتبارسنجی کد و دریافت JWT");
+        sb.Append("  - `POST ").Append(baseUrl).AppendLine("/_baas/v1/{project}/auth/login`: ورود با کلمه عبور");
+        sb.AppendLine();
+        sb.AppendLine("## ۴. ذخیره سازی ابری شی گرا (S3 Storage)");
+        sb.AppendLine("- فضای ذخیره سازی شی گرا سازگار کامل با پروتکل استاندارد Amazon S3");
+        sb.AppendLine("- ایجاد باکت های عمومی و خصوصی با مجوزهای دسترسی امن");
+        sb.AppendLine("- بارگذاری فایل از طریق استریم چندبخشی یا پیش امضاشده (Presigned URL)");
+        sb.AppendLine();
+        sb.AppendLine("## ۵. توابع بدون سرور لبه شبکه (Edge Functions)");
+        sb.AppendLine("- اجرای کدهای تجاری جاوااسکریپت و تایپ اسکریپت در محیط سبک V8 ایزوله با حافظه اختصاصی");
+        sb.AppendLine("- زمان اجرای زیر ۵۰ میلی ثانیه و ارتباط مستقیم با دیتابیس پروژه");
+        sb.AppendLine();
+        sb.AppendLine("## ۶. نمونه کد کلاینت (Flutter / Dart)");
+        sb.AppendLine("```dart");
+        sb.AppendLine("// اتصال و خواندن اطلاعات در فلاتر");
+        sb.AppendLine("final response = await http.get(");
+        sb.Append("  Uri.parse('").Append(baseUrl).AppendLine("/_baas/v1/my-app/rest/tasks'),");
+        sb.AppendLine("  headers: {");
+        sb.AppendLine("    'X-Service-Key': 'lm_db_myapp_xyz123',");
+        sb.AppendLine("    'Authorization': 'Bearer ' + userToken,");
+        sb.AppendLine("  },");
+        sb.AppendLine(");");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("## ۷. نمونه کد کلاینت (React Native / Web TypeScript)");
+        sb.AppendLine("```typescript");
+        sb.Append("const res = await fetch('").Append(baseUrl).AppendLine("/_baas/v1/my-app/rest/tasks', {");
+        sb.AppendLine("  headers: {");
+        sb.AppendLine("    'X-Service-Key': 'lm_db_myapp_xyz123',");
+        sb.AppendLine("    'Authorization': `Bearer ${userToken}`,");
+        sb.AppendLine("  }");
+        sb.AppendLine("});");
+        sb.AppendLine("const tasks = await res.json();");
+        sb.AppendLine("```");
 
         return sb.ToString();
     }
@@ -300,6 +383,9 @@ public sealed class DynamicDiscoveryService
 
             var llmsContent = GenerateLlmsTxt(config);
             File.WriteAllText(Path.Combine(webRootPath, "llms.txt"), llmsContent, Encoding.UTF8);
+
+            var llmsFullContent = GenerateLlmsFullTxt(config, webRootPath);
+            File.WriteAllText(Path.Combine(webRootPath, "llms-full.txt"), llmsFullContent, Encoding.UTF8);
         }
         catch (Exception ex)
         {

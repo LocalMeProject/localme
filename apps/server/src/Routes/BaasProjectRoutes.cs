@@ -25,11 +25,15 @@ public static class BaasProjectRoutes
                 var prj = pm.GetProject(pid);
                 return Results.Json(prj != null ? new[] { prj } : Array.Empty<BaasProject>());
             }
-            if (user != null && (user.Role == UserRole.Admin || user.Role == UserRole.Operator))
+            if (user == null)
+            {
+                return Results.Unauthorized();
+            }
+            if (user.Role == UserRole.Admin || user.Role == UserRole.Operator)
             {
                 return Results.Json(pm.GetAllProjects());
             }
-            return Results.Json(user != null ? pm.GetProjectsByUser(user.Id) : Array.Empty<BaasProject>());
+            return Results.Json(pm.GetProjectsByUser(user.Id));
         });
 
         app.MapPost("/_baas/v1/projects", (CreateProjectRequest req, HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService configService) =>
@@ -192,12 +196,29 @@ public static class BaasProjectRoutes
         });
 
         // 10. Superadmin & Operator Governance APIs
-        app.MapGet("/_baas/v1/admin/stats", (SuperadminService admin) => Results.Json(admin.GetSystemStats()));
-        app.MapGet("/_baas/v1/admin/pricing", (PricingCatalog catalog) => Results.Json(catalog.GetSnapshot()));
+        app.MapGet("/_baas/v1/admin/stats", (HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null) return Results.Unauthorized();
+            if (user.Role != UserRole.Admin && user.Role != UserRole.Operator)
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin or Operator can access platform stats.");
+            }
+            return Results.Json(admin.GetSystemStats());
+        });
+
+        app.MapGet("/_baas/v1/admin/pricing", (HttpContext ctx, PricingCatalog catalog, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null) return Results.Unauthorized();
+            return Results.Json(catalog.GetSnapshot());
+        });
+
         app.MapPut("/_baas/v1/admin/pricing", (UpdatePricingRequest req, HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user != null && user.Role != UserRole.Admin)
+            if (user == null) return Results.Unauthorized();
+            if (user.Role != UserRole.Admin)
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can modify platform pricing.");
             }
@@ -208,7 +229,8 @@ public static class BaasProjectRoutes
         app.MapGet("/_baas/v1/admin/config", (HttpContext ctx, PlatformConfigurationService configService, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user != null && user.Role != UserRole.Admin && user.Role != UserRole.Operator)
+            if (user == null) return Results.Unauthorized();
+            if (user.Role != UserRole.Admin && user.Role != UserRole.Operator)
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin or Operator can access platform configuration.");
             }
@@ -218,11 +240,12 @@ public static class BaasProjectRoutes
         app.MapPut("/_baas/v1/admin/config", (PlatformConfig updated, HttpContext ctx, PlatformConfigurationService configService, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user != null && user.Role != UserRole.Admin)
+            if (user == null) return Results.Unauthorized();
+            if (user.Role != UserRole.Admin)
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can modify platform configuration.");
             }
-            var adminName = user?.FullName ?? user?.Username ?? "superadmin";
+            var adminName = user.FullName ?? user.Username ?? "superadmin";
             var result = configService.UpdateConfig(updated, adminName);
             return Results.Json(result);
         });
@@ -230,7 +253,8 @@ public static class BaasProjectRoutes
         app.MapGet("/_baas/v1/admin/logs", (HttpContext ctx, PlatformLogBuffer logBuffer, ProjectManagerService pm, string? level, string? category, string? search, int? limit) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user != null && user.Role != UserRole.Admin && user.Role != UserRole.Operator)
+            if (user == null) return Results.Unauthorized();
+            if (user.Role != UserRole.Admin && user.Role != UserRole.Operator)
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin or Operator can access platform logs.");
             }
@@ -301,10 +325,20 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
+        app.MapPost("/_baas/v1/user/credit", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
+            var ok = pm.AdjustUserWallet(currentUser.Id, deltaIrr);
+            return ok ? Results.Ok(new { success = true, user = pm.GetUser(currentUser.Id) }) : Results.NotFound();
+        });
+
         app.MapPost("/_baas/v1/users/{userId}/credit", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
             var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
-            if (currentUser != null && currentUser.Role != UserRole.Admin)
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Id != userId)
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can adjust user credits.");
             }
