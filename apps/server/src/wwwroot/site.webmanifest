@@ -1,0 +1,31 @@
+{
+  "name": "لوکال می | پلتفرم ابری توسعه دهندگان",
+  "short_name": "لوکال می",
+  "description": "پلتفرم ابری Backend-as-a-Service بومی ایران برای توسعه سریع اپلیکیشن های موبایل و فرانت اند با تاخیر زیر ۳۰۰ میلی ثانیه و ۱۰۰٪ آپتایم.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "fa",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
