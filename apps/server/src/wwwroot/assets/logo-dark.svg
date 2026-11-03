@@ -22,15 +22,15 @@
 
   <rect width="760" height="200" fill="#f5f2ea" rx="20"/>
 
-  <!-- Logo Mark on Right (with safe margins) -->
+  <!-- Logo Mark on Right -->
   <g>
     <polygon points="596.21,109.09 596.21,40.0 715.0,40.0 715.0,158.79 666.52,158.79 666.52,144.85 701.06,144.85 701.06,53.94 610.15,53.94 610.15,109.09" fill="#172824"/>
     <polygon points="595.0,109.09 648.33,109.09 648.33,73.94 698.03,73.94 698.03,123.64 683.48,123.64 683.48,88.48 662.88,88.48 662.88,123.64 595.0,123.64" fill="#176b5b"/>
   </g>
 
-  <!-- Typography Right-Aligned at x=582 (Halved Gap, Bold Title, Vertically Centered) -->
+  <!-- Typography Right-Aligned at x=582 (Vertically Centered in Middle) -->
   <g>
-    <text x="582" y="100" class="brand-title">لوکال می</text>
-    <text x="582" y="148" class="brand-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
+    <text x="582" y="90" class="brand-title">لوکال می</text>
+    <text x="582" y="138" class="brand-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
   </g>
 </svg>
