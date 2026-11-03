@@ -1,43 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="50%" stop-color="#0b0f19"/>
-      <stop offset="100%" stop-color="#040711"/>
-    </linearGradient>
-    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="50%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#059669"/>
-    </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#06b6d4"/>
-      <stop offset="60%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#34d399"/>
-    </linearGradient>
-    <filter id="ambientGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="16" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
-  </defs>
+  <!-- Container: Architectural Obsidian Slate Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="#0b0f19" stroke="#1e293b" stroke-width="4"/>
 
-  <!-- Background Squircle -->
-  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bgGrad)" stroke="#10b981" stroke-width="6"/>
+  <!-- Authentic Persian Bannai Kufic Ligature 'لم' (LocalMe) -->
+  <g fill="#10b981">
+    <!-- Lām: Tall Vertical Stem (Right Column) -->
+    <rect x="360" y="96" width="52" height="312" rx="10"/>
 
-  <!-- Radial Glow -->
-  <circle cx="256" cy="256" r="140" fill="#10b981" opacity="0.16" filter="url(#ambientGlow)"/>
+    <!-- Baseline: Connecting Lām and Mīm -->
+    <rect x="100" y="356" width="312" height="52" rx="10"/>
 
-  <!-- Geometric Monogram & Data Node -->
-  <g filter="url(#ambientGlow)">
-    <!-- L Segment -->
-    <path d="M 140 148 C 140 136 148 128 160 128 L 196 128 C 208 128 216 136 216 148 L 216 320 L 264 320 C 276 320 284 328 284 340 L 284 368 C 284 380 276 388 264 388 L 160 388 C 148 388 140 380 140 368 Z" fill="url(#primaryGrad)"/>
-
-    <!-- M Segment -->
-    <path d="M 288 240 C 288 228 296 220 308 220 L 320 220 C 332 220 340 228 344 240 L 364 316 L 384 240 C 388 228 396 220 408 220 L 420 220 C 432 220 440 228 440 240 L 440 368 C 440 380 432 388 420 388 L 396 388 C 384 388 376 380 376 368 L 376 304 L 356 376 C 352 384 344 388 336 388 C 328 388 320 384 316 376 L 296 304 L 296 368 C 296 380 288 388 276 388 L 268 388 L 268 340 L 288 340 Z" fill="url(#accentGrad)"/>
-
-    <!-- IXP Node -->
-    <circle cx="372" cy="156" r="24" fill="#34d399"/>
-    <circle cx="372" cy="156" r="12" fill="#ffffff"/>
-    <line x1="332" y1="184" x2="354" y2="168" stroke="#34d399" stroke-width="6" stroke-linecap="round"/>
+    <!-- Mīm: Precision Square Head (Left Box) -->
+    <path fill-rule="evenodd" d="
+      M 100 148
+      C 100 138 108 130 118 130
+      L 306 130
+      C 316 130 324 138 324 148
+      L 324 356
+      L 100 356
+      Z
+      M 152 182
+      L 272 182
+      L 272 304
+      L 152 304
+      Z
+    "/>
   </g>
 </svg>
