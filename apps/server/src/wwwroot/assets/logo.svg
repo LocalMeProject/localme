@@ -3,47 +3,34 @@
     <style>
       .brand-title {
         font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 56px;
+        font-size: 60px;
         font-weight: 900;
         fill: #ffffff;
+        stroke: #ffffff;
+        stroke-width: 1.5px;
         text-anchor: end;
       }
       .brand-sub {
         font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 500;
         fill: #d1d5db;
         text-anchor: end;
       }
-      .badge-text {
-        font-family: 'Vazirmatn', -apple-system, sans-serif;
-        font-size: 13px;
-        font-weight: 700;
-        fill: #b38a55;
-      }
     </style>
   </defs>
 
-  <!-- Background -->
   <rect width="760" height="200" fill="#172824" rx="20"/>
 
-  <!-- Right Logo Mark (140x140 at x=590, y=30) -->
-  <g transform="translate(590, 30)">
-    <rect width="140" height="140" rx="24" fill="#172824"/>
-    <g transform="scale(1.16667)">
-      <polygon points="22,79 22,22 120,22 120,120 80,120 80,108.5 108.5,108.5 108.5,33.5 33.5,33.5 33.5,79" fill="#ffffff"/>
-      <polygon points="21,79 65,79 65,50 106,50 106,91 94,91 94,62 77,62 77,91 21,91" fill="#b38a55"/>
-    </g>
+  <!-- Logo Mark on Right (with safe margins) -->
+  <g>
+    <polygon points="596.21,109.09 596.21,40.0 715.0,40.0 715.0,158.79 666.52,158.79 666.52,144.85 701.06,144.85 701.06,53.94 610.15,53.94 610.15,109.09" fill="#ffffff"/>
+    <polygon points="595.0,109.09 648.33,109.09 648.33,73.94 698.03,73.94 698.03,123.64 683.48,123.64 683.48,88.48 662.88,88.48 662.88,123.64 595.0,123.64" fill="#b38a55"/>
   </g>
 
-  <!-- Persian Typography (Right-Aligned towards mark at x=560) -->
+  <!-- Typography Right-Aligned at x=582 (Halved Gap, Bold Title, Vertically Centered) -->
   <g>
-    <text x="560" y="98" class="brand-title">لوکال می</text>
-    <text x="560" y="142" class="brand-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
-
-    <!-- Status Pill on the Left -->
-    <rect x="36" y="66" width="168" height="32" rx="16" fill="rgba(179, 138, 85, 0.15)" stroke="#b38a55" stroke-width="1.2"/>
-    <circle cx="52" cy="82" r="4.5" fill="#b38a55"/>
-    <text x="64" y="87" class="badge-text">۱۰۰٪ آپتایم · پایداری کامل</text>
+    <text x="582" y="100" class="brand-title">لوکال می</text>
+    <text x="582" y="148" class="brand-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
   </g>
 </svg>
