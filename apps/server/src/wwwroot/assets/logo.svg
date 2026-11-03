@@ -1,69 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="100%" height="100%" dir="rtl">
   <defs>
     <style>
-      .brand-persian-title {
+      .brand-title {
         font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 56px;
         font-weight: 900;
         fill: #ffffff;
         text-anchor: end;
       }
-      .brand-persian-sub {
+      .brand-sub {
         font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 18px;
         font-weight: 500;
-        fill: #94a3b8;
+        fill: #d1d5db;
         text-anchor: end;
       }
-      .brand-badge-text {
+      .badge-text {
         font-family: 'Vazirmatn', -apple-system, sans-serif;
         font-size: 13px;
         font-weight: 700;
-        fill: #10b981;
+        fill: #b38a55;
       }
     </style>
   </defs>
 
   <!-- Background -->
-  <rect width="760" height="200" fill="#0b0f19" rx="20"/>
+  <rect width="760" height="200" fill="#172824" rx="20"/>
 
-  <!-- Right-Hand Logo Mark: RTL Primary Anchor (x=590, y=30, 140x140) -->
+  <!-- Right Logo Mark (140x140 at x=590, y=30) -->
   <g transform="translate(590, 30)">
-    <rect width="140" height="140" rx="30" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
-    <g transform="scale(0.2734)">
-      <!-- Lām Vertical -->
-      <rect x="360" y="96" width="52" height="312" rx="10" fill="#10b981"/>
-      <!-- Baseline -->
-      <rect x="100" y="356" width="312" height="52" rx="10" fill="#10b981"/>
-      <!-- Mīm Head -->
-      <path fill-rule="evenodd" fill="#10b981" d="
-        M 100 148
-        C 100 138 108 130 118 130
-        L 306 130
-        C 316 130 324 138 324 148
-        L 324 356
-        L 100 356
-        Z
-        M 152 182
-        L 272 182
-        L 272 304
-        L 152 304
-        Z
-      "/>
+    <rect width="140" height="140" rx="24" fill="#172824"/>
+    <g transform="scale(1.16667)">
+      <polygon points="22,79 22,22 120,22 120,120 80,120 80,108.5 108.5,108.5 108.5,33.5 33.5,33.5 33.5,79" fill="#ffffff"/>
+      <polygon points="21,79 65,79 65,50 106,50 106,91 94,91 94,62 77,62 77,91 21,91" fill="#b38a55"/>
     </g>
   </g>
 
-  <!-- Left Persian Typography (Anchored Rightwards to the Logo Mark at x=560) -->
+  <!-- Persian Typography (Right-Aligned towards mark at x=560) -->
   <g>
-    <!-- Brand Title: لوکال می (Zero Half-Space) -->
-    <text x="560" y="98" class="brand-persian-title">لوکال می</text>
+    <text x="560" y="98" class="brand-title">لوکال می</text>
+    <text x="560" y="142" class="brand-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
 
-    <!-- Subtitle: پلتفرم ابری بک اند برای توسعه دهندگان -->
-    <text x="560" y="142" class="brand-persian-sub">پلتفرم ابری بک اند برای توسعه دهندگان</text>
-
-    <!-- Status Badge on Far Left (x=36, y=66) -->
-    <rect x="36" y="66" width="168" height="32" rx="16" fill="rgba(16, 185, 129, 0.12)" stroke="#10b981" stroke-width="1.2"/>
-    <circle cx="52" cy="82" r="4.5" fill="#10b981"/>
-    <text x="64" y="87" class="brand-badge-text">۱۰۰٪ آپتایم · پایداری کامل</text>
+    <!-- Status Pill on the Left -->
+    <rect x="36" y="66" width="168" height="32" rx="16" fill="rgba(179, 138, 85, 0.15)" stroke="#b38a55" stroke-width="1.2"/>
+    <circle cx="52" cy="82" r="4.5" fill="#b38a55"/>
+    <text x="64" y="87" class="badge-text">۱۰۰٪ آپتایم · پایداری کامل</text>
   </g>
 </svg>
