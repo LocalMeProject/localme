@@ -54,8 +54,8 @@ public static class AuthHelper
             }
         }
 
-        // Default developer user for seamless local development
-        return pm.GetUser("usr_developer_03");
+        // Strict enterprise security: unauthenticated requests must never default to a mock user in production
+        return null;
     }
 
     public static IResult ServiceDisabled(string serviceName) =>

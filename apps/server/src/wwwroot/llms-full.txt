@@ -1,0 +1,59 @@
+﻿# مستندات فنی جامع و راهنمای کامل پلتفرم ابری لوکال می (LocalMe Full Documentation)
+
+> لوکال می پلتفرم ابری چندمستاجره Backend-as-a-Service (BaaS) بومی ایران است که خدمات پایگاه داده رابطه ای با RLS، احراز هویت توکن محور JWT، ذخیره سازی ابری فایل سازگار با S3، توابع سرورلس لبه و تله متری را در مراکز داده تهران با تاخیر زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪ ارائه می دهد.
+
+## ۱. ساختار دسترسی و کلیدهای API
+درخواست های ارسالی از کلاینت ها با هدرهای زیر تایید می شوند:
+- `X-Service-Key`: کلید تفکیک شده اختصاصی هر سرویس با الگوی `lm_[service]_[project]_[id]`
+- `Authorization: Bearer <token>`: توکن اعتبارسنجی احراز هویت JWT کاربر
+- `Accept: application/json`: ساختار تبادل داده پیش فرض
+
+## ۲. سرویس پایگاه داده رابطه ای (Database)
+- موتور دیتابیس: PostgreSQL 18.1 چندمستاجره با تفکیک اسکیمای اختصاصی برای هر پروژه
+- کوئری مستقیم JSON از فرانت اند و کلاینت های موبایل بدون نیاز به کدنویسی بک اند
+- امنیت در سطح سطر (Row-Level Security): تفکیک قطعی داده های هر کاربر و پروژه با سیاست های امنیتی
+- اندپوینت ها:
+  - `GET https://localme.ir/_baas/v1/{project}/rest/{table}`: دریافت رکوردهای جدول با فیلتر
+  - `POST https://localme.ir/_baas/v1/{project}/rest/{table}`: ایجاد رکورد جدید
+  - `PATCH https://localme.ir/_baas/v1/{project}/rest/{table}/{id}`: بروزرسانی سطر
+  - `DELETE https://localme.ir/_baas/v1/{project}/rest/{table}/{id}`: حذف رکورد
+
+## ۳. سرویس احراز هویت (Auth & Users)
+- احراز هویت پیامکی با کد یکبار مصرف (SMS OTP) بومی ایران
+- ورود و ثبت نام با ایمیل و نام کاربری با توکن های امن JWT
+- اندپوینت ها:
+  - `POST https://localme.ir/_baas/v1/{project}/auth/otp/request`: درخواست ارسال پیامک کد تایید
+  - `POST https://localme.ir/_baas/v1/{project}/auth/otp/verify`: اعتبارسنجی کد و دریافت JWT
+  - `POST https://localme.ir/_baas/v1/{project}/auth/login`: ورود با کلمه عبور
+
+## ۴. ذخیره سازی ابری شی گرا (S3 Storage)
+- فضای ذخیره سازی شی گرا سازگار کامل با پروتکل استاندارد Amazon S3
+- ایجاد باکت های عمومی و خصوصی با مجوزهای دسترسی امن
+- بارگذاری فایل از طریق استریم چندبخشی یا پیش امضاشده (Presigned URL)
+
+## ۵. توابع بدون سرور لبه شبکه (Edge Functions)
+- اجرای کدهای تجاری جاوااسکریپت و تایپ اسکریپت در محیط سبک V8 ایزوله با حافظه اختصاصی
+- زمان اجرای زیر ۵۰ میلی ثانیه و ارتباط مستقیم با دیتابیس پروژه
+
+## ۶. نمونه کد کلاینت (Flutter / Dart)
+```dart
+// اتصال و خواندن اطلاعات در فلاتر
+final response = await http.get(
+  Uri.parse('https://localme.ir/_baas/v1/my-app/rest/tasks'),
+  headers: {
+    'X-Service-Key': 'lm_db_myapp_xyz123',
+    'Authorization': 'Bearer ' + userToken,
+  },
+);
+```
+
+## ۷. نمونه کد کلاینت (React Native / Web TypeScript)
+```typescript
+const res = await fetch('https://localme.ir/_baas/v1/my-app/rest/tasks', {
+  headers: {
+    'X-Service-Key': 'lm_db_myapp_xyz123',
+    'Authorization': `Bearer ${userToken}`,
+  }
+});
+const tasks = await res.json();
+```

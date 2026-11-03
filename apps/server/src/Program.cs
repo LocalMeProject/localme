@@ -113,6 +113,11 @@ public class Program
         Directory.CreateDirectory(storageDir);
         builder.Services.AddSingleton<IBlobStorageAdapter>(_ => new LocalDiskAdapter(storageDir));
 
+        builder.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+        });
+
         var app = builder.Build();
 
         var pm = app.Services.GetRequiredService<ProjectManagerService>();
@@ -127,6 +132,47 @@ public class Program
         }
 
         app.UseWebSockets();
+        app.UseResponseCompression();
+
+        // 1. Strict Security Headers
+        app.Use(async (context, next) =>
+        {
+            context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+            context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            await next();
+        });
+
+        // 2. Canonical Domain Redirection (www -> apex)
+        app.Use(async (context, next) =>
+        {
+            var host = context.Request.Host.Host;
+            if (host.Equals("www.localme.ir", StringComparison.OrdinalIgnoreCase))
+            {
+                var target = $"https://localme.ir{context.Request.Path}{context.Request.QueryString}";
+                context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
+                context.Response.Headers.Location = target;
+                return;
+            }
+            await next();
+        });
+
+        // 3. Trailing Slash Normalization (Permanent 301)
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path.Value;
+            if (!string.IsNullOrEmpty(path) && path.Length > 1 && path.EndsWith('/'))
+            {
+                var cleanPath = path.TrimEnd('/');
+                var target = $"{cleanPath}{context.Request.QueryString}";
+                context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
+                context.Response.Headers.Location = target;
+                return;
+            }
+            await next();
+        });
+
         app.UseMiddleware<GatewayCacheMiddleware>();
         app.UseMiddleware<SecurityRobotsMiddleware>();
 
@@ -269,7 +315,26 @@ public class Program
         });
 
         app.UseDefaultFiles();
-        app.UseStaticFiles();
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+            {
+                var path = ctx.Context.Request.Path.Value ?? "";
+                if (path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".woff", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                }
+            }
+        });
 
         // 1. Health & Config Probe
         app.MapGet("/healthz", () => Results.Ok(new
@@ -303,6 +368,8 @@ public class Program
         // Root / Landing
         app.MapGet("/", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
         app.MapGet("/about", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+        app.MapGet("/terms", () => Results.File(Path.Combine(app.Environment.WebRootPath, "terms.html"), "text/html; charset=utf-8"));
+        app.MapGet("/privacy", () => Results.File(Path.Combine(app.Environment.WebRootPath, "privacy.html"), "text/html; charset=utf-8"));
 
         // Developer Documentation (/docs/*)
         app.MapGet("/docs", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
@@ -312,20 +379,84 @@ public class Program
         app.MapGet("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
         app.MapGet("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
 
-        // Developer Console (/panel/* and /console/*)
-        app.MapGet("/panel", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
-        app.MapGet("/panel/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        // Protected Developer Console (/panel/*, /console/*, /projects/*)
+        app.MapGet("/panel", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
+        app.MapGet("/panel/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
         app.MapGet("/dashboard", () => Results.Redirect("/panel"));
 
-        app.MapGet("/console", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
-        app.MapGet("/console/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/console", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
+        app.MapGet("/console/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
 
-        app.MapGet("/projects", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
-        app.MapGet("/projects/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGet("/projects", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
+        app.MapGet("/projects/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null)
+            {
+                return Results.Redirect("/auth?redirect=/panel");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
 
         // Superadmin & Operator Portal (/admin/*)
-        app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
-        app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
+        app.MapGet("/admin", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
+            {
+                return Results.Redirect("/auth?redirect=/admin");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
+        });
+        app.MapGet("/admin/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
+            {
+                return Results.Redirect("/auth?redirect=/admin");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
+        });
 
         // 13. Dynamic SEO & Machine-Readable Discoverability
         app.MapGet("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
@@ -346,6 +477,13 @@ public class Program
         {
             ctx.Response.Headers.CacheControl = "public, max-age=3600";
             var txt = DynamicDiscoveryService.GenerateLlmsTxt(cfg.GetConfig());
+            return Results.Content(txt, "text/plain; charset=utf-8");
+        });
+
+        app.MapGet("/llms-full.txt", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
+        {
+            ctx.Response.Headers.CacheControl = "public, max-age=3600";
+            var txt = DynamicDiscoveryService.GenerateLlmsFullTxt(cfg.GetConfig(), env.WebRootPath);
             return Results.Content(txt, "text/plain; charset=utf-8");
         });
 
@@ -371,8 +509,22 @@ public class Program
                 : Results.NotFound();
         });
 
-        // Fallback to landing
-        app.MapFallbackToFile("index.html");
+        // Fallback to custom 404 Not Found (Eliminate Soft 404)
+        app.MapFallback(async (HttpContext ctx) =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            var notFoundFile = Path.Combine(app.Environment.WebRootPath, "404.html");
+            if (File.Exists(notFoundFile))
+            {
+                ctx.Response.ContentType = "text/html; charset=utf-8";
+                await ctx.Response.SendFileAsync(notFoundFile);
+            }
+            else
+            {
+                ctx.Response.ContentType = "text/html; charset=utf-8";
+                await ctx.Response.WriteAsync("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><title>۴۰۴ - صفحه یافت نشد | لوکال می</title></head><body><h1>صفحه مورد نظر یافت نشد (خطای ۴۰۴)</h1><p><a href=\"/\">بازگشت به صفحه اصلی</a></p></body></html>");
+            }
+        });
 
         Console.WriteLine("[LocalMe] Server ready with modular routing:");
         Console.WriteLine("  -> Landing Page:      http://localhost:5000/");

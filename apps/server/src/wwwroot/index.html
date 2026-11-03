@@ -42,9 +42,6 @@
   <meta property="twitter:image" content="https://localme.ir/assets/og/home.png" />
 
   <link rel="stylesheet" href="/styles.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Schema.org JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -52,22 +49,70 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "WebSite",
+        "@id": "https://localme.ir/#website",
+        "url": "https://localme.ir/",
+        "name": "لوکال می | LocalMe",
+        "alternateName": [
+          "LocalMe",
+          "لوکال می",
+          "BaaS ایران"
+        ],
+        "description": "پلتفرم ابری یکپارچه و چندمستاجره Backend-as-a-Service بومی ایران برای توسعه سریع اپلیکیشن های موبایل و فرانت اند.",
+        "inLanguage": "fa",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://localme.ir/docs?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
         "@type": "SoftwareApplication",
         "name": "لوکال می",
-        "operatingSystem": "Android, iOS, Web, Flutter, React Native",
+        "operatingSystem": "Android, iOS, Web, Flutter, React Native, macOS, Linux, Windows",
         "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "Backend-as-a-Service, Cloud Platform",
+        "softwareVersion": "1.0.0",
         "description": "پلتفرم ابری چندمستاجره Backend-as-a-Service بومی ایران برای تسریع توسعه اپلیکیشن های موبایل و فرانت اند با خدمات پایگاه داده، احراز هویت، فضای ابری S3، توابع لبه و تله متری.",
+        "image": "https://localme.ir/assets/og/home.png",
         "offers": {
           "@type": "Offer",
           "price": "0",
           "priceCurrency": "IRR"
-        }
+        },
+        "featureList": [
+          "پایگاه داده چندمستاجره PostgreSQL با ایزولاسیون اسکیما و RLS",
+          "احراز هویت توکن محور JWT و پیامکی بومی",
+          "فضای ابری ذخیره سازی شی گرا سازگار با S3",
+          "اجرای توابع محاسباتی سرورلس در لبه شبکه",
+          "تله متری، متریک ها و پایش آنلاین سلامت پروژه"
+        ]
       },
       {
         "@type": "Organization",
+        "@id": "https://localme.ir/#organization",
         "name": "لوکال می",
+        "alternateName": "LocalMe Cloud Platform",
         "url": "https://localme.ir",
-        "logo": "https://localme.ir/assets/logo.png",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://localme.ir/assets/logo.png",
+          "width": 512,
+          "height": 512
+        },
+        "description": "ارائه دهنده خدمات ابری و زیرساخت Backend-as-a-Service بومی ایران با استقرار در مراکز داده تهران.",
+        "foundingDate": "2026",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "تهران",
+          "addressCountry": "IR"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "technical support",
+          "email": "support@localme.ir",
+          "url": "https://localme.ir/docs"
+        },
         "sameAs": [
           "https://github.com/LocalMeProject"
         ]
@@ -279,8 +324,8 @@
     </div>
 
     <div style="display: flex; gap: 10px;">
-      <a href="/auth" class="btn-secondary">ورود به حساب</a>
-      <a href="/auth" class="btn-primary">شروع ساخت پروژه</a>
+      <a href="/auth" rel="nofollow" class="btn-secondary">ورود به حساب</a>
+      <a href="/auth" rel="nofollow" class="btn-primary">شروع ساخت پروژه</a>
     </div>
   </header>
 
@@ -291,7 +336,7 @@
       پلتفرم ابری یکپارچه توسعه دهندگان موبایل و فرانت اند ایران
     </div>
     <h1 style="font-size: 34px; font-weight: 900; line-height: 1.4; max-width: 850px; margin: 0 auto 16px auto;">
-      بک اند آماده، امن و مقیاس پذیر برای توسعه دهندگان فلاتر، ری اکت نیتیو، وب، اندروید و iOS
+      لوکال می: بک اند آماده، امن و مقیاس پذیر برای توسعه دهندگان فلاتر، ری اکت نیتیو، وب، اندروید و iOS
     </h1>
     <p style="font-size: 15.5px; color: var(--text-muted); line-height: 1.9; max-width: 780px; margin: 0 auto 30px auto;">
       دیگر نگران راه اندازی سرور، تنظیمات دیتابیس و کدهای تکراری احراز هویت نباشید. لوکال می تمامی زیرساخت های سمت سرور را به صورت یکپارچه با تاخیر زیر ۳۰۰ میلی ثانیه و ۱۰۰٪ آپتایم در مراکز داده تهران ارائه می کند.
@@ -573,11 +618,14 @@ Task {
       </div>
 
       <div>
-        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 12px;">دسترسی سریع</div>
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 12px;">دسترسی سریع و قوانین</div>
         <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
-          <a href="/panel" style="color: var(--text-muted); text-decoration: none;">کنسول توسعه دهندگان</a>
-          <a href="/auth" style="color: var(--text-muted); text-decoration: none;">ورود به حساب کاربری</a>
-          <a href="/llms.txt" style="color: var(--text-muted); text-decoration: none;">فایل شاخص هوش مصنوعی (llms.txt)</a>
+          <a href="/panel" rel="nofollow" style="color: var(--text-muted); text-decoration: none;">کنسول توسعه دهندگان</a>
+          <a href="/auth" rel="nofollow" style="color: var(--text-muted); text-decoration: none;">ورود به حساب کاربری</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none;">قوانین و شرایط استفاده</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none;">حریم خصوصی و امنیت داده ها</a>
+          <a href="/llms.txt" style="color: var(--text-muted); text-decoration: none;">شاخص هوش مصنوعی (llms.txt)</a>
+          <a href="/llms-full.txt" style="color: var(--text-muted); text-decoration: none;">متن کامل مستندات (llms-full.txt)</a>
           <a href="/sitemap.xml" style="color: var(--text-muted); text-decoration: none;">نقشه سایت (sitemap.xml)</a>
         </div>
       </div>

@@ -132,6 +132,10 @@ export default function App() {
   const fetchLiveProjects = useCallback(async () => {
     try {
       const res = await fetch('/_baas/v1/projects');
+      if (res.status === 401) {
+        window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
       if (res.ok) {
         const live = await res.json();
         if (Array.isArray(live)) {
@@ -459,7 +463,7 @@ export default function App() {
   // Real API: Topup Wallet
   const handleTopup = async (amountIrr: number, gateway: string) => {
     try {
-      const res = await fetch('/_baas/v1/users/usr_developer_03/credit', {
+      const res = await fetch('/_baas/v1/user/credit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deltaIrr: amountIrr }),
