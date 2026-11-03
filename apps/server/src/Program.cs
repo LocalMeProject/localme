@@ -439,8 +439,24 @@ public class Program
         });
 
         // Superadmin & Operator Portal (/admin/*)
-        app.MapGet("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
-        app.MapGet("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html"));
+        app.MapGet("/admin", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
+            {
+                return Results.Redirect("/auth?redirect=/admin");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
+        });
+        app.MapGet("/admin/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
+            {
+                return Results.Redirect("/auth?redirect=/admin");
+            }
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
+        });
 
         // 13. Dynamic SEO & Machine-Readable Discoverability
         app.MapGet("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>

@@ -183,6 +183,17 @@
       document.getElementById('login-password').value = password;
     }
 
+    function getSafeRedirect(defaultUrl) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const r = params.get('redirect');
+        if (r && r.startsWith('/') && !r.startsWith('//') && !r.includes('\\')) {
+          return r;
+        }
+      } catch {}
+      return defaultUrl;
+    }
+
     // 1. OTP Login Implementation
     async function quickOtpLogin(phone, redirectPath) {
       phoneInput.value = phone;
@@ -209,7 +220,7 @@
             if (vData.tokens?.accessToken) {
               localStorage.setItem('localme_token', vData.tokens.accessToken);
             }
-            window.location.href = redirectPath;
+            window.location.href = getSafeRedirect(redirectPath);
             return;
           }
         }
@@ -276,9 +287,9 @@
               localStorage.setItem('localme_token', data.tokens.accessToken);
             }
             if (data.user?.role === 0 || data.user?.role === 1 || data.user?.role === 'Admin' || data.user?.role === 'Operator') {
-              window.location.href = '/admin';
+              window.location.href = getSafeRedirect('/admin');
             } else {
-              window.location.href = '/panel';
+              window.location.href = getSafeRedirect('/panel');
             }
           } else {
             showToast(data.message || 'کد نامعتبر است', 'error');
@@ -318,9 +329,9 @@
             localStorage.setItem('localme_token', data.tokens.accessToken);
           }
           if (data.user?.role === 0 || data.user?.role === 1 || data.user?.role === 'Admin' || data.user?.role === 'Operator') {
-            window.location.href = '/admin';
+            window.location.href = getSafeRedirect('/admin');
           } else {
-            window.location.href = '/panel';
+            window.location.href = getSafeRedirect('/panel');
           }
         } else {
           userpassError.textContent = data.error || data.message || 'نام کاربری یا کلمه عبور نادرست است.';
@@ -361,7 +372,7 @@
           if (data.tokens?.accessToken) {
             localStorage.setItem('localme_token', data.tokens.accessToken);
           }
-          window.location.href = '/panel';
+          window.location.href = getSafeRedirect('/panel');
         } else {
           projpassError.textContent = data.error || data.message || 'شناسه یا رمز عبور اختصاصی پروژه نادرست است.';
           projpassError.style.display = 'block';

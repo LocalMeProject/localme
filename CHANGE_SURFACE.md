@@ -53,6 +53,7 @@ Complete implementation of SEO, AEO, Core Web Vitals performance, and multi-tena
 - `apps/server/src/wwwroot/features/storage.html`
 - `apps/server/src/wwwroot/features/telemetry.html`
 - `apps/server/src/wwwroot/admin.html`
+- `apps/server/src/wwwroot/admin.js`
 - `apps/server/src/wwwroot/auth.html`
 - `apps/server/src/wwwroot/panel.html`
 - `apps/server/src/wwwroot/terms.html`
@@ -64,6 +65,7 @@ Complete implementation of SEO, AEO, Core Web Vitals performance, and multi-tena
 - `apps/server/src/wwwroot/sitemap.xml`
 - `apps/web-console/src/App.tsx`
 - `apps/server/src/wwwroot/assets/index-BMIrIwJf.js`
+- `apps/server/src/wwwroot/assets/index-Zbcr_arX.js`
 - `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`
 - `tests/LocalMe.Integration.Tests/SeoAndSecurityOverhaulTests.cs`
 

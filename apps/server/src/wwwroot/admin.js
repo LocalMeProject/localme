@@ -47,14 +47,17 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initAdminSession() {
   try {
     const res = await fetch('/_baas/v1/users/me');
-    if (res.ok) {
-      adminUser = await res.json();
+    if (!res.ok) {
+      window.location.href = '/auth?redirect=/admin';
+      return;
+    }
+    adminUser = await res.json();
 
-      // If user is just Developer, redirect to panel
-      if (adminUser.role === 2) {
-        window.location.href = '/panel';
-        return;
-      }
+    // If user is just Developer, redirect to panel
+    if (adminUser.role === 2) {
+      window.location.href = '/panel';
+      return;
+    }
 
       const nameEl = document.getElementById('admin-user-name');
       if (nameEl) nameEl.textContent = adminUser.fullName;

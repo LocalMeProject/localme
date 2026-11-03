@@ -149,4 +149,14 @@ public class SeoAndSecurityOverhaulTests
         Assert.True(File.Exists(Path.Combine(webRoot, "llms.txt")));
         Assert.True(File.Exists(Path.Combine(webRoot, "llms-full.txt")));
     }
+
+    [Fact]
+    public void DeveloperUser_CannotAccessSuperadminRole()
+    {
+        var pm = new ProjectManagerService();
+        var dev = pm.RegisterDeveloper("+989359998877", "New Developer");
+        Assert.Equal(UserRole.Developer, dev.Role);
+        Assert.NotEqual(UserRole.Admin, dev.Role);
+        Assert.NotEqual(UserRole.Operator, dev.Role);
+    }
 }
