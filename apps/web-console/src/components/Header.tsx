@@ -65,13 +65,15 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 focus:outline-none group"
-          title="بازگشت به فهرست پروژه‌ها"
+          title="بازگشت به فهرست پروژه ها"
         >
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center font-bold text-white text-xs shadow-xs transition">
-            LM
-          </div>
+          <img
+            src="/favicon.svg"
+            alt="لوکال می"
+            className="w-7 h-7 rounded-lg object-contain shadow-xs transition group-hover:scale-105"
+          />
           <span className="text-xs font-bold text-slate-900 tracking-tight">
-            لوکال‌می
+            لوکال می
           </span>
         </button>
 
@@ -81,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
         {isHubView ? (
           <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
             <LayoutGrid className="w-3.5 h-3.5 text-emerald-600" />
-            <span>میزکار مدیریت پروژه‌ها</span>
+            <span>میزکار مدیریت پروژه ها</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs">
@@ -90,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition px-2 py-1 rounded-md hover:bg-slate-100"
             >
               <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
-              <span>پروژه‌ها</span>
+              <span>پروژه ها</span>
             </button>
 
             <span className="text-slate-300">/</span>
@@ -119,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="max-h-56 overflow-y-auto py-1">
                     {allProjects.length === 0 ? (
                       <div className="px-3 py-3 text-xs text-slate-400 text-center">
-                        هیچ پروژه‌ای یافت نشد
+                        هیچ پروژه ای یافت نشد
                       </div>
                     ) : (
                       allProjects.map((proj) => {
@@ -192,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-xs text-slate-900">سینا والی زاده</span>
                 <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                  توسعه‌دهنده
+                  توسعه دهنده
                 </span>
               </div>
               <div className="text-[11px] text-slate-500 font-mono" dir="ltr">
@@ -238,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 text-xs transition text-right"
               >
                 <Settings className="w-3.5 h-3.5 text-slate-400" />
-                <span>تنظیمات و دسترسی‌ها</span>
+                <span>تنظیمات و دسترسی ها</span>
               </button>
 
               <button
