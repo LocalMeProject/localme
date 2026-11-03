@@ -108,7 +108,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'overview', label: 'داشبورد', icon: <LayoutGrid className="w-5 h-5" /> },
     { id: 'database', label: 'پایگاه داده', icon: <Database className="w-5 h-5" /> },
     { id: 'auth', label: 'کاربران', icon: <Users className="w-5 h-5" /> },
-    { id: 'storage', label: 'ذخیره‌سازی', icon: <HardDrive className="w-5 h-5" /> },
+    { id: 'storage', label: 'ذخیره سازی', icon: <HardDrive className="w-5 h-5" /> },
     {
       id: 'functions',
       label: 'توابع ابری',
@@ -118,7 +118,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'ipg', label: 'درگاه پرداخت', icon: <CreditCard className="w-5 h-5" /> },
     { id: 'hosting', label: 'میزبانی وب', icon: <Globe className="w-5 h-5" /> },
     { id: 'compliance', label: 'اینماد و نمادها', icon: <Award className="w-5 h-5" /> },
-    { id: 'telemetry', label: 'لاگ‌ها', icon: <Activity className="w-5 h-5" /> },
+    { id: 'telemetry', label: 'لاگ ها', icon: <Activity className="w-5 h-5" /> },
     { id: 'settings', label: 'تنظیمات', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -134,11 +134,11 @@ export const Navigation: React.FC<NavigationProps> = ({
       title: 'پایگاه داده',
       items: [
         { id: 'dashboard', label: 'داشبورد پایگاه داده', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { id: 'grid', label: 'جداول و داده‌ها', icon: <TableIcon className="w-4 h-4" /> },
+        { id: 'grid', label: 'جداول و داده ها', icon: <TableIcon className="w-4 h-4" /> },
         { id: 'sql', label: 'ویرایشگر کوئری SQL', icon: <Code2 className="w-4 h-4" /> },
         { id: 'schema', label: 'طراحی ساختار جدول', icon: <Columns className="w-4 h-4" /> },
         { id: 'diagram', label: 'نمودار ارتباطی (ER)', icon: <Network className="w-4 h-4" /> },
-        { id: 'backups', label: 'پشتیبان‌گیری و اسنپ‌شات', icon: <Archive className="w-4 h-4" /> },
+        { id: 'backups', label: 'پشتیبان گیری و اسنپ شات', icon: <Archive className="w-4 h-4" /> },
       ],
     },
     auth: {
@@ -146,15 +146,15 @@ export const Navigation: React.FC<NavigationProps> = ({
       items: [
         { id: 'users', label: 'مدیریت کاربران', icon: <Users className="w-4 h-4" /> },
         { id: 'sms', label: 'سرویس پیامک و ورود', icon: <Shield className="w-4 h-4" /> },
-        { id: 'policies', label: 'سیاست‌های امنیتی', icon: <UserCheck className="w-4 h-4" /> },
+        { id: 'policies', label: 'سیاست های امنیتی', icon: <UserCheck className="w-4 h-4" /> },
       ],
     },
     storage: {
-      title: 'ذخیره‌سازی ابری فایل',
+      title: 'ذخیره سازی ابری فایل',
       items: [
-        { id: 'buckets', label: 'باکت‌های فایل', icon: <HardDrive className="w-4 h-4" /> },
+        { id: 'buckets', label: 'باکت های فایل', icon: <HardDrive className="w-4 h-4" /> },
         { id: 'explorer', label: 'مرورگر اسناد', icon: <FileSpreadsheet className="w-4 h-4" /> },
-        { id: 'policies', label: 'سهمیه‌ها و محدودیت', icon: <Shield className="w-4 h-4" /> },
+        { id: 'policies', label: 'سهمیه ها و محدودیت', icon: <Shield className="w-4 h-4" /> },
       ],
     },
     functions: {
@@ -166,33 +166,33 @@ export const Navigation: React.FC<NavigationProps> = ({
       ],
     },
     ipg: {
-      title: 'درگاه‌های پرداخت',
+      title: 'درگاه های پرداخت',
       items: [
-        { id: 'transactions', label: 'گزارش تراکنش‌ها', icon: <History className="w-4 h-4" /> },
-        { id: 'gateways', label: 'پیکربندی درگاه‌ها', icon: <CreditCard className="w-4 h-4" /> },
+        { id: 'transactions', label: 'گزارش تراکنش ها', icon: <History className="w-4 h-4" /> },
+        { id: 'gateways', label: 'پیکربندی درگاه ها', icon: <CreditCard className="w-4 h-4" /> },
         { id: 'ledger', label: 'دفتر کل و تسویه', icon: <FileSpreadsheet className="w-4 h-4" /> },
       ],
     },
     hosting: {
-      title: 'میزبانی وب و دامنه‌ها',
+      title: 'میزبانی وب و دامنه ها',
       items: [
         { id: 'deployments', label: 'استقرارهای وب', icon: <Globe className="w-4 h-4" /> },
-        { id: 'domains', label: 'دامنه‌های اختصاصی', icon: <Link2 className="w-4 h-4" /> },
+        { id: 'domains', label: 'دامنه های اختصاصی', icon: <Link2 className="w-4 h-4" /> },
         { id: 'routing', label: 'مسیریابی شبکه لبه', icon: <Network className="w-4 h-4" /> },
       ],
     },
     compliance: {
-      title: 'اینماد و نمادهای سامانه‌ای',
+      title: 'اینماد و نمادهای سامانه ای',
       items: [
-        { id: 'tokens', label: 'تاییدیه‌های اینماد', icon: <Award className="w-4 h-4" /> },
+        { id: 'tokens', label: 'تاییدیه های اینماد', icon: <Award className="w-4 h-4" /> },
         { id: 'deeplinks', label: 'احراز دامنه و اپلیکیشن', icon: <Link2 className="w-4 h-4" /> },
       ],
     },
     telemetry: {
-      title: 'لاگ‌ها و رویدادها',
+      title: 'لاگ ها و رویدادها',
       items: [
-        { id: 'live', label: 'لاگ‌های زنده پلتفرم', icon: <Activity className="w-4 h-4" /> },
-        { id: 'usage', label: 'گزارش مصارف و سهمیه‌ها', icon: <Layers className="w-4 h-4" /> },
+        { id: 'live', label: 'لاگ های زنده پلتفرم', icon: <Activity className="w-4 h-4" /> },
+        { id: 'usage', label: 'گزارش مصارف و سهمیه ها', icon: <Layers className="w-4 h-4" /> },
       ],
     },
     settings: {
@@ -200,7 +200,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       items: [
         { id: 'general', label: 'تنظیمات عمومی', icon: <Settings className="w-4 h-4" /> },
         { id: 'network', label: 'موقعیت و خروجی شبکه', icon: <Network className="w-4 h-4" /> },
-        { id: 'team', label: 'اعضای تیم و دسترسی‌ها', icon: <Users className="w-4 h-4" /> },
+        { id: 'team', label: 'اعضای تیم و دسترسی ها', icon: <Users className="w-4 h-4" /> },
       ],
     },
   };
@@ -217,17 +217,21 @@ export const Navigation: React.FC<NavigationProps> = ({
           className={`absolute top-0 right-0 h-full bg-white border-l border-slate-200 flex flex-col justify-between py-3 px-2 overflow-hidden transition-[width,box-shadow] duration-200 ease-in-out ${
             isRailExpanded ? 'w-56 shadow-2xl z-40' : 'w-14'
           }`}
-          aria-label="سرویس‌های اصلی"
+          aria-label="سرویس های اصلی"
         >
           <div className="flex flex-col gap-1 w-full">
             {/* Project Avatar / Mini Logo */}
             <button
               onClick={onNavigateHome}
-              title={`بازگشت به هاب پروژه‌ها (${project?.name || 'انتخاب پروژه'})`}
+              title={`بازگشت به هاب پروژه ها (${project?.name || 'انتخاب پروژه'})`}
               className="w-full h-10 flex items-center rounded-xl transition-colors hover:bg-slate-100 text-right p-0 overflow-hidden"
             >
-              <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shadow-xs transition-colors">
-                {project?.name ? project.name.slice(0, 2) : 'LM'}
+              <div className="w-10 h-10 shrink-0 rounded-xl bg-slate-900 overflow-hidden flex items-center justify-center font-bold text-xs shadow-xs transition-colors p-1">
+                {project?.name ? (
+                  <span className="text-white font-bold">{project.name.slice(0, 2)}</span>
+                ) : (
+                  <img src="/favicon.svg" alt="لوکال می" className="w-full h-full object-contain" />
+                )}
               </div>
               <div
                 className={`mr-2.5 flex-1 min-w-0 text-right transition-opacity duration-150 ${
@@ -237,7 +241,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <div className="text-xs font-semibold text-slate-900 truncate leading-tight">
                   {project?.name || 'انتخاب پروژه'}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه‌ها</div>
+                <div className="text-[10px] text-slate-400 truncate">بازگشت به هاب پروژه ها</div>
               </div>
             </button>
 
@@ -293,7 +297,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           <div className="w-full pt-2 border-t border-slate-200">
             <button
               onClick={onNavigateHome}
-              title={!isRailExpanded ? 'همه پروژه‌ها' : undefined}
+              title={!isRailExpanded ? 'همه پروژه ها' : undefined}
               className="w-full h-10 flex items-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors overflow-hidden"
             >
               <div className="w-10 h-10 shrink-0 flex items-center justify-center">
@@ -304,7 +308,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   isRailExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 }`}
               >
-                همه پروژه‌ها
+                همه پروژه ها
               </span>
             </button>
           </div>
