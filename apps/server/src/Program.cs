@@ -364,23 +364,23 @@ public class Program
         app.MapBaasIpgReportRoutes();
         app.MapBaasHostingWebhookRoutes();
 
-        // 12. Modular Front-End Routing (Landing, Auth, Panel, Admin, Docs)
+        // 12. Modular Front-End Routing (Landing, Auth, Panel, Admin, Docs) - Supports both GET and HEAD
         // Root / Landing
-        app.MapGet("/", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
-        app.MapGet("/about", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
-        app.MapGet("/terms", () => Results.File(Path.Combine(app.Environment.WebRootPath, "terms.html"), "text/html; charset=utf-8"));
-        app.MapGet("/privacy", () => Results.File(Path.Combine(app.Environment.WebRootPath, "privacy.html"), "text/html; charset=utf-8"));
+        app.MapGetAndHead("/", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+        app.MapGetAndHead("/about", () => Results.File(Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+        app.MapGetAndHead("/terms", () => Results.File(Path.Combine(app.Environment.WebRootPath, "terms.html"), "text/html; charset=utf-8"));
+        app.MapGetAndHead("/privacy", () => Results.File(Path.Combine(app.Environment.WebRootPath, "privacy.html"), "text/html; charset=utf-8"));
 
         // Developer Documentation (/docs/*)
-        app.MapGet("/docs", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
-        app.MapGet("/docs/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
+        app.MapGetAndHead("/docs", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
+        app.MapGetAndHead("/docs/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
 
         // Auth Portal (/auth/*)
-        app.MapGet("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
-        app.MapGet("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
+        app.MapGetAndHead("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
+        app.MapGetAndHead("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
 
         // Protected Developer Console (/panel/*, /console/*, /projects/*)
-        app.MapGet("/panel", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/panel", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -389,7 +389,7 @@ public class Program
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGet("/panel/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/panel/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -398,9 +398,9 @@ public class Program
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGet("/dashboard", () => Results.Redirect("/panel"));
+        app.MapGetAndHead("/dashboard", () => Results.Redirect("/panel"));
 
-        app.MapGet("/console", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/console", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -409,7 +409,7 @@ public class Program
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGet("/console/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/console/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -419,7 +419,7 @@ public class Program
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
 
-        app.MapGet("/projects", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/projects", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -428,7 +428,7 @@ public class Program
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGet("/projects/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/projects/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null)
@@ -439,7 +439,7 @@ public class Program
         });
 
         // Superadmin & Operator Portal (/admin/*)
-        app.MapGet("/admin", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/admin", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
@@ -448,7 +448,7 @@ public class Program
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
         });
-        app.MapGet("/admin/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/admin/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
@@ -459,28 +459,28 @@ public class Program
         });
 
         // 13. Dynamic SEO & Machine-Readable Discoverability
-        app.MapGet("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
+        app.MapGetAndHead("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
         {
             ctx.Response.Headers.CacheControl = "public, max-age=3600";
             var txt = DynamicDiscoveryService.GenerateRobotsTxt(cfg.GetConfig());
             return Results.Content(txt, "text/plain; charset=utf-8");
         });
 
-        app.MapGet("/sitemap.xml", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
+        app.MapGetAndHead("/sitemap.xml", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
         {
             ctx.Response.Headers.CacheControl = "public, max-age=3600";
             var xml = DynamicDiscoveryService.GenerateSitemapXml(cfg.GetConfig(), env.WebRootPath);
             return Results.Content(xml, "application/xml; charset=utf-8");
         });
 
-        app.MapGet("/llms.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
+        app.MapGetAndHead("/llms.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>
         {
             ctx.Response.Headers.CacheControl = "public, max-age=3600";
             var txt = DynamicDiscoveryService.GenerateLlmsTxt(cfg.GetConfig());
             return Results.Content(txt, "text/plain; charset=utf-8");
         });
 
-        app.MapGet("/llms-full.txt", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
+        app.MapGetAndHead("/llms-full.txt", (PlatformConfigurationService cfg, IWebHostEnvironment env, HttpContext ctx) =>
         {
             ctx.Response.Headers.CacheControl = "public, max-age=3600";
             var txt = DynamicDiscoveryService.GenerateLlmsFullTxt(cfg.GetConfig(), env.WebRootPath);
@@ -555,5 +555,15 @@ public class Program
             ".ttf" => "font/ttf",
             _ => "application/octet-stream"
         };
+    }
+}
+
+file static class RouteExtensions
+{
+    private static readonly string[] GetAndHeadMethods = ["GET", "HEAD"];
+
+    public static RouteHandlerBuilder MapGetAndHead(this IEndpointRouteBuilder endpoints, string pattern, Delegate handler)
+    {
+        return endpoints.MapMethods(pattern, GetAndHeadMethods, handler);
     }
 }

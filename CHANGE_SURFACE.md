@@ -59,6 +59,8 @@ Complete implementation of SEO, AEO, Core Web Vitals performance, and multi-tena
 - `apps/server/src/wwwroot/terms.html`
 - `apps/server/src/wwwroot/privacy.html`
 - `apps/server/src/wwwroot/404.html`
+- `Dockerfile`
+- `scripts/deploy-runflare.sh`
 - `apps/server/src/wwwroot/llms.txt`
 - `apps/server/src/wwwroot/llms-full.txt`
 - `apps/server/src/wwwroot/robots.txt`

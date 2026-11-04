@@ -3,8 +3,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app
 
-# Production release tag
-LABEL build.target="production-20261029"
+# Production release tag & cache invalidator
+ARG BUILD_DATE="2026-11-05T02:11:00Z"
+LABEL build.target="production-20261105-seo-security"
+LABEL build.timestamp="${BUILD_DATE}"
 
 ENV NODE_ENV=production
 ENV ASPNETCORE_ENVIRONMENT=Production
