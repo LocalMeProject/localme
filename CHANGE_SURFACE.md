@@ -41,6 +41,7 @@ affected_projects:
 - `CHANGE_SURFACE.md`: Blast radius tracking and enterprise surface declaration.
 - `apps/server/src/Program.cs`: Register workers, archive services, `/healthz` and `/readyz` probes.
 - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`: Support `LOCALME_DEV_MOCK_DISPATCH` for LocalMeLite offline mode.
+- `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Enforce row limits and keyset pagination.
 - `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Add archive export, import, and restore routes.
 - `apps/server/src/Routes/BaasServiceRoutes.cs`: Streaming multipart bucket uploads eliminating base64 JSON memory buffering.
 - `libs/core-domain/src/Database/SqlAstQueryCompiler.cs`: Bounded query limit ceiling enforcement (1,000 max rows).

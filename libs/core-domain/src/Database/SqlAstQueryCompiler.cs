@@ -289,75 +289,75 @@ public static class SqlAstQueryCompiler
                 switch (filter.Operator)
                 {
                     case QueryOperator.Equals:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} = {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} = {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.NotEquals:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} != {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} != {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.GreaterThan:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} > {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} > {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.GreaterThanOrEqual:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} >= {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} >= {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.LessThan:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} < {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} < {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.LessThanOrEqual:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} <= {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} <= {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.Like:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} LIKE {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} LIKE {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.ILike:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} ILIKE {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} ILIKE {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.NotLike:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} NOT LIKE {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} NOT LIKE {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.NotILike:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} NOT ILIKE {pName}");
-                        parameters[pName] = filter.Value;
-                        break;
-                    }
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} NOT ILIKE {pName}");
+                            parameters[pName] = filter.Value;
+                            break;
+                        }
                     case QueryOperator.IsNull:
                         filterClauses.Add($"{col} IS NULL");
                         break;
@@ -365,123 +365,123 @@ public static class SqlAstQueryCompiler
                         filterClauses.Add($"{col} IS NOT NULL");
                         break;
                     case QueryOperator.In when filter.Value is System.Collections.IEnumerable inValues and not string:
-                    {
-                        var inClauses = new List<string>();
-                        foreach (var inVal in inValues)
                         {
-                            var inParam = $"@p{paramIdx++}";
-                            inClauses.Add(inParam);
-                            parameters[inParam] = inVal?.ToString();
-                        }
-                        if (inClauses.Count > 0)
-                            filterClauses.Add($"{col} IN ({string.Join(", ", inClauses)})");
-                        else
-                            filterClauses.Add("1=0");
-                        break;
-                    }
-                    case QueryOperator.NotIn when filter.Value is System.Collections.IEnumerable inValues and not string:
-                    {
-                        var inClauses = new List<string>();
-                        foreach (var inVal in inValues)
-                        {
-                            var inParam = $"@p{paramIdx++}";
-                            inClauses.Add(inParam);
-                            parameters[inParam] = inVal?.ToString();
-                        }
-                        if (inClauses.Count > 0)
-                            filterClauses.Add($"{col} NOT IN ({string.Join(", ", inClauses)})");
-                        else
-                            filterClauses.Add("1=1");
-                        break;
-                    }
-                    case QueryOperator.Contains:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} @> {pName}::jsonb");
-                        parameters[pName] = filter.Value?.ToString();
-                        break;
-                    }
-                    case QueryOperator.ContainedBy:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"{col} <@ {pName}::jsonb");
-                        parameters[pName] = filter.Value?.ToString();
-                        break;
-                    }
-                    case QueryOperator.TextSearch:
-                    {
-                        var pName = $"@p{paramIdx++}";
-                        filterClauses.Add($"to_tsvector('simple', {col}::text) @@ plainto_tsquery('simple', {pName})");
-                        parameters[pName] = filter.Value?.ToString();
-                        break;
-                    }
-                    case QueryOperator.OrGroup when filter.Value is IEnumerable<QueryFilterNode> orNodes:
-                    {
-                        var subClauses = new List<string>();
-                        foreach (var subNode in orNodes)
-                        {
-                            var sCol = $"\"{subNode.Column}\"";
-                            var pName = $"@p{paramIdx++}";
-                            switch (subNode.Operator)
+                            var inClauses = new List<string>();
+                            foreach (var inVal in inValues)
                             {
-                                case QueryOperator.Equals:
-                                    subClauses.Add($"{sCol} = {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.NotEquals:
-                                    subClauses.Add($"{sCol} != {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.GreaterThan:
-                                    subClauses.Add($"{sCol} > {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.GreaterThanOrEqual:
-                                    subClauses.Add($"{sCol} >= {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.LessThan:
-                                    subClauses.Add($"{sCol} < {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.LessThanOrEqual:
-                                    subClauses.Add($"{sCol} <= {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.Like:
-                                    subClauses.Add($"{sCol} LIKE {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.ILike:
-                                    subClauses.Add($"{sCol} ILIKE {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.NotLike:
-                                    subClauses.Add($"{sCol} NOT LIKE {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.NotILike:
-                                    subClauses.Add($"{sCol} NOT ILIKE {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
-                                case QueryOperator.IsNull:
-                                    subClauses.Add($"{sCol} IS NULL");
-                                    break;
-                                case QueryOperator.IsNotNull:
-                                    subClauses.Add($"{sCol} IS NOT NULL");
-                                    break;
-                                default:
-                                    subClauses.Add($"{sCol} = {pName}");
-                                    parameters[pName] = subNode.Value;
-                                    break;
+                                var inParam = $"@p{paramIdx++}";
+                                inClauses.Add(inParam);
+                                parameters[inParam] = inVal?.ToString();
                             }
+                            if (inClauses.Count > 0)
+                                filterClauses.Add($"{col} IN ({string.Join(", ", inClauses)})");
+                            else
+                                filterClauses.Add("1=0");
+                            break;
                         }
-                        if (subClauses.Count > 0)
+                    case QueryOperator.NotIn when filter.Value is System.Collections.IEnumerable inValues and not string:
                         {
-                            filterClauses.Add($"({string.Join(" OR ", subClauses)})");
+                            var inClauses = new List<string>();
+                            foreach (var inVal in inValues)
+                            {
+                                var inParam = $"@p{paramIdx++}";
+                                inClauses.Add(inParam);
+                                parameters[inParam] = inVal?.ToString();
+                            }
+                            if (inClauses.Count > 0)
+                                filterClauses.Add($"{col} NOT IN ({string.Join(", ", inClauses)})");
+                            else
+                                filterClauses.Add("1=1");
+                            break;
                         }
-                        break;
-                    }
+                    case QueryOperator.Contains:
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} @> {pName}::jsonb");
+                            parameters[pName] = filter.Value?.ToString();
+                            break;
+                        }
+                    case QueryOperator.ContainedBy:
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"{col} <@ {pName}::jsonb");
+                            parameters[pName] = filter.Value?.ToString();
+                            break;
+                        }
+                    case QueryOperator.TextSearch:
+                        {
+                            var pName = $"@p{paramIdx++}";
+                            filterClauses.Add($"to_tsvector('simple', {col}::text) @@ plainto_tsquery('simple', {pName})");
+                            parameters[pName] = filter.Value?.ToString();
+                            break;
+                        }
+                    case QueryOperator.OrGroup when filter.Value is IEnumerable<QueryFilterNode> orNodes:
+                        {
+                            var subClauses = new List<string>();
+                            foreach (var subNode in orNodes)
+                            {
+                                var sCol = $"\"{subNode.Column}\"";
+                                var pName = $"@p{paramIdx++}";
+                                switch (subNode.Operator)
+                                {
+                                    case QueryOperator.Equals:
+                                        subClauses.Add($"{sCol} = {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.NotEquals:
+                                        subClauses.Add($"{sCol} != {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.GreaterThan:
+                                        subClauses.Add($"{sCol} > {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.GreaterThanOrEqual:
+                                        subClauses.Add($"{sCol} >= {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.LessThan:
+                                        subClauses.Add($"{sCol} < {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.LessThanOrEqual:
+                                        subClauses.Add($"{sCol} <= {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.Like:
+                                        subClauses.Add($"{sCol} LIKE {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.ILike:
+                                        subClauses.Add($"{sCol} ILIKE {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.NotLike:
+                                        subClauses.Add($"{sCol} NOT LIKE {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.NotILike:
+                                        subClauses.Add($"{sCol} NOT ILIKE {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                    case QueryOperator.IsNull:
+                                        subClauses.Add($"{sCol} IS NULL");
+                                        break;
+                                    case QueryOperator.IsNotNull:
+                                        subClauses.Add($"{sCol} IS NOT NULL");
+                                        break;
+                                    default:
+                                        subClauses.Add($"{sCol} = {pName}");
+                                        parameters[pName] = subNode.Value;
+                                        break;
+                                }
+                            }
+                            if (subClauses.Count > 0)
+                            {
+                                filterClauses.Add($"({string.Join(" OR ", subClauses)})");
+                            }
+                            break;
+                        }
                 }
             }
 
