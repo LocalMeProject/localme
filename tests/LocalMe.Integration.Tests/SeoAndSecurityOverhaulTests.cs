@@ -74,7 +74,9 @@ public class SeoAndSecurityOverhaulTests
         var txt = DynamicDiscoveryService.BuildLlmsFullTxt(config);
 
         Assert.Contains("# مستندات فنی جامع و راهنمای کامل پلتفرم ابری لوکال می", txt);
-        Assert.Contains("PostgreSQL 18.1", txt);
+        Assert.Contains("پایگاه داده رابطه ای ابری مدیریت شده", txt);
+        Assert.DoesNotContain("PostgreSQL", txt);
+        Assert.DoesNotContain("چندمستاجره", txt);
         Assert.Contains("X-Service-Key", txt);
         Assert.Contains("Flutter / Dart", txt);
         Assert.Contains("Edge Functions", txt);

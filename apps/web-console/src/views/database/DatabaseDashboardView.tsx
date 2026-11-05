@@ -186,7 +186,7 @@ const { data, error } = await localme
           <div>
             <div className="text-[11px] font-medium text-slate-500">موتور ذخیره‌سازی</div>
             <div className="text-xs font-bold text-slate-800 font-mono mt-1" dir="ltr">
-              PostgreSQL 18.1 Multi-Tenant
+              LocalMe Cloud Relational Engine
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
               prj_{project.slug}

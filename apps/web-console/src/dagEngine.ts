@@ -14,7 +14,7 @@ export const CAPABILITY_DEFINITIONS: Record<CapabilityCode, {
   },
   BAAS_DB: {
     name: 'Relational Database & API',
-    description: 'PostgreSQL 18 schema-per-tenant, Npgsql pool, Dynamic SQL endpoint',
+    description: 'Cloud relational data store, isolated schema, Dynamic API endpoint',
     dependentCapabilities: [],
     directPrimitives: ['PG_TENANT_SCHEMA', 'NPGSQL_POOL', 'DYNAMIC_SQL_ROUTE'],
   },
@@ -26,7 +26,7 @@ export const CAPABILITY_DEFINITIONS: Record<CapabilityCode, {
   },
   RTAAS: {
     name: 'Realtime PubSub & Signals',
-    description: 'ASP.NET Core SignalR gateway, Redis backplane, Postgres LISTEN/NOTIFY',
+    description: 'Real-time pub/sub gateway and event delivery',
     dependentCapabilities: ['BAAS_DB'],
     directPrimitives: ['PG_LISTEN_NOTIFY', 'REDIS_STREAMS', 'SIGNALR_GATEWAY'],
   },
@@ -61,7 +61,7 @@ export const CAPABILITY_DEFINITIONS: Record<CapabilityCode, {
     directPrimitives: ['BLOB_STORAGE_ADAPTER', 'TUSDOTNET_PROXY', 'IMAGESHARP_PROXY'],
   },
   EDA_STREAM: {
-    name: 'Event-Driven Redis Streams',
+    name: 'Event-Driven Message Streams',
     description: 'Partitioned message stream consumer groups with automatic acking',
     dependentCapabilities: [],
     directPrimitives: ['REDIS_STREAMS'],
@@ -79,8 +79,8 @@ export const CAPABILITY_DEFINITIONS: Record<CapabilityCode, {
     directPrimitives: ['REDIS_STREAMS', 'HEAVY_WORKER_POOL'],
   },
   CACHE_LOCK: {
-    name: 'Distributed Cache & Redlock',
-    description: 'Sub-millisecond Redis key-value operations and atomic locks',
+    name: 'Distributed Cache & High-Speed Locks',
+    description: 'Sub-millisecond high-speed key-value operations and atomic locks',
     dependentCapabilities: [],
     directPrimitives: ['REDIS_KV'],
   },

@@ -105,7 +105,9 @@ public class DiscoverabilityAndSeoTests
         Assert.Contains("# لوکال می", llmsTxt);
         Assert.Contains("زیر ۳۰۰ میلی ثانیه", llmsTxt);
         Assert.Contains("۱۰۰٪ پایداری تضمین شده", llmsTxt);
-        Assert.Contains("PostgreSQL", llmsTxt);
+        Assert.Contains("پایگاه داده ابری", llmsTxt);
+        Assert.DoesNotContain("PostgreSQL", llmsTxt);
+        Assert.DoesNotContain("چندمستاجره", llmsTxt);
         Assert.Contains("https://localme.ir/features/database", llmsTxt);
 
         // Enterprise tone: zero chat artifacts

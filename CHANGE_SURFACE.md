@@ -1,7 +1,7 @@
 ---
-title: "Change Surface: SEO, AEO, Performance & Security Overhaul"
+title: "Change Surface: Drop Multi-Tenant Terminology and Backend Stack Exposure"
 author: "sinavali"
-created_date: "2026-11-03"
+created_date: "2026-11-05"
 target_branch: "main"
 risk_level: "LOW"
 affected_projects:
@@ -14,19 +14,12 @@ affected_projects:
 # Change Surface
 
 ## 1. Intent & Business Rationale
-Complete implementation of SEO, AEO, Core Web Vitals performance, and multi-tenant security lockdown.
-- Fix public exposure and authentication bypass on `/panel` and `/_baas/v1/projects`.
-- Eliminate Soft 404s with dedicated 404 response handler.
-- Canonical domain 301 normalization for `www.localme.ir` to `localme.ir` and trailing slashes.
-- Enable Kestrel response compression (Gzip / Brotli) and static asset `Cache-Control`.
-- Inject standard HTTP security headers (HSTS, nosniff, SAMEORIGIN, Referrer-Policy).
-- Self-host Vazirmatn font locally; eliminate render-blocking Google Fonts across all pages.
-- Correct document heading hierarchy (unify 17 `<h1>` tags on `docs.html` to a single top-level `<h1>`, add `<h2>` to `faq.html`).
-- Add `rel="nofollow"` to internal links targeting disallowed routes.
-- Standardize `llms.txt` and generate consolidated `llms-full.txt` according to llmstxt.org.
-- Add modern AI search engine crawlers (`OAI-SearchBot`, `Claude-Web`, `Meta-ExternalAgent`) to robots.txt.
-- Add Schema.org `WebSite` + `SearchAction`, enhance `Organization`, and add publication timestamps to `TechArticle`.
-- Add dedicated `privacy.html`, `terms.html`, and `404.html`.
+- Completely remove "چندمستاجره" and "چند مستاجره" across user-facing documentation, landing pages, compare guides, terms, console, and discovery files.
+- Eliminate explicit mentions of underlying backend stacks (PostgreSQL 18, Redis, ASP.NET, .NET 10, Java, Kestrel, etc.) in user-facing marketing, docs, console, and HTTP responses.
+- Configure Kestrel web host to omit the `Server: Kestrel` header.
+- Clean up `/_baas/v1/config` to return generic cloud platform metadata.
+- Rebuild web-console and synchronize clean assets into wwwroot.
+- Verify through integration tests that forbidden terms are strictly absent from discoverability and SEO assets.
 
 ## 2. Affected Monorepo Projects
 - `apps/server`
@@ -66,20 +59,24 @@ Complete implementation of SEO, AEO, Core Web Vitals performance, and multi-tena
 - `apps/server/src/wwwroot/robots.txt`
 - `apps/server/src/wwwroot/sitemap.xml`
 - `apps/web-console/src/App.tsx`
+- `apps/web-console/src/dagEngine.ts`
+- `apps/web-console/src/views/database/DatabaseDashboardView.tsx`
 - `apps/server/src/wwwroot/assets/index-BMIrIwJf.js`
-- `apps/server/src/wwwroot/assets/index-Zbcr_arX.js`
+- `apps/server/src/wwwroot/assets/index-DIO1YLSc.js`
 - `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`
+- `tests/LocalMe.Integration.Tests/DiscoverabilityAndSeoTests.cs`
 - `tests/LocalMe.Integration.Tests/SeoAndSecurityOverhaulTests.cs`
 
 ## 4. Test Surface
 ### Unit & Integration Suites
+- `tests/LocalMe.Integration.Tests/DiscoverabilityAndSeoTests.cs`
 - `tests/LocalMe.Integration.Tests/SeoAndSecurityOverhaulTests.cs`
 - `tests/LocalMe.Integration.Tests/LocalMe.Integration.Tests.csproj`
 
 ## 5. Invariants
-- Zero unauthenticated data leakage across multi-tenant boundaries.
-- Non-root invalid paths return explicit HTTP 404 status.
-- Zero render-blocking external font dependencies for domestic network resilience.
+- Zero ZWNJ (`\u200c`) characters in any HTML files.
+- Zero user-facing mentions of "چندمستاجره" or "چند مستاجره".
+- Zero public exposure of backend technology stack names (Postgres, PostgreSQL, Redis, .NET, ASP.NET, Kestrel).
 - 100% backward-compatible API contracts for Client SDKs.
 
 ## 6. Risk Matrix

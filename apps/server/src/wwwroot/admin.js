@@ -737,7 +737,7 @@ function copyApiKey(key) {
 
 function getServicePersianName(srv) {
   switch (srv.toLowerCase()) {
-    case 'database': return 'پایگاه داده رابطه ای (PostgreSQL)';
+    case 'database': return 'پایگاه داده ابری رابطه ای (Database)';
     case 'auth': return 'احراز هویت پیامکی (SMS OTP)';
     case 'storage': return 'ذخیره سازی ابری فایل (Storage)';
     case 'functions': return 'توابع سرورلس لبه (Functions)';

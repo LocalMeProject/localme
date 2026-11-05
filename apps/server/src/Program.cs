@@ -53,11 +53,16 @@ public class Program
             WebRootPath = resolvedWebRoot
         });
 
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.AddServerHeader = false;
+        });
+
         var nodeRole = builder.Configuration["NodeRole"]
             ?? Environment.GetEnvironmentVariable("LOCALME_NODE_ROLE")
             ?? "all";
 
-        Console.WriteLine($"[LocalMe] Booting multi-tenant BaaS platform. Node role: {nodeRole} (WebRoot: {builder.Environment.WebRootPath})");
+        Console.WriteLine($"[LocalMe] Booting cloud BaaS platform. Node role: {nodeRole} (WebRoot: {builder.Environment.WebRootPath})");
 
         var configService = new PlatformConfigurationService(webRootPath: builder.Environment.WebRootPath);
         var logBuffer = new PlatformLogBuffer(configService);
@@ -340,17 +345,17 @@ public class Program
         app.MapGet("/healthz", () => Results.Ok(new
         {
             status = "HEALTHY",
-            platform = "LocalMe Multi-Tenant BaaS",
+            platform = "LocalMe Cloud Platform",
             role = nodeRole,
             timestamp = DateTimeOffset.UtcNow
         }));
 
         app.MapGet("/_baas/v1/config", () => Results.Ok(new
         {
-            stack = "Pure .NET 10 + PostgreSQL 18.1 + Redis 7/8",
+            stack = "LocalMe Managed Cloud Infrastructure",
             version = "1.0.0-PROD",
             region = "ir-central-tehran",
-            multi_tenancy = "Schema-Per-Project",
+            isolation = "Dedicated-Project-Schema",
             egress_nat = "2.180.12.94",
             brand_color = "#10b981"
         }));

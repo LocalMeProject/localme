@@ -250,7 +250,7 @@ public sealed class DynamicDiscoveryService
 
         sb.AppendLine("# لوکال می (LocalMe)");
         sb.AppendLine();
-        sb.AppendLine("> لوکال می یک پلتفرم ابری چندمستاجره Backend-as-a-Service (BaaS) بومی ایران است که زیرساخت بک اند آماده، امن و مقیاس پذیر را برای توسعه دهندگان موبایل و فرانت اند در مراکز داده تهران ارائه می دهد.");
+        sb.AppendLine("> لوکال می یک پلتفرم ابری Backend-as-a-Service (BaaS) بومی ایران است که زیرساخت بک اند آماده، امن و مقیاس پذیر را برای توسعه دهندگان موبایل و فرانت اند در مراکز داده تهران ارائه می دهد.");
         sb.AppendLine();
         sb.AppendLine("## مشخصات زیرساختی و تعهدات سطح خدمت (SLA)");
         sb.AppendLine("- مراکز داده: استقرار فعال چندمرکزی در مراکز داده تهران با اتصال مستقیم به نقطه تبادل ترافیک ملی (IXP)");
@@ -259,7 +259,7 @@ public sealed class DynamicDiscoveryService
         sb.AppendLine("- ساختار ترافیک: محاسبه ترافیک به صورت تمام داخلی و نیم بها برای کاربران نهایی");
         sb.AppendLine();
         sb.AppendLine("## سرویس های اصلی پلتفرم");
-        sb.AppendLine("1. پایگاه داده چندمستاجره: پایگاه داده رابطه ای PostgreSQL چندمستاجره با تفکیک اسکیمای اختصاصی، کوئری مستقیم JSON و امنیت در سطح سطر (RLS)");
+        sb.AppendLine("1. پایگاه داده ابری: پایگاه داده رابطه ای کاملا مدیریت شده با تفکیک داده اختصاصی، کوئری مستقیم JSON و امنیت در سطح سطر (RLS)");
         sb.AppendLine("2. احراز هویت و مدیریت کاربران: سیستم احراز هویت توکن محور JWT با نام کاربری و رمز عبور ایمن");
         sb.AppendLine("3. ذخیره سازی ابری: فضای ذخیره سازی شی گرا سازگار با پروتکل S3 برای بارگذاری و بارگیری امن فایل ها");
         sb.AppendLine("4. توابع ابری بدون سرور: محیط محاسباتی سرورلس سبک و ایزوله برای اجرای منطق های تجاری");
@@ -276,7 +276,7 @@ public sealed class DynamicDiscoveryService
         sb.AppendLine("## مستندات و پیوندهای کلیدی");
         sb.Append("- [صفحه اصلی](").Append(baseUrl).AppendLine("/): معرفی زیرساخت و امکانات پلتفرم ابری لوکال می");
         sb.Append("- [مستندات جامع توسعه دهندگان](").Append(baseUrl).AppendLine("/docs): مستندات فنی و راهنمای کامل SDK ها");
-        sb.Append("- [پایگاه داده چندمستاجره](").Append(baseUrl).AppendLine("/features/database): راهنمای پایگاه داده PostgreSQL با ایزولاسیون اسکیما");
+        sb.Append("- [پایگاه داده ابری](").Append(baseUrl).AppendLine("/features/database): راهنمای پایگاه داده رابطه ای ابری با امنیت داده ها");
         sb.Append("- [احراز هویت و مدیریت کاربران](").Append(baseUrl).AppendLine("/features/auth): احراز هویت توکن محور JWT و مدیریت کاربران");
         sb.Append("- [ذخیره سازی ابری فایل](").Append(baseUrl).AppendLine("/features/storage): آبجکت استوریج سازگار با پروتکل S3 در تهران");
         sb.Append("- [توابع سرورلس لبه](").Append(baseUrl).AppendLine("/features/edge-functions): اجرای منطق تجاری در لبه شبکه بدون سرور");
@@ -307,7 +307,7 @@ public sealed class DynamicDiscoveryService
 
         sb.AppendLine("# مستندات فنی جامع و راهنمای کامل پلتفرم ابری لوکال می (LocalMe Full Documentation)");
         sb.AppendLine();
-        sb.AppendLine("> لوکال می پلتفرم ابری چندمستاجره Backend-as-a-Service (BaaS) بومی ایران است که خدمات پایگاه داده رابطه ای با RLS، احراز هویت توکن محور JWT، ذخیره سازی ابری فایل سازگار با S3، توابع سرورلس لبه و تله متری را در مراکز داده تهران با تاخیر زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪ ارائه می دهد.");
+        sb.AppendLine("> لوکال می پلتفرم ابری Backend-as-a-Service (BaaS) بومی ایران است که خدمات پایگاه داده رابطه ای با RLS، احراز هویت توکن محور JWT، ذخیره سازی ابری فایل سازگار با S3، توابع سرورلس لبه و تله متری را در مراکز داده تهران با تاخیر زیر ۳۰۰ میلی ثانیه و پایداری ۱۰۰٪ ارائه می دهد.");
         sb.AppendLine();
         sb.AppendLine("## ۱. ساختار دسترسی و کلیدهای API");
         sb.AppendLine("درخواست های ارسالی از کلاینت ها با هدرهای زیر تایید می شوند:");
@@ -316,7 +316,7 @@ public sealed class DynamicDiscoveryService
         sb.AppendLine("- `Accept: application/json`: ساختار تبادل داده پیش فرض");
         sb.AppendLine();
         sb.AppendLine("## ۲. سرویس پایگاه داده رابطه ای (Database)");
-        sb.AppendLine("- موتور دیتابیس: PostgreSQL 18.1 چندمستاجره با تفکیک اسکیمای اختصاصی برای هر پروژه");
+        sb.AppendLine("- پایگاه داده رابطه ای ابری مدیریت شده با تفکیک داده اختصاصی برای هر پروژه");
         sb.AppendLine("- کوئری مستقیم JSON از فرانت اند و کلاینت های موبایل بدون نیاز به کدنویسی بک اند");
         sb.AppendLine("- امنیت در سطح سطر (Row-Level Security): تفکیک قطعی داده های هر کاربر و پروژه با سیاست های امنیتی");
         sb.AppendLine("- اندپوینت ها:");

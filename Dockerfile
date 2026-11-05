@@ -4,8 +4,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
 # Production release tag & cache invalidator
-ARG BUILD_DATE="2026-11-05T02:11:00Z"
-LABEL build.target="production-20261105-seo-security"
+ARG BUILD_DATE="2026-11-05T04:40:00Z"
+LABEL build.target="production-20261105-clean-brand"
 LABEL build.timestamp="${BUILD_DATE}"
 
 ENV NODE_ENV=production
