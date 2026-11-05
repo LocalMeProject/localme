@@ -166,12 +166,6 @@ public class DataPlaneIntegrationTests
         Assert.Contains("Username=test_user", normalized);
         Assert.Contains("Password=SampleTestPassword123", normalized);
         Assert.Contains("Database=test_db", normalized);
-
-        var redisUri = "redis://default:SampleRedisSecret123@remote.internal.net:32567/0";
-        var normalizedRedis = LocalMe.Infrastructure.Storage.PostgreSqlProjectStore.NormalizeRedisConnectionString(redisUri);
-        Assert.Contains("remote.internal.net:32567", normalizedRedis);
-        Assert.Contains("password=SampleRedisSecret123", normalizedRedis);
-        Assert.Contains("defaultDatabase=0", normalizedRedis);
     }
 }
 

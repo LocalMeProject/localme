@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS projects (
     owner_phone VARCHAR(32) NOT NULL,
     region VARCHAR(64) NOT NULL DEFAULT 'ir-central-tehran',
     status VARCHAR(32) NOT NULL DEFAULT 'Active',
+    db_cluster_id VARCHAR(32) NOT NULL DEFAULT 'shard-a',
     password_hash VARCHAR(512),
     has_password BOOLEAN NOT NULL DEFAULT FALSE,
     services_json JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -41,6 +42,8 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug);
 CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects(owner_id);
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS db_cluster_id VARCHAR(32) NOT NULL DEFAULT 'shard-a';
+CREATE INDEX IF NOT EXISTS idx_projects_cluster ON projects(db_cluster_id);
 
 -- 3. Project Auth Users (End users of tenant apps)
 CREATE TABLE IF NOT EXISTS project_auth_users (
@@ -197,17 +200,9 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_authority ON payments(authority_token);
 CREATE INDEX IF NOT EXISTS idx_payments_project ON payments(project_id);
 
--- 14. Project Dynamic Table Records (Data Studio PostgREST storage)
-CREATE TABLE IF NOT EXISTS project_table_records (
-    id VARCHAR(64) PRIMARY KEY,
-    project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    table_name VARCHAR(128) NOT NULL,
-    record_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at_utc TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_project_table_records ON project_table_records(project_id, table_name);
+-- 14. Deprecated legacy table cleanup (Dynamic tables are isolated in prj_{slug}.*)
+-- adr-ref: docs/adr/0006-postgres-centralization-contract.md
+DROP TABLE IF EXISTS project_table_records CASCADE;
 
 -- 15. Stored Payments & Transactions
 CREATE TABLE IF NOT EXISTS payment_transactions (
@@ -310,4 +305,82 @@ CREATE TABLE IF NOT EXISTS billing_usage_records (
     cost_irr BIGINT NOT NULL,
     recorded_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- 21. Refresh Tokens with Replay Detection & Rotation
+CREATE TABLE IF NOT EXISTS project_refresh_tokens (
+    id VARCHAR(64) PRIMARY KEY,
+    project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id VARCHAR(64) NOT NULL REFERENCES project_auth_users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) UNIQUE NOT NULL,
+    family_id VARCHAR(64) NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    user_agent TEXT,
+    ip_address INET,
+    expires_at_utc TIMESTAMPTZ NOT NULL,
+    created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_rt_family ON project_refresh_tokens(family_id);
+
+-- 22. Ephemeral Unlogged OTP Table (Zero WAL overhead for 120s codes)
+CREATE UNLOGGED TABLE IF NOT EXISTS project_active_otps (
+    phone VARCHAR(32) PRIMARY KEY,
+    project_id VARCHAR(64) NOT NULL,
+    hmac_hash BYTEA NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    expires_at_utc TIMESTAMPTZ NOT NULL,
+    created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 23. Transactional Outbox Push Notification Queue (Replaces Redis)
+CREATE TABLE IF NOT EXISTS push_jobs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    target_payload JSONB NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    max_attempts INT NOT NULL DEFAULT 3,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    error_message TEXT,
+    scheduled_for_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed_at_utc TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_push_jobs_status ON push_jobs(status, scheduled_for_utc)
+WHERE status = 'PENDING';
+
+-- 24. Universal Project Archives (.localmepack Registry)
+CREATE TABLE IF NOT EXISTS project_archives (
+    id VARCHAR(64) PRIMARY KEY,
+    project_id VARCHAR(64) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    archive_type VARCHAR(32) NOT NULL DEFAULT 'FULL',
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    storage_path TEXT NOT NULL,
+    sha256_checksum VARCHAR(64) NOT NULL,
+    created_by VARCHAR(64) NOT NULL,
+    created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 25. Inter-Node Cluster Bus (Pointer-Only Realtime Invalidation)
+CREATE OR REPLACE FUNCTION notify_cluster_event() RETURNS TRIGGER AS $$
+DECLARE
+    payload jsonb;
+BEGIN
+    payload := jsonb_build_object(
+        't', TG_TABLE_NAME,
+        'a', TG_OP,
+        'k', COALESCE(NEW.id::text, OLD.id::text)
+    );
+    PERFORM pg_notify('localme_cluster_bus', payload::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_projects_invalidation ON projects;
+CREATE TRIGGER trg_projects_invalidation
+AFTER UPDATE OR DELETE ON projects
+FOR EACH ROW EXECUTE FUNCTION notify_cluster_event();
+
+DROP TRIGGER IF EXISTS trg_domains_invalidation ON project_domains;
+CREATE TRIGGER trg_domains_invalidation
+AFTER INSERT OR UPDATE OR DELETE ON project_domains
+FOR EACH ROW EXECUTE FUNCTION notify_cluster_event();
 

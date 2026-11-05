@@ -23,6 +23,7 @@ using LocalMe.Server.Middleware;
 using LocalMe.Infrastructure.Storage;
 using LocalMe.Server.Diagnostics;
 using LocalMe.Server.Routes;
+using LocalMe.Server.Services;
 using Npgsql;
 
 public class Program
@@ -97,6 +98,35 @@ public class Program
             pm.TenantDbStore = sp.GetRequiredService<ITenantDatabaseStore>();
             return pm;
         });
+        builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
+        {
+            var store = sp.GetRequiredService<IProjectStore>();
+            if (store is PostgreSqlProjectStore pgStore && pgStore.DataSource != null)
+            {
+                return pgStore.DataSource;
+            }
+            var connStr = Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
+                ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_URL")
+                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? Environment.GetEnvironmentVariable("LOCALME_PG_CONNECTION")
+                ?? "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;MinPoolSize=5;MaxPoolSize=30;Multiplexing=true;";
+            return NpgsqlDataSource.Create(PostgreSqlProjectStore.NormalizePostgresConnectionString(connStr));
+        });
+        builder.Services.AddSingleton<ProjectArchiveService>();
+        builder.Services.AddSingleton<ClusterBusSubscriber>(sp =>
+        {
+            var ds = sp.GetRequiredService<NpgsqlDataSource>();
+            var sub = new ClusterBusSubscriber(ds);
+            sub.OnClusterEvent = (table, action, id) =>
+            {
+                GatewayCacheMiddleware.InvalidateTag(table);
+                PostgreSqlTenantSchemaStore.InvalidateTenantSchemaCache();
+            };
+            return sub;
+        });
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<ClusterBusSubscriber>());
+        builder.Services.AddHostedService<PushDispatcherWorker>();
+
         builder.Services.AddSingleton<PaymentIpgService>(sp =>
             new PaymentIpgService(sp.GetRequiredService<ProjectManagerService>()));
         builder.Services.AddSingleton<UsageMeteringService>();
@@ -189,6 +219,7 @@ public class Program
 
             if (path.StartsWith("/_baas/", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/readyz", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/panel", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/auth", StringComparison.OrdinalIgnoreCase) ||
@@ -349,6 +380,27 @@ public class Program
             role = nodeRole,
             timestamp = DateTimeOffset.UtcNow
         }));
+
+        app.MapGet("/readyz", async (IProjectStore store) =>
+        {
+            try
+            {
+                if (store is PostgreSqlProjectStore pgStore && pgStore.DataSource != null)
+                {
+                    await using var conn = await pgStore.DataSource.OpenConnectionAsync();
+                    await using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT 1;";
+                    cmd.CommandTimeout = 2;
+                    await cmd.ExecuteScalarAsync();
+                    return Results.Ok(new { status = "READY", database = "connected", timestamp = DateTimeOffset.UtcNow });
+                }
+                return Results.Ok(new { status = "READY", database = "in-memory", timestamp = DateTimeOffset.UtcNow });
+            }
+            catch (Exception ex)
+            {
+                return Results.Json(new { status = "NOT_READY", error = ex.Message }, statusCode: 503);
+            }
+        });
 
         app.MapGet("/_baas/v1/config", () => Results.Ok(new
         {

@@ -58,7 +58,7 @@ public static class SqlAstQueryCompiler
 
             if (lKey == "limit" && int.TryParse(val, out var parsedLimit))
             {
-                limit = Math.Clamp(parsedLimit, 1, 10000);
+                limit = Math.Clamp(parsedLimit, 1, 1000);
                 continue;
             }
 
@@ -261,7 +261,7 @@ public static class SqlAstQueryCompiler
         var limit = json["limit"]?.GetValue<int>() ?? 50;
         var offset = json["offset"]?.GetValue<int>() ?? 0;
 
-        return new SqlAstQuery(selectCols, filters, orderBy, orderAsc, Math.Clamp(limit, 1, 10000), Math.Max(0, offset));
+        return new SqlAstQuery(selectCols, filters, orderBy, orderAsc, Math.Clamp(limit, 1, 1000), Math.Max(0, offset));
     }
 
     public static (string Sql, Dictionary<string, object?> Parameters) CompileToParameterizedSql(string tableName, SqlAstQuery query)

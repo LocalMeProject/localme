@@ -80,38 +80,16 @@ public static class BaasServiceRoutes
             }
             else
             {
-                using var reader = new StreamReader(request.Body);
-                var rawBody = await reader.ReadToEndAsync();
-                JsonObject? bodyObj = null;
-                try
-                {
-                    bodyObj = JsonNode.Parse(rawBody) as JsonObject;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[LocalMe.Server] Non-JSON upload body received: {ex.Message}");
-                }
+                fileName = request.Headers["X-File-Name"].ToString() is { Length: > 0 } fn
+                    ? Path.GetFileName(fn)
+                    : $"file_{Guid.NewGuid():N}"[..8] + ".bin";
+                contentType = string.IsNullOrWhiteSpace(request.ContentType)
+                    ? "application/octet-stream"
+                    : request.ContentType;
 
-                fileName = bodyObj?["file_name"]?.ToString() ?? $"file_{Guid.NewGuid():N}"[..8] + ".bin";
-                contentType = bodyObj?["content_type"]?.ToString() ?? "application/octet-stream";
-
-                byte[] bytes;
-                if (bodyObj != null && bodyObj.ContainsKey("content_base64"))
-                {
-                    bytes = Convert.FromBase64String(bodyObj["content_base64"]?.ToString() ?? "");
-                }
-                else if (bodyObj != null && bodyObj.ContainsKey("content"))
-                {
-                    bytes = System.Text.Encoding.UTF8.GetBytes(bodyObj["content"]?.ToString() ?? "");
-                }
-                else
-                {
-                    bytes = System.Text.Encoding.UTF8.GetBytes(rawBody);
-                }
-
-                sizeBytes = bytes.Length > 0 ? bytes.Length : (bodyObj?["size_bytes"]?.GetValue<long>() ?? 1024 * 64);
-                using var ms = new MemoryStream(bytes);
-                await storage.PutObjectAsync($"{projectId}/{bucket}", fileName, ms, contentType);
+                await using var bodyStream = request.Body;
+                await storage.PutObjectAsync($"{projectId}/{bucket}", fileName, bodyStream, contentType);
+                sizeBytes = request.ContentLength ?? 1024 * 64;
             }
 
             metering.RecordUsage(projectId, project.OwnerPhone, "storage_mb", Math.Max(1, (int)(sizeBytes / (1024 * 1024))));
