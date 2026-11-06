@@ -92,6 +92,20 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             }
         }
 
+        // Ensure schema evolution for existing projects table (db_cluster_id column)
+        try
+        {
+            await using var alterCmd = _dataSource.CreateCommand(@"
+                ALTER TABLE IF EXISTS projects ADD COLUMN IF NOT EXISTS db_cluster_id VARCHAR(32) NOT NULL DEFAULT 'shard-a';
+                CREATE INDEX IF NOT EXISTS idx_projects_cluster ON projects(db_cluster_id);
+            ");
+            await alterCmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.Store] Schema evolution notice: {ex.Message}");
+        }
+
         // Verify and apply migration 005 (Dynamic platform configurations and shards)
         try
         {
@@ -116,11 +130,33 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                     }
                 }
 
-                if (!string.IsNullOrWhiteSpace(mig005Sql))
+                if (string.IsNullOrWhiteSpace(mig005Sql))
                 {
-                    await using var mCmd = _dataSource.CreateCommand(mig005Sql);
-                    await mCmd.ExecuteNonQueryAsync();
+                    mig005Sql = @"
+                        CREATE TABLE IF NOT EXISTS platform_configurations (
+                            key VARCHAR(64) PRIMARY KEY,
+                            value JSONB NOT NULL,
+                            updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                            updated_by VARCHAR(128) NOT NULL DEFAULT 'system'
+                        );
+                        CREATE TABLE IF NOT EXISTS platform_shards (
+                            id VARCHAR(32) PRIMARY KEY,
+                            name VARCHAR(128) NOT NULL,
+                            connection_string TEXT NOT NULL,
+                            region VARCHAR(64) NOT NULL DEFAULT 'ir-central',
+                            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                            is_accepting_new_projects BOOLEAN NOT NULL DEFAULT TRUE,
+                            max_capacity_projects INT NOT NULL DEFAULT 5000,
+                            current_project_count INT NOT NULL DEFAULT 0,
+                            created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        );
+                        INSERT INTO platform_shards (id, name, connection_string, region, is_active, is_accepting_new_projects, max_capacity_projects)
+                        VALUES ('shard-a', 'Primary PostgreSQL Cluster (Default)', 'PRIMARY_CONNECTION', 'ir-central', true, true, 5000)
+                        ON CONFLICT (id) DO NOTHING;";
                 }
+
+                await using var mCmd = _dataSource.CreateCommand(mig005Sql);
+                await mCmd.ExecuteNonQueryAsync();
             }
         }
         catch (Exception ex)
@@ -318,41 +354,63 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         await EnsureInitializedAsync();
         var list = new List<BaasProject>();
         const string sql = "SELECT id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc, COALESCE(db_cluster_id, 'shard-a') FROM projects ORDER BY created_at_utc DESC;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        try
         {
-            var servicesJson = reader.IsDBNull(10) ? "{}" : reader.GetString(10);
-            Dictionary<string, ServiceConfig> services;
-            try
+            await using var cmd = _dataSource!.CreateCommand(sql);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                services = JsonSerializer.Deserialize<Dictionary<string, ServiceConfig>>(
-                    servicesJson,
-                    JsonOptions) ?? [];
+                list.Add(ReadProjectRow(reader));
             }
-            catch
-            {
-                services = [];
-            }
+        }
+        catch (PostgresException ex) when (ex.SqlState == "42703")
+        {
+            // Auto-heal missing db_cluster_id on legacy schemas
+            await using var alterCmd = _dataSource!.CreateCommand(@"
+                ALTER TABLE IF EXISTS projects ADD COLUMN IF NOT EXISTS db_cluster_id VARCHAR(32) NOT NULL DEFAULT 'shard-a';
+                CREATE INDEX IF NOT EXISTS idx_projects_cluster ON projects(db_cluster_id);
+            ");
+            await alterCmd.ExecuteNonQueryAsync();
 
-            list.Add(new BaasProject(
-                Id: reader.GetString(0),
-                Name: reader.GetString(1),
-                Slug: reader.GetString(2),
-                Description: reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                OwnerId: reader.GetString(4),
-                OwnerPhone: reader.GetString(5),
-                Region: reader.GetString(6),
-                Status: reader.GetString(7),
-                PasswordHash: reader.IsDBNull(8) ? null : reader.GetString(8),
-                HasPassword: !reader.IsDBNull(9) && reader.GetBoolean(9),
-                Services: services,
-                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc),
-                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc),
-                DbClusterId: reader.FieldCount > 13 && !reader.IsDBNull(13) ? reader.GetString(13) : "shard-a"
-            ));
+            await using var retryCmd = _dataSource!.CreateCommand(sql);
+            await using var retryReader = await retryCmd.ExecuteReaderAsync();
+            while (await retryReader.ReadAsync())
+            {
+                list.Add(ReadProjectRow(retryReader));
+            }
         }
         return list;
+    }
+
+    private static BaasProject ReadProjectRow(System.Data.Common.DbDataReader reader)
+    {
+        var servicesJson = reader.IsDBNull(10) ? "{}" : reader.GetString(10);
+        Dictionary<string, ServiceConfig> services;
+        try
+        {
+            services = JsonSerializer.Deserialize<Dictionary<string, ServiceConfig>>(servicesJson, JsonOptions) ?? [];
+        }
+        catch
+        {
+            services = [];
+        }
+
+        return new BaasProject(
+            Id: reader.GetString(0),
+            Name: reader.GetString(1),
+            Slug: reader.GetString(2),
+            Description: reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+            OwnerId: reader.GetString(4),
+            OwnerPhone: reader.GetString(5),
+            Region: reader.GetString(6),
+            Status: reader.GetString(7),
+            PasswordHash: reader.IsDBNull(8) ? null : reader.GetString(8),
+            HasPassword: !reader.IsDBNull(9) && reader.GetBoolean(9),
+            Services: services,
+            CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc),
+            UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc),
+            DbClusterId: reader.FieldCount > 13 && !reader.IsDBNull(13) ? reader.GetString(13) : "shard-a"
+        );
     }
 
     public async Task UpsertProjectAsync(BaasProject project)
