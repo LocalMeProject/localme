@@ -9,11 +9,12 @@ using Npgsql;
 public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDisposable
 {
     private readonly string _pgConnectionString;
+    public string ConnectionString => _pgConnectionString;
     private NpgsqlDataSource? _dataSource;
     public NpgsqlDataSource? DataSource => _dataSource;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private const string LocalFallbackPostgres = "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
+    private const string LocalFallbackPostgres = "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;Persist Security Info=true;";
 
     public static string NormalizePostgresConnectionString(string connectionString)
     {
@@ -35,14 +36,26 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                     : (trimmed.Contains("sslmode=disable", StringComparison.OrdinalIgnoreCase)
                         ? "SSL Mode=Disable;"
                         : "SSL Mode=Prefer;Trust Server Certificate=true;");
-                return $"Host={uri.Host};Port={port};Username={username};Password={password};Database={database};{sslMode}";
+                return $"Host={uri.Host};Port={port};Username={username};Password={password};Database={database};Persist Security Info=true;{sslMode}";
             }
             catch
             {
                 return connectionString;
             }
         }
-        return connectionString;
+
+        try
+        {
+            var csb = new NpgsqlConnectionStringBuilder(connectionString)
+            {
+                PersistSecurityInfo = true
+            };
+            return csb.ConnectionString;
+        }
+        catch
+        {
+            return connectionString;
+        }
     }
 
     public PostgreSqlProjectStore(string? pgConnectionString = null, string? _ = null)

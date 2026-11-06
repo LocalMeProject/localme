@@ -136,7 +136,9 @@ public class Program
         builder.Services.AddSingleton<ClusterBusSubscriber>(sp =>
         {
             var ds = sp.GetRequiredService<NpgsqlDataSource>();
-            var sub = new ClusterBusSubscriber(ds);
+            var pgStore = sp.GetService<IProjectStore>() as PostgreSqlProjectStore;
+            var rawConn = pgStore?.ConnectionString;
+            var sub = new ClusterBusSubscriber(ds, rawConn);
             sub.OnClusterEvent = (table, action, id) =>
             {
                 GatewayCacheMiddleware.InvalidateTag(table);

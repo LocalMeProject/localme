@@ -15,10 +15,14 @@ public sealed class ClusterBusSubscriber : BackgroundService
     private readonly string _listenConnectionString;
     public Action<string, string, string>? OnClusterEvent { get; set; }
 
-    public ClusterBusSubscriber(NpgsqlDataSource dataSource)
+    public ClusterBusSubscriber(NpgsqlDataSource dataSource, string? rawConnectionString = null)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
-        var csb = new NpgsqlConnectionStringBuilder(dataSource.ConnectionString)
+        var baseConnStr = !string.IsNullOrWhiteSpace(rawConnectionString)
+            ? rawConnectionString
+            : dataSource.ConnectionString;
+
+        var csb = new NpgsqlConnectionStringBuilder(baseConnStr)
         {
             Multiplexing = false,
             Pooling = false
