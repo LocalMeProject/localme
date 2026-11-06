@@ -57,6 +57,11 @@ public class Program
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.AddServerHeader = false;
+            var portStr = Environment.GetEnvironmentVariable("PORT") ?? "3000";
+            if (int.TryParse(portStr, out var port))
+            {
+                options.ListenAnyIP(port);
+            }
         });
 
         var nodeRole = builder.Configuration["NodeRole"]
@@ -76,28 +81,6 @@ public class Program
         // Register Core Subsystems
         builder.Services.AddSingleton(configService.Pricing);
         builder.Services.AddSingleton<IProjectStore, PostgreSqlProjectStore>(_ => new PostgreSqlProjectStore());
-        builder.Services.AddSingleton<ITenantDatabaseStore>(sp =>
-        {
-            var store = sp.GetRequiredService<IProjectStore>();
-            if (store is PostgreSqlProjectStore pgStore && pgStore.DataSource != null)
-            {
-                return new PostgreSqlTenantSchemaStore(pgStore.DataSource);
-            }
-            var connStr = Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
-                ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_URL")
-                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
-                ?? Environment.GetEnvironmentVariable("LOCALME_PG_CONNECTION")
-                ?? "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
-            var ds = NpgsqlDataSource.Create(PostgreSqlProjectStore.NormalizePostgresConnectionString(connStr));
-            return new PostgreSqlTenantSchemaStore(ds);
-        });
-        builder.Services.AddSingleton<OutboundEgressDispatcher>(_ => new OutboundEgressDispatcher());
-        builder.Services.AddSingleton<ProjectManagerService>(sp =>
-        {
-            var pm = new ProjectManagerService(sp.GetRequiredService<IProjectStore>());
-            pm.TenantDbStore = sp.GetRequiredService<ITenantDatabaseStore>();
-            return pm;
-        });
         builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
         {
             var store = sp.GetRequiredService<IProjectStore>();
@@ -105,13 +88,50 @@ public class Program
             {
                 return pgStore.DataSource;
             }
-            var connStr = Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
+            var connStr = Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
                 ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_URL")
-                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
                 ?? Environment.GetEnvironmentVariable("LOCALME_PG_CONNECTION")
                 ?? "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;MinPoolSize=5;MaxPoolSize=30;Multiplexing=true;";
             return NpgsqlDataSource.Create(PostgreSqlProjectStore.NormalizePostgresConnectionString(connStr));
         });
+
+        builder.Services.AddSingleton<IPlatformConfigurationStore>(sp =>
+            new PostgreSqlPlatformConfigurationStore(sp.GetRequiredService<NpgsqlDataSource>()));
+        builder.Services.AddSingleton<IPlatformShardStore>(sp =>
+            new PostgreSqlPlatformShardStore(sp.GetRequiredService<NpgsqlDataSource>()));
+
+        builder.Services.AddSingleton<ShardManagerService>(sp =>
+        {
+            var shardStore = sp.GetRequiredService<IPlatformShardStore>();
+            var primaryDs = sp.GetRequiredService<NpgsqlDataSource>();
+            return new ShardManagerService(shardStore, primaryDs, conn =>
+            {
+                var normalized = PostgreSqlProjectStore.NormalizePostgresConnectionString(conn);
+                return NpgsqlDataSource.Create(normalized);
+            });
+        });
+
+        builder.Services.AddSingleton<ITenantDatabaseStore>(sp =>
+        {
+            var primaryDs = sp.GetRequiredService<NpgsqlDataSource>();
+            var shardMgr = sp.GetRequiredService<ShardManagerService>();
+            var pm = sp.GetRequiredService<ProjectManagerService>();
+            return new PostgreSqlTenantSchemaStore(primaryDs, slug =>
+            {
+                var prj = pm.GetProjectBySlug(slug);
+                return (NpgsqlDataSource)shardMgr.GetDataSourceForShard(prj?.DbClusterId);
+            });
+        });
+
+        builder.Services.AddSingleton<OutboundEgressDispatcher>(_ => new OutboundEgressDispatcher());
+        builder.Services.AddSingleton<ProjectManagerService>(sp =>
+        {
+            var pm = new ProjectManagerService(sp.GetRequiredService<IProjectStore>());
+            pm.TenantDbStore = sp.GetRequiredService<ITenantDatabaseStore>();
+            return pm;
+        });
+
         builder.Services.AddSingleton<ProjectArchiveService>();
         builder.Services.AddSingleton<ClusterBusSubscriber>(sp =>
         {
@@ -121,6 +141,14 @@ public class Program
             {
                 GatewayCacheMiddleware.InvalidateTag(table);
                 PostgreSqlTenantSchemaStore.InvalidateTenantSchemaCache();
+                if (table.Equals("platform_configurations", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = configService.ReloadFromStoreAsync();
+                }
+                else if (table.Equals("platform_shards", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = sp.GetRequiredService<ShardManagerService>().ReloadFromStoreAsync();
+                }
             };
             return sub;
         });
@@ -146,7 +174,10 @@ public class Program
 
         var storageDir = Path.Combine(Directory.GetCurrentDirectory(), ".localme-storage");
         Directory.CreateDirectory(storageDir);
-        builder.Services.AddSingleton<IBlobStorageAdapter>(_ => new LocalDiskAdapter(storageDir));
+        var localDiskAdapter = new LocalDiskAdapter(storageDir);
+        builder.Services.AddSingleton<LocalDiskAdapter>(_ => localDiskAdapter);
+        builder.Services.AddSingleton<IBlobStorageAdapter>(sp =>
+            new DynamicBlobStorageAdapter(sp.GetRequiredService<PlatformConfigurationService>(), localDiskAdapter));
 
         builder.Services.AddResponseCompression(options =>
         {
@@ -154,6 +185,9 @@ public class Program
         });
 
         var app = builder.Build();
+
+        // Bind in-DB configuration store to PlatformConfigurationService
+        configService.SetStore(app.Services.GetRequiredService<IPlatformConfigurationStore>());
 
         var pm = app.Services.GetRequiredService<ProjectManagerService>();
         var realtimeHub = app.Services.GetRequiredService<RealtimeChannelHub>();
@@ -432,88 +466,57 @@ public class Program
         app.MapGetAndHead("/docs", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
         app.MapGetAndHead("/docs/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "docs.html"), "text/html"));
 
-        // Auth Portal (/auth/*)
-        app.MapGetAndHead("/auth", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
-        app.MapGetAndHead("/auth/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "auth.html"), "text/html"));
-
-        // Protected Developer Console (/panel/*, /console/*, /projects/*)
-        app.MapGetAndHead("/panel", (HttpContext ctx, ProjectManagerService pm) =>
+        // Auth Portal (/login, /register, /auth/*)
+        app.MapGetAndHead("/login", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
+            if (user != null)
             {
-                return Results.Redirect("/auth?redirect=/panel");
+                var returnUrl = ctx.Request.Query["returnUrl"].ToString();
+                return Results.Redirect(!string.IsNullOrEmpty(returnUrl) ? returnUrl : "/panel");
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGetAndHead("/panel/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/register", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
+            if (user != null) return Results.Redirect("/panel");
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
+        app.MapGetAndHead("/auth", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user != null)
             {
-                return Results.Redirect("/auth?redirect=/panel");
+                var returnUrl = ctx.Request.Query["redirect"].ToString();
+                if (string.IsNullOrEmpty(returnUrl)) returnUrl = ctx.Request.Query["returnUrl"].ToString();
+                return Results.Redirect(!string.IsNullOrEmpty(returnUrl) ? returnUrl : "/panel");
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
-        app.MapGetAndHead("/dashboard", () => Results.Redirect("/panel"));
-
-        app.MapGetAndHead("/console", (HttpContext ctx, ProjectManagerService pm) =>
+        app.MapGetAndHead("/auth/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
-            {
-                return Results.Redirect("/auth?redirect=/panel");
-            }
-            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
-        });
-        app.MapGetAndHead("/console/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
-            {
-                return Results.Redirect("/auth?redirect=/panel");
-            }
+            if (user != null) return Results.Redirect("/panel");
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
 
-        app.MapGetAndHead("/projects", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
-            {
-                return Results.Redirect("/auth?redirect=/panel");
-            }
-            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
-        });
-        app.MapGetAndHead("/projects/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null)
-            {
-                return Results.Redirect("/auth?redirect=/panel");
-            }
-            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
-        });
+        // Backward compatibility redirects for legacy static HTML files
+        app.MapGetAndHead("/auth.html", () => Results.Redirect("/login", permanent: true));
+        app.MapGetAndHead("/admin.html", () => Results.Redirect("/admin", permanent: true));
+
+        // Developer Console (/panel/*, /console/*, /projects/*)
+        app.MapGetAndHead("/panel", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGetAndHead("/panel/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGetAndHead("/dashboard", () => Results.Redirect("/panel", permanent: true));
+        app.MapGetAndHead("/console", () => Results.Redirect("/panel", permanent: true));
+        app.MapGetAndHead("/console/{*sub}", () => Results.Redirect("/panel", permanent: true));
+        app.MapGetAndHead("/projects", () => Results.Redirect("/panel", permanent: true));
+        app.MapGetAndHead("/projects/{*sub}", () => Results.Redirect("/panel", permanent: true));
 
         // Superadmin & Operator Portal (/admin/*)
-        app.MapGetAndHead("/admin", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
-            {
-                return Results.Redirect("/auth?redirect=/admin");
-            }
-            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
-        });
-        app.MapGetAndHead("/admin/{*sub}", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null || (user.Role != UserRole.Admin && user.Role != UserRole.Operator))
-            {
-                return Results.Redirect("/auth?redirect=/admin");
-            }
-            return Results.File(Path.Combine(app.Environment.WebRootPath, "admin.html"), "text/html");
-        });
+        app.MapGetAndHead("/admin", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
+        app.MapGetAndHead("/admin/{*sub}", () => Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html"));
 
         // 13. Dynamic SEO & Machine-Readable Discoverability
         app.MapGetAndHead("/robots.txt", (PlatformConfigurationService cfg, HttpContext ctx) =>

@@ -18,6 +18,7 @@ using NpgsqlTypes;
 public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly Func<string, NpgsqlDataSource>? _dataSourceResolver;
     private static readonly MemoryCache _schemaCache = new(new MemoryCacheOptions
     {
         SizeLimit = 1000
@@ -37,9 +38,20 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         }
     }
 
-    public PostgreSqlTenantSchemaStore(NpgsqlDataSource dataSource)
+    public PostgreSqlTenantSchemaStore(NpgsqlDataSource dataSource, Func<string, NpgsqlDataSource>? dataSourceResolver = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+        _dataSourceResolver = dataSourceResolver;
+    }
+
+    private NpgsqlDataSource GetDataSource(string? projectSlug = null)
+    {
+        if (_dataSourceResolver != null && !string.IsNullOrWhiteSpace(projectSlug))
+        {
+            var resolved = _dataSourceResolver(projectSlug);
+            if (resolved != null) return resolved;
+        }
+        return _dataSource;
     }
 
     private static string GetSchemaName(string projectSlug)
@@ -65,7 +77,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                 return;
             }
 
-            await using var conn = await _dataSource.OpenConnectionAsync(ct);
+            await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
 
             if (!_authFunctionsEnsured)
             {
@@ -152,7 +164,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var schema = GetSchemaName(projectSlug);
         var results = new List<TableOverviewItem>();
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
@@ -207,7 +219,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var schema = GetSchemaName(projectSlug);
         var tables = new List<string>();
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT table_name FROM information_schema.tables 
@@ -230,7 +242,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var columns = new List<TableColumnDefinition>();
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
@@ -320,7 +332,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         }
 
         var sql = sb.ToString();
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         await cmd.ExecuteNonQueryAsync(ct);
@@ -340,7 +352,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var schema = GetSchemaName(projectSlug);
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DROP TABLE IF EXISTS ""{schema}"".""{cleanTable}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);
@@ -356,7 +368,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 
         var (sql, parameters) = SqlAstQueryCompiler.CompileToParameterizedSql(tableName, query);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
 
         // Inject sandbox limits and RLS claim context
@@ -456,7 +468,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             VALUES ({string.Join(", ", paramPlaceholders)})
             RETURNING *;";
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         foreach (var (pName, pVal, pDt) in paramBindings)
@@ -512,7 +524,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             WHERE ""{pkName}"" = @rowId
             RETURNING *;";
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         var idType = colMap.TryGetValue(pkName.ToLowerInvariant(), out var it) ? it : "text";
@@ -604,7 +616,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             ON CONFLICT (""{cleanConflict}"") {conflictClause}
             RETURNING *;";
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         foreach (var (pName, pVal, pDt) in paramBindings)
@@ -638,7 +650,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         var pkColDef = schemaCols.FirstOrDefault(c => c.IsPrimaryKey) ?? schemaCols.FirstOrDefault(c => c.Name.Equals("id", StringComparison.OrdinalIgnoreCase));
         var pkName = pkColDef?.Name ?? "id";
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DELETE FROM ""{schema}"".""{cleanTable}"" WHERE ""{pkName}"" = @rowId;";
         var idType = colMap.TryGetValue(pkName.ToLowerInvariant(), out var it) ? it : "text";
@@ -659,7 +671,7 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
 
         try
         {
-            await using var conn = await _dataSource.OpenConnectionAsync(ct);
+            await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
             await using var tx = await conn.BeginTransactionAsync(ct);
 
             await using (var setCmd = conn.CreateCommand())
@@ -716,77 +728,5 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             sw.Stop();
             return new SqlExecutionResult(false, [], new JsonArray(), 0, sw.ElapsedMilliseconds, ex.Message);
         }
-    }
-
-    public async Task<bool> AddColumnAsync(string projectSlug, string tableName, TableColumnDefinition column, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-        var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(column.Name);
-        var nullability = column.IsNullable ? "NULL" : "NOT NULL";
-        var defaultExpr = !string.IsNullOrWhiteSpace(column.DefaultValue) ? $"DEFAULT {column.DefaultValue}" : "";
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ADD COLUMN ""{cleanCol}"" {column.DataType} {nullability} {defaultExpr};";
-        await cmd.ExecuteNonQueryAsync(ct);
-        InvalidateTenantSchemaCache(projectSlug);
-        return true;
-    }
-
-    public async Task<bool> DropColumnAsync(string projectSlug, string tableName, string columnName, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-        var cleanCol = SqlAstQueryCompiler.SanitizeIdentifier(columnName);
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" DROP COLUMN IF EXISTS ""{cleanCol}"" CASCADE;";
-        await cmd.ExecuteNonQueryAsync(ct);
-        InvalidateTenantSchemaCache(projectSlug);
-        return true;
-    }
-
-    public async Task<bool> AlterColumnAsync(string projectSlug, string tableName, string oldColumnName, TableColumnDefinition newColumn, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-        var oldCol = SqlAstQueryCompiler.SanitizeIdentifier(oldColumnName);
-        var newCol = SqlAstQueryCompiler.SanitizeIdentifier(newColumn.Name);
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        if (!string.Equals(oldCol, newCol, StringComparison.OrdinalIgnoreCase))
-        {
-            await using var cmdRename = conn.CreateCommand();
-            cmdRename.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" RENAME COLUMN ""{oldCol}"" TO ""{newCol}"";";
-            await cmdRename.ExecuteNonQueryAsync(ct);
-        }
-        if (!string.IsNullOrWhiteSpace(newColumn.DataType))
-        {
-            await using var cmdType = conn.CreateCommand();
-            cmdType.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" TYPE {newColumn.DataType} USING ""{newCol}""::{newColumn.DataType};";
-            await cmdType.ExecuteNonQueryAsync(ct);
-        }
-        await using var cmdNull = conn.CreateCommand();
-        cmdNull.CommandText = newColumn.IsNullable
-            ? $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" DROP NOT NULL;"
-            : $@"ALTER TABLE ""{schema}"".""{cleanTable}"" ALTER COLUMN ""{newCol}"" SET NOT NULL;";
-        await cmdNull.ExecuteNonQueryAsync(ct);
-        InvalidateTenantSchemaCache(projectSlug);
-        return true;
-    }
-
-    public async Task<bool> TruncateTableAsync(string projectSlug, string tableName, CancellationToken ct = default)
-    {
-        var schema = GetSchemaName(projectSlug);
-        var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
-
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"TRUNCATE TABLE ""{schema}"".""{cleanTable}"" CASCADE;";
-        await cmd.ExecuteNonQueryAsync(ct);
-        InvalidateTenantSchemaCache(projectSlug);
-        return true;
     }
 }

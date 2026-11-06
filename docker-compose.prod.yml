@@ -1,0 +1,60 @@
+# ==============================================================================
+# LocalMe Production Docker Compose Specification (Provider-Agnostic)
+# Deployable to AbrArvan Cloud VPS, Hetzner, DigitalOcean, or private Linux nodes.
+# ==============================================================================
+
+services:
+  localme-postgres:
+    image: postgres:18-alpine
+    container_name: localme-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-localme_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-localme_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMeSecureLocalMe2026!}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-localme_app} -d ${POSTGRES_DB:-localme_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - localme-net
+
+  localme-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${LOCALME_IMAGE:-localme/platform:latest}
+    container_name: localme-app
+    restart: unless-stopped
+    depends_on:
+      localme-postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: "Host=localme-postgres;Port=5432;Database=${POSTGRES_DB:-localme_prod};Username=${POSTGRES_USER:-localme_app};Password=${POSTGRES_PASSWORD:-ChangeMeSecureLocalMe2026!};SSL Mode=Prefer;Trust Server Certificate=true;MinPoolSize=5;MaxPoolSize=30;Multiplexing=true;"
+      JWT_SECRET: ${JWT_SECRET:-localme-platform-production-hmac-sha256-secret-key-32-chars-min!}
+      PORT: 3000
+      LOCALME_NODE_ROLE: all
+    volumes:
+      - localme_storage:/app/.localme-storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - localme-net
+
+volumes:
+  postgres_data:
+  localme_storage:
+
+networks:
+  localme-net:
+    driver: bridge

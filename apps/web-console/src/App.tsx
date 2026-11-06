@@ -20,6 +20,18 @@ import { ComplianceView } from './views/ComplianceView';
 import { TelemetryView } from './views/TelemetryView';
 import { SettingsView } from './views/SettingsView';
 
+// Auth & Admin Views
+import { LoginView } from './views/auth/LoginView';
+import { AdminLayout, AdminTab } from './views/admin/AdminLayout';
+import { ClusterShardsView } from './views/admin/ClusterShardsView';
+import { StorageBucketsView } from './views/admin/StorageBucketsView';
+import { GatewaysSmsView } from './views/admin/GatewaysSmsView';
+import { TenantOversightView } from './views/admin/TenantOversightView';
+import { TelemetryHealthView } from './views/admin/TelemetryHealthView';
+import { UsersPermissionsView } from './views/admin/UsersPermissionsView';
+import { AdminLogsView } from './views/admin/AdminLogsView';
+import { PricingQuotasView } from './views/admin/PricingQuotasView';
+
 // Modals
 import { CreateProjectModal } from './components/modals/CreateProjectModal';
 import { DeployFunctionModal } from './components/modals/DeployFunctionModal';
@@ -131,9 +143,12 @@ export default function App() {
   // Fetch live projects from backend API
   const fetchLiveProjects = useCallback(async () => {
     try {
-      const res = await fetch('/_baas/v1/projects');
+      const token = localStorage.getItem('localme_token');
+      const res = await fetch('/_baas/v1/projects', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (res.status === 401) {
-        window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login?returnUrl=' + encodeURIComponent(window.location.pathname);
         return;
       }
       if (res.ok) {
@@ -486,6 +501,36 @@ export default function App() {
   };
 
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
+
+  const normalizedPath = location.pathname.toLowerCase();
+  const isAuthRoute = normalizedPath === '/login' || normalizedPath === '/register' || normalizedPath.startsWith('/auth');
+  const isAdminRoute = normalizedPath === '/admin' || normalizedPath.startsWith('/admin/');
+
+  // Auth Routing
+  if (isAuthRoute) {
+    return <LoginView />;
+  }
+
+  // Admin Routing
+  if (isAdminRoute) {
+    const adminTabMatch = normalizedPath.match(/^\/admin\/([a-z0-9_-]+)/);
+    const rawAdminTab = (adminTabMatch ? adminTabMatch[1] : 'shards') as AdminTab;
+    const validAdminTabs: AdminTab[] = ['shards', 'storage', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
+    const activeAdminTab: AdminTab = validAdminTabs.includes(rawAdminTab) ? rawAdminTab : 'shards';
+
+    return (
+      <AdminLayout currentTab={activeAdminTab} onTabChange={(t) => navigate(`/admin/${t}`)}>
+        {activeAdminTab === 'shards' && <ClusterShardsView />}
+        {activeAdminTab === 'storage' && <StorageBucketsView />}
+        {activeAdminTab === 'gateways' && <GatewaysSmsView />}
+        {activeAdminTab === 'tenants' && <TenantOversightView />}
+        {activeAdminTab === 'telemetry' && <TelemetryHealthView />}
+        {activeAdminTab === 'users' && <UsersPermissionsView />}
+        {activeAdminTab === 'logs' && <AdminLogsView />}
+        {activeAdminTab === 'pricing' && <PricingQuotasView />}
+      </AdminLayout>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-white text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600 overflow-hidden" dir="rtl">

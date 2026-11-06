@@ -14,7 +14,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         await EnsureTenantSchemaAsync(projectSlug, ct);
         var schema = GetSchemaName(projectSlug);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))), 0)::bigint
@@ -78,7 +78,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
             return false;
         }
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
 
         try

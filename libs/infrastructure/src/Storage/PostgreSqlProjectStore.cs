@@ -92,6 +92,42 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             }
         }
 
+        // Verify and apply migration 005 (Dynamic platform configurations and shards)
+        try
+        {
+            await using var chkCmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'platform_configurations';");
+            var cfgCount = Convert.ToInt64(await chkCmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
+            if (cfgCount == 0)
+            {
+                string? mig005Sql = null;
+                var mig005Candidates = new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "Migrations", "005_DynamicPlatformConfigAndShards.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "libs", "infrastructure", "src", "Migrations", "005_DynamicPlatformConfigAndShards.sql"),
+                    Path.Combine(AppContext.BaseDirectory, "../../../libs/infrastructure/src/Migrations/005_DynamicPlatformConfigAndShards.sql")
+                };
+
+                foreach (var candidate in mig005Candidates)
+                {
+                    if (File.Exists(candidate))
+                    {
+                        mig005Sql = await File.ReadAllTextAsync(candidate);
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(mig005Sql))
+                {
+                    await using var mCmd = _dataSource.CreateCommand(mig005Sql);
+                    await mCmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.Store] Migration 005 initialization notice: {ex.Message}");
+        }
+
         // Ensure finance, mobile push & IAP, and billing tables exist
         const string auxiliaryTablesSql = @"
             CREATE TABLE IF NOT EXISTS payment_transactions (
@@ -281,7 +317,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         var list = new List<BaasProject>();
-        const string sql = "SELECT id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc FROM projects ORDER BY created_at_utc DESC;";
+        const string sql = "SELECT id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc, COALESCE(db_cluster_id, 'shard-a') FROM projects ORDER BY created_at_utc DESC;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -312,7 +348,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 HasPassword: !reader.IsDBNull(9) && reader.GetBoolean(9),
                 Services: services,
                 CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc),
-                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc)
+                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc),
+                DbClusterId: reader.FieldCount > 13 && !reader.IsDBNull(13) ? reader.GetString(13) : "shard-a"
             ));
         }
         return list;
@@ -322,8 +359,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         const string sql = @"
-            INSERT INTO projects (id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc)
-            VALUES (@id, @name, @slug, @desc, @oid, @oph, @reg, @st, @pwd, @hp, @srv::jsonb, @ca, @ua)
+            INSERT INTO projects (id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc, db_cluster_id)
+            VALUES (@id, @name, @slug, @desc, @oid, @oph, @reg, @st, @pwd, @hp, @srv::jsonb, @ca, @ua, @shard)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 slug = EXCLUDED.slug,
@@ -332,7 +369,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 password_hash = EXCLUDED.password_hash,
                 has_password = EXCLUDED.has_password,
                 services_json = EXCLUDED.services_json,
-                updated_at_utc = EXCLUDED.updated_at_utc;";
+                updated_at_utc = EXCLUDED.updated_at_utc,
+                db_cluster_id = EXCLUDED.db_cluster_id;";
 
         var servicesJson = JsonSerializer.Serialize(project.Services);
         await using var cmd = _dataSource!.CreateCommand(sql);
@@ -349,6 +387,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         cmd.Parameters.AddWithValue("srv", servicesJson);
         cmd.Parameters.AddWithValue("ca", project.CreatedAtUtc);
         cmd.Parameters.AddWithValue("ua", (object?)project.UpdatedAtUtc ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("shard", string.IsNullOrWhiteSpace(project.DbClusterId) ? "shard-a" : project.DbClusterId);
         await cmd.ExecuteNonQueryAsync();
     }
 

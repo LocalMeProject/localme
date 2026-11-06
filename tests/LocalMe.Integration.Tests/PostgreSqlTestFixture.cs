@@ -12,6 +12,8 @@ public class PostgreSqlTestFixture : IAsyncLifetime
     private const string DefaultConnectionString =
         "Host=127.0.0.1;Port=5432;Username=postgres;Password=lerd;Database=lerd;Include Error Detail=true;Pooling=true;Minimum Pool Size=1;Maximum Pool Size=20;";
 
+    private static readonly System.Threading.SemaphoreSlim _initLock = new(1, 1);
+    private static volatile bool _mig005Applied;
     private readonly ConcurrentBag<string> _createdSlugs = new();
     private NpgsqlDataSource? _dataSource;
 
@@ -28,11 +30,43 @@ public class PostgreSqlTestFixture : IAsyncLifetime
         _dataSource = dataSourceBuilder.Build();
         Store = new PostgreSqlTenantSchemaStore(_dataSource);
 
-        // Verify connectivity
+        // Verify connectivity and ensure baseline migrations
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT 1;";
         await cmd.ExecuteScalarAsync();
+
+        if (!_mig005Applied)
+        {
+            await _initLock.WaitAsync();
+            try
+            {
+                if (!_mig005Applied)
+                {
+                    var mig005Candidates = new[]
+                    {
+                        System.IO.Path.Combine(AppContext.BaseDirectory, "Migrations", "005_DynamicPlatformConfigAndShards.sql"),
+                        System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "libs", "infrastructure", "src", "Migrations", "005_DynamicPlatformConfigAndShards.sql")
+                    };
+                    foreach (var c in mig005Candidates)
+                    {
+                        if (System.IO.File.Exists(c))
+                        {
+                            var sql = await System.IO.File.ReadAllTextAsync(c);
+                            await using var migCmd = conn.CreateCommand();
+                            migCmd.CommandText = sql;
+                            await migCmd.ExecuteNonQueryAsync();
+                            break;
+                        }
+                    }
+                    _mig005Applied = true;
+                }
+            }
+            finally
+            {
+                _initLock.Release();
+            }
+        }
     }
 
     public string CreateProjectSlug()
