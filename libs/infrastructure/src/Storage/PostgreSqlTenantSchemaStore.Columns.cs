@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using LocalMe.Core.Domain;
 using LocalMe.Core.Database;
 using LocalMe.DataPlane.MultiTenancy;
 using Npgsql;
