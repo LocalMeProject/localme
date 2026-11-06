@@ -62,6 +62,13 @@ affected_projects:
 - `tests/LocalMe.Integration.Tests/DynamicConfigAndShardsTests.cs`: Ephemeral container test battery for in-DB configs and sharding.
 - `docker-compose.prod.yml`: Provider-agnostic production compose setup.
 - `scripts/deploy.sh`: Generic OCI registry and VPS deployment script.
+- `scripts/org-build.sh`: Build platform and SDKs across the organization.
+- `scripts/org-dev.sh`: Dev server launcher for platform services.
+- `scripts/org-pull.sh`: Pull and synchronize all organization repositories.
+- `scripts/org-setup.sh`: Organization scaffolding bootstrapper and dependency restorer.
+- `scripts/org-status.sh`: Status table for all organization repositories.
+- `scripts/org-sync.sh`: Multi-tier branch synchronizer across organization repositories.
+- `scripts/org-test.sh`: Run automated test suites across all organization projects.
 
 ### Modified Files
 - `.dockerignore`: Docker build ignore rules.
