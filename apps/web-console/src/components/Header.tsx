@@ -12,7 +12,9 @@ import {
   LogOut,
   CreditCard,
   Check,
+  ShieldAlert,
 } from 'lucide-react';
+import { useAuth } from './auth/AuthGuard';
 
 interface HeaderProps {
   currentProject?: Project;
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   // Project selector dropdown state
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -54,8 +57,12 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isHubView = location.pathname === '/' || location.pathname === '/hub';
-  const tomanBalance = Math.floor((currentProject?.walletBalanceIrr ?? 0) / 10);
+  const isHubView = location.pathname === '/' || location.pathname === '/hub' || location.pathname === '/panel';
+  const rawBalance = user?.walletBalanceIrr ?? currentProject?.walletBalanceIrr ?? 0;
+  const tomanBalance = Math.floor(rawBalance / 10);
+
+  const roleStr = String(user?.role ?? '').toLowerCase();
+  const isAdmin = roleStr === '0' || roleStr === 'superadmin' || roleStr === 'admin' || roleStr === '1' || roleStr === 'operator';
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md px-5 py-2.5 flex items-center justify-between shadow-xs select-none">
@@ -169,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Mini Profile Popover (Replacing old raw badges) */}
+      {/* Mini Profile Popover (Dynamic User Session & Admin Navigation) */}
       <div className="relative" ref={profileRef}>
         <button
           onClick={() => setProfileOpen(!profileOpen)}
@@ -180,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
             <User className="w-3.5 h-3.5" />
           </div>
           <span className="font-medium text-slate-800 hidden sm:inline-flex items-center gap-1.5">
-            <span>سینا ولی زاده</span>
+            <span>{user?.fullName || 'حساب کاربری'}</span>
             <span className="text-slate-300">|</span>
             <span className="text-emerald-700 font-semibold">{tomanBalance.toLocaleString('fa-IR')} تومان</span>
           </span>
@@ -192,16 +199,18 @@ export const Header: React.FC<HeaderProps> = ({
             {/* User Details */}
             <div className="pb-3 border-b border-slate-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-xs text-slate-900">سینا والی زاده</span>
-                <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                  توسعه دهنده
+                <span className="font-semibold text-xs text-slate-900">{user?.fullName || 'کاربر پلتفرم'}</span>
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                  isAdmin ? 'bg-rose-50 text-rose-700 border-rose-200 font-bold' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}>
+                  {isAdmin ? 'مدیر ارشد' : 'توسعه‌دهنده'}
                 </span>
               </div>
               <div className="text-[11px] text-slate-500 font-mono" dir="ltr">
-                +989121112233
+                {user?.phone || '—'}
               </div>
               <div className="text-[11px] text-slate-400 font-mono" dir="ltr">
-                sina@example.com
+                {user?.email || ''}
               </div>
             </div>
 
@@ -219,6 +228,19 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Action Buttons */}
             <div className="space-y-1">
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate('/admin/shards');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold transition text-right shadow-xs mb-1"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>ورود به پنل مدیریت کلان (Admin)</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setProfileOpen(false);
@@ -246,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => {
                   setProfileOpen(false);
-                  navigate('/panel');
+                  logout();
                 }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-xs transition text-right"
               >

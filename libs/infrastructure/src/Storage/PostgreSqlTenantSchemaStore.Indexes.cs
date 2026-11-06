@@ -16,7 +16,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var list = new List<TableIndexDefinition>();
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT 
@@ -66,7 +66,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var cleanCols = string.Join(", ", columns.Select(c => $@"""{SqlAstQueryCompiler.SanitizeIdentifier(c)}"""));
         var unique = isUnique ? "UNIQUE" : "";
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"CREATE {unique} INDEX IF NOT EXISTS ""{cleanIdx}"" ON ""{schema}"".""{cleanTable}"" ({cleanCols});";
         await cmd.ExecuteNonQueryAsync(ct);
@@ -80,7 +80,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var schema = GetSchemaName(projectSlug);
         var cleanIdx = SqlAstQueryCompiler.SanitizeIdentifier(indexName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DROP INDEX IF EXISTS ""{schema}"".""{cleanIdx}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);
@@ -94,7 +94,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var schema = GetSchemaName(projectSlug);
         var cleanIdx = SqlAstQueryCompiler.SanitizeIdentifier(indexName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"REINDEX INDEX ""{schema}"".""{cleanIdx}"";";
         await cmd.ExecuteNonQueryAsync(ct);

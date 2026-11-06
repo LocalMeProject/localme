@@ -23,7 +23,19 @@ public sealed class PlatformConfig
     public string PlatformName { get; set; } = "لوکال می";
     public string DefaultRegion { get; set; } = "ir-thr-milad1";
     public string SovereignEgressNat { get; set; } = "2.180.12.94 (Static Domestic NAT Active)";
+    public string PspEgressWhitelist { get; set; } = "2.180.12.94, 185.143.232.0/24";
     public string SystemBroadcastMessage { get; set; } = "";
+    public string DefaultShardId { get; set; } = "shard-a";
+    public int DefaultMaxProjectsPerShard { get; set; } = 5000;
+
+    // 2.1 Storage Layer Configuration (LocalDisk vs AbrArvan S3 / S3-Compatible)
+    public string StorageAdapterType { get; set; } = "LOCAL_DISK"; // LOCAL_DISK, ARVAN_S3, S3_COMPATIBLE
+    public string ArvanS3Endpoint { get; set; } = "https://s3.ir-thr-at1.arvancdn.ir";
+    public string ArvanS3Region { get; set; } = "ir-thr-at1";
+    public string ArvanS3Bucket { get; set; } = "localme-storage";
+    public string ArvanS3AccessKey { get; set; } = "";
+    public string ArvanS3SecretKey { get; set; } = "";
+    public string ArvanS3CdnUrl { get; set; } = "";
 
     // 3. Developer & Tier Limits
     public int MaxProjectsPerDeveloperTier { get; set; } = 1;
@@ -93,7 +105,17 @@ public sealed class PlatformConfig
             PlatformName = PlatformName,
             DefaultRegion = DefaultRegion,
             SovereignEgressNat = SovereignEgressNat,
+            PspEgressWhitelist = PspEgressWhitelist,
             SystemBroadcastMessage = SystemBroadcastMessage,
+            DefaultShardId = DefaultShardId,
+            DefaultMaxProjectsPerShard = DefaultMaxProjectsPerShard,
+            StorageAdapterType = StorageAdapterType,
+            ArvanS3Endpoint = ArvanS3Endpoint,
+            ArvanS3Region = ArvanS3Region,
+            ArvanS3Bucket = ArvanS3Bucket,
+            ArvanS3AccessKey = ArvanS3AccessKey,
+            ArvanS3SecretKey = ArvanS3SecretKey,
+            ArvanS3CdnUrl = ArvanS3CdnUrl,
             MaxProjectsPerDeveloperTier = MaxProjectsPerDeveloperTier,
             MaxTeamMembersPerDeveloperTier = MaxTeamMembersPerDeveloperTier,
             SmsDefaultProvider = SmsDefaultProvider,

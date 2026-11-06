@@ -86,5 +86,117 @@ public static class BaasDbSnapshotRoutes
                 ? Results.Ok(new { success = true, snapshotId })
                 : Results.NotFound(new { error = "اسنپ‌شات یافت نشد یا حذف ناموفق بود." });
         });
+
+        // 6. Universal Project Portability (.localmepack Archive Export, Import & Restore)
+        app.MapPost("/_baas/v1/{projectId}/archive/export", async (string projectId, HttpContext ctx, ProjectArchiveService archiveService) =>
+        {
+            var compress = !ctx.Request.Query.ContainsKey("format") || ctx.Request.Query["format"].ToString().Equals("gzip", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                var bytes = await archiveService.ExportProjectArchiveAsync(projectId, compress);
+                var filename = $"{projectId}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}." + (compress ? "localmepack" : "json");
+                var contentType = compress ? "application/gzip" : "application/json";
+                return Results.File(bytes, contentType, filename);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/_baas/v1/projects/import", async (HttpRequest request, ProjectArchiveService archiveService) =>
+        {
+            try
+            {
+                Stream stream;
+                if (request.HasFormContentType && request.Form.Files.Count > 0)
+                {
+                    stream = request.Form.Files[0].OpenReadStream();
+                }
+                else
+                {
+                    stream = request.Body;
+                }
+
+                var archive = await ProjectArchiveService.ReadArchiveStreamAsync(stream);
+                var modeStr = request.Query["mode"].ToString();
+                var mode = modeStr.Equals("merge", StringComparison.OrdinalIgnoreCase) ? ArchiveRestoreMode.RestoreMerge : ArchiveRestoreMode.CloneAsNew;
+                var conflictStr = request.Query["conflict"].ToString();
+                var conflict = conflictStr.Equals("overwrite", StringComparison.OrdinalIgnoreCase) ? MergeConflictPolicy.Overwrite : MergeConflictPolicy.Skip;
+
+                var options = new ArchiveImportOptions(
+                    Mode: mode,
+                    ConflictPolicy: conflict,
+                    NewProjectName: request.Query["name"].ToString() is { Length: > 0 } n ? n : null,
+                    NewProjectSlug: request.Query["slug"].ToString() is { Length: > 0 } s ? s : null
+                );
+
+                var imported = await archiveService.ImportArchiveAsync(archive, options);
+                return Results.Ok(new
+                {
+                    success = true,
+                    mode = options.Mode.ToString(),
+                    project = new
+                    {
+                        imported.Id,
+                        imported.Name,
+                        imported.Slug,
+                        imported.Region,
+                        imported.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/archive/restore", async (string projectId, HttpRequest request, ProjectArchiveService archiveService) =>
+        {
+            try
+            {
+                Stream stream;
+                if (request.HasFormContentType && request.Form.Files.Count > 0)
+                {
+                    stream = request.Form.Files[0].OpenReadStream();
+                }
+                else
+                {
+                    stream = request.Body;
+                }
+
+                var archive = await ProjectArchiveService.ReadArchiveStreamAsync(stream);
+                var modeStr = request.Query["mode"].ToString();
+                var mode = modeStr.Equals("merge", StringComparison.OrdinalIgnoreCase) ? ArchiveRestoreMode.RestoreMerge : ArchiveRestoreMode.RestoreOverwrite;
+                var conflictStr = request.Query["conflict"].ToString();
+                var conflict = conflictStr.Equals("overwrite", StringComparison.OrdinalIgnoreCase) ? MergeConflictPolicy.Overwrite : MergeConflictPolicy.Skip;
+
+                var options = new ArchiveImportOptions(
+                    Mode: mode,
+                    ConflictPolicy: conflict,
+                    TargetProjectId: projectId
+                );
+
+                var restored = await archiveService.ImportArchiveAsync(archive, options);
+                return Results.Ok(new
+                {
+                    success = true,
+                    mode = options.Mode.ToString(),
+                    project = new
+                    {
+                        restored.Id,
+                        restored.Name,
+                        restored.Slug,
+                        restored.Region,
+                        restored.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
     }
 }

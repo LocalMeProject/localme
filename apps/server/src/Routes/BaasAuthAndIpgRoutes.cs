@@ -38,13 +38,20 @@ public static class BaasAuthAndIpgRoutes
 
             if (result.Success)
             {
-                var isDev = app.Environment.IsDevelopment() || ctx.Request.Headers.ContainsKey("X-Test-Mode");
+                var isDev = app.Environment.IsDevelopment()
+                    || ctx.Request.Headers.ContainsKey("X-Test-Mode")
+                    || Environment.GetEnvironmentVariable("LOCALME_DEV_MOCK_DISPATCH") == "true"
+                    || Environment.GetEnvironmentVariable("LOCALME_DISTRIBUTION") == "lite";
+                if (isDev && result.CodeForTesting != null)
+                {
+                    Console.WriteLine($"[LocalMe.Auth.DevMock] OTP for {phone}: {result.CodeForTesting}");
+                }
                 return Results.Ok(new
                 {
                     success = true,
                     message = result.Message,
                     codeForTesting = isDev ? result.CodeForTesting : null,
-                    dispatchedVia = "kavenegar (3000777)"
+                    dispatchedVia = isDev ? "LocalMe Developer Mock Engine" : "kavenegar (3000777)"
                 });
             }
 

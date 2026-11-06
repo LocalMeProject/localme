@@ -12,4 +12,7 @@ tests
 *.sqlite*
 .env
 .env.*
-!dist/server/**
+apps/web-console/node_modules
+dist
+**/bin
+**/obj

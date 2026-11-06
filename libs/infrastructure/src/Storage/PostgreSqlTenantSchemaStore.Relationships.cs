@@ -15,7 +15,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var list = new List<TableRelationshipDefinition>();
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
@@ -93,7 +93,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
             _ => "NO ACTION"
         };
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"
             ALTER TABLE ""{schema}"".""{cleanSourceTable}""
@@ -115,7 +115,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var cleanConstraint = SqlAstQueryCompiler.SanitizeIdentifier(constraintName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"ALTER TABLE ""{schema}"".""{cleanTable}"" DROP CONSTRAINT IF EXISTS ""{cleanConstraint}"" CASCADE;";
         await cmd.ExecuteNonQueryAsync(ct);

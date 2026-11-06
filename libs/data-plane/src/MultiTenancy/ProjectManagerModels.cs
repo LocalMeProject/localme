@@ -52,7 +52,8 @@ public sealed record BaasProject(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc,
     [property: System.Text.Json.Serialization.JsonIgnore] string? PasswordHash = null,
-    bool HasPassword = false
+    bool HasPassword = false,
+    string DbClusterId = "shard-a"
 );
 
 public sealed record CreateProjectRequest(
@@ -60,7 +61,8 @@ public sealed record CreateProjectRequest(
     string? Slug = null,
     string? Description = null,
     string OwnerId = "usr_developer_03",
-    string OwnerPhone = "+989121112233"
+    string OwnerPhone = "+989121112233",
+    string DbClusterId = "shard-a"
 );
 
 public sealed record UpdateProjectRequest(
