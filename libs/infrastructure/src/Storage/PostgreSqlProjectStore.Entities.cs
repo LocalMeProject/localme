@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using LocalMe.DataPlane.MultiTenancy;
 using Npgsql;
-using StackExchange.Redis;
 
 public sealed partial class PostgreSqlProjectStore
 {

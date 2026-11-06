@@ -403,11 +403,11 @@ public static class BaasDatabaseRoutes
                 }, statusCode: 400);
             }
 
-            var userId = context.User.FindFirst("sub")?.Value 
-                         ?? context.Request.Headers["X-User-Id"].FirstOrDefault() 
+            var userId = context.User.FindFirst("sub")?.Value
+                         ?? context.Request.Headers["X-User-Id"].FirstOrDefault()
                          ?? "anon";
-            var userRole = context.User.FindFirst("role")?.Value 
-                          ?? context.Request.Headers["X-User-Role"].FirstOrDefault() 
+            var userRole = context.User.FindFirst("role")?.Value
+                          ?? context.Request.Headers["X-User-Role"].FirstOrDefault()
                           ?? "authenticated";
 
             try
@@ -481,11 +481,11 @@ public static class BaasDatabaseRoutes
             metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
             try
             {
-                var userId = context.User.FindFirst("sub")?.Value 
-                             ?? context.Request.Headers["X-User-Id"].FirstOrDefault() 
+                var userId = context.User.FindFirst("sub")?.Value
+                             ?? context.Request.Headers["X-User-Id"].FirstOrDefault()
                              ?? "anon";
-                var userRole = context.User.FindFirst("role")?.Value 
-                              ?? context.Request.Headers["X-User-Role"].FirstOrDefault() 
+                var userRole = context.User.FindFirst("role")?.Value
+                              ?? context.Request.Headers["X-User-Role"].FirstOrDefault()
                               ?? "authenticated";
 
                 var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);

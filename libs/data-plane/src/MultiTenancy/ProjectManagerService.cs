@@ -254,7 +254,8 @@ public sealed partial class ProjectManagerService
             Status: "Active",
             Services: services,
             CreatedAtUtc: DateTimeOffset.UtcNow,
-            UpdatedAtUtc: null
+            UpdatedAtUtc: null,
+            DbClusterId: string.IsNullOrWhiteSpace(request.DbClusterId) ? "shard-a" : request.DbClusterId
         );
 
         _projects[projectId] = project;
@@ -378,11 +379,29 @@ public sealed partial class ProjectManagerService
     {
         if (_projects.TryGetValue(projectId, out var project))
         {
-            _projects[projectId] = project with
+            var updated = project with
             {
                 Status = status.Trim(),
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             };
+            _projects[projectId] = updated;
+            _store?.UpsertProjectAsync(updated);
+            return true;
+        }
+        return false;
+    }
+
+    public bool ReassignProjectShard(string projectId, string newShardId)
+    {
+        if (_projects.TryGetValue(projectId, out var project))
+        {
+            var updated = project with
+            {
+                DbClusterId = newShardId.Trim(),
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            _projects[projectId] = updated;
+            _store?.UpsertProjectAsync(updated);
             return true;
         }
         return false;

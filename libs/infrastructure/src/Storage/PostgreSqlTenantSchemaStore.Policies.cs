@@ -14,7 +14,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var schema = GetSchemaName(projectSlug);
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT policyname, tablename, cmd, roles, qual, with_check
@@ -72,7 +72,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
 
         var roles = string.IsNullOrWhiteSpace(policy.Roles) ? "public" : policy.Roles;
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
 
         // Ensure RLS enabled on table
         await using var enableCmd = conn.CreateCommand();
@@ -100,7 +100,7 @@ public sealed partial class PostgreSqlTenantSchemaStore
         var cleanTable = SqlAstQueryCompiler.SanitizeIdentifier(tableName);
         var cleanPolicy = SqlAstQueryCompiler.SanitizeIdentifier(policyName);
 
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"DROP POLICY IF EXISTS ""{cleanPolicy}"" ON ""{schema}"".""{cleanTable}"";";
         await cmd.ExecuteNonQueryAsync(ct);

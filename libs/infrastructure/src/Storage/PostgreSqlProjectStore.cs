@@ -5,20 +5,15 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using LocalMe.DataPlane.MultiTenancy;
 using Npgsql;
-using StackExchange.Redis;
 
 public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDisposable
 {
     private readonly string _pgConnectionString;
-    private readonly string _redisConnectionString;
     private NpgsqlDataSource? _dataSource;
     public NpgsqlDataSource? DataSource => _dataSource;
-    private ConnectionMultiplexer? _redis;
-    private IDatabase? _redisDb;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private const string LocalFallbackPostgres = "Host=127.0.0.1;Port=5432;Database=lerd;Username=postgres;Password=lerd;SSL Mode=Prefer;Trust Server Certificate=true;";
-    private const string LocalFallbackRedis = "127.0.0.1:6379,defaultDatabase=0,abortConnect=false";
 
     public static string NormalizePostgresConnectionString(string connectionString)
     {
@@ -50,33 +45,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         return connectionString;
     }
 
-    public static string NormalizeRedisConnectionString(string connectionString)
-    {
-        if (string.IsNullOrWhiteSpace(connectionString)) return connectionString;
-        var trimmed = connectionString.Trim();
-        if (trimmed.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var uri = new Uri(trimmed);
-                var userInfo = uri.UserInfo.Split(':');
-                var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : (userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "");
-                var port = uri.Port > 0 ? uri.Port : 6379;
-                var dbStr = uri.AbsolutePath.TrimStart('/');
-                var dbIndex = int.TryParse(dbStr, out var d) ? d : 0;
-                var ssl = trimmed.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase);
-                return $"{uri.Host}:{port},password={password},defaultDatabase={dbIndex},abortConnect=false,ssl={ssl}";
-            }
-            catch
-            {
-                return connectionString;
-            }
-        }
-        return connectionString;
-    }
-
-    public PostgreSqlProjectStore(string? pgConnectionString = null, string? redisConnectionString = null)
+    public PostgreSqlProjectStore(string? pgConnectionString = null, string? _ = null)
     {
         _pgConnectionString = NormalizePostgresConnectionString(!string.IsNullOrWhiteSpace(pgConnectionString)
             ? pgConnectionString
@@ -84,13 +53,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                ?? Environment.GetEnvironmentVariable("LOCALME_POSTGRES_CONNECTION")
                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
                ?? LocalFallbackPostgres));
-
-        _redisConnectionString = NormalizeRedisConnectionString(!string.IsNullOrWhiteSpace(redisConnectionString)
-            ? redisConnectionString
-            : (Environment.GetEnvironmentVariable("LOCALME_REDIS_URL")
-               ?? Environment.GetEnvironmentVariable("LOCALME_REDIS_CONNECTION")
-               ?? Environment.GetEnvironmentVariable("REDIS_URL")
-               ?? LocalFallbackRedis));
     }
 
     public async Task InitializeAsync()
@@ -99,22 +61,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         {
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(_pgConnectionString);
             _dataSource = dataSourceBuilder.Build();
-        }
-
-        if (_redis == null)
-        {
-            try
-            {
-                var options = ConfigurationOptions.Parse(_redisConnectionString);
-                options.AbortOnConnectFail = false;
-                options.ConnectTimeout = 4000;
-                _redis = await ConnectionMultiplexer.ConnectAsync(options);
-                _redisDb = _redis.GetDatabase(options.DefaultDatabase ?? 0);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[LocalMe.Redis] Warning: Redis connection failed ({ex.Message}). Continuing with PostgreSQL.");
-            }
         }
 
         // Verify and apply migrations if needed
@@ -144,6 +90,42 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 await using var migCmd = _dataSource.CreateCommand(sql);
                 await migCmd.ExecuteNonQueryAsync();
             }
+        }
+
+        // Verify and apply migration 005 (Dynamic platform configurations and shards)
+        try
+        {
+            await using var chkCmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'platform_configurations';");
+            var cfgCount = Convert.ToInt64(await chkCmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
+            if (cfgCount == 0)
+            {
+                string? mig005Sql = null;
+                var mig005Candidates = new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "Migrations", "005_DynamicPlatformConfigAndShards.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "libs", "infrastructure", "src", "Migrations", "005_DynamicPlatformConfigAndShards.sql"),
+                    Path.Combine(AppContext.BaseDirectory, "../../../libs/infrastructure/src/Migrations/005_DynamicPlatformConfigAndShards.sql")
+                };
+
+                foreach (var candidate in mig005Candidates)
+                {
+                    if (File.Exists(candidate))
+                    {
+                        mig005Sql = await File.ReadAllTextAsync(candidate);
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(mig005Sql))
+                {
+                    await using var mCmd = _dataSource.CreateCommand(mig005Sql);
+                    await mCmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.Store] Migration 005 initialization notice: {ex.Message}");
         }
 
         // Ensure finance, mobile push & IAP, and billing tables exist
@@ -335,7 +317,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         var list = new List<BaasProject>();
-        const string sql = "SELECT id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc FROM projects ORDER BY created_at_utc DESC;";
+        const string sql = "SELECT id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc, COALESCE(db_cluster_id, 'shard-a') FROM projects ORDER BY created_at_utc DESC;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -366,7 +348,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 HasPassword: !reader.IsDBNull(9) && reader.GetBoolean(9),
                 Services: services,
                 CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc),
-                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc)
+                UpdatedAtUtc: reader.IsDBNull(12) ? null : DateTime.SpecifyKind(reader.GetDateTime(12), DateTimeKind.Utc),
+                DbClusterId: reader.FieldCount > 13 && !reader.IsDBNull(13) ? reader.GetString(13) : "shard-a"
             ));
         }
         return list;
@@ -376,8 +359,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         const string sql = @"
-            INSERT INTO projects (id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc)
-            VALUES (@id, @name, @slug, @desc, @oid, @oph, @reg, @st, @pwd, @hp, @srv::jsonb, @ca, @ua)
+            INSERT INTO projects (id, name, slug, description, owner_id, owner_phone, region, status, password_hash, has_password, services_json, created_at_utc, updated_at_utc, db_cluster_id)
+            VALUES (@id, @name, @slug, @desc, @oid, @oph, @reg, @st, @pwd, @hp, @srv::jsonb, @ca, @ua, @shard)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 slug = EXCLUDED.slug,
@@ -386,7 +369,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 password_hash = EXCLUDED.password_hash,
                 has_password = EXCLUDED.has_password,
                 services_json = EXCLUDED.services_json,
-                updated_at_utc = EXCLUDED.updated_at_utc;";
+                updated_at_utc = EXCLUDED.updated_at_utc,
+                db_cluster_id = EXCLUDED.db_cluster_id;";
 
         var servicesJson = JsonSerializer.Serialize(project.Services);
         await using var cmd = _dataSource!.CreateCommand(sql);
@@ -403,19 +387,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         cmd.Parameters.AddWithValue("srv", servicesJson);
         cmd.Parameters.AddWithValue("ca", project.CreatedAtUtc);
         cmd.Parameters.AddWithValue("ua", (object?)project.UpdatedAtUtc ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("shard", string.IsNullOrWhiteSpace(project.DbClusterId) ? "shard-a" : project.DbClusterId);
         await cmd.ExecuteNonQueryAsync();
-
-        if (_redisDb != null)
-        {
-            try
-            {
-                await _redisDb.StringSetAsync($"localme:project:{project.Slug}", project.Id, TimeSpan.FromDays(7));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[LocalMe.Redis] Cache write non-blocking failure: {ex.Message}");
-            }
-        }
     }
 
     public async Task DeleteProjectAsync(string projectId)
@@ -684,30 +657,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             UPDATE platform_users SET wallet_balance_irr = 0;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await cmd.ExecuteNonQueryAsync();
-
-        if (_redis != null)
-        {
-            try
-            {
-                var endpoints = _redis.GetEndPoints();
-                foreach (var ep in endpoints)
-                {
-                    var srv = _redis.GetServer(ep);
-                    if (srv.IsConnected)
-                    {
-                        var keys = srv.Keys(pattern: "localme:*").ToArray();
-                        if (keys.Length > 0 && _redisDb != null)
-                        {
-                            await _redisDb.KeyDeleteAsync(keys);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[LocalMe.Store] Redis wipe warning: {ex.Message}");
-            }
-        }
     }
 
     private async Task EnsureInitializedAsync()
@@ -723,10 +672,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         if (_dataSource != null)
         {
             await _dataSource.DisposeAsync();
-        }
-        if (_redis != null)
-        {
-            await _redis.DisposeAsync();
         }
     }
 }
