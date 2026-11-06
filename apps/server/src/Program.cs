@@ -116,9 +116,9 @@ public class Program
         {
             var primaryDs = sp.GetRequiredService<NpgsqlDataSource>();
             var shardMgr = sp.GetRequiredService<ShardManagerService>();
-            var pm = sp.GetRequiredService<ProjectManagerService>();
             return new PostgreSqlTenantSchemaStore(primaryDs, slug =>
             {
+                var pm = sp.GetRequiredService<ProjectManagerService>();
                 var prj = pm.GetProjectBySlug(slug);
                 return (NpgsqlDataSource)shardMgr.GetDataSourceForShard(prj?.DbClusterId);
             });

@@ -12,12 +12,18 @@ using Npgsql;
 /// </summary>
 public sealed class ClusterBusSubscriber : BackgroundService
 {
-    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _listenConnectionString;
     public Action<string, string, string>? OnClusterEvent { get; set; }
 
     public ClusterBusSubscriber(NpgsqlDataSource dataSource)
     {
-        _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+        ArgumentNullException.ThrowIfNull(dataSource);
+        var csb = new NpgsqlConnectionStringBuilder(dataSource.ConnectionString)
+        {
+            Multiplexing = false,
+            Pooling = false
+        };
+        _listenConnectionString = csb.ConnectionString;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -26,7 +32,8 @@ public sealed class ClusterBusSubscriber : BackgroundService
         {
             try
             {
-                await using var conn = await _dataSource.OpenConnectionAsync(stoppingToken);
+                await using var conn = new NpgsqlConnection(_listenConnectionString);
+                await conn.OpenAsync(stoppingToken);
 
                 conn.Notification += (sender, args) =>
                 {
