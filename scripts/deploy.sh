@@ -41,7 +41,17 @@ usage() {
 ACTION="${1:---build}"
 
 do_build() {
-  echo "📦 Building multi-stage production image (${FULL_IMAGE})..."
+  echo "⚛️ 1. Compiling web-console (React + Vite)..."
+  pnpm -C apps/web-console build
+  cp apps/web-console/dist/index.html apps/server/src/wwwroot/panel.html
+  mkdir -p apps/server/src/wwwroot/assets
+  cp -r apps/web-console/dist/assets/* apps/server/src/wwwroot/assets/
+
+  echo "🔨 2. Compiling and publishing .NET 10 host..."
+  dotnet publish apps/server/src/LocalMe.Server.csproj -c Release -o dist/server
+  rm -f dist/server/*.pdb 2>/dev/null || true
+
+  echo "📦 3. Building lean production image (${FULL_IMAGE})..."
   ${CONTAINER_CLI} build -t "${FULL_IMAGE}" -f Dockerfile .
   echo "✅ Image built successfully: ${FULL_IMAGE}"
 }

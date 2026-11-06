@@ -61,6 +61,7 @@ affected_projects:
 - `apps/server/src/wwwroot/assets/index-v9oasbVe.js`: Compiled JS bundle.
 - `tests/LocalMe.Integration.Tests/DynamicConfigAndShardsTests.cs`: Ephemeral container test battery for in-DB configs and sharding.
 - `docker-compose.prod.yml`: Provider-agnostic production compose setup.
+- `Dockerfile.multistage`: Standalone multi-stage build definition for CI/CD runners.
 - `scripts/deploy.sh`: Generic OCI registry and VPS deployment script.
 - `scripts/org-build.sh`: Build platform and SDKs across the organization.
 - `scripts/org-dev.sh`: Dev server launcher for platform services.
