@@ -870,8 +870,29 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true, message = "کاربر با موفقیت حذف گردید." }) : Results.NotFound();
         });
 
+        app.MapPut("/_baas/v1/admin/users/{userId}", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can update user details.");
+
+            var fullName = body["fullName"]?.ToString();
+            var phone = body["phone"]?.ToString();
+            var email = body["email"]?.ToString();
+            var username = body["username"]?.ToString();
+            UserRole? role = null;
+            if (body["role"] != null && Enum.TryParse<UserRole>(body["role"]!.ToString(), true, out var parsedRole))
+            {
+                role = parsedRole;
+            }
+
+            var ok = pm.UpdateUserDetails(userId, fullName ?? "", phone ?? "", email ?? "", username, role);
+            return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
+        });
+
         // 13. Deep Database Studio & Maintenance Admin APIs
-        app.MapPost("/_baas/v1/admin/db/query", async (JsonObject body, HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/admin/db/query", async (JsonObject body, HttpContext ctx, NpgsqlDataSource ds, ShardManagerService shardMgr, ProjectManagerService pm) =>
         {
             var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
             if (currentUser == null) return Results.Unauthorized();
@@ -880,14 +901,22 @@ public static class BaasProjectRoutes
 
             var sql = body["sql"]?.ToString() ?? "";
             var targetSchema = body["targetSchema"]?.ToString();
+            var targetShardId = body["shardId"]?.ToString();
 
             if (string.IsNullOrWhiteSpace(sql))
                 return Results.BadRequest(new { success = false, message = "عبارت SQL الزامی است." });
 
+            var targetDs = ds;
+            if (!string.IsNullOrWhiteSpace(targetShardId))
+            {
+                var customDs = shardMgr.GetDataSourceForShard(targetShardId);
+                if (customDs is NpgsqlDataSource nds) targetDs = nds;
+            }
+
             var sw = Stopwatch.StartNew();
             try
             {
-                await using var conn = await ds.OpenConnectionAsync();
+                await using var conn = await targetDs.OpenConnectionAsync();
                 if (!string.IsNullOrWhiteSpace(targetSchema))
                 {
                     var cleanSchema = targetSchema.Replace("\"", "").Replace(";", "").Trim();
@@ -1063,6 +1092,30 @@ public static class BaasProjectRoutes
             return Results.Json(list);
         });
 
+        app.MapGet("/_baas/v1/admin/db/schemas", async (HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden");
+
+            var schemas = new List<string>();
+            try
+            {
+                await using var conn = await ds.OpenConnectionAsync();
+                await using var cmd = new NpgsqlCommand(
+                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name != 'information_schema' ORDER BY schema_name;",
+                    conn);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    schemas.Add(reader.GetString(0));
+                }
+            }
+            catch {}
+            return Results.Ok(schemas);
+        });
+
         // 14. Global Edge Deployments & Web Hosting Admin APIs
         app.MapGet("/_baas/v1/admin/deployments/functions", (HttpContext ctx, ProjectManagerService pm) =>
         {
@@ -1177,6 +1230,61 @@ public static class BaasProjectRoutes
                 uptimeSeconds = Math.Round((DateTime.UtcNow - proc.StartTime.ToUniversalTime()).TotalSeconds),
                 storageAdapter = cfgService.GetConfig().StorageAdapterType,
                 clusterBusActive = true
+            });
+        });
+
+        app.MapPost("/_baas/v1/admin/system/gc", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can trigger GC.");
+
+            var proc = Process.GetCurrentProcess();
+            var beforeHeapMb = Math.Round(GC.GetTotalMemory(false) / 1024.0 / 1024.0, 2);
+            var beforeWorkingSetMb = Math.Round(proc.WorkingSet64 / 1024.0 / 1024.0, 2);
+
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+            proc.Refresh();
+            var afterHeapMb = Math.Round(GC.GetTotalMemory(false) / 1024.0 / 1024.0, 2);
+            var afterWorkingSetMb = Math.Round(proc.WorkingSet64 / 1024.0 / 1024.0, 2);
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = $"عملیات بازیافت حافظه .NET (Garbage Collection) با موفقیت اجرا شد. فضای هیپ از {beforeHeapMb} MB به {afterHeapMb} MB کاهش یافت.",
+                beforeHeapMb,
+                afterHeapMb,
+                reclaimedHeapMb = Math.Round(Math.Max(0, beforeHeapMb - afterHeapMb), 2),
+                beforeWorkingSetMb,
+                afterWorkingSetMb
+            });
+        });
+
+        app.MapPost("/_baas/v1/admin/system/cache/flush", async (HttpContext ctx, PlatformConfigurationService cfgService, ShardManagerService shardMgr, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can flush system cache.");
+
+            await shardMgr.ReloadFromStoreAsync();
+            await cfgService.ReloadFromStoreAsync();
+
+            try
+            {
+                await using var cmd = ds.CreateCommand("SELECT pg_notify('localme_cluster_bus', '{\"t\":\"cache_flush\",\"a\":\"all\"}');");
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch {}
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = "کلیه کش‌های حافظه درون‌برنامه‌ای سرور (تنظیمات، شاردها و تننت‌ها) ابطال و پیام بازخوانی در کلاستر باس منتشر گردید."
             });
         });
 

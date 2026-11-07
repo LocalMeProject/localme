@@ -46,6 +46,9 @@ export function AdminSqlStudioView() {
   // Console State
   const [query, setQuery] = useState<string>('SELECT current_database(), current_user, version();');
   const [targetSchema, setTargetSchema] = useState<string>('public');
+  const [targetShardId, setTargetShardId] = useState<string>('shard-a');
+  const [shards, setShards] = useState<{ id: string; name: string }[]>([]);
+  const [availableSchemas, setAvailableSchemas] = useState<string[]>(['public']);
   const [executing, setExecuting] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
@@ -95,6 +98,22 @@ export function AdminSqlStudioView() {
   };
 
   useEffect(() => {
+    // Load shards and available schemas for the SQL console
+    api.get('/_baas/v1/admin/shards').then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setShards(res);
+        setTargetShardId(res[0].id);
+      }
+    }).catch(() => {});
+
+    api.get('/_baas/v1/admin/db/schemas').then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setAvailableSchemas(res);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (activeSubTab === 'tables' || activeSubTab === 'maintenance') {
       fetchTables();
     } else if (activeSubTab === 'locks') {
@@ -111,7 +130,8 @@ export function AdminSqlStudioView() {
     try {
       const res = await api.post('/_baas/v1/admin/db/query', {
         sql: query,
-        schema: targetSchema || 'public',
+        targetSchema: targetSchema || 'public',
+        shardId: targetShardId || undefined,
         limit: 100
       });
 
@@ -222,21 +242,49 @@ export function AdminSqlStudioView() {
       {activeSubTab === 'console' && (
         <div className="space-y-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-400 font-medium">اسکیمای هدف:</span>
-                <input
-                  type="text"
-                  value={targetSchema}
-                  onChange={(e) => setTargetSchema(e.target.value)}
-                  placeholder="public یا tenant_slug"
-                  className="bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-mono focus:outline-hidden focus:border-emerald-500"
-                  dir="ltr"
-                />
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-800 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Shard Selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 font-medium">شارد:</span>
+                  <select
+                    value={targetShardId}
+                    onChange={(e) => setTargetShardId(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 text-emerald-400 px-2.5 py-1 rounded-lg text-xs font-mono focus:outline-hidden focus:border-emerald-500"
+                    dir="ltr"
+                  >
+                    {shards.length > 0 ? (
+                      shards.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.id})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="shard-a">shard-a (Default)</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Schema Selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 font-medium">اسکیما:</span>
+                  <select
+                    value={targetSchema}
+                    onChange={(e) => setTargetSchema(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-mono focus:outline-hidden focus:border-emerald-500"
+                    dir="ltr"
+                  >
+                    {availableSchemas.map((sch) => (
+                      <option key={sch} value={sch}>
+                        {sch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-slate-500 text-[11px]">اجرا با Ctrl+Enter</span>
+                <span className="text-slate-500 text-[11px] hidden sm:inline">اجرا با Ctrl+Enter</span>
                 <button
                   onClick={handleRunQuery}
                   disabled={executing || !query.trim()}

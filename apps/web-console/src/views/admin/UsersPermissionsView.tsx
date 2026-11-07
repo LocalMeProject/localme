@@ -49,9 +49,15 @@ export function UsersPermissionsView() {
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Role Edit Modal
+  // User Profile & Role Edit Modal
   const [editingUser, setEditingUser] = useState<PlatformUserItem | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editUsername, setEditUsername] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('Developer');
   const [savingRole, setSavingRole] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -125,6 +131,10 @@ export function UsersPermissionsView() {
 
   const openRoleModal = (u: PlatformUserItem) => {
     setEditingUser(u);
+    setEditFullName(u.fullName || '');
+    setEditPhone(u.phone || '');
+    setEditEmail(u.email || '');
+    setEditUsername(u.username || '');
     const r = String(u.role).toLowerCase();
     if (r === '0' || r === 'superadmin' || r === 'admin') {
       setSelectedRole('Superadmin');
@@ -144,16 +154,24 @@ export function UsersPermissionsView() {
     setRoleError(null);
 
     try {
-      await api.put(`/_baas/v1/users/${encodeURIComponent(editingUser.id)}/role`, {
+      const res = await api.put(`/_baas/v1/admin/users/${encodeURIComponent(editingUser.id)}`, {
+        fullName: editFullName.trim(),
+        phone: editPhone.trim(),
+        email: editEmail.trim(),
+        username: editUsername.trim() || undefined,
         role: selectedRole,
       });
 
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editingUser.id ? { ...u, role: selectedRole } : u))
-      );
+      if (res.user) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === editingUser.id ? { ...u, ...res.user } : u))
+        );
+      } else {
+        await fetchUsers();
+      }
       setEditingUser(null);
     } catch (err: any) {
-      setRoleError(err.message || 'خطا در تغییر سطح دسترسی کاربر.');
+      setRoleError(err.message || 'خطا در ویرایش اطلاعات کاربر.');
     } finally {
       setSavingRole(false);
     }
@@ -307,6 +325,17 @@ export function UsersPermissionsView() {
   };
 
   const filteredUsers = users.filter((u) => {
+    if (roleFilter !== 'ALL') {
+      const r = String(u.role).toLowerCase();
+      if (roleFilter === 'Admin' && r !== '0' && r !== 'superadmin' && r !== 'admin') return false;
+      if (roleFilter === 'Operator' && r !== '1' && r !== 'operator') return false;
+      if (roleFilter === 'Developer' && r !== '2' && r !== 'developer') return false;
+    }
+    if (statusFilter !== 'ALL') {
+      const active = u.isActive ?? true;
+      if (statusFilter === 'ACTIVE' && !active) return false;
+      if (statusFilter === 'INACTIVE' && active) return false;
+    }
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -335,9 +364,32 @@ export function UsersPermissionsView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-500"
+          >
+            <option value="ALL">همه نقش‌ها</option>
+            <option value="Admin">فقط مدیران ارشد</option>
+            <option value="Operator">فقط اپراتورها</option>
+            <option value="Developer">فقط توسعه‌دهندگان</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-500"
+          >
+            <option value="ALL">همه وضعیت‌ها</option>
+            <option value="ACTIVE">فقط فعال</option>
+            <option value="INACTIVE">فقط مسدود/غیرفعال</option>
+          </select>
+
           {/* Search */}
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-56">
             <input
               type="text"
               value={searchQuery}
@@ -825,13 +877,14 @@ export function UsersPermissionsView() {
         </div>
       )}
 
-      {/* Role Edit Modal */}
+      {/* User Profile & Role Edit Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" dir="rtl">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-bold text-slate-900">
-                تغییر سطح دسترسی کاربر
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Edit2 className="w-4 h-4 text-emerald-600" />
+                <span>ویرایش مشخصات و نقش کاربر</span>
               </h3>
               <button
                 onClick={() => setEditingUser(null)}
@@ -848,24 +901,70 @@ export function UsersPermissionsView() {
               </div>
             )}
 
-            <form onSubmit={handleSaveRole} className="space-y-4">
+            <form onSubmit={handleSaveRole} className="space-y-3.5 text-xs">
               <div>
-                <span className="block text-xs font-semibold text-slate-700 mb-1">
-                  کاربر:
-                </span>
-                <div className="text-xs text-slate-800 font-bold">
-                  {editingUser.fullName || editingUser.phone}
+                <label className="block font-semibold text-slate-700 mb-1">
+                  نام و نام خانوادگی:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    شماره موبایل:
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    dir="ltr"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    نام کاربری:
+                  </label>
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    dir="ltr"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  نقش امنیتی جدید:
+                <label className="block font-semibold text-slate-700 mb-1">
+                  آدرس ایمیل:
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  dir="ltr"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  نقش امنیتی و سطح دسترسی:
                 </label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-hidden focus:border-emerald-500 font-medium"
                 >
                   <option value="Developer">توسعه‌دهنده (Developer)</option>
                   <option value="Operator">اپراتور سامانه (Operator)</option>
@@ -877,16 +976,16 @@ export function UsersPermissionsView() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={savingRole}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition disabled:opacity-50 shadow-xs"
                 >
-                  {savingRole ? 'در حال ثبت...' : 'ذخیره تغییرات'}
+                  {savingRole ? 'در حال ذخیره...' : 'ذخیره مشخصات و دسترسی'}
                 </button>
               </div>
             </form>

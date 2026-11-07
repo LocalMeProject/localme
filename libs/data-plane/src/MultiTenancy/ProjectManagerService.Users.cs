@@ -228,6 +228,32 @@ public sealed partial class ProjectManagerService
         return false;
     }
 
+    public bool UpdateUserDetails(string userId, string fullName, string phone, string email, string? username, UserRole? role = null)
+    {
+        if (_users.TryGetValue(userId, out var u))
+        {
+            var updated = u with
+            {
+                FullName = string.IsNullOrWhiteSpace(fullName) ? u.FullName : fullName.Trim(),
+                Phone = string.IsNullOrWhiteSpace(phone) ? u.Phone : phone.Trim(),
+                Email = string.IsNullOrWhiteSpace(email) ? u.Email : email.Trim(),
+                Username = username != null ? username.Trim() : u.Username,
+                Role = role ?? u.Role
+            };
+            _users[userId] = updated;
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.UpsertUserAsync(updated); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] UpdateUserDetails persist error: {ex.Message}"); }
+                });
+            }
+            return true;
+        }
+        return false;
+    }
+
     public bool UpdateUserStatus(string userId, bool isActive)
     {
         if (_users.TryGetValue(userId, out var u))
