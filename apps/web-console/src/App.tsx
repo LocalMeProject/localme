@@ -19,11 +19,13 @@ import { HostingView } from './views/HostingView';
 import { ComplianceView } from './views/ComplianceView';
 import { TelemetryView } from './views/TelemetryView';
 import { SettingsView } from './views/SettingsView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Auth & Admin Views
 import { LoginView } from './views/auth/LoginView';
 import { AdminLayout, AdminTab } from './views/admin/AdminLayout';
 import { ClusterShardsView } from './views/admin/ClusterShardsView';
+import { DatabaseActivityView } from './views/admin/DatabaseActivityView';
 import { StorageBucketsView } from './views/admin/StorageBucketsView';
 import { GatewaysSmsView } from './views/admin/GatewaysSmsView';
 import { TenantOversightView } from './views/admin/TenantOversightView';
@@ -159,7 +161,7 @@ export default function App() {
             name: String(p.name || p.Name || p.id || ''),
             slug: String(p.slug || p.Slug || p.id || ''),
             description: String(p.description || p.Description || ''),
-            region: String(p.region || p.Region || 'ir-teh-1 (آسیاتک برج میلاد)'),
+            region: String(p.region || p.Region || 'ir-teh-1 (دیتاسنتر مرکزی)'),
             status: (p.status === 'PROVISIONING' || p.status === 'MAINTENANCE' ? p.status : 'ACTIVE') as Project['status'],
             createdAt: String(p.createdAt || p.CreatedAt || new Date().toISOString()),
             walletBalanceIrr: Number(p.walletBalanceIrr ?? p.WalletBalanceIrr ?? 0),
@@ -515,32 +517,36 @@ export default function App() {
   if (isAdminRoute) {
     const adminTabMatch = normalizedPath.match(/^\/admin\/([a-z0-9_-]+)/);
     const rawAdminTab = (adminTabMatch ? adminTabMatch[1] : 'shards') as AdminTab;
-    const validAdminTabs: AdminTab[] = ['shards', 'storage', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
+    const validAdminTabs: AdminTab[] = ['shards', 'activity', 'storage', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
     const activeAdminTab: AdminTab = validAdminTabs.includes(rawAdminTab) ? rawAdminTab : 'shards';
 
     return (
-      <AdminLayout currentTab={activeAdminTab} onTabChange={(t) => navigate(`/admin/${t}`)}>
-        {activeAdminTab === 'shards' && <ClusterShardsView />}
-        {activeAdminTab === 'storage' && <StorageBucketsView />}
-        {activeAdminTab === 'gateways' && <GatewaysSmsView />}
-        {activeAdminTab === 'tenants' && <TenantOversightView />}
-        {activeAdminTab === 'telemetry' && <TelemetryHealthView />}
-        {activeAdminTab === 'users' && <UsersPermissionsView />}
-        {activeAdminTab === 'logs' && <AdminLogsView />}
-        {activeAdminTab === 'pricing' && <PricingQuotasView />}
-      </AdminLayout>
+      <ErrorBoundary>
+        <AdminLayout currentTab={activeAdminTab} onTabChange={(t) => navigate(`/admin/${t}`)}>
+          {activeAdminTab === 'shards' && <ClusterShardsView />}
+          {activeAdminTab === 'activity' && <DatabaseActivityView />}
+          {activeAdminTab === 'storage' && <StorageBucketsView />}
+          {activeAdminTab === 'gateways' && <GatewaysSmsView />}
+          {activeAdminTab === 'tenants' && <TenantOversightView />}
+          {activeAdminTab === 'telemetry' && <TelemetryHealthView />}
+          {activeAdminTab === 'users' && <UsersPermissionsView />}
+          {activeAdminTab === 'logs' && <AdminLogsView />}
+          {activeAdminTab === 'pricing' && <PricingQuotasView />}
+        </AdminLayout>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600 overflow-hidden" dir="rtl">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <ErrorBoundary>
+      <div className="h-screen flex flex-col bg-white text-surface-900 font-sans selection:bg-brand-500/20 selection:text-brand-600 overflow-hidden" dir="rtl">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
 
       {/* Global Header */}
       <Header
@@ -754,5 +760,6 @@ export default function App() {
         onCancel={() => setIsConfirmDeleteProjectOpen(false)}
       />
     </div>
+    </ErrorBoundary>
   );
 }

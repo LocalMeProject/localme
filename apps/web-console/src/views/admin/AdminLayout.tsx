@@ -11,13 +11,15 @@ import {
   DollarSign, 
   LogOut, 
   ExternalLink, 
-  Network
+  Network,
+  Terminal
 } from 'lucide-react';
 import { useAuth } from '../../components/auth/AuthGuard';
 import { api } from '../../utils/apiClient';
 
 export type AdminTab = 
   | 'shards'
+  | 'activity'
   | 'storage'
   | 'gateways'
   | 'tenants'
@@ -36,7 +38,7 @@ export function AdminLayout({ currentTab, onTabChange, children }: AdminLayoutPr
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [egressIp, setEgressIp] = useState<string>('2.180.12.94');
+  const [egressIp, setEgressIp] = useState<string>('—');
 
   useEffect(() => {
     // Fetch live config to get dynamic egress IP
@@ -53,7 +55,8 @@ export function AdminLayout({ currentTab, onTabChange, children }: AdminLayoutPr
 
   const navItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'shards', label: 'مدیریت شاردها و کلاستر', icon: Database },
-    { id: 'storage', label: 'فضای ذخیره‌سازی و S3 آروان', icon: HardDrive },
+    { id: 'activity', label: 'کوئری‌ها و نشست‌های زنده', icon: Terminal },
+    { id: 'storage', label: 'فضای ذخیره‌سازی ابری (S3)', icon: HardDrive },
     { id: 'gateways', label: 'درگاه‌های پیامک و پرداخت', icon: Radio },
     { id: 'tenants', label: 'نظارت بر پروژه‌ها (تننت‌ها)', icon: Building2 },
     { id: 'telemetry', label: 'پایش و سلامت سرور (Telemetry)', icon: Activity },

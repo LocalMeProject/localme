@@ -170,6 +170,12 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
 
                 await using var mCmd = _dataSource.CreateCommand(mig005Sql);
                 await mCmd.ExecuteNonQueryAsync();
+
+                // Ensure shard-a has the real connection string instead of placeholder PRIMARY_CONNECTION
+                await using var syncShardCmd = _dataSource.CreateCommand(
+                    "UPDATE platform_shards SET connection_string = $1 WHERE id = 'shard-a' AND (connection_string = 'PRIMARY_CONNECTION' OR connection_string = '' OR connection_string IS NULL);");
+                syncShardCmd.Parameters.AddWithValue(_pgConnectionString);
+                await syncShardCmd.ExecuteNonQueryAsync();
             }
         }
         catch (Exception ex)

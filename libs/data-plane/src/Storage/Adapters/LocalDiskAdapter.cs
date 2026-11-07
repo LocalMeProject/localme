@@ -107,6 +107,37 @@ public sealed class LocalDiskAdapter : IBlobStorageAdapter
         return Task.FromResult<BlobMetadata?>(metadata);
     }
 
+    public Task<IReadOnlyList<BlobMetadata>> ListObjectsAsync(
+        string bucket,
+        string? prefix = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var bucketDir = Path.Combine(_rootPath, bucket);
+        if (!Directory.Exists(bucketDir))
+        {
+            return Task.FromResult<IReadOnlyList<BlobMetadata>>(Array.Empty<BlobMetadata>());
+        }
+
+        var files = Directory.GetFiles(bucketDir, "*", SearchOption.AllDirectories)
+            .Take(Math.Clamp(limit, 1, 500))
+            .Select(f =>
+            {
+                var fi = new FileInfo(f);
+                var relPath = Path.GetRelativePath(bucketDir, f).Replace('\\', '/');
+                return new BlobMetadata(
+                    Bucket: bucket,
+                    ObjectKey: relPath,
+                    SizeBytes: fi.Length,
+                    ContentType: "application/octet-stream",
+                    ETag: $"\"{fi.LastWriteTimeUtc.Ticks}\"",
+                    LastModified: fi.LastWriteTimeUtc);
+            })
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<BlobMetadata>>(files);
+    }
+
     public Task<string> CreatePresignedPutUrlAsync(
         string bucket,
         string objectKey,

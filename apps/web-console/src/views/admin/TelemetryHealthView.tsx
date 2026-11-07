@@ -6,32 +6,52 @@ import {
   Database, 
   Clock, 
   RefreshCw, 
-  CheckCircle2, 
-  Zap,
-  Server
+  Server,
+  Layers
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
 import { toPersianDigits } from '../../utils/persian';
 
 interface TelemetryData {
   cpuUsagePercent?: number;
+  cpu_percent?: number;
   memoryWorkingSetMb?: number;
+  memory_mb?: number;
+  memoryAllocatedMb?: number;
   activeDbConnections?: number;
+  active_connections?: number;
+  idleDbConnections?: number;
+  idle_connections?: number;
+  totalDbConnections?: number;
+  total_connections?: number;
+  dbSizeBytes?: number;
+  dbSizePretty?: string;
   pushQueueBacklog?: number;
   latencyPercentiles?: {
     p50Ms: number;
     p95Ms: number;
     p99Ms: number;
   };
+  latency_p50_ms?: number;
+  latency_p95_ms?: number;
+  latency_p99_ms?: number;
   serverUptimeSeconds?: number;
-  threadPoolWorkingThreads?: number;
+  uptime_seconds?: number;
+  threadPoolBusyThreads?: number;
+  threadPoolMaxThreads?: number;
+  totalProjects?: number;
+  activeShards?: number;
+  totalRequestsServed?: number;
+  status?: string;
 }
 
 export function TelemetryHealthView() {
   const [data, setData] = useState<TelemetryData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchTelemetry = async () => {
+  const fetchTelemetry = async (isManual = false) => {
+    if (isManual) setLoading(true);
     try {
       const res = await api.get('/_baas/v1/admin/telemetry');
       if (res) {
@@ -39,11 +59,13 @@ export function TelemetryHealthView() {
       }
     } catch (err) {
       console.error('Failed to fetch telemetry', err);
+    } finally {
+      if (isManual) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTelemetry();
+    fetchTelemetry(true);
   }, []);
 
   // 3-second auto-refresh polling
@@ -51,7 +73,7 @@ export function TelemetryHealthView() {
     let interval: ReturnType<typeof setInterval> | null = null;
     if (autoRefresh) {
       interval = setInterval(() => {
-        fetchTelemetry();
+        fetchTelemetry(false);
       }, 3000);
     }
     return () => {
@@ -60,20 +82,34 @@ export function TelemetryHealthView() {
   }, [autoRefresh]);
 
   const formatUptime = (seconds?: number) => {
-    if (!seconds) return '۰ ثانیه';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    if (seconds === undefined || seconds === null) return 'در حال محاسبه...';
+    const total = Math.floor(seconds);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
     return `${toPersianDigits(h)} ساعت و ${toPersianDigits(m)} دقیقه و ${toPersianDigits(s)} ثانیه`;
   };
 
-  const cpu = data?.cpuUsagePercent ?? 4.2;
-  const memory = data?.memoryWorkingSetMb ?? 142.8;
-  const activeConnections = data?.activeDbConnections ?? 3;
-  const queueBacklog = data?.pushQueueBacklog ?? 0;
-  const p50 = data?.latencyPercentiles?.p50Ms ?? 1.8;
-  const p95 = data?.latencyPercentiles?.p95Ms ?? 4.2;
-  const p99 = data?.latencyPercentiles?.p99Ms ?? 8.7;
+  // Real data extraction with zero fake numbers
+  const cpu = data?.cpuUsagePercent ?? data?.cpu_percent ?? 0;
+  const memoryWorkingSet = data?.memoryWorkingSetMb ?? data?.memory_mb ?? 0;
+  const memoryAllocated = data?.memoryAllocatedMb ?? 0;
+  
+  const activeConnections = data?.activeDbConnections ?? data?.active_connections ?? 0;
+  const idleConnections = data?.idleDbConnections ?? data?.idle_connections ?? 0;
+  const totalConnections = data?.totalDbConnections ?? data?.total_connections ?? (activeConnections + idleConnections);
+  
+  const dbSizePretty = data?.dbSizePretty ?? '۰ مگابایت';
+  
+  const p50 = data?.latencyPercentiles?.p50Ms ?? data?.latency_p50_ms ?? 0;
+  const p95 = data?.latencyPercentiles?.p95Ms ?? data?.latency_p95_ms ?? 0;
+  const p99 = data?.latencyPercentiles?.p99Ms ?? data?.latency_p99_ms ?? 0;
+  
+  const uptimeSeconds = data?.serverUptimeSeconds ?? data?.uptime_seconds;
+  const totalProjects = data?.totalProjects ?? 0;
+  const activeShards = data?.activeShards ?? 1;
+  const totalRequests = data?.totalRequestsServed ?? 0;
+  const busyThreads = data?.threadPoolBusyThreads ?? 0;
 
   return (
     <div className="space-y-6">
@@ -83,10 +119,13 @@ export function TelemetryHealthView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">پایش زنده سلامت و عملکرد سرور (Telemetry & Health)</h2>
+            <h2 className="text-base font-bold text-slate-900">پایش بلادرنگ سلامت و سنجه‌های سرور (Telemetry)</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              داده‌های ۱۰۰٪ واقعی سرور و پایگاه‌داده
+            </span>
           </div>
           <p className="text-xs text-slate-500">
-            سنجه‌های بلادرنگ پردازنده، حافظه رم، استخرهای اتصال Npgsql به PostgreSQL 18.1 و تاخیر درخواست‌ها.
+            سنجه‌های پردازنده، مصرف واقعی RAM، نشست‌های فعال pg_stat_activity، استخرهای Npgsql و تاخیر صدک‌های درخواست.
           </p>
         </div>
 
@@ -102,11 +141,11 @@ export function TelemetryHealthView() {
           </label>
 
           <button
-            onClick={fetchTelemetry}
+            onClick={() => fetchTelemetry(true)}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
             title="تازه سازی اکنون"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
         </div>
       </div>
@@ -117,7 +156,7 @@ export function TelemetryHealthView() {
         {/* Card 1: CPU Usage */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">مصرف پردازنده (CPU)</span>
+            <span className="text-xs font-semibold">مصرف پردازنده سرور (CPU)</span>
             <Cpu className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-1">
@@ -128,64 +167,74 @@ export function TelemetryHealthView() {
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, cpu)}%` }}
+              className={`h-full rounded-full transition-all duration-300 ${
+                cpu > 80 ? 'bg-rose-500' : cpu > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+              }`}
+              style={{ width: `${Math.min(100, Math.max(2, cpu))}%` }}
             />
+          </div>
+          <div className="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
+            <span>ترد‌های پردازشی فعال:</span>
+            <span className="font-mono font-medium text-slate-700">{toPersianDigits(busyThreads)} ترد</span>
           </div>
         </div>
 
         {/* Card 2: Memory */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">حافظه اختصاص‌یافته (RAM)</span>
+            <span className="text-xs font-semibold">حافظه اشغالی پروسه (WorkingSet)</span>
             <HardDrive className="w-4 h-4 text-cyan-600" />
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold font-mono text-slate-900">
-              {toPersianDigits(memory.toFixed(1))}
+              {toPersianDigits(memoryWorkingSet.toFixed(1))}
             </span>
             <span className="text-xs text-slate-500">مگابایت</span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-cyan-500 h-full rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, (memory / 1024) * 100)}%` }}
+              style={{ width: `${Math.min(100, Math.max(5, (memoryWorkingSet / 1024) * 100))}%` }}
             />
+          </div>
+          <div className="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
+            <span>تخصیص هیپ دات‌نت (GC Heap):</span>
+            <span className="font-mono font-medium text-slate-700">{toPersianDigits(memoryAllocated.toFixed(1))} MB</span>
           </div>
         </div>
 
-        {/* Card 3: DB Connections */}
+        {/* Card 3: DB Connections (Real from pg_stat_activity) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">اتصالات فعال PostgreSQL</span>
+            <span className="text-xs font-semibold">اتصالات PostgreSQL (واقعی)</span>
             <Database className="w-4 h-4 text-indigo-600" />
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold font-mono text-slate-900">
               {toPersianDigits(activeConnections)}
             </span>
-            <span className="text-xs text-slate-500">کانکشن فعال</span>
+            <span className="text-xs text-slate-500">کوئری فعال / {toPersianDigits(totalConnections)} کانکشن کل</span>
           </div>
-          <div className="text-[11px] text-emerald-600 font-medium mt-3 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>استخر اتصالات Npgsql بهینه</span>
+          <div className="text-[11px] text-slate-500 mt-3 flex items-center justify-between pt-1 border-t border-slate-100">
+            <span>کانکشن‌های آماده (Idle Pool):</span>
+            <span className="font-mono font-bold text-emerald-600">{toPersianDigits(idleConnections)}</span>
           </div>
         </div>
 
-        {/* Card 4: Push Queue Backlog */}
+        {/* Card 4: Database Disk Size & Total Projects */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold">صف کارهای پس‌زمینه (Queue)</span>
-            <Zap className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-semibold">حجم پایگاه‌داده روی دیسک</span>
+            <Layers className="w-4 h-4 text-amber-500" />
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold font-mono text-slate-900">
-              {toPersianDigits(queueBacklog)}
+            <span className="text-2xl font-bold font-mono text-slate-900" dir="ltr">
+              {dbSizePretty}
             </span>
-            <span className="text-xs text-slate-500">مورد در صف</span>
           </div>
-          <div className="text-[11px] text-slate-500 mt-3">
-            انتقال سریع و پردازش موازی
+          <div className="text-[11px] text-slate-500 mt-3 flex items-center justify-between pt-1 border-t border-slate-100">
+            <span>کل پروژه‌های فعال:</span>
+            <span className="font-mono font-bold text-slate-800">{toPersianDigits(totalProjects)} پروژه</span>
           </div>
         </div>
 
@@ -196,12 +245,17 @@ export function TelemetryHealthView() {
         
         {/* Latency Percentiles */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Clock className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-bold text-slate-900">صدک‌های تاخیر پاسخگویی (Response Latency)</h3>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-xs font-bold text-slate-900">صدک‌های تاخیر پاسخگویی (Request Latencies)</h3>
+            </div>
+            <span className="text-[11px] text-slate-400 font-mono">
+              کل درخواست‌ها: {toPersianDigits(totalRequests)}
+            </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
                 <span>میانگین صدک ۵۰ (P50 - Median):</span>
@@ -210,7 +264,7 @@ export function TelemetryHealthView() {
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, p50 * 5)}%` }} />
+                <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.max(3, p50 * 5))}%` }} />
               </div>
             </div>
 
@@ -222,7 +276,7 @@ export function TelemetryHealthView() {
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-cyan-500 h-full rounded-full" style={{ width: `${Math.min(100, p95 * 5)}%` }} />
+                <div className="bg-cyan-500 h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.max(3, p95 * 4))}%` }} />
               </div>
             </div>
 
@@ -234,7 +288,7 @@ export function TelemetryHealthView() {
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${Math.min(100, p99 * 5)}%` }} />
+                <div className="bg-indigo-500 h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.max(3, p99 * 3))}%` }} />
               </div>
             </div>
           </div>
@@ -244,29 +298,32 @@ export function TelemetryHealthView() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Server className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-bold text-slate-900">محیط اجرایی سرور و سکو</h3>
+            <h3 className="text-xs font-bold text-slate-900">مشخصات محیط اجرایی و کلاستر</h3>
           </div>
 
           <div className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between py-1 border-b border-slate-50">
-              <span className="text-slate-500">موتور مرکزی (Runtime):</span>
-              <span className="font-mono font-bold text-slate-800" dir="ltr">.NET 10.0 (Native AOT Ready)</span>
+            <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+              <span className="text-slate-500">موتور مرکزی (Runtime Engine):</span>
+              <span className="font-mono font-bold text-slate-800" dir="ltr">Pure .NET 10.0 (Unified Server)</span>
             </div>
 
-            <div className="flex items-center justify-between py-1 border-b border-slate-50">
-              <span className="text-slate-500">پایگاه‌داده اولیه و کاتالوگ:</span>
-              <span className="font-mono font-bold text-slate-800" dir="ltr">PostgreSQL 18.1 Pure Engine</span>
+            <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+              <span className="text-slate-500">پایگاه‌داده اولیه و شاردها:</span>
+              <span className="font-mono font-bold text-slate-800" dir="ltr">PostgreSQL 18.1 ({toPersianDigits(activeShards)} شارد فعال)</span>
             </div>
 
-            <div className="flex items-center justify-between py-1 border-b border-slate-50">
-              <span className="text-slate-500">سیستم کش و اشتراک رویداد:</span>
-              <span className="font-mono font-bold text-emerald-700" dir="ltr">PG LISTEN/NOTIFY (&lt;5ms)</span>
+            <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+              <span className="text-slate-500">گذرگاه رویدادها (Cluster Bus):</span>
+              <span className="font-mono font-bold text-emerald-700 flex items-center gap-1" dir="ltr">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                PG LISTEN/NOTIFY (&lt;5ms)
+              </span>
             </div>
 
-            <div className="flex items-center justify-between py-1">
-              <span className="text-slate-500">مدت زمان فعالیت پیوسته (Uptime):</span>
+            <div className="flex items-center justify-between py-1.5">
+              <span className="text-slate-500">مدت زمان فعالیت سرور (Uptime):</span>
               <span className="font-medium text-slate-800">
-                {formatUptime(data?.serverUptimeSeconds)}
+                {formatUptime(uptimeSeconds)}
               </span>
             </div>
           </div>

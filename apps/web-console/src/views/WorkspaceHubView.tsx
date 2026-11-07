@@ -153,8 +153,8 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
           >
             <option value="ALL">همه موقعیت‌ها</option>
-            <option value="ir-teh-1 (آسیاتک برج میلاد)">آسیاتک برج میلاد</option>
-            <option value="ir-teh-2 (زیرساخت امام)">زیرساخت امام</option>
+            <option value="ir-teh-1 (دیتاسنتر مرکزی تهران)">دیتاسنتر مرکزی</option>
+            <option value="ir-teh-2 (دیتاسنتر پشتیبان تهران)">دیتاسنتر پشتیبان</option>
           </select>
         </div>
       </div>

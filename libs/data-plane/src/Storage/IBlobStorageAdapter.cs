@@ -30,6 +30,12 @@ public interface IBlobStorageAdapter
         string objectKey,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<BlobMetadata>> ListObjectsAsync(
+        string bucket,
+        string? prefix = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default);
+
     Task<string> CreatePresignedPutUrlAsync(
         string bucket,
         string objectKey,

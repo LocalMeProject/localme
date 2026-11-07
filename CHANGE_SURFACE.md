@@ -35,6 +35,9 @@ affected_projects:
 
 ## 3. Code Surface (Targeted Symbols & Files)
 ### Added Files
+- `apps/server/src/Diagnostics/SystemMetricsCollector.cs`: OS and .NET runtime performance metrics collector (CPU %, Working Set RAM, GC Heap, Thread Pool, rolling P50/P95/P99 latency).
+- `apps/web-console/src/components/ErrorBoundary.tsx`: Unified React Error Boundary component with Persian error recovery card.
+- `apps/web-console/src/views/admin/DatabaseActivityView.tsx`: Real-time PostgreSQL session & query monitor (pg_stat_activity) with live query termination (pg_terminate_backend).
 - `libs/infrastructure/src/Migrations/005_DynamicPlatformConfigAndShards.sql`: DDL for platform_configurations and platform_shards with trigger notifications.
 - `libs/infrastructure/src/Storage/PostgreSqlPlatformConfigurationStore.cs`: In-DB configuration store.
 - `libs/infrastructure/src/Storage/PostgreSqlPlatformShardStore.cs`: Shards catalog store.
@@ -57,8 +60,8 @@ affected_projects:
 - `apps/web-console/src/views/admin/UsersPermissionsView.tsx`: User list and role escalation.
 - `apps/web-console/src/views/admin/AdminLogsView.tsx`: Buffered system logs viewer.
 - `apps/web-console/src/views/admin/PricingQuotasView.tsx`: Pricing catalog and quotas editor.
-- `apps/server/src/wwwroot/assets/index-Br7n94n9.css`: Compiled CSS bundle.
-- `apps/server/src/wwwroot/assets/index-v9oasbVe.js`: Compiled JS bundle.
+- `apps/server/src/wwwroot/assets/index-BIrLsUaE.css`: Compiled CSS bundle.
+- `apps/server/src/wwwroot/assets/index-D4P2Fuxq.js`: Compiled JS bundle.
 - `tests/LocalMe.Integration.Tests/DynamicConfigAndShardsTests.cs`: Ephemeral container test battery for in-DB configs and sharding.
 - `docker-compose.prod.yml`: Provider-agnostic production compose setup.
 - `Dockerfile.multistage`: Standalone multi-stage build definition for CI/CD runners.
@@ -80,14 +83,20 @@ affected_projects:
 - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`: Auth route enhancements and redirects.
 - `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Tenant query execution and schema updates.
 - `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Database snapshot routes.
-- `apps/server/src/Routes/BaasProjectRoutes.cs`: Admin shard endpoints, in-DB config endpoints.
+- `apps/server/src/Routes/BaasProjectRoutes.cs`: Admin shard endpoints, in-DB config endpoints, telemetry, and live controls.
 - `apps/server/src/Routes/BaasServiceRoutes.cs`: Service capability endpoints.
 - `apps/server/src/Services/ClusterBusSubscriber.cs`: Cluster bus notification subscription.
 - `apps/server/src/Services/PushDispatcherWorker.cs`: Push worker background dispatcher.
+- `apps/server/src/wwwroot/benchmarks.html`: Cleaned datacenter marketing references.
 - `apps/server/src/wwwroot/panel.html`: Web console SPA shell.
-- `apps/web-console/src/App.tsx`: Incorporate admin routes, login route, and route guards.
+- `apps/server/src/wwwroot/sitemap.xml`: Sitemap updates.
+- `apps/web-console/src/App.tsx`: Incorporate admin routes, login route, ErrorBoundary, and route guards.
 - `apps/web-console/src/components/Header.tsx`: Dynamic profile and admin link.
+- `apps/web-console/src/components/modals/CreateProjectModal.tsx`: Cleaned region options.
 - `apps/web-console/src/main.tsx`: Root React wrapper with AuthGuard.
+- `apps/web-console/src/views/HostingView.tsx`: Cleaned region options.
+- `apps/web-console/src/views/SettingsView.tsx`: Cleaned region options.
+- `apps/web-console/src/views/WorkspaceHubView.tsx`: Cleaned region options.
 - `docs/adr/0006-postgres-centralization-contract.md`: Architecture decision record.
 - `libs/core-domain/src/Database/SqlAstQueryCompiler.cs`: AST query compilation.
 - `libs/data-plane/src/Admin/PlatformConfig.cs`: Add storage adapter and sharding fields.
@@ -95,10 +104,13 @@ affected_projects:
 - `libs/data-plane/src/MultiTenancy/ProjectArchiveService.cs`: Universal project archiving.
 - `libs/data-plane/src/MultiTenancy/ProjectManagerModels.cs`: Shard identifier in project models.
 - `libs/data-plane/src/MultiTenancy/ProjectManagerService.cs`: Shard reassignment logic.
+- `libs/data-plane/src/Storage/IBlobStorageAdapter.cs`: Added ListObjectsAsync definition.
+- `libs/data-plane/src/Storage/Adapters/LocalDiskAdapter.cs`: Implemented ListObjectsAsync.
+- `libs/data-plane/src/Storage/Adapters/RunflareBlobAdapter.cs`: Implemented ListObjectsAsync.
 - `libs/infrastructure/src/LocalMe.Infrastructure.csproj`: Project dependencies.
 - `libs/infrastructure/src/Migrations/004_PlatformPersistence.sql`: Initial platform migration.
 - `libs/infrastructure/src/Storage/PostgreSqlProjectStore.Entities.cs`: Project store entity mapping.
-- `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Multi-shard storage integration.
+- `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Multi-shard storage integration and connection healing.
 - `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Indexes.cs`: Index management on project shard.
 - `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Policies.cs`: Policy management on project shard.
 - `libs/infrastructure/src/Storage/PostgreSqlTenantSchemaStore.Relationships.cs`: Relationship management on project shard.

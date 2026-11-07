@@ -76,6 +76,9 @@ public sealed class DynamicBlobStorageAdapter : IBlobStorageAdapter
     public Task<BlobMetadata?> HeadObjectAsync(string bucket, string objectKey, CancellationToken cancellationToken = default) =>
         GetActiveAdapter().HeadObjectAsync(bucket, objectKey, cancellationToken);
 
+    public Task<IReadOnlyList<BlobMetadata>> ListObjectsAsync(string bucket, string? prefix = null, int limit = 100, CancellationToken cancellationToken = default) =>
+        GetActiveAdapter().ListObjectsAsync(bucket, prefix, limit, cancellationToken);
+
     public Task<string> CreatePresignedPutUrlAsync(string bucket, string objectKey, TimeSpan expiry, CancellationToken cancellationToken = default) =>
         GetActiveAdapter().CreatePresignedPutUrlAsync(bucket, objectKey, expiry, cancellationToken);
 

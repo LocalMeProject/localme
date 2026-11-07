@@ -259,7 +259,7 @@ export const HostingView: React.FC<HostingViewProps> = ({
             </div>
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <span>موقعیت دیتاسنتر لبه:</span>
-              <span>ایران - تهران (برج میلاد آسیاتک)</span>
+              <span>ایران - تهران (دیتاسنتر مرکزی)</span>
             </div>
           </div>
         </div>

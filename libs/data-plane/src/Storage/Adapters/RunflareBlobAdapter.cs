@@ -91,6 +91,11 @@ public sealed class RunflareBlobAdapter : IBlobStorageAdapter
         return new BlobMetadata(bucket, objectKey, length, contentType, etag, lastModified);
     }
 
+    public Task<IReadOnlyList<BlobMetadata>> ListObjectsAsync(string bucket, string? prefix = null, int limit = 100, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<BlobMetadata>>(Array.Empty<BlobMetadata>());
+    }
+
     public Task<string> CreatePresignedPutUrlAsync(string bucket, string objectKey, TimeSpan expiry, CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(bucket, objectKey);

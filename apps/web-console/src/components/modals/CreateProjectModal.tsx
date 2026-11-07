@@ -21,7 +21,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [region, setRegion] = useState('ir-teh-1 (آسیاتک برج میلاد)');
+  const [region, setRegion] = useState('ir-teh-1 (دیتاسنتر مرکزی تهران)');
   const [password, setPassword] = useState('');
   const [enablePassword, setEnablePassword] = useState(false);
 
@@ -132,8 +132,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => setRegion(e.target.value)}
                 className="w-full pr-10 pl-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800"
               >
-                <option value="ir-teh-1 (آسیاتک برج میلاد)">آسیاتک برج میلاد (تهران)</option>
-                <option value="ir-teh-2 (زیرساخت امام)">زیرساخت امام (تهران)</option>
+                <option value="ir-teh-1 (دیتاسنتر مرکزی تهران)">دیتاسنتر مرکزی (تهران)</option>
+                <option value="ir-teh-2 (دیتاسنتر پشتیبان تهران)">دیتاسنتر پشتیبان (تهران)</option>
               </select>
             </div>
           </div>

@@ -266,7 +266,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onChange={(e) => setEgressRegion(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-emerald-500 shadow-xs"
               >
-                <option value="ir-tehran">ایران - تهران (برج میلاد آسیاتک)</option>
+                <option value="ir-tehran">ایران - تهران (دیتاسنتر مرکزی)</option>
                 <option value="cross-de">نود خروجی فرامرزی - آلمان (فرانکفورت)</option>
                 <option value="cross-nl">نود خروجی فرامرزی - هلند (آمستردام)</option>
               </select>

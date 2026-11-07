@@ -105,11 +105,13 @@ public class Program
         {
             var shardStore = sp.GetRequiredService<IPlatformShardStore>();
             var primaryDs = sp.GetRequiredService<NpgsqlDataSource>();
+            var pgStore = sp.GetService<IProjectStore>() as PostgreSqlProjectStore;
+            var primaryConn = pgStore?.ConnectionString;
             return new ShardManagerService(shardStore, primaryDs, conn =>
             {
                 var normalized = PostgreSqlProjectStore.NormalizePostgresConnectionString(conn);
                 return NpgsqlDataSource.Create(normalized);
-            });
+            }, primaryConn);
         });
 
         builder.Services.AddSingleton<ITenantDatabaseStore>(sp =>
@@ -246,6 +248,21 @@ public class Program
 
         app.UseMiddleware<GatewayCacheMiddleware>();
         app.UseMiddleware<SecurityRobotsMiddleware>();
+
+        // Real Telemetry & Request Duration Metrics Middleware
+        app.Use(async (context, next) =>
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await next();
+            sw.Stop();
+            var reqPath = context.Request.Path.Value ?? "";
+            if (!reqPath.StartsWith("/_baas/v1/admin/telemetry", StringComparison.OrdinalIgnoreCase) &&
+                !reqPath.StartsWith("/_baas/v1/admin/logs", StringComparison.OrdinalIgnoreCase) &&
+                !reqPath.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase))
+            {
+                SystemMetricsCollector.RecordRequestLatency(sw.Elapsed.TotalMilliseconds);
+            }
+        });
 
         // Multi-Tenant Edge Middleware: Subdomains (*.localme.ir) & Custom Domains
         app.Use(async (context, next) =>

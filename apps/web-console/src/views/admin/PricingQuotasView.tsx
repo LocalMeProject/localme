@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { 
   DollarSign, 
   Save, 
   RefreshCw, 
   CheckCircle2, 
   AlertCircle, 
-  Sliders 
+  Sliders,
+  Radio,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
-import { formatToman } from '../../utils/persian';
+import { formatToman, toPersianDigits } from '../../utils/persian';
 
 export function PricingQuotasView() {
   const [loading, setLoading] = useState(true);
@@ -24,10 +26,15 @@ export function PricingQuotasView() {
   const [minTopup, setMinTopup] = useState(100000);
 
   // Quotas & System Config
-  const [egressIp, setEgressIp] = useState('2.180.12.94');
+  const [egressIp, setEgressIp] = useState('');
   const [maxProjectsPerUser, setMaxProjectsPerUser] = useState(10);
   const [storageQuotaMb, setStorageQuotaMb] = useState(1024);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('سامانه در حال ارتقا و نگهداری دوره‌ای است. لطفا شکیبا باشید.');
+
+  // Cluster Bus Manual Test State
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; latencyMs?: number; message?: string } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -51,6 +58,7 @@ export function PricingQuotasView() {
         if (config.defaultMaxProjectsPerUser) setMaxProjectsPerUser(config.defaultMaxProjectsPerUser);
         if (config.defaultStorageQuotaMb) setStorageQuotaMb(config.defaultStorageQuotaMb);
         if (typeof config.maintenanceMode === 'boolean') setMaintenanceMode(config.maintenanceMode);
+        if (config.maintenanceMessage) setMaintenanceMessage(config.maintenanceMessage);
       }
     } catch (err) {
       console.error('Failed to load pricing/quotas', err);
@@ -63,7 +71,7 @@ export function PricingQuotasView() {
     fetchData();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setFeedback(null);
@@ -87,12 +95,13 @@ export function PricingQuotasView() {
         defaultMaxProjectsPerUser: Number(maxProjectsPerUser),
         defaultStorageQuotaMb: Number(storageQuotaMb),
         maintenanceMode,
+        maintenanceMessage: maintenanceMessage.trim(),
         minWalletTopupIrr: Number(minTopup),
       });
 
       setFeedback({
         type: 'success',
-        message: 'تعرفه‌ها و سهمیه‌های پایه با موفقیت ذخیره و در کل کلاستر پلتفرم منتشر شد.',
+        message: 'تعرفه‌ها و سهمیه‌های پایه با موفقیت در پایگاه‌داده ذخیره شد و در سراسر کلاستر منتشر گردید.',
       });
     } catch (err: any) {
       setFeedback({
@@ -104,18 +113,68 @@ export function PricingQuotasView() {
     }
   };
 
+  const handleBroadcastTest = async () => {
+    setBroadcasting(true);
+    setBroadcastResult(null);
+    try {
+      const res = await api.post('/_baas/v1/admin/cluster/broadcast', {
+        tag: 'admin_test',
+        action: 'ping',
+      });
+      setBroadcastResult({
+        ok: res.success ?? true,
+        latencyMs: res.latencyMs,
+        message: res.message || 'پیام NOTIFY در کلاستر باس منتشر شد.',
+      });
+    } catch (err: any) {
+      setBroadcastResult({
+        ok: false,
+        message: err.message || 'خطا در ارسال پیام به گذرگاه رویدادهای کلاستر.',
+      });
+    } finally {
+      setBroadcasting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-2 mb-1">
-          <DollarSign className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-base font-bold text-slate-900">تعرفه‌گذاری کلان، سهمیه‌های پایه و IP خروجی</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-base font-bold text-slate-900">تعرفه‌ها، سهمیه‌ها و پیکربندی عملیاتی سرور</h2>
+          </div>
+          <p className="text-xs text-slate-500">
+            تنظیم قیمت مصرف منابع (دیتابیس، استوریج، توابع، احراز هویت)، سهمیه کاربر، و پیام اضطراری کلاستر.
+          </p>
         </div>
-        <p className="text-xs text-slate-500">
-          تنظیم مدل اقتصادی پلتفرم، حداقل شارژ کیف پول و متغیرهای عملیاتی کلان سامانه.
-        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition disabled:opacity-50"
+            title="بازخوانی داده‌ها"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-400'}`} />
+            <span>بازخوانی</span>
+          </button>
+          <button
+            onClick={handleBroadcastTest}
+            disabled={broadcasting}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition disabled:opacity-50"
+          >
+            {broadcasting ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+            ) : (
+              <Radio className="w-4 h-4 text-emerald-600" />
+            )}
+            <span>تست زنده کلاستر باس (NOTIFY)</span>
+          </button>
+        </div>
       </div>
 
       {feedback && (
@@ -127,214 +186,243 @@ export function PricingQuotasView() {
           }`}
         >
           {feedback.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           )}
           <span>{feedback.message}</span>
         </div>
       )}
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-200 shadow-xs">
-          <RefreshCw className="w-6 h-6 animate-spin text-emerald-600 mb-2" />
-          <span className="text-xs text-slate-500">در حال دریافت تعرفه‌ها...</span>
+      {broadcastResult && (
+        <div
+          className={`p-4 rounded-xl border text-xs flex items-center justify-between animate-in fade-in ${
+            broadcastResult.ok
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {broadcastResult.ok ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{broadcastResult.message}</span>
+          </div>
+          {broadcastResult.latencyMs !== undefined && (
+            <span className="font-mono font-bold text-xs shrink-0 mr-2" dir="ltr">
+              {toPersianDigits(broadcastResult.latencyMs)} ms
+            </span>
+          )}
         </div>
-      ) : (
+      )}
+
+      {/* Pricing Form */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <form onSubmit={handleSave} className="space-y-6">
           
-          {/* Pricing Catalog */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 mb-3 flex items-center gap-1.5">
               <DollarSign className="w-4 h-4 text-emerald-600" />
-              <span>کاتالوگ قیمت‌گذاری منابع (به ریال)</span>
+              <span>نرخ‌های تعرفه و مصرف منابع (ریال)</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
                   آبونمان پایه ماهانه هر پروژه (ریال)
                 </label>
                 <input
                   type="number"
-                  min={0}
                   value={baseFee}
-                  onChange={(e) => setBaseFee(parseInt(e.target.value, 10) || 0)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setBaseFee(Number(e.target.value))}
+                  min={0}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(baseFee)}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  قیمت هر گیگابایت فضای استوریج در ماه (ریال)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  فضای ذخیره‌سازی ابری (گیگابایت / ماه)
                 </label>
                 <input
                   type="number"
-                  min={0}
                   value={storageGb}
-                  onChange={(e) => setStorageGb(parseInt(e.target.value, 10) || 0)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setStorageGb(Number(e.target.value))}
+                  min={0}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(storageGb)}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  قیمت هر ۱۰۰۰ سطر دیتابیس در ماه (ریال)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  پایگاه‌داده (به ازای هر ۱,۰۰۰ رکورد ماهانه)
                 </label>
                 <input
                   type="number"
-                  min={0}
                   value={dbRows}
-                  onChange={(e) => setDbRows(parseInt(e.target.value, 10) || 0)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setDbRows(Number(e.target.value))}
+                  min={0}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(dbRows)}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  قیمت هر ۱۰ هزار فراخوانی تابع اج (ریال)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  توابع ابری (به ازای هر ۱۰,۰۰۰ فراخوانی)
                 </label>
                 <input
                   type="number"
-                  min={0}
                   value={edgeCalls}
-                  onChange={(e) => setEdgeCalls(parseInt(e.target.value, 10) || 0)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setEdgeCalls(Number(e.target.value))}
+                  min={0}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(edgeCalls)}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  قیمت هر ۱۰۰۰ کاربر فعال احراز هویت ماهانه (ریال)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  احراز هویت (به ازای هر ۱,۰۰۰ کاربر ماهانه فعال)
                 </label>
                 <input
                   type="number"
-                  min={0}
                   value={authUsers}
-                  onChange={(e) => setAuthUsers(parseInt(e.target.value, 10) || 0)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setAuthUsers(Number(e.target.value))}
+                  min={0}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(authUsers)}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
                   حداقل مبلغ شارژ کیف پول (ریال)
                 </label>
                 <input
                   type="number"
-                  min={10000}
                   value={minTopup}
-                  onChange={(e) => setMinTopup(parseInt(e.target.value, 10) || 100000)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setMinTopup(Number(e.target.value))}
+                  min={10000}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   معادل {formatToman(minTopup)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Operational Settings & Egress */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 pb-3 border-b border-slate-100">
+          {/* Operational Config */}
+          <div className="pt-4 border-t border-slate-100">
+            <h3 className="text-xs font-bold text-slate-900 mb-3 flex items-center gap-1.5">
               <Sliders className="w-4 h-4 text-emerald-600" />
-              <span>متغیرهای عملیاتی و سهمیه‌های پلتفرم</span>
+              <span>پیکربندی سهمیه‌ها و وضعیت سرور</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  آی‌پی استاتیک خروجی (Egress NAT IP)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  آدرس IP ثابت خروجی سرور (Egress NAT)
                 </label>
                 <input
                   type="text"
                   value={egressIp}
                   onChange={(e) => setEgressIp(e.target.value)}
-                  placeholder="2.180.12.94"
+                  placeholder="IP سرور یا گیت‌وی خروجی"
                   dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  جهت تعریف IP مجاز در درگاه‌های شاپرک و PSPها
-                </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  حداکثر پروژه مجاز برای هر کاربر
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  حداکثر پروژه مجاز هر توسعه‌دهنده
                 </label>
                 <input
                   type="number"
-                  min={1}
                   value={maxProjectsPerUser}
-                  onChange={(e) => setMaxProjectsPerUser(parseInt(e.target.value, 10) || 10)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setMaxProjectsPerUser(Number(e.target.value))}
+                  min={1}
+                  max={1000}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  سهمیه پیش‌فرض استوریج (مگابایت)
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  سهمیه پیش‌فرض استوریج هر پروژه (MB)
                 </label>
                 <input
                   type="number"
-                  min={100}
                   value={storageQuotaMb}
-                  onChange={(e) => setStorageQuotaMb(parseInt(e.target.value, 10) || 1024)}
-                  dir="ltr"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  onChange={(e) => setStorageQuotaMb(Number(e.target.value))}
+                  min={50}
+                  max={500000}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
+            </div>
 
-              <div className="sm:col-span-3 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700">
+            {/* Maintenance Mode */}
+            <div className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={maintenanceMode}
+                  onChange={(e) => setMaintenanceMode(e.target.checked)}
+                  className="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500"
+                />
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span>فعال‌سازی وضعیت ارتقا و نگهداری کلان (Maintenance Mode)</span>
+                </span>
+              </label>
+
+              {maintenanceMode && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    پیام نمایشی به کاربران در زمان نگهداری:
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={maintenanceMode}
-                    onChange={(e) => setMaintenanceMode(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                    type="text"
+                    value={maintenanceMessage}
+                    onChange={(e) => setMaintenanceMessage(e.target.value)}
+                    placeholder="سامانه در حال ارتقا است..."
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-rose-200 text-xs text-slate-900 focus:outline-none focus:border-rose-500"
                   />
-                  <span>فعال‌سازی حالت نگهداری عمومی پلتفرم (Maintenance Mode)</span>
-                </label>
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end pt-4 border-t border-slate-100">
             <button
               type="submit"
               disabled={saving}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
             >
-              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>ذخیره کلیه تعرفه‌ها و متغیرها</span>
+              <Save className="w-4 h-4" />
+              <span>{saving ? 'در حال ذخیره‌سازی...' : 'ذخیره تعرفه‌ها و اعمال در کلاستر'}</span>
             </button>
           </div>
 
         </form>
-      )}
+      </div>
 
     </div>
   );

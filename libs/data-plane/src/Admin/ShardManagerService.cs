@@ -43,23 +43,27 @@ public sealed class ShardManagerService
     private readonly IPlatformShardStore _shardStore;
     private readonly Func<string, object> _dataSourceFactory; // Factory to create NpgsqlDataSource from connection string
     private readonly object _primaryDataSource;
+    private readonly string? _primaryConnectionString;
     private readonly ConcurrentDictionary<string, object> _dataSourcePool = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, PlatformShard> _shardCatalog = new(StringComparer.OrdinalIgnoreCase);
 
     public ShardManagerService(
         IPlatformShardStore shardStore,
         object primaryDataSource,
-        Func<string, object> dataSourceFactory)
+        Func<string, object> dataSourceFactory,
+        string? primaryConnectionString = null)
     {
         _shardStore = shardStore ?? throw new ArgumentNullException(nameof(shardStore));
         _primaryDataSource = primaryDataSource ?? throw new ArgumentNullException(nameof(primaryDataSource));
         _dataSourceFactory = dataSourceFactory ?? throw new ArgumentNullException(nameof(dataSourceFactory));
+        _primaryConnectionString = primaryConnectionString;
 
         _dataSourcePool["shard-a"] = _primaryDataSource;
         _ = InitializeShardsAsync();
     }
 
     public object PrimaryDataSource => _primaryDataSource;
+    public string? PrimaryConnectionString => _primaryConnectionString;
 
     public async Task InitializeShardsAsync(CancellationToken ct = default)
     {
@@ -124,22 +128,43 @@ public sealed class ShardManagerService
     public async Task<IReadOnlyList<PlatformShard>> GetAllShardsAsync(CancellationToken ct = default)
     {
         var shards = await _shardStore.GetAllShardsAsync(ct);
+        var resolved = new List<PlatformShard>();
         foreach (var s in shards)
         {
-            _shardCatalog[s.Id] = s;
+            var item = s;
+            if (item.Id.Equals("shard-a", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace(item.ConnectionString) || item.ConnectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(_primaryConnectionString))
+            {
+                item = item with { ConnectionString = _primaryConnectionString };
+            }
+            _shardCatalog[item.Id] = item;
+            resolved.Add(item);
         }
-        return shards;
+        return resolved;
     }
 
     public async Task<PlatformShard?> GetShardAsync(string shardId, CancellationToken ct = default)
     {
         if (_shardCatalog.TryGetValue(shardId, out var cached))
         {
+            if (cached.Id.Equals("shard-a", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace(cached.ConnectionString) || cached.ConnectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(_primaryConnectionString))
+            {
+                return cached with { ConnectionString = _primaryConnectionString };
+            }
             return cached;
         }
         var shard = await _shardStore.GetShardByIdAsync(shardId, ct);
         if (shard != null)
         {
+            if (shard.Id.Equals("shard-a", StringComparison.OrdinalIgnoreCase) &&
+                (string.IsNullOrWhiteSpace(shard.ConnectionString) || shard.ConnectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(_primaryConnectionString))
+            {
+                shard = shard with { ConnectionString = _primaryConnectionString };
+            }
             _shardCatalog[shard.Id] = shard;
         }
         return shard;
@@ -234,16 +259,22 @@ public sealed class ShardManagerService
 
     public async Task<ShardTestResult> TestConnectionAsync(string connectionString, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(connectionString) || connectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase))
-        {
-            return new ShardTestResult(true, 1, "PostgreSQL 18.1 (LocalMe Central Managed)", null);
-        }
-
         var sw = Stopwatch.StartNew();
         try
         {
             // Dynamically invoke test query using reflection to keep data-plane free of hard ADO.NET dependencies
-            var ds = _dataSourceFactory(connectionString);
+            object ds;
+            if (string.IsNullOrWhiteSpace(connectionString) ||
+                connectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrWhiteSpace(_primaryConnectionString) && connectionString.Equals(_primaryConnectionString, StringComparison.OrdinalIgnoreCase)))
+            {
+                ds = _primaryDataSource;
+            }
+            else
+            {
+                ds = _dataSourceFactory(connectionString);
+            }
+
             var openMethod = ds.GetType().GetMethod("OpenConnectionAsync", new[] { typeof(CancellationToken) });
             if (openMethod == null)
             {

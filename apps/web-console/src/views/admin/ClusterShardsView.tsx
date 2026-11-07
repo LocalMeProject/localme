@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Database, 
   Plus, 
@@ -9,7 +10,12 @@ import {
   Trash2, 
   Edit3, 
   Wifi, 
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Activity
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
 import { toPersianDigits } from '../../utils/persian';
@@ -27,10 +33,13 @@ export interface PlatformShard {
 }
 
 export function ClusterShardsView() {
+  const navigate = useNavigate();
   const [shards, setShards] = useState<PlatformShard[]>([]);
   const [loading, setLoading] = useState(true);
   const [testingShardId, setTestingShardId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; latencyMs?: number; message?: string }>>({});
+  const [visibleConnStrings, setVisibleConnStrings] = useState<Record<string, boolean>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,7 +51,7 @@ export function ClusterShardsView() {
   const [shardId, setShardId] = useState('');
   const [name, setName] = useState('');
   const [connectionString, setConnectionString] = useState('');
-  const [region, setRegion] = useState('ir-thr-at1 (برج میلاد)');
+  const [region, setRegion] = useState('ir-tehran-1');
   const [maxCapacity, setMaxCapacity] = useState(5000);
   const [isActive, setIsActive] = useState(true);
   const [isAccepting, setIsAccepting] = useState(true);
@@ -70,7 +79,7 @@ export function ClusterShardsView() {
     setShardId('');
     setName('');
     setConnectionString('');
-    setRegion('ir-thr-at1 (برج میلاد)');
+    setRegion('ir-tehran-1');
     setMaxCapacity(5000);
     setIsActive(true);
     setIsAccepting(true);
@@ -83,10 +92,10 @@ export function ClusterShardsView() {
     setShardId(shard.id);
     setName(shard.name);
     setConnectionString(shard.connectionString);
-    setRegion(shard.region);
-    setMaxCapacity(shard.maxCapacityProjects);
-    setIsActive(shard.isActive);
-    setIsAccepting(shard.isAcceptingNewProjects);
+    setRegion(shard.region || 'ir-tehran-1');
+    setMaxCapacity(shard.maxCapacityProjects || 5000);
+    setIsActive(shard.isActive ?? true);
+    setIsAccepting(shard.isAcceptingNewProjects ?? true);
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -99,8 +108,8 @@ export function ClusterShardsView() {
         ...prev,
         [id]: {
           ok: res.success || res.status === 'OK',
-          latencyMs: res.latencyMs || Math.floor(Math.random() * 15 + 3),
-          message: res.message || 'اتصال زنده با موفقیت برقرار شد.',
+          latencyMs: res.latencyMs,
+          message: res.message || (res.version ? `پایگاه‌داده پاسخگو است (${res.version.slice(0, 32)}...)` : 'اتصال زنده با موفقیت برقرار شد.'),
         },
       }));
     } catch (err: any) {
@@ -114,6 +123,22 @@ export function ClusterShardsView() {
     } finally {
       setTestingShardId(null);
     }
+  };
+
+  const toggleConnVisibility = (id: string) => {
+    setVisibleConnStrings((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const copyConnectionString = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const maskConnectionString = (str: string) => {
+    if (!str) return '---';
+    return str.replace(/Password=[^;]+/gi, 'Password=••••••••')
+              .replace(/:([^:@]+)@/, ':••••••••@');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +178,11 @@ export function ClusterShardsView() {
   };
 
   const handleDeleteShard = async (id: string) => {
+    if (id === 'shard-a') {
+      alert('شارد اصلی (shard-a) هسته پلتفرم است و امکان حذف آن وجود ندارد.');
+      return;
+    }
+
     if (!window.confirm(`آیا از حذف شارد «${id}» از کاتالوگ پلتفرم اطمینان دارید؟`)) {
       return;
     }
@@ -173,20 +203,33 @@ export function ClusterShardsView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Database className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">مدیریت شاردها و کلاستر پایگاه‌داده</h2>
+            <h2 className="text-base font-bold text-slate-900">مدیریت خوشه‌ها و شاردهای پایگاه‌داده (Database Shards)</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+              {toPersianDigits(shards.length)} شارد
+            </span>
           </div>
           <p className="text-xs text-slate-500">
-            توزیع پویای پروژه‌ها میان خوشه‌های مجزای PostgreSQL 18.1 با مقیاس‌پذیری نامحدود و کشینگ زنده تحت کلاستر باس.
+            توزیع پروژه‌های لوکال می میان سرورهای مستقل PostgreSQL با مقیاس‌پذیری نامحدود و همگام‌سازی بلادرنگ کلاستر باس.
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>افزودن شارد جدید</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate('/admin/activity')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+          >
+            <Activity className="w-4 h-4 text-slate-500" />
+            <span>پایش کوئری‌های زنده</span>
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>افزودن شارد جدید</span>
+          </button>
+        </div>
       </div>
 
       {/* Shards List / Cards Grid */}
@@ -215,11 +258,12 @@ export function ClusterShardsView() {
               Math.round(((shard.currentProjectCount || 0) / (shard.maxCapacityProjects || 1)) * 100)
             );
             const testResult = testResults[shard.id];
+            const isConnVisible = !!visibleConnStrings[shard.id];
 
             return (
               <div
                 key={shard.id}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-slate-300 transition flex flex-col justify-between"
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-slate-300 transition flex flex-col justify-between space-y-4"
               >
                 <div>
                   {/* Card Header */}
@@ -227,11 +271,13 @@ export function ClusterShardsView() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{shard.name}</span>
-                        <span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded" dir="ltr">
+                        <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-semibold" dir="ltr">
                           {shard.id}
                         </span>
                       </div>
-                      <span className="text-[11px] text-slate-400 mt-0.5 block">{shard.region}</span>
+                      <span className="text-[11px] text-slate-400 mt-0.5 block font-mono" dir="ltr">
+                        {shard.region || 'ir-tehran-1'}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -259,8 +305,36 @@ export function ClusterShardsView() {
                     </div>
                   </div>
 
+                  {/* Real Connection String Viewer with Masking */}
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs mb-3 space-y-1">
+                    <div className="flex items-center justify-between text-slate-500 text-[11px]">
+                      <span>رشته اتصال PostgreSQL:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleConnVisibility(shard.id)}
+                          className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition"
+                          title={isConnVisible ? 'مخفی‌سازی رمز' : 'نمایش رمز عبور'}
+                        >
+                          {isConnVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          <span>{isConnVisible ? 'مخفی' : 'نمایش'}</span>
+                        </button>
+                        <button
+                          onClick={() => copyConnectionString(shard.id, shard.connectionString)}
+                          className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition mr-2"
+                          title="کپی رشته اتصال"
+                        >
+                          {copiedId === shard.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedId === shard.id ? 'کپی شد' : 'کپی'}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-800 break-all bg-white p-2 rounded-lg border border-slate-200" dir="ltr">
+                      {isConnVisible ? shard.connectionString : maskConnectionString(shard.connectionString)}
+                    </div>
+                  </div>
+
                   {/* Capacity Bar */}
-                  <div className="space-y-1.5 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="space-y-1.5 mb-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <div className="flex items-center justify-between text-xs text-slate-600">
                       <span>ظرفیت تننت‌های مستقر:</span>
                       <span className="font-mono font-medium">
@@ -280,7 +354,7 @@ export function ClusterShardsView() {
                   {/* Test Connection Result */}
                   {testResult && (
                     <div
-                      className={`mb-3 p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
                         testResult.ok
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                           : 'bg-rose-50 border-rose-200 text-rose-800'
@@ -288,14 +362,14 @@ export function ClusterShardsView() {
                     >
                       <div className="flex items-center gap-1.5">
                         {testResult.ok ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                         )}
-                        <span>{testResult.message}</span>
+                        <span className="line-clamp-2">{testResult.message}</span>
                       </div>
-                      {testResult.latencyMs && (
-                        <span className="font-mono font-bold text-[11px]" dir="ltr">
+                      {testResult.latencyMs !== undefined && (
+                        <span className="font-mono font-bold text-[11px] shrink-0 mr-2" dir="ltr">
                           {toPersianDigits(testResult.latencyMs)} ms
                         </span>
                       )}
@@ -326,13 +400,15 @@ export function ClusterShardsView() {
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDeleteShard(shard.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                      title="حذف شارد"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {shard.id !== 'shard-a' && (
+                      <button
+                        onClick={() => handleDeleteShard(shard.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="حذف شارد"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -352,7 +428,7 @@ export function ClusterShardsView() {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
@@ -375,55 +451,55 @@ export function ClusterShardsView() {
                   value={shardId}
                   disabled={!!editingShard}
                   onChange={(e) => setShardId(e.target.value)}
-                  placeholder="shard-teh-2"
+                  placeholder="shard-tehran-2"
                   dir="ltr"
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono disabled:opacity-60 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  نام نمایشی
+                  نام نمایشی خوشه
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="خوشه اصلی تهران - برج میلاد"
+                  placeholder="سرور دیتابیس تهران ۲"
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  رشته اتصال کامل (Connection String)
+                  رشته اتصال کامل (PostgreSQL Connection String)
                 </label>
                 <textarea
-                  rows={3}
                   value={connectionString}
                   onChange={(e) => setConnectionString(e.target.value)}
-                  placeholder="Host=10.0.0.12;Port=5432;Database=postgres;Username=localme;Password=..."
+                  placeholder="Host=10.0.0.5;Port=5432;Database=localme_shard2;Username=postgres;Password=secret;"
                   dir="ltr"
+                  rows={3}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    منطقه جغرافیایی / دیتاسنتر
+                    شناسه منطقه (Region)
                   </label>
                   <input
                     type="text"
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
-                    placeholder="ir-thr-at1"
+                    placeholder="ir-tehran-1"
                     dir="ltr"
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -433,12 +509,12 @@ export function ClusterShardsView() {
                   </label>
                   <input
                     type="number"
-                    min={1}
                     value={maxCapacity}
-                    onChange={(e) => setMaxCapacity(parseInt(e.target.value, 10) || 5000)}
-                    dir="ltr"
+                    onChange={(e) => setMaxCapacity(Number(e.target.value))}
+                    min={1}
+                    max={50000}
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -461,7 +537,7 @@ export function ClusterShardsView() {
                     onChange={(e) => setIsAccepting(e.target.checked)}
                     className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
-                  <span>پذیرش پروژه‌های جدید مجاز باشد</span>
+                  <span>پذیرش پروژه‌های جدید</span>
                 </label>
               </div>
 
@@ -469,21 +545,19 @@ export function ClusterShardsView() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={formSubmitting}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
                 >
-                  {formSubmitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{editingShard ? 'ذخیره تغییرات شارد' : 'افزودن شارد به کلاستر'}</span>
+                  {formSubmitting ? 'در حال ثبت...' : editingShard ? 'ذخیره تغییرات' : 'ثبت و اتصال شارد'}
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}

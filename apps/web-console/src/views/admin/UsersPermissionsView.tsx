@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -7,10 +7,13 @@ import {
   Shield, 
   RefreshCw, 
   Edit2, 
-  AlertCircle 
+  AlertCircle,
+  Wallet,
+  PlusCircle,
+  MinusCircle
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
-import { formatToman } from '../../utils/persian';
+import { formatToman, toPersianDigits } from '../../utils/persian';
 
 interface PlatformUserItem {
   id: string;
@@ -19,6 +22,7 @@ interface PlatformUserItem {
   email: string;
   role: number | string; // 0: Superadmin, 1: Operator, 2: Developer
   walletBalanceIrr: number;
+  isActive?: boolean;
   createdAtUtc: string;
 }
 
@@ -32,6 +36,13 @@ export function UsersPermissionsView() {
   const [selectedRole, setSelectedRole] = useState<string>('Developer');
   const [savingRole, setSavingRole] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
+
+  // Credit Adjustment Modal
+  const [creditUser, setCreditUser] = useState<PlatformUserItem | null>(null);
+  const [creditAction, setCreditAction] = useState<'add' | 'deduct'>('add');
+  const [creditAmountToman, setCreditAmountToman] = useState<number>(50000);
+  const [savingCredit, setSavingCredit] = useState(false);
+  const [creditError, setCreditError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -98,6 +109,44 @@ export function UsersPermissionsView() {
     }
   };
 
+  const openCreditModal = (u: PlatformUserItem) => {
+    setCreditUser(u);
+    setCreditAction('add');
+    setCreditAmountToman(50000);
+    setCreditError(null);
+  };
+
+  const handleSaveCredit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creditUser) return;
+
+    setSavingCredit(true);
+    setCreditError(null);
+
+    const deltaIrr = creditAction === 'add' 
+      ? creditAmountToman * 10 
+      : -1 * creditAmountToman * 10;
+
+    try {
+      await api.post(`/_baas/v1/users/${encodeURIComponent(creditUser.id)}/credit`, {
+        deltaIrr,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === creditUser.id
+            ? { ...u, walletBalanceIrr: Math.max(0, u.walletBalanceIrr + deltaIrr) }
+            : u
+        )
+      );
+      setCreditUser(null);
+    } catch (err: any) {
+      setCreditError(err.message || 'خطا در تنظیم موجودی کاربر.');
+    } finally {
+      setSavingCredit(false);
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -116,10 +165,13 @@ export function UsersPermissionsView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">مدیریت کاربران پلتفرم و سطوح دسترسی (RBAC)</h2>
+            <h2 className="text-base font-bold text-slate-900">مدیریت کاربران، کیف پول و سطوح دسترسی (RBAC)</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+              {toPersianDigits(users.length)} کاربر
+            </span>
           </div>
           <p className="text-xs text-slate-500">
-            فهرست حساب‌های کاربری، کنترل نقش‌های امنیتی و موجودی کیف پول کاربران سکوی لوکال می.
+            فهرست حساب‌های کاربری، کنترل نقش‌های امنیتی، و تخصیص مستقیم اعتبار به کیف پول کاربران لوکال می.
           </p>
         </div>
 
@@ -194,13 +246,24 @@ export function UsersPermissionsView() {
                       </td>
 
                       <td className="py-3 px-4 text-left">
-                        <button
-                          onClick={() => openRoleModal(u)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition font-medium text-[11px]"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                          <span>تغییر نقش</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openCreditModal(u)}
+                            title="تنظیم موجودی کیف پول"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition font-medium text-[11px] border border-emerald-200"
+                          >
+                            <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>اعتبار</span>
+                          </button>
+
+                          <button
+                            onClick={() => openRoleModal(u)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition font-medium text-[11px]"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                            <span>نقش</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -211,18 +274,21 @@ export function UsersPermissionsView() {
         </div>
       )}
 
-      {/* Role Change Modal */}
+      {/* Role Edit Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" dir="rtl">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-bold text-slate-900">تغییر سطح دسترسی کاربر</h3>
-              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <h3 className="text-sm font-bold text-slate-900">
+                تغییر سطح دسترسی کاربر
+              </h3>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
+              >
+                ✕
+              </button>
             </div>
-
-            <p className="text-xs text-slate-600 mb-4">
-              تغییر نقش امنیتی برای «<span className="font-bold text-slate-900">{editingUser.fullName}</span>»:
-            </p>
 
             {roleError && (
               <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
@@ -233,35 +299,146 @@ export function UsersPermissionsView() {
 
             <form onSubmit={handleSaveRole} className="space-y-4">
               <div>
+                <span className="block text-xs font-semibold text-slate-700 mb-1">
+                  کاربر:
+                </span>
+                <div className="text-xs text-slate-800 font-bold">
+                  {editingUser.fullName || editingUser.phone}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  نقش امنیتی جدید
+                  نقش امنیتی جدید:
                 </label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="Developer">توسعه‌دهنده (Developer) — دسترسی عادی به پروژه‌ها</option>
-                  <option value="Operator">اپراتور (Operator) — دسترسی به گزارش‌ها و مانیتورینگ</option>
-                  <option value="Superadmin">مدیر ارشد (Superadmin) — کنترل کامل کلاستر و تنظیمات</option>
+                  <option value="Developer">توسعه‌دهنده (Developer)</option>
+                  <option value="Operator">اپراتور سامانه (Operator)</option>
+                  <option value="Superadmin">مدیر ارشد (Superadmin)</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={savingRole}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
                 >
-                  {savingRole && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>ثبت تغییرات</span>
+                  {savingRole ? 'در حال ثبت...' : 'ذخیره تغییرات'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Adjustment Modal */}
+      {creditUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" dir="rtl">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <span>تنظیم موجودی کیف پول کاربر</span>
+              </h3>
+              <button
+                onClick={() => setCreditUser(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {creditError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{creditError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCredit} className="space-y-4">
+              <div>
+                <span className="block text-xs font-semibold text-slate-700 mb-1">
+                  کاربر و موجودی فعلی:
+                </span>
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <span className="font-bold text-slate-900">{creditUser.fullName || creditUser.phone}</span>
+                  <span className="font-mono text-emerald-700 font-semibold">{formatToman(creditUser.walletBalanceIrr)}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  نوع عملیات:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCreditAction('add')}
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition ${
+                      creditAction === 'add'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>افزایش اعتبار</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreditAction('deduct')}
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition ${
+                      creditAction === 'deduct'
+                        ? 'bg-rose-50 text-rose-700 border-rose-300'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    <MinusCircle className="w-3.5 h-3.5" />
+                    <span>کسر اعتبار</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  مبلغ (تومان):
+                </label>
+                <input
+                  type="number"
+                  value={creditAmountToman}
+                  onChange={(e) => setCreditAmountToman(Math.max(1000, Number(e.target.value)))}
+                  step={1000}
+                  min={1000}
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCreditUser(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCredit}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                >
+                  {savingCredit ? 'در حال اعمال...' : 'ثبت در کیف پول'}
                 </button>
               </div>
             </form>
