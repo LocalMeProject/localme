@@ -14,6 +14,7 @@ public interface IProjectStore
     // Platform Users
     Task<List<PlatformUser>> LoadUsersAsync();
     Task UpsertUserAsync(PlatformUser user);
+    Task DeleteUserAsync(string userId);
 
     // Projects
     Task<List<BaasProject>> LoadProjectsAsync();

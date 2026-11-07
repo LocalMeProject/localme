@@ -12,7 +12,9 @@ import {
   LogOut, 
   ExternalLink, 
   Network,
-  Terminal
+  Terminal,
+  Wrench,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../../components/auth/AuthGuard';
 import { api } from '../../utils/apiClient';
@@ -20,7 +22,9 @@ import { api } from '../../utils/apiClient';
 export type AdminTab = 
   | 'shards'
   | 'activity'
+  | 'query'
   | 'storage'
+  | 'deployments'
   | 'gateways'
   | 'tenants'
   | 'telemetry'
@@ -56,7 +60,9 @@ export function AdminLayout({ currentTab, onTabChange, children }: AdminLayoutPr
   const navItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'shards', label: 'مدیریت شاردها و کلاستر', icon: Database },
     { id: 'activity', label: 'کوئری‌ها و نشست‌های زنده', icon: Terminal },
+    { id: 'query', label: 'کنسول SQL و نگهداری دیتابیس', icon: Wrench },
     { id: 'storage', label: 'فضای ذخیره‌سازی ابری (S3)', icon: HardDrive },
+    { id: 'deployments', label: 'توابع لبه و دامنه‌ها', icon: Zap },
     { id: 'gateways', label: 'درگاه‌های پیامک و پرداخت', icon: Radio },
     { id: 'tenants', label: 'نظارت بر پروژه‌ها (تننت‌ها)', icon: Building2 },
     { id: 'telemetry', label: 'پایش و سلامت سرور (Telemetry)', icon: Activity },

@@ -109,4 +109,21 @@ public static class SystemMetricsCollector
 
         return (Math.Round(p50, 1), Math.Round(p95, 1), Math.Round(p99, 1), totalReq);
     }
+
+    /// <summary>
+    /// Formats raw byte count into human readable metric.
+    /// </summary>
+    public static string FormatBytes(long bytes)
+    {
+        if (bytes <= 0) return "0 B";
+        string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
+        int i = 0;
+        double d = bytes;
+        while (d >= 1024 && i < suffixes.Length - 1)
+        {
+            d /= 1024;
+            i++;
+        }
+        return $"{d:0.#} {suffixes[i]}";
+    }
 }

@@ -367,6 +367,15 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         await cmd.ExecuteNonQueryAsync();
     }
 
+    public async Task DeleteUserAsync(string userId)
+    {
+        await EnsureInitializedAsync();
+        const string sql = "DELETE FROM platform_users WHERE id = @id;";
+        await using var cmd = _dataSource!.CreateCommand(sql);
+        cmd.Parameters.AddWithValue("id", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     // 2. Projects
     public async Task<List<BaasProject>> LoadProjectsAsync()
     {

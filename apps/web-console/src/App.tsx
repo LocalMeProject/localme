@@ -33,6 +33,8 @@ import { TelemetryHealthView } from './views/admin/TelemetryHealthView';
 import { UsersPermissionsView } from './views/admin/UsersPermissionsView';
 import { AdminLogsView } from './views/admin/AdminLogsView';
 import { PricingQuotasView } from './views/admin/PricingQuotasView';
+import { AdminSqlStudioView } from './views/admin/AdminSqlStudioView';
+import { AdminDeploymentsView } from './views/admin/AdminDeploymentsView';
 
 // Modals
 import { CreateProjectModal } from './components/modals/CreateProjectModal';
@@ -517,7 +519,7 @@ export default function App() {
   if (isAdminRoute) {
     const adminTabMatch = normalizedPath.match(/^\/admin\/([a-z0-9_-]+)/);
     const rawAdminTab = (adminTabMatch ? adminTabMatch[1] : 'shards') as AdminTab;
-    const validAdminTabs: AdminTab[] = ['shards', 'activity', 'storage', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
+    const validAdminTabs: AdminTab[] = ['shards', 'activity', 'query', 'storage', 'deployments', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
     const activeAdminTab: AdminTab = validAdminTabs.includes(rawAdminTab) ? rawAdminTab : 'shards';
 
     return (
@@ -525,7 +527,9 @@ export default function App() {
         <AdminLayout currentTab={activeAdminTab} onTabChange={(t) => navigate(`/admin/${t}`)}>
           {activeAdminTab === 'shards' && <ClusterShardsView />}
           {activeAdminTab === 'activity' && <DatabaseActivityView />}
+          {activeAdminTab === 'query' && <AdminSqlStudioView />}
           {activeAdminTab === 'storage' && <StorageBucketsView />}
+          {activeAdminTab === 'deployments' && <AdminDeploymentsView />}
           {activeAdminTab === 'gateways' && <GatewaysSmsView />}
           {activeAdminTab === 'tenants' && <TenantOversightView />}
           {activeAdminTab === 'telemetry' && <TelemetryHealthView />}

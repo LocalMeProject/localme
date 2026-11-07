@@ -194,7 +194,16 @@ public sealed partial class ProjectManagerService
     {
         if (_users.TryGetValue(userId, out var u))
         {
-            _users[userId] = u with { PasswordHash = HashPassword(newPassword) };
+            var updated = u with { PasswordHash = HashPassword(newPassword) };
+            _users[userId] = updated;
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.UpsertUserAsync(updated); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SetUserPassword persist error: {ex.Message}"); }
+                });
+            }
             return true;
         }
         return false;
@@ -204,7 +213,16 @@ public sealed partial class ProjectManagerService
     {
         if (_users.TryGetValue(userId, out var u))
         {
-            _users[userId] = u with { Role = newRole };
+            var updated = u with { Role = newRole };
+            _users[userId] = updated;
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.UpsertUserAsync(updated); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] UpdateUserRole persist error: {ex.Message}"); }
+                });
+            }
             return true;
         }
         return false;
@@ -214,7 +232,16 @@ public sealed partial class ProjectManagerService
     {
         if (_users.TryGetValue(userId, out var u))
         {
-            _users[userId] = u with { IsActive = isActive };
+            var updated = u with { IsActive = isActive };
+            _users[userId] = updated;
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.UpsertUserAsync(updated); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] UpdateUserStatus persist error: {ex.Message}"); }
+                });
+            }
             return true;
         }
         return false;
@@ -225,10 +252,62 @@ public sealed partial class ProjectManagerService
         if (_users.TryGetValue(userId, out var u))
         {
             var newBal = Math.Max(0, u.WalletBalanceIrr + deltaIrr);
-            _users[userId] = u with { WalletBalanceIrr = newBal };
+            var updated = u with { WalletBalanceIrr = newBal };
+            _users[userId] = updated;
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.UpsertUserAsync(updated); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] AdjustUserWallet persist error: {ex.Message}"); }
+                });
+            }
             return true;
         }
         return false;
+    }
+
+    public bool DeleteUser(string userId)
+    {
+        if (_users.TryRemove(userId, out _))
+        {
+            if (_store != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await _store.DeleteUserAsync(userId); }
+                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteUser persist error: {ex.Message}"); }
+                });
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public PlatformUser CreatePlatformUser(string fullName, string phone, string email, string username, string password, UserRole role)
+    {
+        var user = new PlatformUser(
+            Id: $"usr_{Guid.NewGuid():N}"[..12],
+            FullName: fullName.Trim(),
+            Phone: phone.Trim(),
+            Email: string.IsNullOrWhiteSpace(email) ? $"{phone.Trim().Replace("+", "", StringComparison.Ordinal)}@localme.ir" : email.Trim(),
+            Role: role,
+            WalletBalanceIrr: 0,
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            IsActive: true,
+            Username: string.IsNullOrWhiteSpace(username) ? phone.Trim().Replace("+", "", StringComparison.Ordinal) : username.Trim(),
+            PasswordHash: HashPassword(password)
+        );
+        _users[user.Id] = user;
+        if (_store != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await _store.UpsertUserAsync(user); }
+                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] CreatePlatformUser persist error: {ex.Message}"); }
+            });
+        }
+        return user;
     }
 
     public PlatformUser RegisterDeveloper(string phone, string fullName, string? email = null)

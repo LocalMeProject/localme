@@ -62,6 +62,10 @@ affected_projects:
 - `apps/web-console/src/views/admin/PricingQuotasView.tsx`: Pricing catalog and quotas editor.
 - `apps/server/src/wwwroot/assets/index-BIrLsUaE.css`: Compiled CSS bundle.
 - `apps/server/src/wwwroot/assets/index-D4P2Fuxq.js`: Compiled JS bundle.
+- `apps/server/src/wwwroot/assets/index-BLnyn0hZ.js`: Compiled JS bundle for web-console.
+- `apps/server/src/wwwroot/assets/index-C1vClONq.css`: Compiled CSS bundle for web-console.
+- `apps/web-console/src/views/admin/AdminDeploymentsView.tsx`: Global edge functions manager, cross-tenant custom domains manager, and .NET 10 CLR runtime diagnostics.
+- `apps/web-console/src/views/admin/AdminSqlStudioView.tsx`: Interactive multi-schema SQL editor, table size & bloat analyzer, VACUUM/REINDEX maintenance runner, and pg_locks inspector.
 - `tests/LocalMe.Integration.Tests/DynamicConfigAndShardsTests.cs`: Ephemeral container test battery for in-DB configs and sharding.
 - `docker-compose.prod.yml`: Provider-agnostic production compose setup.
 - `Dockerfile.multistage`: Standalone multi-stage build definition for CI/CD runners.
@@ -79,7 +83,8 @@ affected_projects:
 - `CHANGE_SURFACE.md`: Declared blast radius.
 - `Dockerfile`: Multi-stage build for web-console, dotnet publish, and lean runtime.
 - `package.json`: Add generic deploy script target.
-- `apps/server/src/Program.cs`: Wire dynamic services, admin endpoints, SPA deep linking.
+- `apps/server/src/Diagnostics/PlatformLogBuffer.cs`: Added entity-type, entity-id, client-ip, trace-id indexing and multi-criteria log query filtering.
+- `apps/server/src/Program.cs`: Wire dynamic services, admin endpoints, SPA deep linking, and per-entity logging tags.
 - `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`: Auth route enhancements and redirects.
 - `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Tenant query execution and schema updates.
 - `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Database snapshot routes.
@@ -101,9 +106,11 @@ affected_projects:
 - `libs/core-domain/src/Database/SqlAstQueryCompiler.cs`: AST query compilation.
 - `libs/data-plane/src/Admin/PlatformConfig.cs`: Add storage adapter and sharding fields.
 - `libs/data-plane/src/Admin/PlatformConfigurationService.cs`: In-DB PostgreSQL persistence and reload.
+- `libs/data-plane/src/MultiTenancy/IProjectStore.cs`: Added DeleteUserAsync domain contract.
 - `libs/data-plane/src/MultiTenancy/ProjectArchiveService.cs`: Universal project archiving.
 - `libs/data-plane/src/MultiTenancy/ProjectManagerModels.cs`: Shard identifier in project models.
 - `libs/data-plane/src/MultiTenancy/ProjectManagerService.cs`: Shard reassignment logic.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.Users.cs`: In-memory and in-DB user persistence, role escalation, password resets, and user deletion.
 - `libs/data-plane/src/Storage/IBlobStorageAdapter.cs`: Added ListObjectsAsync definition.
 - `libs/data-plane/src/Storage/Adapters/LocalDiskAdapter.cs`: Implemented ListObjectsAsync.
 - `libs/data-plane/src/Storage/Adapters/RunflareBlobAdapter.cs`: Implemented ListObjectsAsync.

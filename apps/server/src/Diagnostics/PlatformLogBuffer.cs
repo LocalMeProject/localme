@@ -14,7 +14,11 @@ public sealed record PlatformLogEntry(
     string LogLevel,
     string Category,
     string Message,
-    string? Exception = null
+    string? Exception = null,
+    string? EntityType = null,
+    string? EntityId = null,
+    string? ClientIp = null,
+    string? TraceId = null
 );
 
 public sealed class PlatformLogBuffer : ILoggerProvider
@@ -29,7 +33,15 @@ public sealed class PlatformLogBuffer : ILoggerProvider
         _maxCapacity = maxCapacity;
     }
 
-    public void AddEntry(string level, string category, string message, string? exception = null)
+    public void AddEntry(
+        string level, 
+        string category, 
+        string message, 
+        string? exception = null,
+        string? entityType = null,
+        string? entityId = null,
+        string? clientIp = null,
+        string? traceId = null)
     {
         var cfg = _configService?.GetConfig();
         if (cfg != null && !cfg.IsPlatformLoggingActive) return;
@@ -40,14 +52,24 @@ public sealed class PlatformLogBuffer : ILoggerProvider
             LogLevel: level,
             Category: category,
             Message: message,
-            Exception: exception
+            Exception: exception,
+            EntityType: entityType,
+            EntityId: entityId,
+            ClientIp: clientIp,
+            TraceId: traceId
         );
 
         _logs.Enqueue(entry);
         while (_logs.Count > _maxCapacity && _logs.TryDequeue(out _)) { }
     }
 
-    public IReadOnlyList<PlatformLogEntry> GetLogs(string? minLevel = null, string? category = null, string? search = null, int limit = 100)
+    public IReadOnlyList<PlatformLogEntry> GetLogs(
+        string? minLevel = null, 
+        string? category = null, 
+        string? search = null, 
+        string? entityType = null,
+        string? entityId = null,
+        int limit = 100)
     {
         var query = _logs.AsEnumerable();
 
@@ -62,11 +84,24 @@ public sealed class PlatformLogBuffer : ILoggerProvider
             query = query.Where(l => l.Category.Contains(category, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrWhiteSpace(entityType) && entityType != "all")
+        {
+            query = query.Where(l => l.EntityType != null && l.EntityType.Equals(entityType, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(entityId))
+        {
+            query = query.Where(l => l.EntityId != null && l.EntityId.Contains(entityId, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (!string.IsNullOrWhiteSpace(search))
         {
             query = query.Where(l =>
                 l.Message.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 l.Category.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                (l.EntityId != null && l.EntityId.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                (l.EntityType != null && l.EntityType.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                (l.TraceId != null && l.TraceId.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                 (l.Exception != null && l.Exception.Contains(search, StringComparison.OrdinalIgnoreCase)));
         }
 

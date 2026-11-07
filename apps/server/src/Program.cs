@@ -249,18 +249,81 @@ public class Program
         app.UseMiddleware<GatewayCacheMiddleware>();
         app.UseMiddleware<SecurityRobotsMiddleware>();
 
-        // Real Telemetry & Request Duration Metrics Middleware
+        // Real Telemetry, Latency Measurement & Per-Entity Request Logging Middleware
         app.Use(async (context, next) =>
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             await next();
             sw.Stop();
             var reqPath = context.Request.Path.Value ?? "";
-            if (!reqPath.StartsWith("/_baas/v1/admin/telemetry", StringComparison.OrdinalIgnoreCase) &&
-                !reqPath.StartsWith("/_baas/v1/admin/logs", StringComparison.OrdinalIgnoreCase) &&
-                !reqPath.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase))
+            var isInternalPoll = reqPath.StartsWith("/_baas/v1/admin/telemetry", StringComparison.OrdinalIgnoreCase) ||
+                                reqPath.StartsWith("/_baas/v1/admin/logs", StringComparison.OrdinalIgnoreCase) ||
+                                reqPath.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase) ||
+                                reqPath.StartsWith("/readyz", StringComparison.OrdinalIgnoreCase);
+
+            if (!isInternalPoll)
             {
                 SystemMetricsCollector.RecordRequestLatency(sw.Elapsed.TotalMilliseconds);
+
+                // Derive Entity Type & Entity ID for granular audit trail
+                string entityType = "system";
+                string? entityId = null;
+
+                if (reqPath.StartsWith("/_baas/v1/auth", StringComparison.OrdinalIgnoreCase))
+                {
+                    entityType = "auth";
+                }
+                else if (reqPath.StartsWith("/_baas/v1/projects", StringComparison.OrdinalIgnoreCase))
+                {
+                    entityType = "project";
+                    var parts = reqPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 3) entityId = parts[3];
+                }
+                else if (reqPath.StartsWith("/_baas/v1/users", StringComparison.OrdinalIgnoreCase) || reqPath.StartsWith("/_baas/v1/user", StringComparison.OrdinalIgnoreCase))
+                {
+                    entityType = "user";
+                    var parts = reqPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 3) entityId = parts[3];
+                }
+                else if (reqPath.StartsWith("/_baas/v1/admin/shards", StringComparison.OrdinalIgnoreCase) || reqPath.StartsWith("/_baas/v1/admin/db", StringComparison.OrdinalIgnoreCase))
+                {
+                    entityType = "database";
+                }
+                else if (reqPath.StartsWith("/_baas/v1/admin/storage", StringComparison.OrdinalIgnoreCase))
+                {
+                    entityType = "storage";
+                }
+                else if (reqPath.StartsWith("/_baas/v1/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = reqPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 2)
+                    {
+                        var seg = parts[2];
+                        entityId = seg;
+                        if (reqPath.Contains("/db/")) entityType = "database";
+                        else if (reqPath.Contains("/storage/")) entityType = "storage";
+                        else if (reqPath.Contains("/functions")) entityType = "function";
+                        else if (reqPath.Contains("/hosting/")) entityType = "hosting";
+                        else entityType = "project";
+                    }
+                }
+
+                var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                var traceId = context.TraceIdentifier;
+                var statusCode = context.Response.StatusCode;
+                var level = statusCode >= 500 ? "Error" : (statusCode >= 400 ? "Warning" : "Information");
+
+                var logBuf = context.RequestServices.GetService<PlatformLogBuffer>();
+                logBuf?.AddEntry(
+                    level, 
+                    "LocalMe.HttpTraffic", 
+                    $"{context.Request.Method} {reqPath} => {statusCode} ({sw.Elapsed.TotalMilliseconds:F1}ms)", 
+                    null, 
+                    entityType, 
+                    entityId, 
+                    clientIp, 
+                    traceId
+                );
             }
         });
 

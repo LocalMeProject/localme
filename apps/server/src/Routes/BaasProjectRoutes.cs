@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using LocalMe.DataPlane.Admin;
+using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compliance;
 using LocalMe.DataPlane.MultiTenancy;
@@ -258,7 +259,7 @@ public static class BaasProjectRoutes
             return Results.Json(result);
         });
 
-        app.MapGet("/_baas/v1/admin/logs", (HttpContext ctx, PlatformLogBuffer logBuffer, ProjectManagerService pm, string? level, string? category, string? search, int? limit) =>
+        app.MapGet("/_baas/v1/admin/logs", (HttpContext ctx, PlatformLogBuffer logBuffer, ProjectManagerService pm, string? level, string? category, string? search, string? entityType, string? entityId, int? limit) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user == null) return Results.Unauthorized();
@@ -266,7 +267,7 @@ public static class BaasProjectRoutes
             {
                 return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin or Operator can access platform logs.");
             }
-            var logs = logBuffer.GetLogs(level, category, search, limit ?? 100);
+            var logs = logBuffer.GetLogs(level, category, search, entityType, entityId, limit ?? 100);
             return Results.Json(logs);
         });
 
@@ -706,7 +707,7 @@ public static class BaasProjectRoutes
                 return Results.Problem(statusCode: 403, title: "Forbidden");
             }
 
-            var logs = logBuffer.GetLogs(null, null, null, 1000);
+            var logs = logBuffer.GetLogs(null, null, null, null, null, 1000);
             return Results.Json(logs);
         });
 
@@ -801,6 +802,478 @@ public static class BaasProjectRoutes
             var status = body["status"]?.ToString() ?? "Active";
             var ok = pm.UpdateProjectStatus(projectId, status);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
+        });
+
+        // 12. Deep User Management Admin APIs
+        app.MapPost("/_baas/v1/admin/users", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can create users.");
+
+            var fullName = body["fullName"]?.ToString() ?? "";
+            var phone = body["phone"]?.ToString() ?? "";
+            var email = body["email"]?.ToString() ?? "";
+            var username = body["username"]?.ToString();
+            var password = body["password"]?.ToString() ?? "LocalMeUser123!";
+            var roleStr = body["role"]?.ToString() ?? "Developer";
+            Enum.TryParse<UserRole>(roleStr, true, out var role);
+
+            if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(phone))
+                return Results.BadRequest(new { success = false, message = "نام کامل و شماره موبایل الزامی است." });
+
+            var user = pm.CreatePlatformUser(fullName, phone, email, username ?? "", password, role);
+            return Results.Ok(new { success = true, user });
+        });
+
+        app.MapPost("/_baas/v1/admin/users/{userId}/reset-password", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can reset passwords.");
+
+            var newPassword = body["newPassword"]?.ToString();
+            if (string.IsNullOrWhiteSpace(newPassword))
+                return Results.BadRequest(new { success = false, message = "کلمه عبور جدید الزامی است." });
+
+            var ok = pm.SetUserPassword(userId, newPassword);
+            return ok ? Results.Ok(new { success = true, message = "کلمه عبور کاربر با موفقیت تغییر یافت." }) : Results.NotFound();
+        });
+
+        app.MapPost("/_baas/v1/admin/users/{userId}/impersonate", (string userId, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can impersonate users.");
+
+            var targetUser = pm.GetUser(userId);
+            if (targetUser == null) return Results.NotFound(new { success = false, message = "کاربر مورد نظر یافت نشد." });
+
+            var tokens = OtpAuthService.GenerateSessionToken(targetUser.Id, targetUser.Role.ToString().ToLowerInvariant());
+            return Results.Ok(new { success = true, tokens, user = targetUser });
+        });
+
+        app.MapDelete("/_baas/v1/admin/users/{userId}", (string userId, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can delete users.");
+
+            if (currentUser.Id == userId)
+                return Results.BadRequest(new { success = false, message = "امکان حذف حساب کاربری مدیر جاری وجود ندارد." });
+
+            var ok = pm.DeleteUser(userId);
+            return ok ? Results.Ok(new { success = true, message = "کاربر با موفقیت حذف گردید." }) : Results.NotFound();
+        });
+
+        // 13. Deep Database Studio & Maintenance Admin APIs
+        app.MapPost("/_baas/v1/admin/db/query", async (JsonObject body, HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Only Superadmin can execute arbitrary SQL.");
+
+            var sql = body["sql"]?.ToString() ?? "";
+            var targetSchema = body["targetSchema"]?.ToString();
+
+            if (string.IsNullOrWhiteSpace(sql))
+                return Results.BadRequest(new { success = false, message = "عبارت SQL الزامی است." });
+
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                await using var conn = await ds.OpenConnectionAsync();
+                if (!string.IsNullOrWhiteSpace(targetSchema))
+                {
+                    var cleanSchema = targetSchema.Replace("\"", "").Replace(";", "").Trim();
+                    await using var setCmd = new NpgsqlCommand($"SET search_path TO \"{cleanSchema}\", public;", conn);
+                    await setCmd.ExecuteNonQueryAsync();
+                }
+
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.CommandTimeout = 20;
+
+                await using var reader = await cmd.ExecuteReaderAsync();
+                var columns = new List<string>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    columns.Add(reader.GetName(i));
+                }
+
+                var rows = new List<Dictionary<string, object?>>();
+                int count = 0;
+                while (await reader.ReadAsync() && count < 200)
+                {
+                    var row = new Dictionary<string, object?>();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        var val = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                        row[reader.GetName(i)] = val is DateTime dt ? dt.ToString("O") : val;
+                    }
+                    rows.Add(row);
+                    count++;
+                }
+                sw.Stop();
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    columns,
+                    rows,
+                    rowCount = rows.Count,
+                    executionTimeMs = Math.Round(sw.Elapsed.TotalMilliseconds, 2)
+                });
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    error = ex.Message,
+                    executionTimeMs = Math.Round(sw.Elapsed.TotalMilliseconds, 2)
+                });
+            }
+        });
+
+        app.MapGet("/_baas/v1/admin/db/tables", async (HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            const string sql = @"
+                SELECT 
+                    schemaname, 
+                    tablename, 
+                    coalesce(n_live_tup, 0)::bigint as live_rows, 
+                    coalesce(n_dead_tup, 0)::bigint as dead_rows, 
+                    pg_size_pretty(pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as data_size,
+                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename)) - pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as index_size,
+                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as total_size,
+                    pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))::bigint as total_bytes
+                FROM pg_stat_user_tables
+                WHERE schemaname LIKE 'tenant_%' OR schemaname = 'public'
+                ORDER BY total_bytes DESC
+                LIMIT 100;";
+
+            await using var conn = await ds.OpenConnectionAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+
+            var list = new List<object>();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new
+                {
+                    schema = reader.GetString(0),
+                    table = reader.GetString(1),
+                    liveRows = reader.GetInt64(2),
+                    deadRows = reader.GetInt64(3),
+                    dataSize = reader.GetString(4),
+                    indexSize = reader.GetString(5),
+                    totalSize = reader.GetString(6),
+                    totalBytes = reader.GetInt64(7)
+                });
+            }
+            return Results.Json(list);
+        });
+
+        app.MapPost("/_baas/v1/admin/db/maintenance", async (JsonObject body, HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Superadmin only.");
+
+            var action = (body["action"]?.ToString() ?? "VACUUM").ToUpperInvariant();
+            var schema = body["schema"]?.ToString();
+            var table = body["table"]?.ToString();
+
+            string sql = action switch
+            {
+                "REINDEX" when !string.IsNullOrWhiteSpace(table) => $"REINDEX TABLE \"{schema ?? "public"}\".\"{table}\";",
+                "REINDEX" when !string.IsNullOrWhiteSpace(schema) => $"REINDEX SCHEMA \"{schema}\";",
+                "VACUUM" when !string.IsNullOrWhiteSpace(table) => $"VACUUM ANALYZE \"{schema ?? "public"}\".\"{table}\";",
+                "VACUUM" => "VACUUM ANALYZE;",
+                _ => "ANALYZE;"
+            };
+
+            try
+            {
+                await using var conn = await ds.OpenConnectionAsync();
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.CommandTimeout = 60;
+                await cmd.ExecuteNonQueryAsync();
+                return Results.Ok(new { success = true, action, message = $"عملیات {action} با موفقیت به پایان رسید." });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { success = false, error = ex.Message });
+            }
+        });
+
+        app.MapGet("/_baas/v1/admin/db/locks", async (HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            const string sql = @"
+                SELECT 
+                    l.pid,
+                    l.locktype,
+                    l.mode,
+                    l.granted,
+                    coalesce(a.query, '<idle>') as query,
+                    coalesce(a.usename, 'unknown') as usename,
+                    coalesce(round(extract(epoch from (now() - a.query_start))::numeric, 2), 0) as duration_sec
+                FROM pg_locks l
+                LEFT JOIN pg_stat_activity a ON l.pid = a.pid
+                WHERE a.pid <> pg_backend_pid() AND l.locktype = 'relation'
+                ORDER BY l.granted ASC, duration_sec DESC
+                LIMIT 50;";
+
+            await using var conn = await ds.OpenConnectionAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+
+            var list = new List<object>();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new
+                {
+                    pid = reader.GetInt32(0),
+                    lockType = reader.GetString(1),
+                    mode = reader.GetString(2),
+                    granted = reader.GetBoolean(3),
+                    query = reader.GetString(4),
+                    user = reader.GetString(5),
+                    durationSec = reader.GetDecimal(6)
+                });
+            }
+            return Results.Json(list);
+        });
+
+        // 14. Global Edge Deployments & Web Hosting Admin APIs
+        app.MapGet("/_baas/v1/admin/deployments/functions", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            var allProjects = pm.GetAllProjects();
+            var allFunctions = new List<object>();
+
+            foreach (var p in allProjects)
+            {
+                var fns = pm.GetProjectFunctions(p.Id);
+                foreach (var fn in fns)
+                {
+                    allFunctions.Add(new
+                    {
+                        id = $"{p.Id}_{fn.Slug}",
+                        projectId = p.Id,
+                        projectSlug = p.Slug,
+                        projectName = p.Name,
+                        name = fn.Name,
+                        slug = fn.Slug,
+                        triggerPath = fn.TriggerPath,
+                        runtime = "v8-isolates",
+                        script = fn.Script,
+                        invocations = 0,
+                        createdAt = fn.CreatedAtUtc,
+                        updatedAt = fn.CreatedAtUtc
+                    });
+                }
+            }
+            return Results.Json(allFunctions);
+        });
+
+        app.MapDelete("/_baas/v1/admin/deployments/functions/{projectId}/{slug}", (string projectId, string slug, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin only.");
+
+            var ok = pm.DeleteFunction(projectId, slug);
+            return ok ? Results.Ok(new { success = true, message = "تابع با موفقیت حذف شد." }) : Results.NotFound();
+        });
+
+        app.MapGet("/_baas/v1/admin/deployments/domains", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            var allProjects = pm.GetAllProjects();
+            var allDomains = new List<object>();
+
+            foreach (var p in allProjects)
+            {
+                var doms = pm.GetDomains(p.Id);
+                foreach (var d in doms)
+                {
+                    allDomains.Add(new
+                    {
+                        projectId = p.Id,
+                        projectSlug = p.Slug,
+                        projectName = p.Name,
+                        domain = d.Domain,
+                        isVerified = d.IsVerified,
+                        createdAt = d.CreatedAtUtc,
+                        sslStatus = d.IsVerified ? "Active" : "Pending Verification"
+                    });
+                }
+            }
+            return Results.Json(allDomains);
+        });
+
+        app.MapDelete("/_baas/v1/admin/deployments/domains/{projectId}/{domain}", (string projectId, string domain, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin only.");
+
+            var ok = pm.DeleteDomain(projectId, domain);
+            return ok ? Results.Ok(new { success = true, message = "دامنه با موفقیت حذف شد." }) : Results.NotFound();
+        });
+
+        // 15. System Runtime Diagnostics
+        app.MapGet("/_baas/v1/admin/system/runtime", (HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService cfgService) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            var proc = Process.GetCurrentProcess();
+
+            return Results.Ok(new
+            {
+                osArchitecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
+                osDescription = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+                frameworkDescription = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                processId = proc.Id,
+                processorCount = Environment.ProcessorCount,
+                workingSetMb = Math.Round(proc.WorkingSet64 / 1024.0 / 1024.0, 1),
+                privateMemoryMb = Math.Round(proc.PrivateMemorySize64 / 1024.0 / 1024.0, 1),
+                gcHeapMb = Math.Round(GC.GetTotalMemory(false) / 1024.0 / 1024.0, 1),
+                isServerGC = System.Runtime.GCSettings.IsServerGC,
+                threadCount = proc.Threads.Count,
+                startTime = proc.StartTime.ToUniversalTime().ToString("O"),
+                uptimeSeconds = Math.Round((DateTime.UtcNow - proc.StartTime.ToUniversalTime()).TotalSeconds),
+                storageAdapter = cfgService.GetConfig().StorageAdapterType,
+                clusterBusActive = true
+            });
+        });
+
+        // 16. Per-Entity Telemetry & Resource Breakdown
+        app.MapGet("/_baas/v1/admin/telemetry/breakdown", async (HttpContext ctx, ProjectManagerService pm, NpgsqlDataSource ds, ShardManagerService shardMgr) =>
+        {
+            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
+            if (currentUser == null) return Results.Unauthorized();
+            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
+                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
+
+            var allProjects = pm.GetAllProjects();
+            var allUsers = pm.GetAllUsers();
+            var allShards = await shardMgr.GetAllShardsAsync();
+
+            var schemaSizes = new Dictionary<string, (int tableCount, long totalBytes, long totalRows)>();
+            try
+            {
+                await using var conn = await ds.OpenConnectionAsync();
+                const string sql = @"
+                    SELECT 
+                        schemaname, 
+                        count(distinct tablename)::int as tbl_cnt,
+                        coalesce(sum(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))), 0)::bigint as bytes,
+                        coalesce(sum(n_live_tup), 0)::bigint as rows
+                    FROM pg_stat_user_tables
+                    WHERE schemaname LIKE 'tenant_%'
+                    GROUP BY schemaname;";
+
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var schema = reader.GetString(0);
+                    schemaSizes[schema] = (reader.GetInt32(1), reader.GetInt64(2), reader.GetInt64(3));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TelemetryBreakdown] Schema query error: {ex.Message}");
+            }
+
+            var projectsBreakdown = allProjects.Select(p =>
+            {
+                var schemaKey = $"tenant_{p.Slug}";
+                var (tblCount, bytes, rows) = schemaSizes.TryGetValue(schemaKey, out var s) ? s : (0, 0L, 0L);
+                var buckets = pm.GetProjectBuckets(p.Id);
+                var files = buckets.SelectMany(b => pm.GetBucketFiles(p.Id, b.Name)).ToList();
+                var storageBytes = files.Sum(f => f.SizeBytes);
+                var functions = pm.GetProjectFunctions(p.Id);
+                var domains = pm.GetDomains(p.Id);
+
+                return new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    slug = p.Slug,
+                    region = p.Region,
+                    status = p.Status,
+                    shardId = p.DbClusterId ?? "shard-a",
+                    ownerPhone = p.OwnerPhone,
+                    tableCount = tblCount,
+                    totalRows = rows,
+                    dbSizeBytes = bytes,
+                    dbSizePretty = SystemMetricsCollector.FormatBytes(bytes),
+                    fileCount = files.Count,
+                    storageBytes,
+                    storagePretty = SystemMetricsCollector.FormatBytes(storageBytes),
+                    functionCount = functions.Count,
+                    domainCount = domains.Count,
+                    createdAt = p.CreatedAtUtc.ToString("O")
+                };
+            }).ToList();
+
+            var usersBreakdown = allUsers.Select(u =>
+            {
+                var userProjects = allProjects.Where(p => p.OwnerId == u.Id || p.OwnerPhone == u.Phone).ToList();
+                return new
+                {
+                    id = u.Id,
+                    fullName = u.FullName,
+                    phone = u.Phone,
+                    email = u.Email,
+                    username = u.Username,
+                    role = u.Role.ToString(),
+                    isActive = u.IsActive,
+                    walletBalanceIrr = u.WalletBalanceIrr,
+                    projectCount = userProjects.Count,
+                    createdAt = u.CreatedAtUtc.ToString("O")
+                };
+            }).ToList();
+
+            return Results.Ok(new
+            {
+                projects = projectsBreakdown,
+                users = usersBreakdown,
+                shards = allShards
+            });
         });
 
         // 11. Compliance Responders (Section 4.2)
