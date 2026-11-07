@@ -48,8 +48,8 @@ export function AdminLayout({ currentTab, onTabChange, children }: AdminLayoutPr
     // Fetch live config to get dynamic egress IP
     api.get('/_baas/v1/admin/config')
       .then((cfg) => {
-        if (cfg?.egressNatIp) {
-          setEgressIp(cfg.egressNatIp);
+        if (cfg?.sovereignEgressNat || cfg?.egressNatIp) {
+          setEgressIp(cfg.sovereignEgressNat || cfg.egressNatIp);
         }
       })
       .catch(() => {

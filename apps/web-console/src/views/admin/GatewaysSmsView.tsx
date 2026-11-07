@@ -8,25 +8,32 @@ import {
   CreditCard, 
   Save, 
   MessageSquare, 
-  Key 
+  Key,
+  Clock,
+  Hash,
+  Link2
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
+import { formatToman } from '../../utils/persian';
 
 export function GatewaysSmsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // SMS Settings
-  const [smsProvider, setSmsProvider] = useState<'kavenegar' | 'faraz' | 'melipayamak'>('kavenegar');
-  const [smsApiKey, setSmsApiKey] = useState('');
-  const [smsSender, setSmsSender] = useState('3000777');
-  const [smsPattern, setSmsPattern] = useState('localme-verify');
+  // SMS Gateway Settings
+  const [smsDefaultProvider, setSmsDefaultProvider] = useState<'kavenegar' | 'melipayamak' | 'magfa'>('kavenegar');
+  const [smsDefaultApiKey, setSmsDefaultApiKey] = useState('');
+  const [smsDefaultSenderNumber, setSmsDefaultSenderNumber] = useState('3000777');
+  const [smsDefaultPatternCode, setSmsDefaultPatternCode] = useState('localme-verify');
+  const [smsDefaultOtpLength, setSmsDefaultOtpLength] = useState<number>(6);
+  const [smsDefaultOtpExpirySeconds, setSmsDefaultOtpExpirySeconds] = useState<number>(120);
 
   // Shetab IPG Settings
-  const [defaultIpgProvider, setDefaultIpgProvider] = useState<'zarinpal' | 'saman' | 'pasargad'>('zarinpal');
-  const [ipgMerchantId, setIpgMerchantId] = useState('');
-  const [ipgSandbox, setIpgSandbox] = useState(true);
+  const [ipgDefaultPsp, setIpgDefaultPsp] = useState<'zarinpal' | 'behpardakht' | 'sep' | 'sadad'>('zarinpal');
+  const [ipgDefaultMerchantId, setIpgDefaultMerchantId] = useState('');
+  const [ipgCallbackBaseUrl, setIpgCallbackBaseUrl] = useState('https://api.localme.ir/_baas/v1/pay/callback');
+  const [shaparakWageIrr, setShaparakWageIrr] = useState<number>(1200);
 
   // Test SMS Dispatch Tool
   const [testPhone, setTestPhone] = useState('');
@@ -38,12 +45,27 @@ export function GatewaysSmsView() {
     try {
       const cfg = await api.get('/_baas/v1/admin/config');
       if (cfg) {
-        if (cfg.smsProvider) setSmsProvider(cfg.smsProvider);
-        if (cfg.smsApiKey) setSmsApiKey(cfg.smsApiKey);
-        if (cfg.smsSenderLine) setSmsSender(cfg.smsSenderLine);
-        if (cfg.smsPatternName) setSmsPattern(cfg.smsPatternName);
-        if (cfg.ipgMerchantId) setIpgMerchantId(cfg.ipgMerchantId);
-        if (typeof cfg.ipgSandbox === 'boolean') setIpgSandbox(cfg.ipgSandbox);
+        if (cfg.smsDefaultProvider || cfg.smsProvider) {
+          const prov = (cfg.smsDefaultProvider || cfg.smsProvider).toLowerCase();
+          if (prov === 'melipayamak' || prov === 'magfa' || prov === 'kavenegar') {
+            setSmsDefaultProvider(prov);
+          }
+        }
+        if (cfg.smsDefaultApiKey || cfg.smsApiKey) setSmsDefaultApiKey(cfg.smsDefaultApiKey || cfg.smsApiKey);
+        if (cfg.smsDefaultSenderNumber || cfg.smsSenderLine) setSmsDefaultSenderNumber(cfg.smsDefaultSenderNumber || cfg.smsSenderLine);
+        if (cfg.smsDefaultPatternCode || cfg.smsPatternName) setSmsDefaultPatternCode(cfg.smsDefaultPatternCode || cfg.smsPatternName);
+        if (cfg.smsDefaultOtpLength) setSmsDefaultOtpLength(Number(cfg.smsDefaultOtpLength));
+        if (cfg.smsDefaultOtpExpirySeconds) setSmsDefaultOtpExpirySeconds(Number(cfg.smsDefaultOtpExpirySeconds));
+
+        if (cfg.ipgDefaultPsp || cfg.defaultIpgProvider) {
+          const psp = (cfg.ipgDefaultPsp || cfg.defaultIpgProvider).toLowerCase();
+          if (psp === 'behpardakht' || psp === 'sep' || psp === 'sadad' || psp === 'zarinpal') {
+            setIpgDefaultPsp(psp);
+          }
+        }
+        if (cfg.ipgDefaultMerchantId || cfg.ipgMerchantId) setIpgDefaultMerchantId(cfg.ipgDefaultMerchantId || cfg.ipgMerchantId);
+        if (cfg.ipgCallbackBaseUrl) setIpgCallbackBaseUrl(cfg.ipgCallbackBaseUrl);
+        if (cfg.shaparakWageIrr) setShaparakWageIrr(Number(cfg.shaparakWageIrr));
       }
     } catch (err) {
       console.error('Failed to load gateways config', err);
@@ -65,19 +87,23 @@ export function GatewaysSmsView() {
       const existing = await api.get('/_baas/v1/admin/config');
       const updated = {
         ...existing,
-        smsProvider,
-        smsApiKey: smsApiKey.trim(),
-        smsSenderLine: smsSender.trim(),
-        smsPatternName: smsPattern.trim(),
-        ipgMerchantId: ipgMerchantId.trim(),
-        ipgSandbox,
+        smsDefaultProvider,
+        smsDefaultApiKey: smsDefaultApiKey.trim(),
+        smsDefaultSenderNumber: smsDefaultSenderNumber.trim(),
+        smsDefaultPatternCode: smsDefaultPatternCode.trim(),
+        smsDefaultOtpLength: Number(smsDefaultOtpLength),
+        smsDefaultOtpExpirySeconds: Number(smsDefaultOtpExpirySeconds),
+        ipgDefaultPsp,
+        ipgDefaultMerchantId: ipgDefaultMerchantId.trim(),
+        ipgCallbackBaseUrl: ipgCallbackBaseUrl.trim(),
+        shaparakWageIrr: Number(shaparakWageIrr),
       };
 
       await api.put('/_baas/v1/admin/config', updated);
 
       setFeedback({
         type: 'success',
-        message: 'پیکربندی درگاه‌های پیامک و بانکی با موفقیت ذخیره و در کل کلاستر به‌روزرسانی شد.',
+        message: 'پیکربندی درگاه‌های پیامک و بانکی با موفقیت ذخیره و در سراسر کلاستر به‌روزرسانی شد.',
       });
     } catch (err: any) {
       setFeedback({
@@ -104,6 +130,7 @@ export function GatewaysSmsView() {
     try {
       const res = await api.post('/_baas/v1/admin/gateways/sms/test', {
         phone: testPhone.trim(),
+        provider: smsDefaultProvider,
       });
       setTestResult({
         success: res.success ?? true,
@@ -123,14 +150,25 @@ export function GatewaysSmsView() {
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-2 mb-1">
-          <Radio className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-base font-bold text-slate-900">تنظیمات درگاه‌های پیامک و پرداخت شتابی (IPG)</h2>
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Radio className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-base font-bold text-slate-900">تنظیمات درگاه‌های پیامک و پرداخت شتابی (IPG)</h2>
+          </div>
+          <p className="text-xs text-slate-500">
+            مدیریت وب‌سرویس‌های ارسال پیامک اعتبارسنجی (کاوه‌نگار، ملی‌پیامک، مگفا) و درگاه‌های پرداخت متصل به شبکه شاپرک.
+          </p>
         </div>
-        <p className="text-xs text-slate-500">
-          مدیریت گیت‌وی‌های ارسال پیامک اعتبارسنجی (کاوه نگار، فراز، ملی پیامک) و درگاه‌های پرداخت متصل به سامانه شاپرک.
-        </p>
+
+        <button
+          onClick={fetchConfig}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-400'}`} />
+          <span>بازخوانی</span>
+        </button>
       </div>
 
       {feedback && (
@@ -168,33 +206,33 @@ export function GatewaysSmsView() {
                   <MessageSquare className="w-4 h-4 text-emerald-600" />
                   <span>پیکربندی ارائه‌دهنده سرویس پیامک (SMS OTP)</span>
                 </h3>
-                <span className="text-[11px] text-slate-400">کد یک‌بار مصرف و اعلانات</span>
+                <span className="text-[11px] text-slate-400">احراز هویت و ارسال اعلانات</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    سامانه پیامکی
+                    سامانه وب‌سرویس پیامکی پیش‌فرض
                   </label>
                   <select
-                    value={smsProvider}
-                    onChange={(e: any) => setSmsProvider(e.target.value)}
+                    value={smsDefaultProvider}
+                    onChange={(e: any) => setSmsDefaultProvider(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   >
-                    <option value="kavenegar">کاوه‌نگار (Kavenegar)</option>
-                    <option value="faraz">فراز اس‌ام‌اس (FarazSMS)</option>
+                    <option value="kavenegar">کاوه‌نگار (Kavenegar REST API)</option>
                     <option value="melipayamak">ملی‌پیامک (Melipayamak)</option>
+                    <option value="magfa">مگفا (Magfa Corp)</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    شماره خط اختصاصی ارسال‌کننده
+                    شماره سرشماره یا خط خدماتی ارسال‌کننده
                   </label>
                   <input
                     type="text"
-                    value={smsSender}
-                    onChange={(e) => setSmsSender(e.target.value)}
+                    value={smsDefaultSenderNumber}
+                    onChange={(e) => setSmsDefaultSenderNumber(e.target.value)}
                     placeholder="3000777"
                     dir="ltr"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
@@ -203,36 +241,67 @@ export function GatewaysSmsView() {
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    کلید اعتبارسنجی وب‌سرویس (API Key)
+                    کلید اعتبارسنجی وب‌سرویس (API Key / Token)
                   </label>
                   <div className="relative">
                     <input
                       type="password"
-                      value={smsApiKey}
-                      onChange={(e) => setSmsApiKey(e.target.value)}
+                      value={smsDefaultApiKey}
+                      onChange={(e) => setSmsDefaultApiKey(e.target.value)}
                       placeholder="••••••••••••••••••••••••"
                       dir="ltr"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition pl-9"
                     />
                     <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                   </div>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     الگوی تایید پیامک (Lookup Pattern Template)
                   </label>
                   <input
                     type="text"
-                    value={smsPattern}
-                    onChange={(e) => setSmsPattern(e.target.value)}
+                    value={smsDefaultPatternCode}
+                    onChange={(e) => setSmsDefaultPatternCode(e.target.value)}
                     placeholder="localme-verify"
                     dir="ltr"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
-                  <span className="text-[11px] text-slate-400 mt-1 block">
-                    نام پترن ثبت‌شده در سامانه پیامکی جهت عبور از بلک‌لیست مخابراتی
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    شناسه الگوی تایید سریع (بدون مسدودی بلک‌لیست)
                   </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                      <Hash className="w-3.5 h-3.5 text-slate-400" />
+                      <span>طول کد OTP</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={4}
+                      max={8}
+                      value={smsDefaultOtpLength}
+                      onChange={(e) => setSmsDefaultOtpLength(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span>انقضا (ثانیه)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={30}
+                      max={600}
+                      value={smsDefaultOtpExpirySeconds}
+                      onChange={(e) => setSmsDefaultOtpExpirySeconds(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -244,49 +313,69 @@ export function GatewaysSmsView() {
                   <CreditCard className="w-4 h-4 text-emerald-600" />
                   <span>درگاه پرداخت اینترنتی شاپرک (Shetab IPG)</span>
                 </h3>
-                <span className="text-[11px] text-slate-400">شارژ کیف پول و پرداخت‌ها</span>
+                <span className="text-[11px] text-slate-400">افزایش اعتبار کیف پول و تسویه ریالی</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    درگاه پرداخت
+                    ارائه‌دهنده درگاه پرداخت (PSP)
                   </label>
                   <select
-                    value={defaultIpgProvider}
-                    onChange={(e: any) => setDefaultIpgProvider(e.target.value)}
+                    value={ipgDefaultPsp}
+                    onChange={(e: any) => setIpgDefaultPsp(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   >
                     <option value="zarinpal">زرین‌پال (ZarinPal)</option>
-                    <option value="saman">سامان کیش (SEP)</option>
-                    <option value="pasargad">پاسارگاد (PEP)</option>
+                    <option value="behpardakht">به‌پرداخت ملت (Mellat BPM)</option>
+                    <option value="sep">سامان‌کیش (SEP Saman)</option>
+                    <option value="sadad">سداد ملی (Sadad Melli)</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    کد پذیرنده (Merchant ID)
+                    کد پذیرنده (Merchant ID / Terminal ID)
                   </label>
                   <input
                     type="text"
-                    value={ipgMerchantId}
-                    onChange={(e) => setIpgMerchantId(e.target.value)}
+                    value={ipgDefaultMerchantId}
+                    onChange={(e) => setIpgDefaultMerchantId(e.target.value)}
                     placeholder="00000000-0000-0000-0000-000000000000"
                     dir="ltr"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
                 </div>
 
-                <div className="sm:col-span-2 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={ipgSandbox}
-                      onChange={(e) => setIpgSandbox(e.target.checked)}
-                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
-                    />
-                    <span>حالت آزمایشی (Sandbox) فعال باشد (تراکنش‌های شبیه‌سازی‌شده بدون کسر واقعی پول)</span>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                    <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span>آدرس بازگشت تراکنش شاپرک (Callback URL)</span>
                   </label>
+                  <input
+                    type="url"
+                    value={ipgCallbackBaseUrl}
+                    onChange={(e) => setIpgCallbackBaseUrl(e.target.value)}
+                    placeholder="https://api.localme.ir/_baas/v1/pay/callback"
+                    dir="ltr"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    کارمزد شاپرک تراکنش (ریال)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={shaparakWageIrr}
+                    onChange={(e) => setShaparakWageIrr(Number(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    معادل {formatToman(shaparakWageIrr)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -298,7 +387,7 @@ export function GatewaysSmsView() {
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
               >
                 {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>ذخیره تنظیمات درگاه‌ها</span>
+                <span>ذخیره تنظیمات درگاه‌ها و اعمال در کلاستر</span>
               </button>
             </div>
 
@@ -312,10 +401,21 @@ export function GatewaysSmsView() {
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              جهت اطمینان از صحت کلید وب‌سرویس پیامکی، شماره همراه مورد نظر را وارد کرده و یک پیامک اعتبارسنجی ارسال نمایید.
+              جهت اطمینان از صحت وب‌سرویس پیامکی و اعتبار کلید ارائه‌دهنده، شماره همراه مورد نظر را وارد کرده و یک پیامک اعتبارسنجی ارسال نمایید.
             </p>
 
             <form onSubmit={handleSendTestSms} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  سامانه انتخابی تست
+                </label>
+                <div className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
+                  {smsDefaultProvider === 'kavenegar' && 'کاوه‌نگار (Kavenegar)'}
+                  {smsDefaultProvider === 'melipayamak' && 'ملی‌پیامک (Melipayamak)'}
+                  {smsDefaultProvider === 'magfa' && 'مگفا (Magfa)'}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   شماره همراه مقصد تست
@@ -324,7 +424,7 @@ export function GatewaysSmsView() {
                   type="tel"
                   value={testPhone}
                   onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  placeholder="09121112233"
                   dir="ltr"
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
@@ -334,7 +434,7 @@ export function GatewaysSmsView() {
               <button
                 type="submit"
                 disabled={testSending}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition disabled:opacity-50 shadow-xs"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition disabled:opacity-50 shadow-xs"
               >
                 {testSending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 <span>ارسال پیامک آزمایشی</span>
@@ -343,7 +443,7 @@ export function GatewaysSmsView() {
 
             {testResult && (
               <div
-                className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
+                className={`p-3 rounded-xl border text-xs flex items-start gap-2 animate-in fade-in ${
                   testResult.success
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                     : 'bg-rose-50 border-rose-200 text-rose-800'

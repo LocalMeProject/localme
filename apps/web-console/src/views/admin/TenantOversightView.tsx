@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   Search, 
@@ -6,18 +7,26 @@ import {
   Power, 
   RefreshCw, 
   Database, 
-  AlertCircle, 
   ArrowUpDown,
   Trash2,
-  ShieldAlert
+  ExternalLink,
+  HardDrive,
+  Zap,
+  ShieldCheck,
+  Calendar,
+  Layers,
+  Phone
 } from 'lucide-react';
 import { api } from '../../utils/apiClient';
-import { formatToman, toPersianDigits } from '../../utils/persian';
+import { toPersianDigits } from '../../utils/persian';
 import { Project } from '../../types';
 
 interface ProjectAdminItem extends Project {
   dbClusterId?: string;
   isPaused?: boolean;
+  ownerPhone?: string;
+  ownerId?: string;
+  createdAtUtc?: string;
 }
 
 interface PlatformShard {
@@ -29,11 +38,13 @@ interface PlatformShard {
 }
 
 export function TenantOversightView() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectAdminItem[]>([]);
   const [shards, setShards] = useState<PlatformShard[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [shardFilter, setShardFilter] = useState('ALL');
   
   // Shard Reassignment Modal
   const [reassignProject, setReassignProject] = useState<ProjectAdminItem | null>(null);
@@ -170,12 +181,14 @@ export function TenantOversightView() {
 
   const filteredProjects = projects.filter((p) => {
     if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+    if (shardFilter !== 'ALL' && (p.dbClusterId || 'shard-a') !== shardFilter) return false;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
       p.name?.toLowerCase().includes(q) ||
       p.slug?.toLowerCase().includes(q) ||
-      p.id?.toLowerCase().includes(q)
+      p.id?.toLowerCase().includes(q) ||
+      p.ownerPhone?.toLowerCase().includes(q)
     );
   });
 
@@ -193,12 +206,12 @@ export function TenantOversightView() {
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            مشاهده، فعال/غیرفعال‌سازی، دریافت بسته جامع پشتیبان (`.localmepack`)، جابجایی شارد، و حذف شِمای پروژه‌ها.
+            مشاهده، دسترسی مستقیم به استودیو، فعال/غیرفعال‌سازی، دریافت بسته جامع پشتیبان (`.localmepack`)، جابجایی شارد، و حذف شِمای پروژه‌ها.
           </p>
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -209,16 +222,38 @@ export function TenantOversightView() {
             <option value="PAUSED">فقط متوقف‌شده</option>
           </select>
 
+          <select
+            value={shardFilter}
+            onChange={(e) => setShardFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
+          >
+            <option value="ALL">همه شاردها</option>
+            {shards.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.id})
+              </option>
+            ))}
+          </select>
+
           <div className="relative flex-1 sm:w-64">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="جستجو با نام یا شناسه پروژه..."
+              placeholder="نام، شناسه یا شماره مالک..."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-9 pl-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
             />
             <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
           </div>
+
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition"
+            title="بازخوانی"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -241,9 +276,11 @@ export function TenantOversightView() {
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold select-none">
                 <tr>
                   <th className="py-3 px-4">نام و شناسه پروژه</th>
-                  <th className="py-3 px-4">شارد پایگاه‌داده</th>
-                  <th className="py-3 px-4">اعتبار کیف پول</th>
-                  <th className="py-3 px-4">وضعیت سرویس</th>
+                  <th className="py-3 px-4">مالک پروژه</th>
+                  <th className="py-3 px-4">شِمای PostgreSQL</th>
+                  <th className="py-3 px-4">شارد خوشه</th>
+                  <th className="py-3 px-4">سرویس‌های فعال</th>
+                  <th className="py-3 px-4">وضعیت</th>
                   <th className="py-3 px-4 text-left">عملیات مدیریت</th>
                 </tr>
               </thead>
@@ -251,6 +288,7 @@ export function TenantOversightView() {
                 {filteredProjects.map((p) => {
                   const isActive = p.status === 'ACTIVE';
                   const isToggling = togglingProjectId === p.id;
+                  const schemaName = (p.services as any)?.database?.settings?.schema || `public_${p.id}`;
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/70 transition">
@@ -258,6 +296,30 @@ export function TenantOversightView() {
                         <div className="font-bold text-slate-900">{p.name}</div>
                         <div className="font-mono text-[11px] text-slate-400 mt-0.5" dir="ltr">
                           {p.slug}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        {p.ownerPhone ? (
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-700" dir="ltr">
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            <span>{p.ownerPhone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-[11px]">{p.ownerId || '—'}</span>
+                        )}
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(p.createdAt || p.createdAtUtc || '').toLocaleDateString('fa-IR')}</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-mono font-semibold text-slate-800 text-[11px]" dir="ltr">
+                            {schemaName}
+                          </span>
                         </div>
                       </td>
 
@@ -271,19 +333,42 @@ export function TenantOversightView() {
                       </td>
 
                       <td className="py-3 px-4">
-                        <span className="font-medium text-slate-800">
-                          {formatToman(p.walletBalanceIrr)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span 
+                            title={p.services?.database?.isEnabled ? 'دیتابیس فعال' : 'دیتابیس غیرفعال'}
+                            className={`p-1 rounded-md text-[10px] ${p.services?.database?.isEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}
+                          >
+                            <Database className="w-3.5 h-3.5" />
+                          </span>
+                          <span 
+                            title={p.services?.storage?.isEnabled ? 'استوریج فعال' : 'استوریج غیرفعال'}
+                            className={`p-1 rounded-md text-[10px] ${p.services?.storage?.isEnabled ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}
+                          >
+                            <HardDrive className="w-3.5 h-3.5" />
+                          </span>
+                          <span 
+                            title={p.services?.auth?.isEnabled ? 'احراز هویت فعال' : 'احراز هویت غیرفعال'}
+                            className={`p-1 rounded-md text-[10px] ${p.services?.auth?.isEnabled ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-400'}`}
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </span>
+                          <span 
+                            title={p.services?.functions?.isEnabled ? 'اج فانکشن فعال' : 'اج فانکشن غیرفعال'}
+                            className={`p-1 rounded-md text-[10px] ${p.services?.functions?.isEnabled ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-400'}`}
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
                       </td>
 
                       <td className="py-3 px-4">
                         {isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             <span>فعال</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                             <span>متوقف‌شده</span>
                           </span>
@@ -293,14 +378,24 @@ export function TenantOversightView() {
                       <td className="py-3 px-4 text-left">
                         <div className="flex items-center justify-end gap-1.5">
                           
+                          {/* 1-Click Open Studio in Developer Console */}
+                          <button
+                            onClick={() => navigate(`/panel/${p.slug}/overview`)}
+                            title="ورود به استودیوی توسعه‌دهنده پروژه"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition font-medium text-[11px]"
+                          >
+                            <span>استودیو</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+
                           {/* 1-Click Universal .localmepack Export */}
                           <button
                             onClick={() => handleDownloadArchive(p.id, p.slug)}
-                            title="دریافت آرشیو جهانی پرتابل (.localmepack)"
+                            title="دریافت آرشیو پشتیبان (.localmepack)"
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition font-medium text-[11px]"
                           >
                             <Download className="w-3.5 h-3.5 text-slate-500" />
-                            <span className="font-mono">.localmepack</span>
+                            <span className="font-mono">Pack</span>
                           </button>
 
                           {/* Reassign Shard */}
@@ -333,7 +428,7 @@ export function TenantOversightView() {
                           {/* Delete Project & Drop Schema Cascade */}
                           <button
                             onClick={() => openDeleteModal(p)}
-                            title="حذف پروژه و اسناد دیتابیس"
+                            title="حذف کامل پروژه و شِمای PostgreSQL"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -368,9 +463,8 @@ export function TenantOversightView() {
             </div>
 
             {reassignError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{reassignError}</span>
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                {reassignError}
               </div>
             )}
 
@@ -379,47 +473,42 @@ export function TenantOversightView() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   پروژه انتخابی:
                 </label>
-                <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800">
-                  <span className="font-bold">{reassignProject.name}</span>
-                  <span className="text-slate-400 font-mono mr-2" dir="ltr">({reassignProject.slug})</span>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                  {reassignProject.name} <span className="text-slate-400 font-mono">({reassignProject.slug})</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  شارد مقصد (Target Database Shard):
+                  شارد مقصد:
                 </label>
                 <select
                   value={targetShardId}
                   onChange={(e) => setTargetShardId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 >
                   {shards.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.id}) — {s.region}
+                      {s.name} ({s.id}) - {s.region}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-                تغییر شارد پروژه بلافاصله در کل کلاستر پلتفرم اعلام می‌گردد. تمام تراکنش‌ها و جداول این تننت از شارد انتخابی سرویس‌دهی خواهند شد.
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setReassignProject(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={reassigning}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition disabled:opacity-50"
                 >
-                  {reassigning ? 'در حال ثبت...' : 'تغییر و ثبت شارد'}
+                  {reassigning ? 'در حال اعمال...' : 'ثبت تغییر شارد'}
                 </button>
               </div>
             </form>
@@ -427,35 +516,37 @@ export function TenantOversightView() {
         </div>
       )}
 
-      {/* Delete Project Confirmation Modal */}
+      {/* Delete Project Modal */}
       {deletingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" dir="rtl">
-          <div className="bg-white rounded-2xl border border-rose-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 space-y-4">
-            <div className="flex items-center gap-3 text-rose-600 pb-3 border-b border-rose-100">
-              <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200">
-                <ShieldAlert className="w-5 h-5 text-rose-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">حذف دائم پروژه و اسناد پایگاه‌داده</h3>
-                <p className="text-[11px] text-slate-500">عملیات غیرقابل بازگشت است.</p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" dir="rtl">
+          <div className="bg-white rounded-2xl border border-rose-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-rose-100 mb-4">
+              <h3 className="text-sm font-bold text-rose-700 flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>حذف دائمی و برگشت‌ناپذیر تننت</span>
+              </h3>
+              <button
+                onClick={() => setDeletingProject(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
+              >
+                ✕
+              </button>
             </div>
 
             {deleteError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{deleteError}</span>
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                {deleteError}
               </div>
             )}
 
-            <p className="text-xs text-slate-600 leading-relaxed">
-              با حذف پروژه «<span className="font-bold text-slate-900">{deletingProject.name}</span>»، شِمای اختصاصی PostgreSQL (<code className="font-mono text-rose-600" dir="ltr">tenant_{deletingProject.slug}</code>) و تمامی جداول، ستون‌ها و داده‌های آن برای همیشه پاکسازی خواهند شد.
-            </p>
-
             <form onSubmit={executeDeleteProject} className="space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                با حذف این پروژه، کلیه جداول، رکوردها، توابع، باکت‌های فایل و شِمای <code className="text-rose-600 font-mono font-bold">public_{deletingProject.id}</code> در پایگاه‌داده به صورت آبشاری (<span className="font-mono">CASCADE</span>) برای همیشه حذف خواهد شد.
+              </p>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  جهت تایید، شناسه یکتای پروژه (<span className="font-mono text-rose-600" dir="ltr">{deletingProject.slug}</span>) را وارد کنید:
+                  جهت تایید، شناسه اسلاگ پروژه <span className="font-mono text-rose-600 font-bold">{deletingProject.slug}</span> را تایپ کنید:
                 </label>
                 <input
                   type="text"
@@ -463,25 +554,24 @@ export function TenantOversightView() {
                   onChange={(e) => setConfirmSlugInput(e.target.value)}
                   placeholder={deletingProject.slug}
                   dir="ltr"
-                  required
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-rose-500"
+                  className="w-full bg-slate-50 border border-rose-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-rose-500 focus:bg-white transition"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setDeletingProject(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={isDeleting || confirmSlugInput.trim() !== deletingProject.slug}
-                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition disabled:opacity-50 shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition disabled:opacity-50"
                 >
-                  {isDeleting ? 'در حال حذف پایگاه‌داده...' : 'حذف قطعی پروژه'}
+                  {isDeleting ? 'در حال حذف کامل...' : 'تایید و حذف برگشت‌ناپذیر'}
                 </button>
               </div>
             </form>
