@@ -12,11 +12,14 @@ public static class BaasIpgReportRoutes
     {
         app.MapGet("/_baas/v1/{projectId}/ipg/reports", (string projectId, HttpRequest req, PaymentIpgService ipg, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "ipg"))
-                return Results.Json(new { error = "سرویس درگاه پرداخت برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(req.HttpContext, pm, projectId, serviceRequired: "ipg");
+            if (!allowed) return err!;
+
+            var pageSize = int.TryParse(req.Query["pageSize"], out var ps) ? Math.Clamp(ps, 1, 100) : 20;
+            var page = int.TryParse(req.Query["page"], out var p) ? Math.Max(1, p) : 1;
 
             var query = new PaymentReportQuery(
-                ProjectId: projectId,
+                ProjectId: project!.Id,
                 Gateway: req.Query["gateway"].ToString(),
                 Status: req.Query["status"].ToString(),
                 SearchTerm: req.Query["query"].ToString(),
@@ -27,8 +30,8 @@ public static class BaasIpgReportRoutes
                 SortBy: req.Query["sortBy"].ToString() is { Length: > 0 } sb ? sb : "date",
                 SortDir: req.Query["sortDir"].ToString() is { Length: > 0 } sd ? sd : "desc",
                 GroupBy: req.Query["groupBy"].ToString(),
-                Page: int.TryParse(req.Query["page"], out var p) ? p : 1,
-                PageSize: int.TryParse(req.Query["pageSize"], out var ps) ? ps : 20
+                Page: page,
+                PageSize: pageSize
             );
 
             var report = ipg.GetProjectPaymentReport(query);

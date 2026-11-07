@@ -50,6 +50,7 @@ public sealed class JintScriptHost
                 options.LimitMemory(_maxMemoryLimitBytes);
                 options.TimeoutInterval(timeout);
                 options.MaxStatements(100_000);
+                options.LimitRecursion(256);
             });
 
             // Inject safe logging bridge

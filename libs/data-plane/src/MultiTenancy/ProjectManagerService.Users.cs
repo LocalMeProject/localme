@@ -110,15 +110,6 @@ public sealed partial class ProjectManagerService
                 {
                     return true;
                 }
-
-                // Known legacy seed fallback "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
-                if (string.Equals(storedHash, "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (password is "developer123456" or "admin123456" or "operator123456" or "admin")
-                    {
-                        return true;
-                    }
-                }
             }
             catch
             {

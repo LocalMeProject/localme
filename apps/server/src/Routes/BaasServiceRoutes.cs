@@ -5,12 +5,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using LocalMe.Core.Database;
-using LocalMe.Server.Middleware;
 using LocalMe.DataPlane.Billing;
+using LocalMe.DataPlane.Compliance;
 using LocalMe.DataPlane.Compute;
 using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
@@ -24,45 +22,53 @@ public static class BaasServiceRoutes
         app.MapBaasDatabaseRoutes();
 
         // 7. Multi-Tenant Project Storage Buckets & Files
-        app.MapGet("/_baas/v1/{projectId}/storage/buckets", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "storage")
-                ? AuthHelper.ServiceDisabled("storage")
-                : Results.Json(pm.GetProjectBuckets(projectId)));
-
-        app.MapGet("/_baas/v1/projects/{projectId}/buckets", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "storage")
-                ? AuthHelper.ServiceDisabled("storage")
-                : Results.Json(pm.GetProjectBuckets(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/storage/buckets", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/storage/buckets", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "storage")) return AuthHelper.ServiceDisabled("storage");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectBuckets(project!.Id));
+        });
+
+        app.MapGet("/_baas/v1/projects/{projectId}/buckets", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectBuckets(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/storage/buckets", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+
             var name = body["name"]?.ToString() ?? "default-bucket";
             var isPublic = body["is_public"]?.GetValue<bool>() ?? false;
-            var bucket = pm.CreateBucket(projectId, name, isPublic);
+            var bucket = pm.CreateBucket(project!.Id, name, isPublic);
             return Results.Json(bucket);
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/buckets", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/buckets", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "storage")) return AuthHelper.ServiceDisabled("storage");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+
             var name = body["name"]?.ToString() ?? "default-bucket";
             var isPublic = body["is_public"]?.GetValue<bool>() ?? false;
-            var bucket = pm.CreateBucket(projectId, name, isPublic);
+            var bucket = pm.CreateBucket(project!.Id, name, isPublic);
             return Results.Json(bucket);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/storage/{bucket}/files", (string projectId, string bucket, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "storage")
-                ? AuthHelper.ServiceDisabled("storage")
-                : Results.Json(pm.GetBucketFiles(projectId, bucket)));
+        app.MapGet("/_baas/v1/{projectId}/storage/{bucket}/files", (string projectId, string bucket, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetBucketFiles(project!.Id, bucket));
+        });
 
         app.MapPost("/_baas/v1/{projectId}/storage/{bucket}/upload", async (string projectId, string bucket, HttpRequest request, ProjectManagerService pm, IBlobStorageAdapter storage, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "storage"))
-                return Results.Json(new { error = "سرویس ذخیره‌سازی ابری برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
 
             string fileName;
             string contentType;
@@ -76,7 +82,7 @@ public static class BaasServiceRoutes
                 sizeBytes = formFile.Length;
 
                 await using var stream = formFile.OpenReadStream();
-                await storage.PutObjectAsync($"{projectId}/{bucket}", fileName, stream, contentType);
+                await storage.PutObjectAsync($"{project!.Id}/{bucket}", fileName, stream, contentType);
             }
             else
             {
@@ -88,20 +94,30 @@ public static class BaasServiceRoutes
                     : request.ContentType;
 
                 await using var bodyStream = request.Body;
-                await storage.PutObjectAsync($"{projectId}/{bucket}", fileName, bodyStream, contentType);
+                await storage.PutObjectAsync($"{project!.Id}/{bucket}", fileName, bodyStream, contentType);
                 sizeBytes = request.ContentLength ?? 1024 * 64;
             }
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "storage_mb", Math.Max(1, (int)(sizeBytes / (1024 * 1024))));
-            var file = pm.UploadBucketFile(projectId, bucket, fileName, contentType, sizeBytes);
+            metering.RecordUsage(project!.Id, project.OwnerPhone, "storage_mb", Math.Max(1, (int)(sizeBytes / (1024 * 1024))));
+            var file = pm.UploadBucketFile(project.Id, bucket, fileName, contentType, sizeBytes);
             return Results.Json(file);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/storage/{bucket}/{*fileName}", async (string projectId, string bucket, string fileName, IBlobStorageAdapter storage, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/storage/{bucket}/{*fileName}", async (string projectId, string bucket, string fileName, HttpContext ctx, IBlobStorageAdapter storage, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "storage")) return AuthHelper.ServiceDisabled("storage");
+            var targetPrj = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
+            if (targetPrj == null) return Results.NotFound(new { error = "Project not found" });
+
+            // Check if bucket is public
+            var bucketObj = pm.GetProjectBuckets(targetPrj.Id).FirstOrDefault(b => b.Name.Equals(bucket, StringComparison.OrdinalIgnoreCase));
+            if (bucketObj == null || !bucketObj.IsPublic)
+            {
+                var (allowed, _, _, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+                if (!allowed) return err!;
+            }
+
             var cleanFileName = Path.GetFileName(fileName);
-            var stream = await storage.GetObjectAsync($"{projectId}/{bucket}", cleanFileName);
+            var stream = await storage.GetObjectAsync($"{targetPrj.Id}/{bucket}", cleanFileName);
             if (stream == null)
             {
                 stream = await storage.GetObjectAsync(bucket, cleanFileName);
@@ -112,78 +128,96 @@ public static class BaasServiceRoutes
                 return Results.NotFound(new { error = "File not found" });
             }
 
-            var files = pm.GetBucketFiles(projectId, bucket);
+            var files = pm.GetBucketFiles(targetPrj.Id, bucket);
             var meta = files.FirstOrDefault(f => f.FileName.Equals(cleanFileName, StringComparison.OrdinalIgnoreCase));
             var contentType = meta?.ContentType ?? "application/octet-stream";
 
             return Results.File(stream, contentType, cleanFileName);
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/storage/buckets/{bucket}", (string projectId, string bucket, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/storage/buckets/{bucket}", (string projectId, string bucket, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "storage")) return AuthHelper.ServiceDisabled("storage");
-            var deleted = pm.DeleteBucket(projectId, bucket);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+
+            var deleted = pm.DeleteBucket(project!.Id, bucket);
             return deleted ? Results.Ok(new { success = true }) : Results.NotFound(new { error = "Bucket not found" });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/storage/{bucket}/{*fileName}", (string projectId, string bucket, string fileName, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/storage/{bucket}/{*fileName}", (string projectId, string bucket, string fileName, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "storage")) return AuthHelper.ServiceDisabled("storage");
-            var deleted = pm.DeleteBucketFile(projectId, bucket, fileName);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "storage");
+            if (!allowed) return err!;
+
+            var deleted = pm.DeleteBucketFile(project!.Id, bucket, fileName);
             return deleted ? Results.Ok(new { success = true }) : Results.NotFound(new { error = "File not found" });
         });
 
         // 8. Multi-Tenant Project Edge Functions
-        app.MapGet("/_baas/v1/{projectId}/functions", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "functions")
-                ? AuthHelper.ServiceDisabled("functions")
-                : Results.Json(pm.GetProjectFunctions(projectId)));
-
-        app.MapGet("/_baas/v1/projects/{projectId}/functions", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "functions")
-                ? AuthHelper.ServiceDisabled("functions")
-                : Results.Json(pm.GetProjectFunctions(projectId)));
-
-        app.MapGet("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/functions", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "functions")) return AuthHelper.ServiceDisabled("functions");
-            var func = pm.GetProjectFunction(projectId, funcSlug);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectFunctions(project!.Id));
+        });
+
+        app.MapGet("/_baas/v1/projects/{projectId}/functions", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectFunctions(project!.Id));
+        });
+
+        app.MapGet("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+
+            var func = pm.GetProjectFunction(project!.Id, funcSlug);
             return func != null ? Results.Json(func) : Results.NotFound(new { error = "Function not found" });
         });
 
-        app.MapPost("/_baas/v1/{projectId}/functions", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/functions", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "functions")) return AuthHelper.ServiceDisabled("functions");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+
             var name = body["name"]?.ToString() ?? "New Function";
             var slug = body["slug"]?.ToString();
             var script = body["script"]?.ToString() ?? "function handler(req) { return { status: 'ok' }; } handler(context);";
-            var func = pm.DeployFunction(projectId, name, script, slug);
+            var func = pm.DeployFunction(project!.Id, name, script, slug);
             return Results.Json(func);
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/functions", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/functions", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "functions")) return AuthHelper.ServiceDisabled("functions");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+
             var name = body["name"]?.ToString() ?? "New Function";
             var slug = body["slug"]?.ToString();
             var script = body["script"]?.ToString() ?? "function handler(req) { return { status: 'ok' }; } handler(context);";
-            var func = pm.DeployFunction(projectId, name, script, slug);
+            var func = pm.DeployFunction(project!.Id, name, script, slug);
             return Results.Json(func);
         });
 
-        app.MapPut("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, JsonObject body, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "functions")) return AuthHelper.ServiceDisabled("functions");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+
             var name = body["name"]?.ToString();
             var script = body["script"]?.ToString() ?? "";
-            var updated = pm.UpdateFunction(projectId, funcSlug, name, script);
+            var updated = pm.UpdateFunction(project!.Id, funcSlug, name, script);
             return updated != null ? Results.Json(updated) : Results.NotFound(new { error = "Function not found" });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/functions/{funcSlug}", (string projectId, string funcSlug, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "functions")) return AuthHelper.ServiceDisabled("functions");
-            var deleted = pm.DeleteFunction(projectId, funcSlug);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "functions");
+            if (!allowed) return err!;
+
+            var deleted = pm.DeleteFunction(project!.Id, funcSlug);
             return deleted ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
@@ -191,12 +225,10 @@ public static class BaasServiceRoutes
         Func<string, string, HttpRequest, ProjectManagerService, JintScriptHost, UsageMeteringService, Task<IResult>> runEdgeFunction =
             async (projectId, funcSlug, request, pm, host, metering) =>
             {
-                var project = pm.GetProject(projectId);
-                if (project == null) return Results.NotFound(new { error = "Project not found" });
-                if (!pm.IsServiceEnabled(projectId, "functions"))
-                    return Results.Json(new { error = "سرویس توابع سرورلس لبه برای این پروژه فعال نشده است." }, statusCode: 403);
+                var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "functions");
+                if (!allowed) return err!;
 
-                var func = pm.GetProjectFunctions(projectId).FirstOrDefault(f => f.Slug.Equals(funcSlug, StringComparison.OrdinalIgnoreCase));
+                var func = pm.GetProjectFunctions(project!.Id).FirstOrDefault(f => f.Slug.Equals(funcSlug, StringComparison.OrdinalIgnoreCase));
                 if (func == null) return Results.NotFound(new { error = $"Function '{funcSlug}' not found." });
 
                 using var reader = new StreamReader(request.Body);
@@ -231,7 +263,7 @@ public static class BaasServiceRoutes
                     TimeoutSeconds: 5
                 ));
 
-                metering.RecordUsage(projectId, project.OwnerPhone, "compute_ms", Math.Max(10, result.ExecutionTimeMs));
+                metering.RecordUsage(project.Id, project.OwnerPhone, "compute_ms", Math.Max(10, result.ExecutionTimeMs));
                 return Results.Json(result);
             };
 
@@ -240,69 +272,87 @@ public static class BaasServiceRoutes
 
         // 9.1 Sovereign Iranian Developer Platform Studios
         // Hosting & Deployments
-        app.MapGet("/_baas/v1/{projectId}/hosting/deployments", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "hosting")
-                ? AuthHelper.ServiceDisabled("hosting")
-                : Results.Json(pm.GetDeployments(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/hosting/deployments", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/hosting/deployments", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "hosting")) return AuthHelper.ServiceDisabled("hosting");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetDeployments(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/hosting/deployments", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+
             var branch = body["branch"]?.ToString() ?? "main";
             var commitSha = body["commit_sha"]?.ToString() ?? $"sha_{Guid.NewGuid():N}"[..7];
             var domain = body["domain"]?.ToString();
-            var dep = pm.CreateDeployment(projectId, branch, commitSha, domain);
-            pm.AddProjectLog(projectId, "hosting", "INFO", $"استقرار نسخه جدید روی دامنه {dep.Domain} ثبت گردید.", dep.Id, 200, 150);
+            var dep = pm.CreateDeployment(project!.Id, branch, commitSha, domain);
+            pm.AddProjectLog(project.Id, "hosting", "INFO", $"استقرار نسخه جدید روی دامنه {dep.Domain} ثبت گردید.", dep.Id, 200, 150);
             return Results.Json(dep);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/hosting/domains", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "hosting")
-                ? AuthHelper.ServiceDisabled("hosting")
-                : Results.Json(pm.GetDomains(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/hosting/domains", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/hosting/domains", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "hosting")) return AuthHelper.ServiceDisabled("hosting");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetDomains(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/hosting/domains", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+
             var domain = body["domain"]?.ToString() ?? "";
             if (string.IsNullOrWhiteSpace(domain)) return Results.BadRequest(new { error = "Domain name is required" });
-            var dom = pm.AddDomain(projectId, domain);
+            var dom = pm.AddDomain(project!.Id, domain);
             return Results.Json(dom);
         });
 
-        app.MapPost("/_baas/v1/{projectId}/hosting/domains/verify", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/hosting/domains/verify", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "hosting")) return AuthHelper.ServiceDisabled("hosting");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+
             var domain = body["domain"]?.ToString() ?? "";
-            var verified = pm.VerifyDomain(projectId, domain);
+            var verified = pm.VerifyDomain(project!.Id, domain);
             return verified != null ? Results.Json(verified) : Results.NotFound(new { error = "Domain not found" });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/hosting/domains/{domain}", (string projectId, string domain, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/hosting/domains/{domain}", (string projectId, string domain, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "hosting")) return AuthHelper.ServiceDisabled("hosting");
-            var deleted = pm.DeleteDomain(projectId, domain);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+
+            var deleted = pm.DeleteDomain(project!.Id, domain);
             return deleted ? Results.Ok(new { success = true }) : Results.NotFound(new { error = "Domain not found" });
         });
 
-        app.MapPost("/_baas/v1/{projectId}/hosting/domains/{domain}/ssl", (string projectId, string domain, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/hosting/domains/{domain}/ssl", (string projectId, string domain, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "hosting")) return AuthHelper.ServiceDisabled("hosting");
-            var verified = pm.VerifyDomain(projectId, domain);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "hosting");
+            if (!allowed) return err!;
+
+            var verified = pm.VerifyDomain(project!.Id, domain);
             return verified != null
                 ? Results.Ok(new { success = true, domain = verified, message = "گواهی امنیتی Let's Encrypt با موفقیت صادر و فعال گردید." })
                 : Results.NotFound(new { error = "Domain not found" });
         });
 
         // Shetab IPG Merchant Studio
-        app.MapGet("/_baas/v1/{projectId}/ipg/config", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "ipg")
-                ? AuthHelper.ServiceDisabled("ipg")
-                : Results.Json(pm.GetIpgConfig(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/ipg/config", (string projectId, IpgMerchantConfig config, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/ipg/config", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "ipg")) return AuthHelper.ServiceDisabled("ipg");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "ipg");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetIpgConfig(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/ipg/config", (string projectId, IpgMerchantConfig config, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "ipg");
+            if (!allowed) return err!;
+
             var psp = config.DefaultPsp.ToUpperInvariant();
             var errors = new List<string>();
 
@@ -354,46 +404,56 @@ public static class BaasServiceRoutes
                 return Results.BadRequest(new { error = string.Join(" ", errors), validationErrors = errors });
             }
 
-            var updated = pm.UpdateIpgConfig(projectId, config);
+            var updated = pm.UpdateIpgConfig(project!.Id, config);
             return Results.Json(updated);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/ipg/transactions", (string projectId, PaymentIpgService ipg, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/ipg/transactions", (string projectId, HttpContext ctx, PaymentIpgService ipg, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "ipg")) return AuthHelper.ServiceDisabled("ipg");
-            var projectTxs = ipg.GetProjectPayments(projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "ipg");
+            if (!allowed) return err!;
+            var projectTxs = ipg.GetProjectPayments(project!.Id);
             return Results.Json(projectTxs);
         });
 
         // Iranian Compliance Hub
-        app.MapGet("/_baas/v1/{projectId}/compliance", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "compliance")
-                ? AuthHelper.ServiceDisabled("compliance")
-                : Results.Json(pm.GetCompliance(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/compliance", (string projectId, ComplianceConfig config, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/compliance", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "compliance")) return AuthHelper.ServiceDisabled("compliance");
-            var updated = pm.UpdateCompliance(projectId, config);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "compliance");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetCompliance(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/compliance", (string projectId, ComplianceConfig config, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "compliance");
+            if (!allowed) return err!;
+            var updated = pm.UpdateCompliance(project!.Id, config);
             return Results.Json(updated);
         });
 
         // Live Log Streaming & Telemetry
         app.MapGet("/_baas/v1/{projectId}/logs", (string projectId, HttpRequest req, ProjectManagerService pm) =>
         {
-            var limit = int.TryParse(req.Query["limit"], out var l) ? l : 50;
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(req.HttpContext, pm, projectId);
+            if (!allowed) return err!;
+
+            var limit = int.TryParse(req.Query["limit"], out var l) ? Math.Clamp(l, 1, 200) : 50;
             var service = req.Query["service"].ToString();
             var level = req.Query["level"].ToString();
-            return Results.Json(pm.GetProjectLogs(projectId, limit, service, level));
+            return Results.Json(pm.GetProjectLogs(project!.Id, limit, service, level));
         });
 
-        app.MapPost("/_baas/v1/{projectId}/logs", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/logs", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
             var service = body["service"]?.ToString() ?? "app";
             var level = body["level"]?.ToString() ?? "INFO";
             var msg = body["message"]?.ToString() ?? "";
             var trace = body["trace_id"]?.ToString();
-            var entry = pm.AddProjectLog(projectId, service, level, msg, trace);
+            var entry = pm.AddProjectLog(project!.Id, service, level, msg, trace);
             return Results.Json(entry);
         });
     }

@@ -22,15 +22,16 @@ public static class BaasMobileRoutes
         app.MapPost("/_baas/v1/{projectId}/push/devices/register", (
             string projectId,
             PushDeviceRegistration registration,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return Results.Json(new { error = "سرویس‌های موبایل برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
             try
             {
-                var registered = pushService.RegisterDevice(projectId, registration);
+                var registered = pushService.RegisterDevice(project!.Id, registration);
                 return Results.Ok(new { success = true, device = registered, message = "دستگاه با موفقیت در سامانه پوش ثبت شد." });
             }
             catch (Exception ex)
@@ -42,13 +43,14 @@ public static class BaasMobileRoutes
         app.MapDelete("/_baas/v1/{projectId}/push/devices/{deviceId}", (
             string projectId,
             string deviceId,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var removed = pushService.UnregisterDevice(projectId, deviceId);
+            var removed = pushService.UnregisterDevice(project!.Id, deviceId);
             return Results.Ok(new { success = removed, message = removed ? "دستگاه با موفقیت حذف شد." : "دستگاه یافت نشد." });
         });
 
@@ -56,28 +58,30 @@ public static class BaasMobileRoutes
             string projectId,
             string? userId,
             string? platform,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var devices = pushService.GetDevices(projectId, userId, platform);
+            var devices = pushService.GetDevices(project!.Id, userId, platform);
             return Results.Ok(new { success = true, devices, total = devices.Count });
         });
 
         app.MapPost("/_baas/v1/{projectId}/push/send", async (
             string projectId,
             PushMessageRequest request,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
             try
             {
-                var result = await pushService.SendPushAsync(projectId, request);
+                var result = await pushService.SendPushAsync(project!.Id, request);
                 return Results.Ok(result);
             }
             catch (Exception ex)
@@ -88,38 +92,41 @@ public static class BaasMobileRoutes
 
         app.MapGet("/_baas/v1/{projectId}/push/config", (
             string projectId,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var cfg = pushService.GetProviderConfig(projectId);
+            var cfg = pushService.GetProviderConfig(project!.Id);
             return Results.Ok(new { success = true, config = cfg });
         });
 
         app.MapPut("/_baas/v1/{projectId}/push/config", (
             string projectId,
             PushProviderConfig config,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var saved = pushService.SaveProviderConfig(projectId, config);
+            var saved = pushService.SaveProviderConfig(project!.Id, config);
             return Results.Ok(new { success = true, config = saved, message = "تنظیمات درگاه‌های پوش ذخیره شد." });
         });
 
         app.MapGet("/_baas/v1/{projectId}/push/history", (
             string projectId,
+            HttpContext ctx,
             PushNotificationService pushService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var history = pushService.GetDispatchHistory(projectId);
+            var history = pushService.GetDispatchHistory(project!.Id);
             return Results.Ok(new { success = true, history, total = history.Count });
         });
 
@@ -129,13 +136,14 @@ public static class BaasMobileRoutes
         app.MapPost("/_baas/v1/{projectId}/iap/verify/bazaar", async (
             string projectId,
             BazaarPurchaseValidationRequest request,
+            HttpContext ctx,
             MobileIapService iapService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var result = await iapService.ValidateBazaarPurchaseAsync(projectId, request);
+            var result = await iapService.ValidateBazaarPurchaseAsync(project!.Id, request);
             return result.Success
                 ? Results.Ok(result)
                 : Results.BadRequest(result);
@@ -144,13 +152,14 @@ public static class BaasMobileRoutes
         app.MapPost("/_baas/v1/{projectId}/iap/verify/myket", async (
             string projectId,
             MyketPurchaseValidationRequest request,
+            HttpContext ctx,
             MobileIapService iapService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var result = await iapService.ValidateMyketPurchaseAsync(projectId, request);
+            var result = await iapService.ValidateMyketPurchaseAsync(project!.Id, request);
             return result.Success
                 ? Results.Ok(result)
                 : Results.BadRequest(result);
@@ -160,38 +169,41 @@ public static class BaasMobileRoutes
             string projectId,
             string? userId,
             string? store,
+            HttpContext ctx,
             MobileIapService iapService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var list = iapService.GetPurchases(projectId, userId, store);
+            var list = iapService.GetPurchases(project!.Id, userId, store);
             return Results.Ok(new { success = true, purchases = list, total = list.Count });
         });
 
         app.MapGet("/_baas/v1/{projectId}/iap/config", (
             string projectId,
+            HttpContext ctx,
             MobileIapService iapService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var cfg = iapService.GetConfig(projectId);
+            var cfg = iapService.GetConfig(project!.Id);
             return Results.Ok(new { success = true, config = cfg });
         });
 
         app.MapPut("/_baas/v1/{projectId}/iap/config", (
             string projectId,
             MobileIapConfig config,
+            HttpContext ctx,
             MobileIapService iapService,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
-                return AuthHelper.ServiceDisabled("mobile");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
 
-            var saved = iapService.SaveConfig(projectId, config);
+            var saved = iapService.SaveConfig(project!.Id, config);
             return Results.Ok(new { success = true, config = saved, message = "تنظیمات خریدهای درون‌برنامه‌ای ذخیره شد." });
         });
 
@@ -204,17 +216,18 @@ public static class BaasMobileRoutes
             RealtimeChannelHub realtimeHub,
             ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "mobile"))
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "mobile");
+            if (!allowed)
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsync("سرویس‌های موبایل و جریان داده زنده برای این پروژه فعال نشده است.");
+                await context.Response.WriteAsync("سرویس‌های موبایل و جریان داده زنده برای این پروژه غیرفعال است یا دسترسی نامعتبر است.");
                 return;
             }
 
             if (context.WebSockets.IsWebSocketRequest)
             {
                 using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                await realtimeHub.HandleWebSocketAsync(projectId, webSocket, context.RequestAborted);
+                await realtimeHub.HandleWebSocketAsync(project!.Id, webSocket, context.RequestAborted);
             }
             else
             {
@@ -226,13 +239,17 @@ public static class BaasMobileRoutes
         app.MapPost("/_baas/v1/{projectId}/realtime/broadcast", async (
             string projectId,
             RealtimeBroadcastRequest request,
-            RealtimeChannelHub realtimeHub) =>
+            HttpContext ctx,
+            RealtimeChannelHub realtimeHub,
+            ProjectManagerService pm) =>
         {
-            await realtimeHub.BroadcastTableEventAsync(projectId, request.Table ?? "*", request.Action ?? "BROADCAST", request.Data);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "mobile");
+            if (!allowed) return err!;
+
+            await realtimeHub.BroadcastTableEventAsync(project!.Id, request.Table ?? "*", request.Action ?? "BROADCAST", request.Data);
             return Results.Ok(new { success = true, message = "رویداد زنده با موفقیت ارسال شد." });
         });
     }
 }
 
 public sealed record RealtimeBroadcastRequest(string? Table, string? Action, object? Data);
-

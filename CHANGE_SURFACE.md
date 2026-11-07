@@ -90,11 +90,16 @@ affected_projects:
 - `package.json`: Add generic deploy script target.
 - `apps/server/src/Diagnostics/PlatformLogBuffer.cs`: Added entity-type, entity-id, client-ip, trace-id indexing and multi-criteria log query filtering.
 - `apps/server/src/Program.cs`: Wire dynamic services, admin endpoints, SPA deep linking, and per-entity logging tags.
-- `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`: Auth route enhancements and redirects.
-- `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Tenant query execution and schema updates.
-- `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Database snapshot routes.
-- `apps/server/src/Routes/BaasProjectRoutes.cs`: Admin shard endpoints, in-DB config endpoints, telemetry, and live controls.
-- `apps/server/src/Routes/BaasServiceRoutes.cs`: Service capability endpoints.
+- `apps/server/src/Routes/AuthHelper.cs`: Hardened authentication helpers, added Superadmin/Operator checks, and implemented EnsureProjectAccess guard.
+- `apps/server/src/Routes/BaasAuthAndIpgRoutes.cs`: Auth route enhancements, secured user list and role escalation with admin checks, tightened cookie security.
+- `apps/server/src/Routes/BaasDatabaseRoutes.cs`: Tenant query execution and schema updates, removed untrusted X-User-Role header trusting.
+- `apps/server/src/Routes/BaasDatabaseSchemaRoutes.cs`: Secured all DDL schema endpoints (tables, columns, indexes, relationships) with EnsureProjectAccess.
+- `apps/server/src/Routes/BaasDbSnapshotRoutes.cs`: Database snapshot and archive routes secured with EnsureProjectAccess.
+- `apps/server/src/Routes/BaasHostingWebhookRoutes.cs`: Webhook secret verification for automated hosting deploys.
+- `apps/server/src/Routes/BaasIpgReportRoutes.cs`: IPG financial reports secured with EnsureProjectAccess and pagination limits.
+- `apps/server/src/Routes/BaasMobileRoutes.cs`: Push device registry and broadcast endpoints secured with EnsureProjectAccess.
+- `apps/server/src/Routes/BaasProjectRoutes.cs`: Admin shard endpoints, in-DB config endpoints, telemetry, and live controls secured with EnsureProjectAccess and admin roles.
+- `apps/server/src/Routes/BaasServiceRoutes.cs`: Storage, edge functions, and hosting deployments secured with EnsureProjectAccess.
 - `apps/server/src/Services/ClusterBusSubscriber.cs`: Cluster bus notification subscription.
 - `apps/server/src/Services/PushDispatcherWorker.cs`: Push worker background dispatcher.
 - `apps/server/src/wwwroot/benchmarks.html`: Cleaned datacenter marketing references.
@@ -111,6 +116,8 @@ affected_projects:
 - `libs/core-domain/src/Database/SqlAstQueryCompiler.cs`: AST query compilation.
 - `libs/data-plane/src/Admin/PlatformConfig.cs`: Add storage adapter and sharding fields.
 - `libs/data-plane/src/Admin/PlatformConfigurationService.cs`: In-DB PostgreSQL persistence and reload.
+- `libs/data-plane/src/Auth/OtpAuthService.cs`: Unified JWT secret lookup across LOCALME_JWT_SECRET and JWT_SECRET.
+- `libs/data-plane/src/Compute/JintScriptHost.cs`: Added recursion depth limit to prevent stack overflow DoS.
 - `libs/data-plane/src/MultiTenancy/IProjectStore.cs`: Added DeleteUserAsync domain contract.
 - `libs/data-plane/src/MultiTenancy/ProjectArchiveService.cs`: Universal project archiving.
 - `libs/data-plane/src/MultiTenancy/ProjectManagerModels.cs`: Shard identifier in project models.

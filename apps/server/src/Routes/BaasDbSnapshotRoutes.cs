@@ -1,6 +1,7 @@
 namespace LocalMe.Server.Routes;
 
 using System;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,15 +11,13 @@ public static class BaasDbSnapshotRoutes
 {
     public static void MapBaasDbSnapshotRoutes(this WebApplication app)
     {
-        app.MapPost("/_baas/v1/{projectId}/db/snapshots", async (string projectId, JsonObject? body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/snapshots", async (string projectId, JsonObject? body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             var type = body?["type"]?.ToString() ?? "دستی فوری";
-            var snapshot = await pm.CreateDatabaseSnapshotAsync(projectId, type);
+            var snapshot = await pm.CreateDatabaseSnapshotAsync(project!.Id, type);
             return Results.Ok(new
             {
                 success = true,
@@ -33,12 +32,12 @@ public static class BaasDbSnapshotRoutes
             });
         });
 
-        app.MapGet("/_baas/v1/{projectId}/db/snapshots", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/snapshots", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            var snapshots = pm.GetDatabaseSnapshots(projectId);
+            var snapshots = pm.GetDatabaseSnapshots(project!.Id);
             return Results.Json(snapshots.Select(s => new
             {
                 id = s.Id,
@@ -49,52 +48,51 @@ public static class BaasDbSnapshotRoutes
             }));
         });
 
-        app.MapGet("/_baas/v1/{projectId}/db/snapshots/{snapshotId}/download", (string projectId, string snapshotId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/snapshots/{snapshotId}/download", (string projectId, string snapshotId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            var snapshot = pm.GetDatabaseSnapshot(projectId, snapshotId);
+            var snapshot = pm.GetDatabaseSnapshot(project!.Id, snapshotId);
             if (snapshot == null) return Results.NotFound(new { error = "اسنپ‌شات یافت نشد." });
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(snapshot.DataJson);
             return Results.File(bytes, "application/json", $"{snapshotId}.json");
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/snapshots/{snapshotId}/restore", async (string projectId, string snapshotId, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/snapshots/{snapshotId}/restore", async (string projectId, string snapshotId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            var ok = await pm.RestoreDatabaseSnapshotAsync(projectId, snapshotId);
+            var ok = await pm.RestoreDatabaseSnapshotAsync(project!.Id, snapshotId);
             if (!ok) return Results.BadRequest(new { error = "بازیابی اسنپ‌شات با خطا مواجه شد یا اسنپ‌شات معتبر نیست." });
 
             return Results.Ok(new { success = true, message = $"اسنپ‌شات {snapshotId} با موفقیت بازیابی شد." });
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/snapshots/{snapshotId}", (string projectId, string snapshotId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/snapshots/{snapshotId}", (string projectId, string snapshotId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نیست." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            var deleted = pm.DeleteDatabaseSnapshot(projectId, snapshotId);
+            var deleted = pm.DeleteDatabaseSnapshot(project!.Id, snapshotId);
             return deleted
                 ? Results.Ok(new { success = true, snapshotId })
                 : Results.NotFound(new { error = "اسنپ‌شات یافت نشد یا حذف ناموفق بود." });
         });
 
         // 6. Universal Project Portability (.localmepack Archive Export, Import & Restore)
-        app.MapPost("/_baas/v1/{projectId}/archive/export", async (string projectId, HttpContext ctx, ProjectArchiveService archiveService) =>
+        app.MapPost("/_baas/v1/{projectId}/archive/export", async (string projectId, HttpContext ctx, ProjectManagerService pm, ProjectArchiveService archiveService) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
             var compress = !ctx.Request.Query.ContainsKey("format") || ctx.Request.Query["format"].ToString().Equals("gzip", StringComparison.OrdinalIgnoreCase);
             try
             {
-                var bytes = await archiveService.ExportProjectArchiveAsync(projectId, compress);
-                var filename = $"{projectId}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}." + (compress ? "localmepack" : "json");
+                var bytes = await archiveService.ExportProjectArchiveAsync(project!.Id, compress);
+                var filename = $"{project.Id}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}." + (compress ? "localmepack" : "json");
                 var contentType = compress ? "application/gzip" : "application/json";
                 return Results.File(bytes, contentType, filename);
             }
@@ -104,8 +102,11 @@ public static class BaasDbSnapshotRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/projects/import", async (HttpRequest request, ProjectArchiveService archiveService) =>
+        app.MapPost("/_baas/v1/projects/import", async (HttpRequest request, ProjectManagerService pm, ProjectArchiveService archiveService) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireUser(request.HttpContext, pm);
+            if (!allowed) return err!;
+
             try
             {
                 Stream stream;
@@ -152,8 +153,11 @@ public static class BaasDbSnapshotRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/{projectId}/archive/restore", async (string projectId, HttpRequest request, ProjectArchiveService archiveService) =>
+        app.MapPost("/_baas/v1/{projectId}/archive/restore", async (string projectId, HttpRequest request, ProjectManagerService pm, ProjectArchiveService archiveService) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId);
+            if (!allowed) return err!;
+
             try
             {
                 Stream stream;
@@ -175,7 +179,7 @@ public static class BaasDbSnapshotRoutes
                 var options = new ArchiveImportOptions(
                     Mode: mode,
                     ConflictPolicy: conflict,
-                    TargetProjectId: projectId
+                    TargetProjectId: project!.Id
                 );
 
                 var restored = await archiveService.ImportArchiveAsync(archive, options);

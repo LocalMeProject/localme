@@ -289,9 +289,13 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         }
 
         // Seed or heal baseline platform users
-        var adminHash = ProjectManagerService.HashPassword("admin123456");
-        var operatorHash = ProjectManagerService.HashPassword("operator123456");
-        var developerHash = ProjectManagerService.HashPassword("developer123456");
+        var adminPass = Environment.GetEnvironmentVariable("LOCALME_ADMIN_INITIAL_PASSWORD") ?? "admin123456";
+        var opPass = Environment.GetEnvironmentVariable("LOCALME_OPERATOR_INITIAL_PASSWORD") ?? "operator123456";
+        var devPass = Environment.GetEnvironmentVariable("LOCALME_DEVELOPER_INITIAL_PASSWORD") ?? "developer123456";
+
+        var adminHash = ProjectManagerService.HashPassword(adminPass);
+        var operatorHash = ProjectManagerService.HashPassword(opPass);
+        var developerHash = ProjectManagerService.HashPassword(devPass);
 
         const string seedSql = @"
             INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc)
