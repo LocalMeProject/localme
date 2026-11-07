@@ -951,13 +951,13 @@ public static class BaasProjectRoutes
             const string sql = @"
                 SELECT 
                     schemaname, 
-                    tablename, 
+                    relname as tablename, 
                     coalesce(n_live_tup, 0)::bigint as live_rows, 
                     coalesce(n_dead_tup, 0)::bigint as dead_rows, 
-                    pg_size_pretty(pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as data_size,
-                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename)) - pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as index_size,
-                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))) as total_size,
-                    pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))::bigint as total_bytes
+                    pg_size_pretty(pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname))) as data_size,
+                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname)) - pg_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname))) as index_size,
+                    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname))) as total_size,
+                    pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(relname))::bigint as total_bytes
                 FROM pg_stat_user_tables
                 WHERE schemaname LIKE 'tenant_%' OR schemaname = 'public'
                 ORDER BY total_bytes DESC
@@ -974,6 +974,7 @@ public static class BaasProjectRoutes
                 {
                     schema = reader.GetString(0),
                     table = reader.GetString(1),
+                    tableName = reader.GetString(1),
                     liveRows = reader.GetInt64(2),
                     deadRows = reader.GetInt64(3),
                     dataSize = reader.GetString(4),
