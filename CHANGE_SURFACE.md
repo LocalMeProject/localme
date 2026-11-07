@@ -63,6 +63,7 @@ affected_projects:
 - `apps/server/src/wwwroot/assets/index-BIrLsUaE.css`: Compiled CSS bundle.
 - `apps/server/src/wwwroot/assets/index-D4P2Fuxq.js`: Compiled JS bundle.
 - `apps/server/src/wwwroot/assets/index-BLnyn0hZ.js`: Compiled JS bundle for web-console.
+- `apps/server/src/wwwroot/assets/index-CRcu-Zbr.js`: Compiled JS bundle for web-console.
 - `apps/server/src/wwwroot/assets/index-C1vClONq.css`: Compiled CSS bundle for web-console.
 - `apps/web-console/src/views/admin/AdminDeploymentsView.tsx`: Global edge functions manager, cross-tenant custom domains manager, and .NET 10 CLR runtime diagnostics.
 - `apps/web-console/src/views/admin/AdminSqlStudioView.tsx`: Interactive multi-schema SQL editor, table size & bloat analyzer, VACUUM/REINDEX maintenance runner, and pg_locks inspector.

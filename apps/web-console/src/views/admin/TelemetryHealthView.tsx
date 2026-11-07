@@ -113,9 +113,40 @@ export function TelemetryHealthView() {
     try {
       const res = await api.get('/_baas/v1/admin/telemetry/breakdown');
       if (res) {
-        setProjectBreakdown(res.projectBreakdown || []);
-        setUserBreakdown(res.userBreakdown || []);
-        setShardBreakdown(res.shardBreakdown || []);
+        const rawProjects = res.projects || res.projectBreakdown || [];
+        setProjectBreakdown(rawProjects.map((p: any) => ({
+          projectId: p.id || p.projectId,
+          slug: p.slug,
+          name: p.name,
+          ownerPhone: p.ownerPhone,
+          dbSize: p.dbSizePretty || p.dbSize || '0 B',
+          tableCount: p.tableCount ?? 0,
+          liveRows: p.liveRows ?? p.totalRows ?? 0,
+          fileCount: p.fileCount ?? 0,
+          storageSize: p.storagePretty || p.storageSize || '0 B',
+          functionCount: p.functionCount ?? 0,
+          domainCount: p.domainCount ?? 0,
+        })));
+
+        const rawUsers = res.users || res.userBreakdown || [];
+        setUserBreakdown(rawUsers.map((u: any) => ({
+          userId: u.id || u.userId,
+          fullName: u.fullName || 'بدون نام',
+          phone: u.phone,
+          role: u.role,
+          walletBalanceIrr: u.walletBalanceIrr ?? 0,
+          projectCount: u.projectCount ?? 0,
+          totalDbSizeBytes: u.totalDbSizeBytes ?? 0,
+          totalDbSizePretty: u.totalDbSizePretty || '0 B',
+          totalStorageBytes: u.totalStorageBytes ?? 0,
+          totalStoragePretty: u.totalStoragePretty || '0 B',
+        })));
+
+        const rawShards = res.shards || res.shardBreakdown || [];
+        setShardBreakdown(rawShards.map((s: any) => ({
+          clusterId: s.id || s.clusterId,
+          projectCount: s.currentProjectCount ?? s.projectCount ?? 0,
+        })));
       }
     } catch (err) {
       console.error('Failed to fetch telemetry breakdown', err);

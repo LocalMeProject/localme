@@ -42,15 +42,19 @@ interface AdminDomain {
 interface RuntimeDiagnostics {
   osDescription: string;
   osArchitecture: string;
-  processArchitecture: string;
+  processArchitecture?: string;
   frameworkDescription: string;
   processId: number;
   processorCount: number;
-  gcTotalMemoryBytes: number;
-  gcTotalMemoryPretty: string;
+  workingSetMb?: number;
+  privateMemoryMb?: number;
+  gcHeapMb?: number;
+  gcTotalMemoryPretty?: string;
   isServerGC: boolean;
   threadCount: number;
-  upTime: string;
+  uptimeSeconds?: number;
+  storageAdapter?: string;
+  clusterBusActive?: boolean;
 }
 
 export function AdminDeploymentsView() {
@@ -392,11 +396,11 @@ export function AdminDeploymentsView() {
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
                 <div className="flex items-center gap-2 text-slate-700 font-bold text-xs">
                   <Clock className="w-4 h-4 text-emerald-600" />
-                  <span>حافظه و Garbage Collector</span>
+                  <span>حافظه و زمان اجرا</span>
                 </div>
                 <div className="space-y-1 text-xs">
-                  <div className="text-slate-500">حجم تخصیص یافته GC: <span className="font-mono text-emerald-600 font-bold" dir="ltr">{runtime.gcTotalMemoryPretty}</span></div>
-                  <div className="text-slate-500">حالت Garbage Collector: <span className="font-mono text-slate-800" dir="ltr">{runtime.isServerGC ? 'Server GC' : 'Workstation GC'}</span></div>
+                  <div className="text-slate-500">حافظه پروسه (WorkingSet): <span className="font-mono text-emerald-600 font-bold" dir="ltr">{runtime.workingSetMb ? `${runtime.workingSetMb} MB` : runtime.gcTotalMemoryPretty}</span></div>
+                  <div className="text-slate-500">هیپ دات‌نت (GC Heap): <span className="font-mono text-slate-800" dir="ltr">{runtime.gcHeapMb ? `${runtime.gcHeapMb} MB` : '—'}</span></div>
                   <div className="text-slate-500">تعداد تردها: <span className="font-mono text-slate-800" dir="ltr">{runtime.threadCount} Threads</span></div>
                 </div>
               </div>
