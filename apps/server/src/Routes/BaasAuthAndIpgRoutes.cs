@@ -73,6 +73,7 @@ public static class BaasAuthAndIpgRoutes
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
+                Secure = true,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -105,6 +106,7 @@ public static class BaasAuthAndIpgRoutes
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
+                Secure = true,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -141,6 +143,7 @@ public static class BaasAuthAndIpgRoutes
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
+                Secure = true,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -201,14 +204,22 @@ public static class BaasAuthAndIpgRoutes
         // Logout API
         app.MapPost("/_baas/v1/auth/logout", (HttpContext ctx) =>
         {
-            ctx.Response.Cookies.Delete("localme_session", new CookieOptions { Path = "/" });
+            ctx.Response.Cookies.Delete("localme_session", new CookieOptions { Path = "/", Secure = true });
             return Results.Ok(new { success = true });
         });
 
-        app.MapGet("/_baas/v1/users", (ProjectManagerService pm) => Results.Json(pm.GetAllUsers()));
-
-        app.MapPut("/_baas/v1/users/{userId}/role", (string userId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/users", (HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
+            return Results.Json(pm.GetAllUsers());
+        });
+
+        app.MapPut("/_baas/v1/users/{userId}/role", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
+
             var roleStr = body["role"]?.ToString() ?? "Developer";
             if (Enum.TryParse<UserRole>(roleStr, true, out var role))
             {
@@ -219,20 +230,24 @@ public static class BaasAuthAndIpgRoutes
         });
 
         // 6. Multi-Tenant Project End-Users (SMS OTP, Email/Password, OAuth)
-        app.MapGet("/_baas/v1/{projectId}/auth/users", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "auth")
-                ? AuthHelper.ServiceDisabled("auth")
-                : Results.Json(pm.GetProjectUsers(projectId)));
-
-        app.MapGet("/_baas/v1/projects/{projectId}/users", (string projectId, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "auth")
-                ? AuthHelper.ServiceDisabled("auth")
-                : Results.Json(pm.GetProjectUsers(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/auth/users", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/auth/users", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth"))
-                return AuthHelper.ServiceDisabled("auth");
+            var (allowed, project, user, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectUsers(project!.Id));
+        });
+
+        app.MapGet("/_baas/v1/projects/{projectId}/users", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, user, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
+            return Results.Json(pm.GetProjectUsers(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/auth/users", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
 
             var phone = body["phone"]?.ToString();
             var email = body["email"]?.ToString();
@@ -240,14 +255,14 @@ public static class BaasAuthAndIpgRoutes
             var password = body["password"]?.ToString();
             var name = body["full_name"]?.ToString();
             var provider = body["provider"]?.ToString() ?? "sms_otp";
-            var user = pm.AddProjectUser(projectId, phone, email, name, provider, username, password);
+            var user = pm.AddProjectUser(project!.Id, phone, email, name, provider, username, password);
             return Results.Json(user);
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/users", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/users", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth"))
-                return AuthHelper.ServiceDisabled("auth");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
 
             var phone = body["phone"]?.ToString();
             var email = body["email"]?.ToString();
@@ -255,50 +270,54 @@ public static class BaasAuthAndIpgRoutes
             var password = body["password"]?.ToString();
             var name = body["full_name"]?.ToString();
             var provider = body["provider"]?.ToString() ?? "sms_otp";
-            var user = pm.AddProjectUser(projectId, phone, email, name, provider, username, password);
+            var user = pm.AddProjectUser(project!.Id, phone, email, name, provider, username, password);
             return Results.Json(user);
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/auth/users/{userId}", (string projectId, string userId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/auth/users/{userId}", (string projectId, string userId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth")) return AuthHelper.ServiceDisabled("auth");
-            var ok = pm.DeleteProjectUser(projectId, userId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
+            var ok = pm.DeleteProjectUser(project!.Id, userId);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound(new { error = "User not found" });
         });
 
-        app.MapPut("/_baas/v1/{projectId}/auth/users/{userId}/status", (string projectId, string userId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/{projectId}/auth/users/{userId}/status", (string projectId, string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth")) return AuthHelper.ServiceDisabled("auth");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
             var isConfirmed = body["is_confirmed"]?.GetValue<bool>() ?? body["isActive"]?.GetValue<bool>() ?? true;
-            var user = pm.UpdateProjectUserStatus(projectId, userId, isConfirmed);
+            var user = pm.UpdateProjectUserStatus(project!.Id, userId, isConfirmed);
             return user != null ? Results.Ok(new { success = true, user }) : Results.NotFound(new { error = "User not found" });
         });
 
-        app.MapPost("/_baas/v1/{projectId}/auth/users/{userId}/reset-password", (string projectId, string userId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/auth/users/{userId}/reset-password", (string projectId, string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth")) return AuthHelper.ServiceDisabled("auth");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
             var newPassword = body["password"]?.ToString();
             if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 4)
             {
                 return Results.BadRequest(new { error = "رمز عبور جدید باید حداقل ۴ کاراکتر باشد." });
             }
-            var user = pm.ResetProjectUserPassword(projectId, userId, newPassword);
+            var user = pm.ResetProjectUserPassword(project!.Id, userId, newPassword);
             return user != null ? Results.Ok(new { success = true, user }) : Results.NotFound(new { error = "User not found" });
         });
 
-        app.MapGet("/_baas/v1/{projectId}/auth/sms-logs", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/auth/sms-logs", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "auth")) return AuthHelper.ServiceDisabled("auth");
-            var logs = pm.GetProjectLogs(projectId, 100, "auth");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
+            var logs = pm.GetProjectLogs(project!.Id, 100, "auth");
             var otpLogs = logs.Where(l => l.Message.Contains("OTP") || l.Message.Contains("پیامک") || l.Message.Contains("کد")).ToList();
             return Results.Json(otpLogs);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/auth/policies", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/auth/policies", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var prj = pm.GetProject(projectId);
-            if (prj == null) return Results.NotFound(new { error = "Project not found" });
-            var settings = prj.Services.TryGetValue("auth", out var sc) ? sc.Settings : new Dictionary<string, string>();
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
+            var settings = project!.Services.TryGetValue("auth", out var sc) ? sc.Settings : new Dictionary<string, string>();
             return Results.Json(new
             {
                 otpExpirySeconds = settings.GetValueOrDefault("otp_expiry_seconds", "120"),
@@ -312,16 +331,16 @@ public static class BaasAuthAndIpgRoutes
             });
         });
 
-        app.MapPost("/_baas/v1/{projectId}/auth/policies", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/auth/policies", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var prj = pm.GetProject(projectId);
-            if (prj == null) return Results.NotFound(new { error = "Project not found" });
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
+            if (!allowed) return err!;
             var dict = new Dictionary<string, string>();
             foreach (var kvp in body)
             {
                 dict[kvp.Key] = kvp.Value?.ToString() ?? "";
             }
-            var updated = pm.ConfigureService(projectId, new ConfigureServiceRequest("auth", true, dict));
+            var updated = pm.ConfigureService(project!.Id, new ConfigureServiceRequest("auth", true, dict));
             return Results.Ok(new { success = true, config = updated });
         });
 

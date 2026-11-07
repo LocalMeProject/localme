@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using LocalMe.Core.Database;
 using LocalMe.DataPlane.MultiTenancy;
@@ -14,9 +15,12 @@ public static class BaasDatabaseSchemaRoutes
     public static void MapBaasDatabaseSchemaRoutes(this IEndpointRouteBuilder app)
     {
         // 1. Create Table (DDL)
-        app.MapPost("/_baas/v1/{projectId}/db/tables", async (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables", async (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var name = body["name"]?.ToString() ?? "new_table";
 
             List<TableColumnDefinition>? colDefs = null;
@@ -51,9 +55,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 2. Drop Table
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}", async (string projectId, string table, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}", async (string projectId, string table, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var removed = await pm.DeleteTableAsync(projectId, table);
@@ -67,9 +74,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 3. Add Column
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/columns", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/columns", async (string projectId, string table, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var name = body["name"]?.ToString() ?? "new_column";
             var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "text";
             var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
@@ -87,9 +97,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 4. Drop Column
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.DropColumnAsync(projectId, table, column);
@@ -103,9 +116,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 5. Alter Column
-        app.MapPatch("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, JsonObject body, ProjectManagerService pm) =>
+        app.MapPatch("/_baas/v1/{projectId}/db/tables/{table}/columns/{column}", async (string projectId, string table, string column, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var newName = body["newName"]?.ToString() ?? column;
             var dataType = body["dataType"]?.ToString() ?? body["type"]?.ToString() ?? "";
             var isNullable = body["isNullable"]?.GetValue<bool>() ?? true;
@@ -123,9 +139,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 6. Index Management (List, Create, Drop, Rebuild)
-        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var indexes = await pm.GetIndexesAsync(projectId, table);
@@ -137,9 +156,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes", async (string projectId, string table, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var name = body["name"]?.ToString() ?? $"idx_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
             var cols = body["columns"] is JsonArray arr ? arr.Select(x => x?.ToString() ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList() : new List<string>();
             if (cols.Count == 0) return Results.BadRequest(new { error = "حداقل انتخاب یک ستون برای ایجاد شاخص الزامی است." });
@@ -155,9 +177,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}", async (string projectId, string table, string indexName, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}", async (string projectId, string table, string indexName, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.DropIndexAsync(projectId, table, indexName);
@@ -169,9 +194,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}/rebuild", async (string projectId, string table, string indexName, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/indexes/{indexName}/rebuild", async (string projectId, string table, string indexName, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.RebuildIndexAsync(projectId, table, indexName);
@@ -184,9 +212,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 7. Foreign Key Relationships Management (List, Add, Drop)
-        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var rels = await pm.GetRelationshipsAsync(projectId, table);
@@ -198,9 +229,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/relationships", async (string projectId, string table, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var sourceCol = body["sourceColumn"]?.ToString() ?? "";
             var targetTable = body["targetTable"]?.ToString() ?? "";
             var targetCol = body["targetColumn"]?.ToString() ?? "id";
@@ -225,9 +259,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/relationships/{constraintName}", async (string projectId, string table, string constraintName, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/relationships/{constraintName}", async (string projectId, string table, string constraintName, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.DropRelationshipAsync(projectId, table, constraintName);
@@ -240,9 +277,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 8. Truncate Table
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/truncate", async (string projectId, string table, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/truncate", async (string projectId, string table, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.TruncateTableAsync(projectId, table);
@@ -256,9 +296,12 @@ public static class BaasDatabaseSchemaRoutes
         });
 
         // 9. RLS Policies (List, Create, Drop)
-        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var policies = await pm.GetPoliciesAsync(projectId, table);
@@ -270,9 +313,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, JsonObject body, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/{projectId}/db/tables/{table}/policies", async (string projectId, string table, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             var name = body["name"]?.ToString() ?? $"policy_{table}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
             var cmd = body["command"]?.ToString() ?? "ALL";
             var roles = body["roles"]?.ToString() ?? "public";
@@ -290,9 +336,12 @@ public static class BaasDatabaseSchemaRoutes
             }
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/policies/{policy}", async (string projectId, string table, string policy, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/tables/{table}/policies/{policy}", async (string projectId, string table, string policy, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+            projectId = project!.Id;
+
             try
             {
                 var ok = await pm.DropPolicyAsync(projectId, table, policy);

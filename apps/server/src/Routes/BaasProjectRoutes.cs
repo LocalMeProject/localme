@@ -70,22 +70,19 @@ public static class BaasProjectRoutes
 
         app.MapGet("/_baas/v1/projects/{projectId}", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (ctx.Items.TryGetValue("ScopedProjectId", out var spId) && spId is string pid && !pid.Equals(projectId, StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Problem(statusCode: 403, title: "Forbidden: شما فقط مجاز به دسترسی به پروژه اختصاص‌یافته هستید.");
-            }
-            var project = pm.GetProject(projectId);
-            return project != null ? Results.Json(project) : Results.NotFound();
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+            return Results.Json(project);
         });
 
         // Project Scoped Password Management APIs
-        app.MapGet("/_baas/v1/projects/{projectId}/password-status", (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/projects/{projectId}/password-status", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound();
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
             return Results.Ok(new
             {
-                projectId = project.Id,
+                projectId = project!.Id,
                 slug = project.Slug,
                 hasPassword = project.HasPassword
             });
@@ -93,8 +90,8 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/projects/{projectId}/password", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
 
             var password = body["password"]?.ToString() ?? "";
             if (string.IsNullOrWhiteSpace(password) || password.Length < 4)
@@ -102,105 +99,140 @@ public static class BaasProjectRoutes
                 return Results.BadRequest(new { error = "رمز عبور اختصاصی پروژه باید حداقل ۴ کاراکتر باشد." });
             }
 
-            var ok = pm.SetProjectPassword(projectId, password);
+            var ok = pm.SetProjectPassword(project!.Id, password);
             return ok ? Results.Ok(new { success = true, hasPassword = true, message = "رمز عبور اختصاصی پروژه با موفقیت ثبت شد." }) : Results.NotFound();
         });
 
         app.MapDelete("/_baas/v1/projects/{projectId}/password", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
 
-            var ok = pm.RemoveProjectPassword(projectId);
+            var ok = pm.RemoveProjectPassword(project!.Id);
             return ok ? Results.Ok(new { success = true, hasPassword = false, message = "رمز عبور اختصاصی پروژه حذف شد." }) : Results.NotFound();
         });
 
-        app.MapPut("/_baas/v1/projects/{projectId}", (string projectId, UpdateProjectRequest req, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/projects/{projectId}", (string projectId, UpdateProjectRequest req, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var updated = pm.UpdateProject(projectId, req);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var updated = pm.UpdateProject(project!.Id, req);
             return updated != null ? Results.Json(updated) : Results.NotFound();
         });
 
-        app.MapDelete("/_baas/v1/projects/{projectId}", (string projectId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/projects/{projectId}", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var ok = pm.DeleteProject(projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var ok = pm.DeleteProject(project!.Id);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
         // 4. Per-Service Configuration & Per-Service API Keys
-        app.MapGet("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound();
-            return project.Services.TryGetValue(service.ToLowerInvariant(), out var cfg)
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            return project!.Services.TryGetValue(service.ToLowerInvariant(), out var cfg)
                 ? Results.Json(cfg)
                 : Results.NotFound();
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
             var srv = string.IsNullOrWhiteSpace(req.Service) ? service : req.Service;
-            var config = pm.ConfigureService(projectId, req with { Service = srv });
+            var config = pm.ConfigureService(project!.Id, req with { Service = srv });
             return config != null ? Results.Json(config) : Results.NotFound();
         });
 
-        app.MapPut("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/projects/{projectId}/services/{service}/config", (string projectId, string service, ConfigureServiceRequest req, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
             var srv = string.IsNullOrWhiteSpace(req.Service) ? service : req.Service;
-            var config = pm.ConfigureService(projectId, req with { Service = srv });
+            var config = pm.ConfigureService(project!.Id, req with { Service = srv });
             return config != null ? Results.Json(config) : Results.NotFound();
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/services/configure", (string projectId, ConfigureServiceRequest req, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/services/configure", (string projectId, ConfigureServiceRequest req, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var config = pm.ConfigureService(projectId, req);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var config = pm.ConfigureService(project!.Id, req);
             return config != null ? Results.Json(config) : Results.NotFound();
         });
 
-        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/regenerate-key", (string projectId, string service, ProjectManagerService pm) =>
+        app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/regenerate-key", (string projectId, string service, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var key = pm.RegenerateServiceKey(projectId, service);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var key = pm.RegenerateServiceKey(project!.Id, service);
             return key != null ? Results.Json(key) : Results.NotFound();
         });
 
-        app.MapGet("/_baas/v1/projects/{projectId}/metrics", (string projectId, UsageMeteringService metering) =>
+        app.MapGet("/_baas/v1/projects/{projectId}/metrics", (string projectId, HttpContext ctx, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var summary = metering.GetProjectSummary(projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var summary = metering.GetProjectSummary(project!.Id);
             return Results.Json(summary);
         });
 
-        app.MapGet("/_baas/v1/{projectId}/billing/usage", (string projectId, UsageMeteringService metering) =>
+        app.MapGet("/_baas/v1/{projectId}/billing/usage", (string projectId, HttpContext ctx, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var summary = metering.GetProjectSummary(projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var summary = metering.GetProjectSummary(project!.Id);
             return Results.Json(summary);
         });
 
         // Team Collaborators & RBAC
-        app.MapGet("/_baas/v1/{projectId}/team", (string projectId, ProjectManagerService pm) =>
-            Results.Json(pm.GetCollaborators(projectId)));
-
-        app.MapPost("/_baas/v1/{projectId}/team", (string projectId, JsonObject body, ProjectManagerService pm, PlatformConfigurationService configService) =>
+        app.MapGet("/_baas/v1/{projectId}/team", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+            return Results.Json(pm.GetCollaborators(project!.Id));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/team", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService configService) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
             var name = body["full_name"]?.ToString() ?? "همکار جدید";
             var contact = body["email_or_phone"]?.ToString() ?? body["phone"]?.ToString() ?? body["email"]?.ToString() ?? "";
             var role = body["role"]?.ToString() ?? "Developer";
             if (string.IsNullOrWhiteSpace(contact)) return Results.BadRequest(new { error = "Mobile number or email is required" });
 
             var maxMembers = configService.GetConfig().MaxTeamMembersPerDeveloperTier;
-            var existingCollabs = pm.GetCollaborators(projectId);
+            var existingCollabs = pm.GetCollaborators(project!.Id);
             if (existingCollabs.Count >= maxMembers)
             {
                 return Results.BadRequest(new { error = $"سقف اعضای تیم در پلن پایه {maxMembers} نفر است. برای افزودن همکاران بیشتر به این پروژه نیاز به ارتقای اشتراک دارید." });
             }
 
-            var collab = pm.AddCollaborator(projectId, name, contact, role);
-            pm.AddProjectLog(projectId, "auth", "INFO", $"عضو جدید {name} ({contact}) با نقش {role} به پروژه افزوده شد.");
+            var collab = pm.AddCollaborator(project!.Id, name, contact, role);
+            pm.AddProjectLog(project!.Id, "auth", "INFO", $"عضو جدید {name} ({contact}) با نقش {role} به پروژه افزوده شد.");
             return Results.Json(collab);
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/team/{collaboratorId}", (string projectId, string collaboratorId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/team/{collaboratorId}", (string projectId, string collaboratorId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var removed = pm.RemoveCollaborator(projectId, collaboratorId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            if (!allowed) return err!;
+
+            var removed = pm.RemoveCollaborator(project!.Id, collaboratorId);
             return removed ? Results.Ok(new { success = true }) : Results.NotFound(new { error = "Collaborator not found" });
         });
 
@@ -785,20 +817,32 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
         });
 
-        app.MapPut("/_baas/v1/users/{userId}/status", (string userId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/users/{userId}/status", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
+
             var isActive = body["isActive"]?.GetValue<bool>() ?? true;
             var ok = pm.UpdateUserStatus(userId, isActive);
             return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
         });
 
-        app.MapGet("/_baas/v1/users/{userId}/projects", (string userId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/users/{userId}/projects", (string userId, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireUser(ctx, pm);
+            if (!allowed) return err!;
+            if (!AuthHelper.HasOperatorOrAdminAccess(user) && !string.Equals(user!.Id, userId, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: شما فقط مجاز به مشاهده پروژه‌های خود هستید.");
+            }
             return Results.Json(pm.GetProjectsByUser(userId));
         });
 
-        app.MapPut("/_baas/v1/admin/projects/{projectId}/status", (string projectId, JsonObject body, ProjectManagerService pm) =>
+        app.MapPut("/_baas/v1/admin/projects/{projectId}/status", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
+
             var status = body["status"]?.ToString() ?? "Active";
             var ok = pm.UpdateProjectStatus(projectId, status);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();

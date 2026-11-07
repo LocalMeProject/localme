@@ -113,7 +113,9 @@ public sealed class OtpAuthService
     }
 
     private static readonly byte[] JwtSecret = Encoding.UTF8.GetBytes(
-        Environment.GetEnvironmentVariable("LOCALME_JWT_SECRET") ?? "localme-secure-platform-jwt-secret-key-384b!"
+        Environment.GetEnvironmentVariable("LOCALME_JWT_SECRET")
+        ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+        ?? "localme-secure-platform-jwt-secret-key-384b!"
     );
 
     private static string Base64UrlEncode(byte[] bytes) =>

@@ -1,6 +1,7 @@
 namespace LocalMe.Server.Routes;
 
 using System;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -13,10 +14,24 @@ public static class BaasHostingWebhookRoutes
         // GitHub / GitLab Git Push Webhook Auto-Deployment Endpoint
         app.MapPost("/_baas/v1/{projectId}/hosting/deploy/webhook", async (string projectId, HttpRequest req, ProjectManagerService pm) =>
         {
-            var project = pm.GetProject(projectId);
+            var project = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
             if (project == null) return Results.NotFound(new { error = "پروژه یافت نشد." });
-            if (!pm.IsServiceEnabled(projectId, "hosting"))
+            if (!pm.IsServiceEnabled(project.Id, "hosting"))
                 return Results.Json(new { error = "سرویس میزبانی وب برای این پروژه فعال نیست." }, statusCode: 403);
+
+            // Optional Webhook Secret Verification
+            var webhookSecret = req.Headers["X-Webhook-Secret"].FirstOrDefault()
+                                ?? req.Headers["X-Gitlab-Token"].FirstOrDefault()
+                                ?? req.Query["secret"].FirstOrDefault();
+
+            var expectedSecret = project.Services.TryGetValue("hosting", out var s)
+                ? s.Settings.GetValueOrDefault("webhook_secret")
+                : null;
+
+            if (!string.IsNullOrEmpty(expectedSecret) && !string.Equals(expectedSecret, webhookSecret, StringComparison.Ordinal))
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: کلید اعتبارسنجی وبهوک (Webhook Secret) نامعتبر است.");
+            }
 
             JsonObject? body = null;
             try
@@ -43,13 +58,13 @@ public static class BaasHostingWebhookRoutes
 
             // Create deployment record
             var deployment = pm.CreateDeployment(
-                projectId: projectId,
+                projectId: project.Id,
                 branch: branch,
                 commitSha: commitSha[..Math.Min(commitSha.Length, 8)]
             );
 
             pm.AddProjectLog(
-                projectId,
+                project.Id,
                 "hosting",
                 "INFO",
                 $"استقرار خودکار نسخه وب از شاخه {branch} (کامیت: {commitSha[..Math.Min(commitSha.Length, 7)]}): {commitMsg}",
@@ -59,7 +74,7 @@ public static class BaasHostingWebhookRoutes
             return Results.Ok(new
             {
                 success = true,
-                message = $"استقرار خودکار با موفقیت انجام شد و نسخه جدید فعال گردید.",
+                message = "استقرار خودکار با موفقیت انجام شد و نسخه جدید فعال گردید.",
                 deployment = new
                 {
                     id = deployment.Id,

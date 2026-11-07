@@ -23,12 +23,10 @@ public static class BaasDatabaseRoutes
         // 1. PostgREST URL Filter Query
         app.MapGet("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+            metering.RecordUsage(project!.Id, project.OwnerPhone, "db_query", 1);
 
             var queryDict = new Dictionary<string, string>();
             foreach (var (k, v) in context.Request.Query)
@@ -39,7 +37,7 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-                var result = await pm.QueryTableAsync(projectId, table, ast);
+                var result = await pm.QueryTableAsync(project.Id, table, ast);
 
                 context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -54,10 +52,8 @@ public static class BaasDatabaseRoutes
         // 2. Structured JSON AST Query
         app.MapPost("/_baas/v1/{projectId}/rest/{table}/query", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -66,8 +62,8 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseJsonQuery(jsonNode);
-                var result = await pm.QueryTableAsync(projectId, table, ast);
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+                var result = await pm.QueryTableAsync(project!.Id, table, ast);
+                metering.RecordUsage(project.Id, project.OwnerPhone, "db_query", 1);
                 return Results.Json(result);
             }
             catch (Exception ex)
@@ -79,12 +75,10 @@ public static class BaasDatabaseRoutes
         // 3. Simple Table Query Fallback
         app.MapGet("/_baas/v1/{projectId}/db/{table}", async (string projectId, string table, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+            metering.RecordUsage(project!.Id, project.OwnerPhone, "db_query", 1);
 
             var queryDict = new Dictionary<string, string>();
             foreach (var (k, v) in context.Request.Query)
@@ -95,7 +89,7 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-                var result = await pm.QueryTableAsync(projectId, table, ast);
+                var result = await pm.QueryTableAsync(project.Id, table, ast);
 
                 context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -110,10 +104,8 @@ public static class BaasDatabaseRoutes
         // 4. REST Table Insert (Single or Batch)
         app.MapPost("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -384,7 +376,9 @@ public static class BaasDatabaseRoutes
         // 12. Sandboxed DML SQL Query Runner
         app.MapPost("/_baas/v1/{projectId}/db/sql", async (string projectId, HttpRequest request, HttpContext context, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
             var json = JsonNode.Parse(body) as JsonObject;
@@ -403,16 +397,12 @@ public static class BaasDatabaseRoutes
                 }, statusCode: 400);
             }
 
-            var userId = context.User.FindFirst("sub")?.Value
-                         ?? context.Request.Headers["X-User-Id"].FirstOrDefault()
-                         ?? "anon";
-            var userRole = context.User.FindFirst("role")?.Value
-                          ?? context.Request.Headers["X-User-Role"].FirstOrDefault()
-                          ?? "authenticated";
+            var userId = caller?.Id ?? "anon";
+            var userRole = caller != null ? (caller.Role == UserRole.Admin ? "admin" : "authenticated") : "anon";
 
             try
             {
-                var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
+                var result = await pm.ExecuteSqlAsync(project!.Id, sql, userId, userRole);
                 return Results.Json(result);
             }
             catch (Exception ex)
@@ -425,13 +415,15 @@ public static class BaasDatabaseRoutes
         app.MapBaasDatabaseSchemaRoutes();
 
         // 22. Delete Rows
-        app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/db/{table}/rows/{rowId}", async (string projectId, string table, string rowId, HttpContext context, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             try
             {
-                var removed = await pm.DeleteRowAsync(projectId, table, rowId);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                var removed = await pm.DeleteRowAsync(project!.Id, table, rowId);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "رکورد یافت نشد" });
             }
             catch (Exception ex)
@@ -440,13 +432,15 @@ public static class BaasDatabaseRoutes
             }
         });
 
-        app.MapDelete("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, ProjectManagerService pm) =>
+        app.MapDelete("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpContext context, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             try
             {
-                var removed = await pm.DeleteRowAsync(projectId, table, rowId);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                var removed = await pm.DeleteRowAsync(project!.Id, table, rowId);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return removed ? Results.Ok(new { success = true, rowId }) : Results.NotFound(new { error = "رکورد یافت نشد" });
             }
             catch (Exception ex)
@@ -458,10 +452,8 @@ public static class BaasDatabaseRoutes
         // 23. Visual SQL Studio Execution Endpoint
         app.MapPost("/_baas/v1/{projectId}/sql/execute", async (string projectId, JsonObject body, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             var sql = body["sql"]?.ToString() ?? body["query"]?.ToString() ?? "SELECT * FROM products LIMIT 50;";
 
@@ -478,18 +470,14 @@ public static class BaasDatabaseRoutes
                 }, statusCode: 400);
             }
 
-            metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
+            metering.RecordUsage(project!.Id, project.OwnerPhone, "db_query", 1);
             try
             {
-                var userId = context.User.FindFirst("sub")?.Value
-                             ?? context.Request.Headers["X-User-Id"].FirstOrDefault()
-                             ?? "anon";
-                var userRole = context.User.FindFirst("role")?.Value
-                              ?? context.Request.Headers["X-User-Role"].FirstOrDefault()
-                              ?? "authenticated";
+                var userId = caller?.Id ?? "anon";
+                var userRole = caller != null ? (caller.Role == UserRole.Admin ? "admin" : "authenticated") : "anon";
 
-                var result = await pm.ExecuteSqlAsync(projectId, sql, userId, userRole);
-                pm.AddProjectLog(projectId, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
+                var result = await pm.ExecuteSqlAsync(project.Id, sql, userId, userRole);
+                pm.AddProjectLog(project.Id, "database", result.Success ? "INFO" : "WARN", $"اجرای دستور SQL: {sql[..Math.Min(sql.Length, 60)]}", statusCode: result.Success ? 200 : 400, latencyMs: result.ExecutionTimeMs);
                 return Results.Json(result);
             }
             catch (Exception ex)
