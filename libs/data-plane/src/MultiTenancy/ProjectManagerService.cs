@@ -152,7 +152,27 @@ public sealed partial class ProjectManagerService
 
     // 2. Project CRUD
     public IReadOnlyList<BaasProject> GetProjectsByUser(string userId) =>
-        _projects.Values.Where(p => p.OwnerId == userId).OrderByDescending(p => p.CreatedAtUtc).ToList();
+        GetProjectsForUser(userId);
+
+    public IReadOnlyList<BaasProject> GetProjectsForUser(string userId, string? phone = null, string? email = null)
+    {
+        var matchingIds = new HashSet<string>(
+            _projects.Values.Where(p => p.OwnerId == userId || (!string.IsNullOrEmpty(phone) && p.OwnerPhone == phone)).Select(p => p.Id),
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        foreach (var (projId, collabs) in _projectCollaborators)
+        {
+            if (collabs.Any(c =>
+                (!string.IsNullOrEmpty(phone) && string.Equals(c.EmailOrPhone, phone, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(email) && string.Equals(c.EmailOrPhone, email, StringComparison.OrdinalIgnoreCase))))
+            {
+                matchingIds.Add(projId);
+            }
+        }
+
+        return _projects.Values.Where(p => matchingIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+    }
 
     public IReadOnlyList<BaasProject> GetAllProjects() =>
         _projects.Values.OrderByDescending(p => p.CreatedAtUtc).ToList();

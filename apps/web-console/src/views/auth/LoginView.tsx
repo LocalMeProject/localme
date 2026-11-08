@@ -46,7 +46,10 @@ export function LoginView() {
 
   // Parse return URL
   const searchParams = new URLSearchParams(location.search);
-  const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/panel';
+  const rawReturnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || '/panel';
+  const returnUrl = rawReturnUrl.toLowerCase().startsWith('/login') || rawReturnUrl.toLowerCase().startsWith('/auth')
+    ? '/panel'
+    : rawReturnUrl;
 
   // Timer countdown
   useEffect(() => {
@@ -73,7 +76,11 @@ export function LoginView() {
   const handleCompleteAuth = async (tokens: { accessToken: string }, user: any) => {
     localStorage.setItem('localme_token', tokens.accessToken);
     localStorage.setItem('localme_user', JSON.stringify(user));
-    await refreshUser();
+    try {
+      await refreshUser();
+    } catch {
+      // ignore
+    }
     
     // Redirect to returnUrl (or /panel)
     const target = returnUrl.startsWith('/login') || returnUrl.startsWith('/auth') ? '/panel' : returnUrl;

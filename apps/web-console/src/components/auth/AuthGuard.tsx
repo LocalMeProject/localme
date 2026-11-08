@@ -9,33 +9,50 @@ export interface UserSession {
   role: number | string; // 0: Admin, 1: Operator, 2: Developer
   walletBalanceIrr: number;
   username?: string;
+  isProjectScoped?: boolean;
+  scopedProjectId?: string;
 }
 
 interface AuthContextType {
   user: UserSession | null;
   loading: boolean;
   logout: () => void;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<UserSession | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   logout: () => {},
-  refreshUser: async () => {},
+  refreshUser: async () => null,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserSession | null>(null);
+  const [user, setUser] = useState<UserSession | null>(() => {
+    try {
+      const stored = localStorage.getItem('localme_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = async (): Promise<UserSession | null> => {
     try {
-      const res = await fetch('/_baas/v1/users/me');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('localme_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/_baas/v1/users/me', {
+        headers,
+        credentials: 'include',
+      });
       if (res.ok) {
         const u = await res.json();
         setUser(u);
@@ -44,6 +61,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         localStorage.removeItem('localme_user');
+        localStorage.removeItem('localme_token');
         return null;
       }
     } catch {
@@ -61,10 +79,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem('localme_token');
     localStorage.removeItem('localme_user');
-    // Clear cookie
     document.cookie = 'localme_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    fetch('/_baas/v1/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setUser(null);
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   useEffect(() => {
@@ -73,15 +91,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const path = location.pathname.toLowerCase();
     const isAuthRoute = path === '/login' || path === '/register' || path.startsWith('/auth');
     const isAdminRoute = path === '/admin' || path.startsWith('/admin/');
-    const isPanelRoute = path === '/panel' || path.startsWith('/panel/') || path === '/console' || path.startsWith('/console/') || path === '/projects';
+    const isPanelRoute = path === '/' || path === '/hub' || path === '/panel' || path.startsWith('/panel/') || path === '/console' || path.startsWith('/console/') || path === '/projects';
 
     const searchParams = new URLSearchParams(location.search);
-    const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
+    let returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
+    if (returnUrl && (returnUrl.toLowerCase().startsWith('/login') || returnUrl.toLowerCase().startsWith('/auth'))) {
+      returnUrl = '/panel';
+    }
 
     if (user) {
       // Authenticated user on auth page -> redirect to panel or returnUrl
       if (isAuthRoute) {
-        navigate(returnUrl && !returnUrl.startsWith('/login') ? returnUrl : '/panel', { replace: true });
+        navigate(returnUrl || '/panel', { replace: true });
         return;
       }
 

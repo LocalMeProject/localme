@@ -69,6 +69,7 @@ affected_projects:
 - `apps/server/src/wwwroot/assets/index-CmxQgU1D.js`: Compiled JS bundle for web-console.
 - `apps/server/src/wwwroot/assets/index-AJt2HxaP.css`: Compiled CSS bundle for web-console.
 - `apps/server/src/wwwroot/assets/index-vYoq5u28.js`: Compiled JS bundle for web-console.
+- `apps/server/src/wwwroot/assets/index-_7YH-lI7.js`: Compiled JS bundle for web-console with login loop fix.
 - `apps/web-console/src/views/admin/AdminDeploymentsView.tsx`: Global edge functions manager, cross-tenant custom domains manager, and .NET 10 CLR runtime diagnostics.
 - `apps/web-console/src/views/admin/AdminSqlStudioView.tsx`: Interactive multi-schema SQL editor, table size & bloat analyzer, VACUUM/REINDEX maintenance runner, and pg_locks inspector.
 - `tests/LocalMe.Integration.Tests/DynamicConfigAndShardsTests.cs`: Ephemeral container test battery for in-DB configs and sharding.

@@ -35,7 +35,7 @@ public static class AuthHelper
                         return new PlatformUser(
                             Id: $"scoped_{prj.Id}",
                             FullName: $"دسترسی پروژه: {prj.Name}",
-                            Phone: prj.OwnerPhone,
+                            Phone: "",
                             Email: $"project-{prj.Slug}@localme.internal",
                             Role: UserRole.Developer,
                             WalletBalanceIrr: 0,
@@ -168,9 +168,20 @@ public static class AuthHelper
 
         // Team Collaborators check
         var collabs = pm.GetCollaborators(project.Id);
-        if (collabs.Any(c => string.Equals(c.EmailOrPhone, user.Email, StringComparison.OrdinalIgnoreCase) ||
-                             string.Equals(c.EmailOrPhone, user.Phone, StringComparison.OrdinalIgnoreCase)))
+        var collab = collabs.FirstOrDefault(c =>
+            (!string.IsNullOrEmpty(user.Email) && string.Equals(c.EmailOrPhone, user.Email, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(user.Phone) && string.Equals(c.EmailOrPhone, user.Phone, StringComparison.OrdinalIgnoreCase)));
+
+        if (collab != null)
         {
+            // RBAC: "Viewer" role is strictly read-only
+            var method = context.Request.Method;
+            if (string.Equals(collab.Role, "Viewer", StringComparison.OrdinalIgnoreCase) &&
+                !HttpMethods.IsGet(method) && !HttpMethods.IsHead(method) && !HttpMethods.IsOptions(method))
+            {
+                return (false, project, user, Results.Problem(statusCode: 403, title: "Forbidden: دسترسی شما به عنوان مشاهده‌گر (Viewer) تنها برای خواندن اطلاعات مجاز است."));
+            }
+
             if (serviceRequired != null && !pm.IsServiceEnabled(project.Id, serviceRequired))
             {
                 return (false, project, user, ServiceDisabled(serviceRequired));
@@ -179,6 +190,46 @@ public static class AuthHelper
         }
 
         return (false, project, user, Results.Problem(statusCode: 403, title: "Forbidden: شما مجوز دسترسی به این پروژه را ندارید."));
+    }
+
+    public static (bool Allowed, BaasProject? Project, PlatformUser? Caller, IResult? Error) EnsureProjectOwnerOrAdmin(
+        HttpContext context,
+        ProjectManagerService pm,
+        string projectId)
+    {
+        var project = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
+        if (project == null)
+        {
+            return (false, null, null, Results.NotFound(new { error = "Project not found", message = $"پروژه با شناسه یا اسلاگ '{projectId}' یافت نشد." }));
+        }
+
+        // Project-scoped tokens and API keys are strictly forbidden from owner-level governance actions
+        if (context.Items.ContainsKey("ScopedProjectId") ||
+            !string.IsNullOrEmpty(context.Request.Headers["apikey"]) ||
+            !string.IsNullOrEmpty(context.Request.Headers["X-Api-Key"]))
+        {
+            return (false, project, null, Results.Problem(statusCode: 403, title: "Forbidden: عملیات مدیریتی پروژه تنها توسط مالک پروژه یا مدیر پلتفرم مجاز است."));
+        }
+
+        var user = GetCurrentUser(context, pm);
+        if (user == null)
+        {
+            return (false, project, null, Results.Unauthorized());
+        }
+
+        if (HasOperatorOrAdminAccess(user))
+        {
+            return (true, project, user, null);
+        }
+
+        // Only true owner
+        if (string.Equals(project.OwnerId, user.Id, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(user.Phone) && string.Equals(project.OwnerPhone, user.Phone, StringComparison.OrdinalIgnoreCase)))
+        {
+            return (true, project, user, null);
+        }
+
+        return (false, project, user, Results.Problem(statusCode: 403, title: "Forbidden: تنها مالک پروژه یا مدیر ارشد مجاز به انجام این عملیات می‌باشد."));
     }
 
     public static IResult ServiceDisabled(string serviceName) =>

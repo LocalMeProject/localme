@@ -124,7 +124,7 @@ public static class BaasDatabaseRoutes
                             insertedList.Add(ins);
                         }
                     }
-                    metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
+                    metering.RecordUsage(projectId, project!.OwnerPhone, "db_query", insertedList.Count);
                     GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                     return Results.Json(insertedList);
                 }
@@ -132,7 +132,7 @@ public static class BaasDatabaseRoutes
                 {
                     var jsonNode = parsed as JsonObject ?? new JsonObject();
                     var inserted = await pm.InsertRowAsync(projectId, table, jsonNode);
-                    metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
+                    metering.RecordUsage(projectId, project!.OwnerPhone, "db_query", 2);
                     GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
                     return Results.Json(inserted);
                 }
@@ -144,12 +144,10 @@ public static class BaasDatabaseRoutes
         });
 
         // 5. REST Table Batch Insert
-        app.MapPost("/_baas/v1/{projectId}/rest/{table}/batch", async (string projectId, string table, JsonArray records, ProjectManagerService pm, UsageMeteringService metering) =>
+        app.MapPost("/_baas/v1/{projectId}/rest/{table}/batch", async (string projectId, string table, JsonArray records, HttpContext context, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database"))
-                return Results.Json(new { error = "سرویس پایگاه داده برای این پروژه فعال نشده است." }, statusCode: 403);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             try
             {
@@ -158,12 +156,12 @@ public static class BaasDatabaseRoutes
                 {
                     if (item is JsonObject row)
                     {
-                        var ins = await pm.InsertRowAsync(projectId, table, row);
+                        var ins = await pm.InsertRowAsync(project!.Id, table, row);
                         insertedList.Add(ins);
                     }
                 }
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", insertedList.Count);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                metering.RecordUsage(project!.Id, project.OwnerPhone, "db_query", insertedList.Count);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return Results.Json(insertedList);
             }
             catch (Exception ex)
@@ -175,7 +173,8 @@ public static class BaasDatabaseRoutes
         // 6. Real-Time CDC Table Events over Server-Sent Events (SSE)
         app.MapGet("/_baas/v1/{projectId}/db/realtime", async (string projectId, HttpContext context, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             context.Response.Headers.Append("Content-Type", "text/event-stream");
             context.Response.Headers.Append("Cache-Control", "no-cache");
@@ -185,7 +184,7 @@ public static class BaasDatabaseRoutes
 
             void Handler(string pId, string tbl, string action, object? payload)
             {
-                if (pId != projectId) return;
+                if (pId != project!.Id) return;
                 if (!string.IsNullOrEmpty(tableFilter) && !tbl.Equals(tableFilter, StringComparison.OrdinalIgnoreCase)) return;
 
                 var payloadJson = System.Text.Json.JsonSerializer.Serialize(new
@@ -239,9 +238,8 @@ public static class BaasDatabaseRoutes
         // 7. REST Row Update (PATCH)
         app.MapPatch("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -249,11 +247,11 @@ public static class BaasDatabaseRoutes
 
             try
             {
-                var updated = await pm.UpdateRowAsync(projectId, table, rowId, patch);
+                var updated = await pm.UpdateRowAsync(project!.Id, table, rowId, patch);
                 if (updated == null) return Results.NotFound(new { error = "Row not found" });
 
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 1);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                metering.RecordUsage(project.Id, project.OwnerPhone, "db_query", 1);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return Results.Json(updated);
             }
             catch (Exception ex)
@@ -265,9 +263,8 @@ public static class BaasDatabaseRoutes
         // 8. REST Row Upsert (PUT)
         app.MapPut("/_baas/v1/{projectId}/rest/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -277,9 +274,9 @@ public static class BaasDatabaseRoutes
 
             try
             {
-                var upserted = await pm.UpsertRowAsync(projectId, table, onConflict, payload);
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                var upserted = await pm.UpsertRowAsync(project!.Id, table, onConflict, payload);
+                metering.RecordUsage(project.Id, project.OwnerPhone, "db_query", 2);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return Results.Json(upserted);
             }
             catch (Exception ex)
@@ -291,9 +288,8 @@ public static class BaasDatabaseRoutes
         // 9. Legacy Single Row Insert (POST)
         app.MapPost("/_baas/v1/{projectId}/db/{table}", async (string projectId, string table, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>
         {
-            var project = pm.GetProject(projectId);
-            if (project == null) return Results.NotFound(new { error = "Project not found" });
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
 
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync();
@@ -301,9 +297,9 @@ public static class BaasDatabaseRoutes
 
             try
             {
-                var inserted = await pm.InsertRowAsync(projectId, table, json);
-                metering.RecordUsage(projectId, project.OwnerPhone, "db_query", 2);
-                GatewayCacheMiddleware.InvalidateTag($"{projectId}:{table}");
+                var inserted = await pm.InsertRowAsync(project!.Id, table, json);
+                metering.RecordUsage(project.Id, project.OwnerPhone, "db_query", 2);
+                GatewayCacheMiddleware.InvalidateTag($"{project.Id}:{table}");
                 return Results.Json(inserted);
             }
             catch (Exception ex)
@@ -313,12 +309,14 @@ public static class BaasDatabaseRoutes
         });
 
         // 10. Table Overview (Consolidated Catalog & Statistics)
-        app.MapGet("/_baas/v1/{projectId}/db/tables/overview", async (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables/overview", async (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             try
             {
-                var overview = await pm.GetTablesOverviewAsync(projectId);
+                var overview = await pm.GetTablesOverviewAsync(project!.Id);
                 return Results.Json(overview);
             }
             catch (Exception ex)
@@ -328,12 +326,14 @@ public static class BaasDatabaseRoutes
         });
 
         // 10.1 List Tables
-        app.MapGet("/_baas/v1/{projectId}/db/tables", async (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/{projectId}/db/tables", async (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             try
             {
-                var tables = await pm.GetProjectTableNamesAsync(projectId);
+                var tables = await pm.GetProjectTableNamesAsync(project!.Id);
                 return Results.Json(tables);
             }
             catch (Exception ex)
@@ -342,12 +342,14 @@ public static class BaasDatabaseRoutes
             }
         });
 
-        app.MapGet("/_baas/v1/projects/{projectId}/tables", async (string projectId, ProjectManagerService pm) =>
+        app.MapGet("/_baas/v1/projects/{projectId}/tables", async (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             try
             {
-                var tables = await pm.GetProjectTableNamesAsync(projectId);
+                var tables = await pm.GetProjectTableNamesAsync(project!.Id);
                 return Results.Json(tables);
             }
             catch (Exception ex)
@@ -359,12 +361,14 @@ public static class BaasDatabaseRoutes
         // 11. Describe Table Schema
         app.MapGet("/_baas/v1/{projectId}/db/schema", async (string projectId, HttpRequest request, ProjectManagerService pm) =>
         {
-            if (!pm.IsServiceEnabled(projectId, "database")) return AuthHelper.ServiceDisabled("database");
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(request.HttpContext, pm, projectId, serviceRequired: "database");
+            if (!allowed) return err!;
+
             var table = request.Query["table"].ToString();
             if (string.IsNullOrWhiteSpace(table)) table = "products";
             try
             {
-                var columns = await pm.GetTableColumnsAsync(projectId, table);
+                var columns = await pm.GetTableColumnsAsync(project!.Id, table);
                 return Results.Json(columns);
             }
             catch (Exception ex)

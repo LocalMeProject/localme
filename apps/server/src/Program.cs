@@ -557,7 +557,15 @@ public class Program
             if (user != null)
             {
                 var returnUrl = ctx.Request.Query["returnUrl"].ToString();
-                return Results.Redirect(!string.IsNullOrEmpty(returnUrl) ? returnUrl : "/panel");
+                if (string.IsNullOrWhiteSpace(returnUrl) ||
+                    returnUrl.StartsWith("/login", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("/auth", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("//", StringComparison.Ordinal) ||
+                    returnUrl.Contains("://", StringComparison.Ordinal))
+                {
+                    returnUrl = "/panel";
+                }
+                return Results.Redirect(returnUrl);
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
@@ -574,7 +582,15 @@ public class Program
             {
                 var returnUrl = ctx.Request.Query["redirect"].ToString();
                 if (string.IsNullOrEmpty(returnUrl)) returnUrl = ctx.Request.Query["returnUrl"].ToString();
-                return Results.Redirect(!string.IsNullOrEmpty(returnUrl) ? returnUrl : "/panel");
+                if (string.IsNullOrWhiteSpace(returnUrl) ||
+                    returnUrl.StartsWith("/login", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("/auth", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("//", StringComparison.Ordinal) ||
+                    returnUrl.Contains("://", StringComparison.Ordinal))
+                {
+                    returnUrl = "/panel";
+                }
+                return Results.Redirect(returnUrl);
             }
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });

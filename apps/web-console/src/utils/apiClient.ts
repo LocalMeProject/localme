@@ -35,7 +35,7 @@ export async function apiFetch<T = any>(
       localStorage.removeItem('localme_user');
       const currentPath = window.location.pathname + window.location.search;
       if (!currentPath.startsWith('/login') && !currentPath.startsWith('/auth')) {
-        window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+        window.location.replace(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
       }
     }
     throw new Error('UNAUTHORIZED: نشست کاربری شما به پایان رسیده است.');

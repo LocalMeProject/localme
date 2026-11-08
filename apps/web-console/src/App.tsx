@@ -146,13 +146,23 @@ export default function App() {
 
   // Fetch live projects from backend API
   const fetchLiveProjects = useCallback(async () => {
+    const currentPath = location.pathname.toLowerCase();
+    if (currentPath === '/login' || currentPath === '/register' || currentPath.startsWith('/auth')) {
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('localme_token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('localme_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch('/_baas/v1/projects', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
+        credentials: 'include',
       });
       if (res.status === 401) {
-        window.location.href = '/login?returnUrl=' + encodeURIComponent(window.location.pathname);
+        // Redirection is handled gracefully by AuthGuard; never trigger full browser reload
         return;
       }
       if (res.ok) {
@@ -184,11 +194,15 @@ export default function App() {
     } catch {
       // ignore
     }
-  }, [currentProjectId]);
+  }, [currentProjectId, location.pathname]);
 
   useEffect(() => {
+    const currentPath = location.pathname.toLowerCase();
+    if (currentPath === '/login' || currentPath === '/register' || currentPath.startsWith('/auth')) {
+      return;
+    }
     fetchLiveProjects();
-  }, [fetchLiveProjects]);
+  }, [fetchLiveProjects, location.pathname]);
 
   // Sync URL project parameter
   useEffect(() => {
