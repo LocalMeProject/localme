@@ -42,7 +42,7 @@ public static class BaasProjectRoutes
             {
                 return Results.Json(pm.GetAllProjects());
             }
-            return Results.Json(pm.GetProjectsByUser(user.Id));
+            return Results.Json(pm.GetProjectsForUser(user.Id, user.Phone, user.Email));
         });
 
         app.MapPost("/_baas/v1/projects", (CreateProjectRequest req, HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService configService) =>
@@ -90,7 +90,7 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/projects/{projectId}/password", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var password = body["password"]?.ToString() ?? "";
@@ -105,7 +105,7 @@ public static class BaasProjectRoutes
 
         app.MapDelete("/_baas/v1/projects/{projectId}/password", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var ok = pm.RemoveProjectPassword(project!.Id);
@@ -114,7 +114,7 @@ public static class BaasProjectRoutes
 
         app.MapPut("/_baas/v1/projects/{projectId}", (string projectId, UpdateProjectRequest req, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var updated = pm.UpdateProject(project!.Id, req);
@@ -123,7 +123,7 @@ public static class BaasProjectRoutes
 
         app.MapDelete("/_baas/v1/projects/{projectId}", (string projectId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var ok = pm.DeleteProject(project!.Id);
@@ -172,7 +172,7 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/projects/{projectId}/services/{service}/regenerate-key", (string projectId, string service, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var key = pm.RegenerateServiceKey(project!.Id, service);
@@ -207,7 +207,7 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/{projectId}/team", (string projectId, JsonObject body, HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService configService) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var name = body["full_name"]?.ToString() ?? "همکار جدید";
@@ -229,7 +229,7 @@ public static class BaasProjectRoutes
 
         app.MapDelete("/_baas/v1/{projectId}/team/{collaboratorId}", (string projectId, string collaboratorId, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId);
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectOwnerOrAdmin(ctx, pm, projectId);
             if (!allowed) return err!;
 
             var removed = pm.RemoveCollaborator(project!.Id, collaboratorId);
@@ -250,8 +250,8 @@ public static class BaasProjectRoutes
 
         app.MapGet("/_baas/v1/admin/pricing", (HttpContext ctx, PricingCatalog catalog, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
             return Results.Json(catalog.GetSnapshot());
         });
 
@@ -305,11 +305,8 @@ public static class BaasProjectRoutes
 
         app.MapDelete("/_baas/v1/admin/logs", (HttpContext ctx, PlatformLogBuffer logBuffer, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user != null && user.Role != UserRole.Admin)
-            {
-                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can clear platform logs.");
-            }
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
             logBuffer.Clear();
             return Results.Json(new { success = true, message = "Logs cleared" });
         });
@@ -393,9 +390,9 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/admin/gateways/sms/test", (JsonObject body, HttpContext ctx, PlatformConfigurationService configService, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
-            var phone = body["phone"]?.ToString() ?? user.Phone;
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
+            var phone = body["phone"]?.ToString() ?? user!.Phone;
             var provider = body["provider"]?.ToString() ?? configService.GetConfig().SmsDefaultProvider;
             var cfg = configService.GetConfig();
             var smsKey = cfg.SmsDefaultApiKey;
@@ -619,8 +616,8 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/admin/storage/test", async (HttpContext ctx, IBlobStorageAdapter storage, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
             var sw = Stopwatch.StartNew();
             try
             {
@@ -698,8 +695,8 @@ public static class BaasProjectRoutes
         // Cluster Bus Manual Test Broadcast
         app.MapPost("/_baas/v1/admin/cluster/broadcast", async (JsonObject body, HttpContext ctx, NpgsqlDataSource ds, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
             var tag = body["tag"]?.ToString() ?? "manual_probe";
             var action = body["action"]?.ToString() ?? "ping";
             var key = body["key"]?.ToString() ?? Guid.NewGuid().ToString("N")[..8];
@@ -769,18 +766,27 @@ public static class BaasProjectRoutes
             });
         });
 
-        app.MapGet("/_baas/v1/admin/tickets", (SuperadminService admin) => Results.Json(admin.GetAllTickets()));
-        app.MapGet("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, SuperadminService admin) =>
+        app.MapGet("/_baas/v1/admin/tickets", (HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
+            return Results.Json(admin.GetAllTickets());
+        });
+
+        app.MapGet("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
+        {
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
             var ticket = admin.GetTicket(ticketId);
             return ticket != null ? Results.Json(ticket) : Results.NotFound();
         });
 
         app.MapPost("/_baas/v1/admin/tickets/{ticketId}/reply", (string ticketId, JsonObject body, HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
         {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            var senderName = user?.FullName ?? "اپراتور سامانه";
-            var senderRole = user?.Role.ToString() ?? "Operator";
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
+            var senderName = user!.FullName ?? "اپراتور سامانه";
+            var senderRole = user.Role.ToString();
             var message = body["message"]?.ToString() ?? "";
             var status = body["status"]?.ToString();
             if (string.IsNullOrWhiteSpace(message)) return Results.BadRequest(new { error = "Message is required" });
@@ -788,8 +794,10 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
-        app.MapPut("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, JsonObject body, SuperadminService admin) =>
+        app.MapPut("/_baas/v1/admin/tickets/{ticketId}", (string ticketId, JsonObject body, HttpContext ctx, SuperadminService admin, ProjectManagerService pm) =>
         {
+            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
+            if (!allowed) return err!;
             var status = body["status"]?.ToString() ?? "Resolved";
             var ok = admin.UpdateTicketStatus(ticketId, status);
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
@@ -797,21 +805,18 @@ public static class BaasProjectRoutes
 
         app.MapPost("/_baas/v1/user/credit", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
-            if (currentUser == null) return Results.Unauthorized();
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
+            var targetUserId = body["userId"]?.ToString() ?? user!.Id;
             var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
-            var ok = pm.AdjustUserWallet(currentUser.Id, deltaIrr);
-            return ok ? Results.Ok(new { success = true, user = pm.GetUser(currentUser.Id) }) : Results.NotFound();
+            var ok = pm.AdjustUserWallet(targetUserId, deltaIrr);
+            return ok ? Results.Ok(new { success = true, user = pm.GetUser(targetUserId) }) : Results.NotFound();
         });
 
         app.MapPost("/_baas/v1/users/{userId}/credit", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
-            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
-            if (currentUser == null) return Results.Unauthorized();
-            if (currentUser.Role != UserRole.Admin && currentUser.Id != userId)
-            {
-                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin role can adjust user credits.");
-            }
+            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
+            if (!allowed) return err!;
             var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
             var ok = pm.AdjustUserWallet(userId, deltaIrr);
             return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();

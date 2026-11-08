@@ -70,10 +70,11 @@ public static class BaasAuthAndIpgRoutes
             var roleStr = user.Role.ToString().ToLowerInvariant();
             var tokens = OtpAuthService.GenerateSessionToken(user.Id, roleStr);
 
+            var isHttps = ctx.Request.IsHttps || string.Equals(ctx.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = isHttps,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -103,10 +104,11 @@ public static class BaasAuthAndIpgRoutes
             var roleStr = user.Role.ToString().ToLowerInvariant();
             var tokens = OtpAuthService.GenerateSessionToken(user.Id, roleStr);
 
+            var isHttps = ctx.Request.IsHttps || string.Equals(ctx.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = isHttps,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -140,10 +142,11 @@ public static class BaasAuthAndIpgRoutes
                 scopedProjectId: project.Id
             );
 
+            var isHttps = ctx.Request.IsHttps || string.Equals(ctx.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
             ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = isHttps,
                 SameSite = SameSiteMode.Lax,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
@@ -204,7 +207,8 @@ public static class BaasAuthAndIpgRoutes
         // Logout API
         app.MapPost("/_baas/v1/auth/logout", (HttpContext ctx) =>
         {
-            ctx.Response.Cookies.Delete("localme_session", new CookieOptions { Path = "/", Secure = true });
+            var isHttps = ctx.Request.IsHttps || string.Equals(ctx.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+            ctx.Response.Cookies.Delete("localme_session", new CookieOptions { Path = "/", Secure = isHttps });
             return Results.Ok(new { success = true });
         });
 
@@ -345,8 +349,11 @@ public static class BaasAuthAndIpgRoutes
         });
 
         // BaaS Captcha Generation for Bot Protection
-        app.MapGet("/_baas/v1/{projectId}/auth/captcha", (string projectId, CaptchaService captcha) =>
+        app.MapGet("/_baas/v1/{projectId}/auth/captcha", (string projectId, CaptchaService captcha, ProjectManagerService pm) =>
         {
+            var project = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+
             var challenge = captcha.Generate();
             return Results.Ok(new
             {
@@ -359,8 +366,11 @@ public static class BaasAuthAndIpgRoutes
         });
 
         // BaaS Captcha Verification
-        app.MapPost("/_baas/v1/{projectId}/auth/captcha/verify", (string projectId, JsonObject body, CaptchaService captcha) =>
+        app.MapPost("/_baas/v1/{projectId}/auth/captcha/verify", (string projectId, JsonObject body, CaptchaService captcha, ProjectManagerService pm) =>
         {
+            var project = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+
             var captchaId = body["captcha_id"]?.ToString() ?? "";
             var code = body["code"]?.ToString() ?? "";
             var valid = captcha.Verify(captchaId, code);
@@ -556,20 +566,43 @@ public static class BaasAuthAndIpgRoutes
         });
 
         // 9. Wallet & IPG APIs
-        app.MapGet("/_baas/v1/wallet/{phone}", (string phone, PaymentIpgService ipg) => Results.Json(ipg.GetWalletBalance(phone)));
-        app.MapPost("/_baas/v1/pay/initiate", (IpgInitiateRequest req, PaymentIpgService ipg, ProjectManagerService pm) =>
-            !string.IsNullOrEmpty(req.ProjectId) && !pm.IsServiceEnabled(req.ProjectId, "ipg")
-                ? AuthHelper.ServiceDisabled("ipg")
-                : Results.Json(ipg.InitiatePayment(req)));
-        app.MapPost("/_baas/v1/{projectId}/pay/initiate", (string projectId, IpgInitiateRequest req, PaymentIpgService ipg, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "ipg")
-                ? AuthHelper.ServiceDisabled("ipg")
-                : Results.Json(ipg.InitiatePayment(req with { ProjectId = projectId })));
+        app.MapGet("/_baas/v1/wallet/{phone}", (string phone, HttpContext ctx, PaymentIpgService ipg, ProjectManagerService pm) =>
+        {
+            var (allowed, user, err) = AuthHelper.RequireUser(ctx, pm);
+            if (!allowed) return err!;
+            if (user!.Role != UserRole.Admin && user.Role != UserRole.Operator && !string.Equals(user.Phone, phone, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Problem(statusCode: 403, title: "Forbidden: مشاهده موجودی کیف‌پول سایر کاربران مجاز نیست.");
+            }
+            return Results.Json(ipg.GetWalletBalance(phone));
+        });
+
+        app.MapPost("/_baas/v1/pay/initiate", (IpgInitiateRequest req, HttpContext ctx, PaymentIpgService ipg, ProjectManagerService pm) =>
+        {
+            var (allowed, user, err) = AuthHelper.RequireUser(ctx, pm);
+            if (!allowed) return err!;
+            if (!string.IsNullOrEmpty(req.ProjectId) && !pm.IsServiceEnabled(req.ProjectId, "ipg"))
+                return AuthHelper.ServiceDisabled("ipg");
+            return Results.Json(ipg.InitiatePayment(req with { CustomerPhone = user!.Phone }));
+        });
+
+        app.MapPost("/_baas/v1/{projectId}/pay/initiate", (string projectId, IpgInitiateRequest req, HttpContext ctx, PaymentIpgService ipg, ProjectManagerService pm) =>
+        {
+            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "ipg");
+            if (!allowed) return err!;
+            return Results.Json(ipg.InitiatePayment(req with { ProjectId = project!.Id }));
+        });
+
         app.MapPost("/_baas/v1/pay/verify", (IpgVerifyRequest req, PaymentIpgService ipg) => Results.Json(ipg.VerifyPayment(req)));
+
         app.MapPost("/_baas/v1/{projectId}/pay/verify", (string projectId, IpgVerifyRequest req, PaymentIpgService ipg, ProjectManagerService pm) =>
-            !pm.IsServiceEnabled(projectId, "ipg")
-                ? AuthHelper.ServiceDisabled("ipg")
-                : Results.Json(ipg.VerifyPayment(req)));
+        {
+            var project = pm.GetProject(projectId) ?? pm.GetProjectBySlug(projectId);
+            if (project == null) return Results.NotFound(new { error = "Project not found" });
+            if (!pm.IsServiceEnabled(project.Id, "ipg"))
+                return AuthHelper.ServiceDisabled("ipg");
+            return Results.Json(ipg.VerifyPayment(req));
+        });
 
         // Shetab / Shaparak Mock IPG Gateway Simulator
         app.MapGet("/_baas/v1/pay/mock-gateway", (HttpRequest req, PaymentIpgService ipg) =>
