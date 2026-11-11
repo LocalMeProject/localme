@@ -6,10 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using LocalMe.DataPlane.Compute;
-using LocalMe.DataPlane.Finance;
-using LocalMe.DataPlane.Mobile;
 using LocalMe.DataPlane.MultiTenancy;
-using LocalMe.DataPlane.Storage.Adapters;
 using Xunit;
 
 public class DatabaseParserAndBridgeTests
@@ -100,51 +97,21 @@ public class DatabaseParserAndBridgeTests
         var proj = pm.CreateProject(new CreateProjectRequest("تست پل", "test-bridge-proj"));
         var bridge = new InternalServiceBridge(pm);
 
-        // When target service 'sms' is not yet enabled, access is blocked
-        var blockedInitially = bridge.CanAccessService(proj.Id, "auth", "sms", out var reasonBlocked);
+        // When target service 'database' is not yet enabled, access is blocked
+        pm.ConfigureService(proj.Id, new ConfigureServiceRequest("database", false));
+        var blockedInitially = bridge.CanAccessService(proj.Id, "compute", "database", out var reasonBlocked);
         Assert.False(blockedInitially);
         Assert.Contains("فعال نشده است", reasonBlocked);
 
-        // Once 'sms' service is enabled for the tenant project, Auth can access SMS
-        pm.ConfigureService(proj.Id, new ConfigureServiceRequest("sms", true));
-        var canAuthAccessSms = bridge.CanAccessService(proj.Id, "auth", "sms", out var reason);
-        Assert.True(canAuthAccessSms, reason);
+        // Once 'database' service is enabled for the tenant project, Compute can access Database
+        pm.ConfigureService(proj.Id, new ConfigureServiceRequest("database", true));
+        var canComputeAccessDb = bridge.CanAccessService(proj.Id, "compute", "database", out var reason);
+        Assert.True(canComputeAccessDb, reason);
 
         // Unauthorized arbitrary caller
         var canAccessDenied = bridge.CanAccessService(proj.Id, "unknown_svc", "secret_target", out var deniedReason);
         Assert.False(canAccessDenied);
         Assert.NotNull(deniedReason);
-    }
-
-    [Fact]
-    public async Task IpgGatewayAdapters_VerifyAndInitiate_HandlesSimulatedPspFlows()
-    {
-        // 1. Initiate for ZarinPal
-        var initReq = new IpgInitiateRequest("zarinpal", 500_000, "https://localme.ir/callback", "شارژ کیف پول", "09120000000");
-        var initResult = await IpgGatewayAdapters.InitiateAsync(initReq, null);
-        Assert.True(initResult.Success);
-        Assert.False(string.IsNullOrWhiteSpace(initResult.Authority));
-        Assert.False(string.IsNullOrWhiteSpace(initResult.RedirectUrl));
-
-        // 2. Verify for ZarinPal
-        var verifyReq = new IpgVerifyRequest("zarinpal", Authority: initResult.Authority, Status: "OK");
-        var verifyResult = await IpgGatewayAdapters.VerifyAsync(verifyReq, null);
-        Assert.True(verifyResult.Success);
-        Assert.False(string.IsNullOrWhiteSpace(verifyResult.TrackingCode));
-
-        // 3. Initiate & Verify for SEP
-        var sepInitReq = new IpgInitiateRequest("sep", 200_000, "https://localme.ir/callback", "شارژ تستی");
-        var sepInit = await IpgGatewayAdapters.InitiateAsync(sepInitReq, null);
-        Assert.True(sepInit.Success);
-        var sepVerify = await IpgGatewayAdapters.VerifyAsync(new IpgVerifyRequest("sep", Authority: sepInit.Authority, Status: "OK"), null);
-        Assert.True(sepVerify.Success);
-
-        // 4. Initiate & Verify for Mellat
-        var mellatInitReq = new IpgInitiateRequest("behpardakht", 300_000, "https://localme.ir/callback", "شارژ تستی");
-        var mellatInit = await IpgGatewayAdapters.InitiateAsync(mellatInitReq, null);
-        Assert.True(mellatInit.Success);
-        var mellatVerify = await IpgGatewayAdapters.VerifyAsync(new IpgVerifyRequest("behpardakht", Authority: mellatInit.Authority, Status: "OK"), null);
-        Assert.True(mellatVerify.Success);
     }
 
     [Fact]
@@ -172,13 +139,10 @@ public class DatabaseParserAndBridgeTests
     }
 
     [Fact]
-    public void ProjectManager_FindProjectByHost_ResolvesSubdomainsAndCustomDomains()
+    public void ProjectManager_FindProjectByHost_ResolvesSubdomains()
     {
         var pm = new ProjectManagerService();
         var proj = pm.CreateProject(new CreateProjectRequest("فروشگاه تست", "test-store"));
-
-        // Add custom domain
-        pm.AddDomain(proj.Id, "shop.mydomain.com");
 
         // 1. Direct slug subdomain
         var bySlug = pm.FindProjectByHost("test-store.localme.ir");
@@ -190,31 +154,11 @@ public class DatabaseParserAndBridgeTests
         Assert.NotNull(byProjPrefix);
         Assert.Equal(proj.Id, byProjPrefix.Id);
 
-        // 3. Custom domain
-        var byCustom = pm.FindProjectByHost("shop.mydomain.com");
-        Assert.NotNull(byCustom);
-        Assert.Equal(proj.Id, byCustom.Id);
-
-        // 4. Non-existent domain
+        // 3. Non-existent domain
         var unknown = pm.FindProjectByHost("other.example.com");
         Assert.Null(unknown);
     }
 
-    [Fact]
-    public void ProjectManager_TableEvents_TriggersRealtimeHook()
-    {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("هوک داده زنده", "test-realtime-hook"));
-
-        var triggeredEvents = new List<(string ProjectId, string Table, string Action)>();
-        pm.OnTableEvent = (pid, tbl, act, data) => triggeredEvents.Add((pid, tbl, act));
-
-        pm.CreateTable(proj.Id, "products");
-        pm.InsertRow(proj.Id, "products", new System.Text.Json.Nodes.JsonObject { ["title"] = "لپ‌تاپ" });
-        pm.DeleteRow(proj.Id, "products", "any-id");
-
-        Assert.Contains(triggeredEvents, e => e.ProjectId == proj.Id && e.Table == "products" && e.Action == "INSERT");
-    }
 
     [Fact]
     public void JintScriptHost_ExecutesCryptoAndEnvironmentVariables()
@@ -233,23 +177,5 @@ public class DatabaseParserAndBridgeTests
 
         Assert.True(result.Success);
         Assert.NotNull(result.Output);
-    }
-
-    [Fact]
-    public async Task PushNotificationService_DispatchesWithFallback()
-    {
-        var push = new PushNotificationService();
-        var reg = push.RegisterDevice("p1", new PushDeviceRegistration(
-            DeviceId: "dev-01",
-            PushToken: "token-abc-123",
-            Platform: "android",
-            Provider: "fcm"
-        ));
-
-        Assert.Equal("dev-01", reg.DeviceId);
-
-        var dispatch = await push.SendPushAsync("p1", new PushMessageRequest("عنوان تست", "متن اعلان"));
-        Assert.True(dispatch.Success);
-        Assert.Equal(1, dispatch.DispatchedCount);
     }
 }

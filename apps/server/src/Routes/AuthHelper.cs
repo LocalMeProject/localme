@@ -23,7 +23,7 @@ public static class AuthHelper
 
         if (!string.IsNullOrEmpty(token))
         {
-            var (valid, userId, role, scopedProjectId) = OtpAuthService.ValidateTokenWithScope(token);
+            var (valid, userId, role, scopedProjectId) = JwtTokenService.ValidateTokenWithScope(token);
             if (valid)
             {
                 if (!string.IsNullOrEmpty(scopedProjectId))
@@ -38,7 +38,6 @@ public static class AuthHelper
                             Phone: "",
                             Email: $"project-{prj.Slug}@localme.internal",
                             Role: UserRole.Developer,
-                            WalletBalanceIrr: 0,
                             CreatedAtUtc: prj.CreatedAtUtc,
                             IsActive: true,
                             Username: prj.Slug

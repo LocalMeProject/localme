@@ -16,18 +16,18 @@ public sealed partial class ProjectManagerService
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<TableColumnSchema>>> _projectTableSchemas = new();
     private readonly ConcurrentDictionary<string, List<DatabaseSnapshot>> _projectSnapshots = new();
     private readonly ConcurrentDictionary<string, List<ProjectAuthUser>> _projectUsers = new();
-    private readonly ConcurrentDictionary<string, List<ProjectBucket>> _projectBuckets = new();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<ProjectStorageFile>>> _projectFiles = new();
     private readonly ConcurrentDictionary<string, List<ProjectEdgeFunction>> _projectFunctions = new();
-    private readonly ConcurrentDictionary<string, List<ProjectDeployment>> _projectDeployments = new();
-    private readonly ConcurrentDictionary<string, List<CustomDomain>> _projectDomains = new();
     private readonly ConcurrentDictionary<string, List<ProjectCollaborator>> _projectCollaborators = new();
-    private readonly ConcurrentDictionary<string, IpgMerchantConfig> _projectIpgConfigs = new();
     private readonly ConcurrentDictionary<string, ComplianceConfig> _projectComplianceConfigs = new();
     private readonly ConcurrentDictionary<string, List<ProjectLogEntry>> _projectLogs = new();
+    private readonly ConcurrentDictionary<string, LocalMe.DataPlane.Auth.Ed25519.KeyPair> _projectKeys = new();
     private readonly IProjectStore? _store;
     public IProjectStore? Store => _store;
     public ITenantDatabaseStore? TenantDbStore { get; set; }
+    public LocalMe.DataPlane.Auth.RefreshTokenService RefreshTokens { get; } = new();
+
+    public LocalMe.DataPlane.Auth.Ed25519.KeyPair GetOrCreateProjectKeyPair(string projectId) =>
+        _projectKeys.GetOrAdd(projectId, _ => LocalMe.DataPlane.Auth.Ed25519.GenerateKeyPair());
 
     public ProjectManagerService(IProjectStore? store = null)
     {
@@ -75,12 +75,6 @@ public sealed partial class ProjectManagerService
                     _projects[p.Id] = p;
                 }
 
-                var ipg = await _store.LoadIpgConfigsAsync();
-                foreach (var (pid, cfg) in ipg)
-                {
-                    _projectIpgConfigs[pid] = cfg;
-                }
-
                 var collabs = await _store.LoadCollaboratorsAsync();
                 foreach (var (pid, list) in collabs)
                 {
@@ -91,35 +85,6 @@ public sealed partial class ProjectManagerService
                 foreach (var (pid, cfg) in compliance)
                 {
                     _projectComplianceConfigs[pid] = cfg;
-                }
-
-                var deps = await _store.LoadDeploymentsAsync();
-                foreach (var (pid, list) in deps)
-                {
-                    _projectDeployments[pid] = list;
-                }
-
-                var doms = await _store.LoadDomainsAsync();
-                foreach (var (pid, list) in doms)
-                {
-                    _projectDomains[pid] = list;
-                }
-
-                var bkts = await _store.LoadBucketsAsync();
-                foreach (var (pid, list) in bkts)
-                {
-                    _projectBuckets[pid] = list;
-                }
-
-                var files = await _store.LoadStorageFilesAsync();
-                foreach (var (pid, list) in files)
-                {
-                    var bucketDict = _projectFiles.GetOrAdd(pid, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
-                    foreach (var f in list)
-                    {
-                        var bktList = bucketDict.GetOrAdd(f.Bucket, _ => []);
-                        bktList.Add(f);
-                    }
                 }
 
                 var funcs = await _store.LoadFunctionsAsync();
@@ -282,12 +247,8 @@ public sealed partial class ProjectManagerService
 
         // Clean, empty project provisioning - Zero fake/seeded data!
         _projectTables[projectId] = new ConcurrentDictionary<string, List<JsonObject>>();
-        _projectBuckets[projectId] = [];
-        _projectFiles[projectId] = new ConcurrentDictionary<string, List<ProjectStorageFile>>();
         _projectFunctions[projectId] = [];
         _projectUsers[projectId] = [];
-        _projectDeployments[projectId] = [];
-        _projectDomains[projectId] = [];
 
         // Project Creator / Owner collaborator only
         var ownerUser = GetUser(request.OwnerId);
@@ -302,16 +263,6 @@ public sealed partial class ProjectManagerService
             Status: "Active"
         );
         team.Add(ownerCollab);
-
-        // Shetab IPG Merchant config ready for developer setup
-        var ipgConfig = new IpgMerchantConfig(
-            TerminalId: string.Empty,
-            MerchantKey: string.Empty,
-            DefaultPsp: "ZARINPAL",
-            EnforceShetabCardMask: true,
-            IsSandbox: true
-        );
-        _projectIpgConfigs[projectId] = ipgConfig;
 
         // Compliance Config ready for developer setup
         var complianceConfig = new ComplianceConfig(
@@ -348,7 +299,6 @@ public sealed partial class ProjectManagerService
                 {
                     await _store.UpsertProjectAsync(project);
                     await _store.SaveCollaboratorAsync(projectId, ownerCollab);
-                    await _store.SaveIpgConfigAsync(projectId, ipgConfig);
                     await _store.SaveComplianceConfigAsync(projectId, complianceConfig);
                     await _store.AppendLogAsync(projectId, initLog);
                 }
@@ -389,7 +339,6 @@ public sealed partial class ProjectManagerService
         {
             _projectTables.TryRemove(projectId, out _);
             _projectUsers.TryRemove(projectId, out _);
-            _projectBuckets.TryRemove(projectId, out _);
             _projectFunctions.TryRemove(projectId, out _);
         }
         return removed;

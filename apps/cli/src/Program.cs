@@ -1,7 +1,6 @@
 namespace LocalMe.Cli;
 
 using LocalMe.Core.Dag;
-using LocalMe.Core.Finance;
 
 public static class Program
 {
@@ -68,9 +67,9 @@ public static class Program
     private static int RunStatus(string[] args)
     {
         Console.WriteLine("[LocalMe] Environment Check:");
-        Console.WriteLine("  - Runtime: .NET 10 Pure Stack (Kestrel + YARP + Jint + SignalR + MQTTnet)");
+        Console.WriteLine("  - Runtime: .NET 10 Pure Stack (Kestrel + YARP + Jint)");
         Console.WriteLine("  - Database: PostgreSQL 18.1 (Single Physical DB: 'localme', Schema-Isolated)");
-        Console.WriteLine("  - Consensus & Cache: Redis 7/8 (Streams + GCRA Lua + Redlock)");
+        Console.WriteLine("  - Consensus & Cluster Bus: PostgreSQL LISTEN / NOTIFY (localme_cluster_bus)");
         Console.WriteLine("  - Regulatory Status: e-Namad and Static Egress NAT Gateway OK");
         return 0;
     }
@@ -78,7 +77,7 @@ public static class Program
     private static int RunMatrix(string[] args)
     {
         Console.WriteLine("[LocalMe] Capability-to-Primitive DAG Resolution Sample:");
-        var capabilities = new[] { CapabilityCode.BASE, CapabilityCode.IDAAS, CapabilityCode.FIN_IPG };
+        var capabilities = new[] { CapabilityCode.BASE, CapabilityCode.IDAAS, CapabilityCode.COMPUTE_EDGE };
         var primitives = DependencyMatrixEngine.ResolvePrimitives(capabilities);
         foreach (var prim in primitives)
         {

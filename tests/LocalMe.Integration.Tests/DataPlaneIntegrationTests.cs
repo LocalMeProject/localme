@@ -3,95 +3,40 @@ namespace LocalMe.Integration.Tests;
 using System.Text.Json.Nodes;
 using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Compute;
-using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
 using Xunit;
 
 public class DataPlaneIntegrationTests
 {
     [Fact]
-    public void OtpAuthService_GeneratesAndVerifiesOtpSuccessfully()
+    public void JwtTokenService_GeneratesAndVerifiesEd25519Tokens()
     {
-        var authService = new OtpAuthService();
-        var phone = "+989123456789";
+        var keyPair = Ed25519.GenerateKeyPair();
+        var userId = "usr_test_data_plane";
+        var role = "authenticated";
 
-        // 1. Request OTP
-        var reqResult = authService.RequestOtp(new OtpRequest(phone, "sms"));
-        Assert.True(reqResult.Success);
-        Assert.NotNull(reqResult.CodeForTesting);
-        Assert.Equal(6, reqResult.CodeForTesting!.Length);
+        // 1. Generate session token
+        var tokens = JwtTokenService.GenerateSessionToken(
+            userId: userId,
+            role: role,
+            privateKeySeed: keyPair.PrivateKey,
+            projectSlug: "test-data-plane"
+        );
+        Assert.NotNull(tokens.AccessToken);
+        Assert.NotNull(tokens.RefreshToken);
 
-        // 2. Sliding window prevents immediate spam
-        var spamResult = authService.RequestOtp(new OtpRequest(phone, "sms"));
-        Assert.False(spamResult.Success);
-        Assert.Contains("Rate limit exceeded", spamResult.Message);
+        // 2. Verify with matching public key
+        var (valid, resUserId, resRole) = JwtTokenService.ValidateToken(tokens.AccessToken, publicKey: keyPair.PublicKey);
+        Assert.True(valid);
+        Assert.Equal(userId, resUserId);
+        Assert.Equal(role, resRole);
 
-        // 3. Verify with correct code
-        var verifyResult = authService.VerifyOtp(new OtpVerifyRequest(phone, reqResult.CodeForTesting));
-        Assert.True(verifyResult.Success);
-        Assert.NotNull(verifyResult.Tokens);
-        Assert.StartsWith("ey.localme.", verifyResult.Tokens!.AccessToken);
-
-        // 4. Code cannot be reused (consumed)
-        var reuseResult = authService.VerifyOtp(new OtpVerifyRequest(phone, reqResult.CodeForTesting));
-        Assert.False(reuseResult.Success);
+        // 3. Verify with wrong public key fails
+        var otherKeyPair = Ed25519.GenerateKeyPair();
+        var (invalidKeyValid, _, _) = JwtTokenService.ValidateToken(tokens.AccessToken, publicKey: otherKeyPair.PublicKey);
+        Assert.False(invalidKeyValid);
     }
 
-    [Fact]
-    public void PaymentIpgService_EnforcesIdempotencyAndDoubleEntryBalance()
-    {
-        var ipgService = new PaymentIpgService();
-        var phone = "+989998887766";
-        var idempotencyKey = "tx_idempotency_unit_test_001";
-        var amountIrr = 50_000_000L; // 5M Toman
-
-        // 1. Initiate payment
-        var init1 = ipgService.InitiatePayment(new IpgInitiateRequest(
-            Gateway: "SEP",
-            AmountIrr: amountIrr,
-            CallbackUrl: "/dashboard",
-            Description: "شارژ کیف پول آزمایشی",
-            CustomerPhone: phone,
-            IdempotencyKey: idempotencyKey
-        ));
-
-        Assert.True(init1.Success);
-        Assert.NotEmpty(init1.AuthorityToken);
-
-        // 2. Duplicate initiate returns identical idempotent response
-        var init2 = ipgService.InitiatePayment(new IpgInitiateRequest(
-            Gateway: "SEP",
-            AmountIrr: amountIrr,
-            CallbackUrl: "/dashboard",
-            Description: "شارژ مجدد غیرعمدی",
-            CustomerPhone: phone,
-            IdempotencyKey: idempotencyKey
-        ));
-
-        Assert.Equal(init1.AuthorityToken, init2.AuthorityToken);
-
-        // 3. Verify payment
-        var verifyResult = ipgService.VerifyPayment(new IpgVerifyRequest(
-            Gateway: "SEP",
-            AuthorityToken: init1.AuthorityToken,
-            Status: "OK"
-        ));
-
-        Assert.True(verifyResult.Success);
-        Assert.Equal(amountIrr, verifyResult.AmountIrr);
-
-        // 4. Wallet balance updated
-        var wallet = ipgService.GetWalletBalance(phone);
-        Assert.Equal(amountIrr, wallet.BalanceIrr);
-        Assert.NotEmpty(wallet.RecentTransactions);
-
-        // 5. Invariant check: Debit == Credit in recorded ledger transaction
-        var latestTx = wallet.RecentTransactions[0];
-        long totalDebit = latestTx.Entries.Sum(e => e.DebitIrr);
-        long totalCredit = latestTx.Entries.Sum(e => e.CreditIrr);
-        Assert.Equal(totalDebit, totalCredit);
-        Assert.Equal(amountIrr, totalDebit);
-    }
 
     [Fact]
     public void ProjectManagerService_QueriesAndInsertsIsolatedData()

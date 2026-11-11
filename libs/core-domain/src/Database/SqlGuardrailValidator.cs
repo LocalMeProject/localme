@@ -21,7 +21,13 @@ public static class SqlGuardrailValidator
         (@"\bREVOKE\b", "REVOKE"),
         (@"\bCOMMENT\s+ON\b", "COMMENT ON"),
         (@"\bVACUUM\b", "VACUUM"),
-        (@"\bREINDEX\b", "REINDEX")
+        (@"\bREINDEX\b", "REINDEX"),
+        (@"(?:\A|;)\s*SET\s+(?:SESSION\s+|LOCAL\s+|TIME\s+ZONE|[a-zA-Z_][a-zA-Z0-9_.]*\s*(=|\bTO\b))", "SET"),
+        (@"\bRESET\b", "RESET"),
+        (@"(?:\A|;)\s*DO\b", "DO"),
+        (@"(?:\A|;)\s*CALL\b", "CALL"),
+        (@"\bDISCARD\b", "DISCARD"),
+        (@"(?:\A|;)\s*LOCK\b", "LOCK")
     ];
 
     private static readonly string[] DangerousPatterns =
@@ -37,7 +43,8 @@ public static class SqlGuardrailValidator
         @"\bpg_terminate_backend\b",
         @"\bcopy\s+.*?from\s+program\b",
         @"\bcopy\s+.*?to\s+program\b",
-        @"\bdblink\b"
+        @"\bdblink\b",
+        @"\bset_config\b"
     ];
 
     /// <summary>
@@ -52,8 +59,10 @@ public static class SqlGuardrailValidator
         s = Regex.Replace(s, @"--[^\r\n]*", " ");
         // 3. Strip dollar-quoted strings: $tag$...$tag$ or $$...$$
         s = Regex.Replace(s, @"\$([a-zA-Z0-9_]*)\$.*?\$\1\$", "''", RegexOptions.Singleline);
-        // 4. Strip standard single-quoted string literals: '...' (supporting escaped '' or \')
-        s = Regex.Replace(s, @"'(''|\\'|[^'])*'", "''");
+        // 4. Strip PostgreSQL E-strings: E'...' (supporting \ escapes)
+        s = Regex.Replace(s, @"E'(''|\\.|[^'\\])*'", "''", RegexOptions.IgnoreCase);
+        // 5. Strip standard single-quoted string literals: '...' (supporting escaped '' without treating \ as escape)
+        s = Regex.Replace(s, @"'(''|[^'])*'", "''");
         return s;
     }
 
@@ -89,5 +98,14 @@ public static class SqlGuardrailValidator
         }
 
         return (true, null);
+    }
+
+    /// <summary>
+    /// Validates that the provided SQL statement is safe for execution (strictly DML/queries, no DDL/DCL).
+    /// </summary>
+    public static (bool IsSafe, string? Reason) ValidateSafeExecution(string sql)
+    {
+        var (allowed, reason) = ValidateDmlOnly(sql);
+        return (allowed, reason);
     }
 }

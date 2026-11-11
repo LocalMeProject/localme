@@ -16,8 +16,6 @@ using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compliance;
 using LocalMe.DataPlane.MultiTenancy;
-using LocalMe.DataPlane.Storage;
-using LocalMe.DataPlane.Storage.Adapters;
 using LocalMe.Server.Diagnostics;
 using LocalMe.Server.Middleware;
 
@@ -599,70 +597,6 @@ public static class BaasProjectRoutes
             }
         });
 
-        // Storage Management APIs
-        app.MapGet("/_baas/v1/admin/storage/files", async (HttpContext ctx, IBlobStorageAdapter storage, ProjectManagerService pm, string? bucket, int? limit) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
-            if (user.Role != UserRole.Admin && user.Role != UserRole.Operator)
-            {
-                return Results.Problem(statusCode: 403, title: "Forbidden");
-            }
-
-            var targetBucket = string.IsNullOrWhiteSpace(bucket) ? "default" : bucket;
-            var files = await storage.ListObjectsAsync(targetBucket, null, limit ?? 100);
-            return Results.Json(files);
-        });
-
-        app.MapPost("/_baas/v1/admin/storage/test", async (HttpContext ctx, IBlobStorageAdapter storage, ProjectManagerService pm) =>
-        {
-            var (allowed, user, err) = AuthHelper.RequireOperatorOrAdmin(ctx, pm);
-            if (!allowed) return err!;
-            var sw = Stopwatch.StartNew();
-            try
-            {
-                var testKey = $".probes/health_probe_{Guid.NewGuid():N}.txt";
-                using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"localme-storage-probe-{DateTime.UtcNow:O}"));
-                await storage.PutObjectAsync("default", testKey, ms, "text/plain");
-                var head = await storage.HeadObjectAsync("default", testKey);
-                await storage.DeleteObjectAsync("default", testKey);
-                sw.Stop();
-                return Results.Json(new
-                {
-                    success = true,
-                    adapter = storage.AdapterKey,
-                    latencyMs = sw.ElapsedMilliseconds,
-                    message = $"استوریج فعال ({storage.AdapterKey}) با موفقیت تست عملیاتی نوشتن، خواندن و حذف را در {sw.ElapsedMilliseconds} میلی‌ثانیه پشت سر گذاشت."
-                });
-            }
-            catch (Exception ex)
-            {
-                sw.Stop();
-                return Results.Json(new
-                {
-                    success = false,
-                    adapter = storage.AdapterKey,
-                    latencyMs = sw.ElapsedMilliseconds,
-                    message = $"خطا در تست عملیاتی استوریج: {ex.Message}"
-                });
-            }
-        });
-
-        app.MapDelete("/_baas/v1/admin/storage/files", async (HttpContext ctx, IBlobStorageAdapter storage, ProjectManagerService pm, string? bucket, string? key) =>
-        {
-            var user = AuthHelper.GetCurrentUser(ctx, pm);
-            if (user == null) return Results.Unauthorized();
-            if (user.Role != UserRole.Admin)
-            {
-                return Results.Problem(statusCode: 403, title: "Forbidden: Only Admin can delete storage files.");
-            }
-
-            if (string.IsNullOrWhiteSpace(key)) return Results.BadRequest(new { error = "Query param 'key' is required." });
-            var targetBucket = string.IsNullOrWhiteSpace(bucket) ? "default" : bucket;
-            var ok = await storage.DeleteObjectAsync(targetBucket, key);
-            return ok ? Results.Ok(new { success = true, key }) : Results.NotFound(new { error = "File not found" });
-        });
-
         // Complete Tenant Project Deletion (Cascade Drop Schema + Delete Record)
         app.MapDelete("/_baas/v1/admin/projects/{projectId}", async (string projectId, HttpContext ctx, ProjectManagerService pm, NpgsqlDataSource ds) =>
         {
@@ -803,25 +737,6 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true }) : Results.NotFound();
         });
 
-        app.MapPost("/_baas/v1/user/credit", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
-            if (!allowed) return err!;
-            var targetUserId = body["userId"]?.ToString() ?? user!.Id;
-            var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
-            var ok = pm.AdjustUserWallet(targetUserId, deltaIrr);
-            return ok ? Results.Ok(new { success = true, user = pm.GetUser(targetUserId) }) : Results.NotFound();
-        });
-
-        app.MapPost("/_baas/v1/users/{userId}/credit", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
-            if (!allowed) return err!;
-            var deltaIrr = body["deltaIrr"]?.GetValue<long>() ?? ((body["deltaToman"]?.GetValue<long>() ?? 0) * 10);
-            var ok = pm.AdjustUserWallet(userId, deltaIrr);
-            return ok ? Results.Ok(new { success = true, user = pm.GetUser(userId) }) : Results.NotFound();
-        });
-
         app.MapPut("/_baas/v1/users/{userId}/status", (string userId, JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
             var (allowed, user, err) = AuthHelper.RequireAdmin(ctx, pm);
@@ -901,7 +816,7 @@ public static class BaasProjectRoutes
             var targetUser = pm.GetUser(userId);
             if (targetUser == null) return Results.NotFound(new { success = false, message = "کاربر مورد نظر یافت نشد." });
 
-            var tokens = OtpAuthService.GenerateSessionToken(targetUser.Id, targetUser.Role.ToString().ToLowerInvariant());
+            var tokens = JwtTokenService.GenerateSessionToken(targetUser.Id, targetUser.Role.ToString().ToLowerInvariant());
             return Results.Ok(new { success = true, tokens, user = targetUser });
         });
 
@@ -1212,47 +1127,6 @@ public static class BaasProjectRoutes
             return ok ? Results.Ok(new { success = true, message = "تابع با موفقیت حذف شد." }) : Results.NotFound();
         });
 
-        app.MapGet("/_baas/v1/admin/deployments/domains", (HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
-            if (currentUser == null) return Results.Unauthorized();
-            if (currentUser.Role != UserRole.Admin && currentUser.Role != UserRole.Operator)
-                return Results.Problem(statusCode: 403, title: "Forbidden: Admin or Operator only.");
-
-            var allProjects = pm.GetAllProjects();
-            var allDomains = new List<object>();
-
-            foreach (var p in allProjects)
-            {
-                var doms = pm.GetDomains(p.Id);
-                foreach (var d in doms)
-                {
-                    allDomains.Add(new
-                    {
-                        projectId = p.Id,
-                        projectSlug = p.Slug,
-                        projectName = p.Name,
-                        domain = d.Domain,
-                        isVerified = d.IsVerified,
-                        createdAt = d.CreatedAtUtc,
-                        sslStatus = d.IsVerified ? "Active" : "Pending Verification"
-                    });
-                }
-            }
-            return Results.Json(allDomains);
-        });
-
-        app.MapDelete("/_baas/v1/admin/deployments/domains/{projectId}/{domain}", (string projectId, string domain, HttpContext ctx, ProjectManagerService pm) =>
-        {
-            var currentUser = AuthHelper.GetCurrentUser(ctx, pm);
-            if (currentUser == null) return Results.Unauthorized();
-            if (currentUser.Role != UserRole.Admin)
-                return Results.Problem(statusCode: 403, title: "Forbidden: Admin only.");
-
-            var ok = pm.DeleteDomain(projectId, domain);
-            return ok ? Results.Ok(new { success = true, message = "دامنه با موفقیت حذف شد." }) : Results.NotFound();
-        });
-
         // 15. System Runtime Diagnostics
         app.MapGet("/_baas/v1/admin/system/runtime", (HttpContext ctx, ProjectManagerService pm, PlatformConfigurationService cfgService) =>
         {
@@ -1380,11 +1254,7 @@ public static class BaasProjectRoutes
             {
                 var schemaKey = $"tenant_{p.Slug}";
                 var (tblCount, bytes, rows) = schemaSizes.TryGetValue(schemaKey, out var s) ? s : (0, 0L, 0L);
-                var buckets = pm.GetProjectBuckets(p.Id);
-                var files = buckets.SelectMany(b => pm.GetBucketFiles(p.Id, b.Name)).ToList();
-                var storageBytes = files.Sum(f => f.SizeBytes);
                 var functions = pm.GetProjectFunctions(p.Id);
-                var domains = pm.GetDomains(p.Id);
 
                 return new
                 {
@@ -1399,11 +1269,11 @@ public static class BaasProjectRoutes
                     totalRows = rows,
                     dbSizeBytes = bytes,
                     dbSizePretty = SystemMetricsCollector.FormatBytes(bytes),
-                    fileCount = files.Count,
-                    storageBytes,
-                    storagePretty = SystemMetricsCollector.FormatBytes(storageBytes),
+                    fileCount = 0,
+                    storageBytes = 0L,
+                    storagePretty = "0 B",
                     functionCount = functions.Count,
-                    domainCount = domains.Count,
+                    domainCount = 0,
                     createdAt = p.CreatedAtUtc.ToString("O")
                 };
             }).ToList();
@@ -1420,7 +1290,7 @@ public static class BaasProjectRoutes
                     username = u.Username,
                     role = u.Role.ToString(),
                     isActive = u.IsActive,
-                    walletBalanceIrr = u.WalletBalanceIrr,
+                    walletBalanceIrr = 0L,
                     projectCount = userProjects.Count,
                     createdAt = u.CreatedAtUtc.ToString("O")
                 };

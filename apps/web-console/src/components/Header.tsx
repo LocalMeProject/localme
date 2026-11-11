@@ -7,10 +7,8 @@ import {
   LayoutGrid,
   ChevronLeft,
   Plus,
-  Wallet,
   Settings,
   LogOut,
-  CreditCard,
   Check,
   ShieldAlert,
 } from 'lucide-react';
@@ -21,7 +19,6 @@ interface HeaderProps {
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
   onOpenCreateModal: () => void;
-  onOpenTopupModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,7 +26,6 @@ export const Header: React.FC<HeaderProps> = ({
   allProjects,
   onSelectProject,
   onOpenCreateModal,
-  onOpenTopupModal,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,8 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const isHubView = location.pathname === '/' || location.pathname === '/hub' || location.pathname === '/panel';
-  const rawBalance = user?.walletBalanceIrr ?? currentProject?.walletBalanceIrr ?? 0;
-  const tomanBalance = Math.floor(rawBalance / 10);
 
   const roleStr = String(user?.role ?? '').toLowerCase();
   const isAdmin = roleStr === '0' || roleStr === 'superadmin' || roleStr === 'admin' || roleStr === '1' || roleStr === 'operator';
@@ -188,8 +182,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <span className="font-medium text-slate-800 hidden sm:inline-flex items-center gap-1.5">
             <span>{user?.fullName || 'حساب کاربری'}</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-emerald-700 font-semibold">{tomanBalance.toLocaleString('fa-IR')} تومان</span>
           </span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
@@ -214,18 +206,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Wallet Balance Box */}
-            <div className="my-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-slate-600">
-                <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>موجودی کیف پول:</span>
-              </div>
-              <div className="font-semibold text-emerald-700 flex items-center gap-1">
-                <span dir="ltr">{tomanBalance.toLocaleString('fa-IR')}</span>
-                <span className="text-[10px] text-slate-500 font-normal">تومان</span>
-              </div>
-            </div>
-
             {/* Action Buttons */}
             <div className="space-y-1">
               {isAdmin && (
@@ -241,16 +221,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              <button
-                onClick={() => {
-                  setProfileOpen(false);
-                  onOpenTopupModal();
-                }}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>افزایش اعتبار کیف پول</span>
-              </button>
 
               <button
                 onClick={() => {

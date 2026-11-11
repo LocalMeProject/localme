@@ -5,7 +5,6 @@ using LocalMe.DataPlane.Admin;
 using LocalMe.DataPlane.Auth;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.Compute;
-using LocalMe.DataPlane.Finance;
 using LocalMe.DataPlane.MultiTenancy;
 using Xunit;
 
@@ -146,8 +145,7 @@ public class MultiTenantBaasTests
     public void Superadmin_DynamicallyUpdatesPricingAndAffectsCostCalculations()
     {
         var pricing = new PricingCatalog();
-        var ipg = new PaymentIpgService();
-        var metering = new UsageMeteringService(pricing, ipg);
+        var metering = new UsageMeteringService(pricing);
         var pm = new ProjectManagerService();
         var admin = new SuperadminService(pricing, pm, metering);
 
@@ -195,8 +193,7 @@ public class MultiTenantBaasTests
     public void Superadmin_ManagesTicketsAndReplies_ThreadIsMaintained()
     {
         var pricing = new PricingCatalog();
-        var ipg = new PaymentIpgService();
-        var metering = new UsageMeteringService(pricing, ipg);
+        var metering = new UsageMeteringService(pricing);
         var pm = new ProjectManagerService();
         var admin = new SuperadminService(pricing, pm, metering);
 
@@ -222,20 +219,11 @@ public class MultiTenantBaasTests
     }
 
     [Fact]
-    public void Admin_AdjustsUserWallet_And_TogglesProjectStatus()
+    public void Admin_TogglesProjectStatus()
     {
         var pm = new ProjectManagerService();
-        var user = pm.GetUser("usr_developer_03");
-        Assert.NotNull(user);
-        var initialBal = user.WalletBalanceIrr;
 
-        // 1. Add credit to wallet (+10M IRR)
-        var okCredit = pm.AdjustUserWallet("usr_developer_03", 10_000_000);
-        Assert.True(okCredit);
-        var updatedUser = pm.GetUser("usr_developer_03");
-        Assert.Equal(initialBal + 10_000_000, updatedUser!.WalletBalanceIrr);
-
-        // 2. Create and Suspend project
+        // Create and Suspend project
         var proj = pm.CreateProject(new CreateProjectRequest("تست وضعیت", "test-status", "توضیح"));
         Assert.Equal("Active", proj.Status);
 
@@ -246,32 +234,31 @@ public class MultiTenantBaasTests
     }
 
     [Fact]
-    public void AuthService_SupportsSmsOtpWithDevProviderAndOAuthAndCredentials()
+    public void AuthService_SupportsArgon2idAndEd25519TokensAndOAuthAndCredentials()
     {
         var pm = new ProjectManagerService();
-        var otp = new OtpAuthService();
 
         var proj = pm.CreateProject(new CreateProjectRequest("پروژه هویت", "auth-project"));
 
-        // 1. Verify developer's custom SMS provider configuration
-        var authCfg = proj.Services["auth"];
-        Assert.Equal("kavenegar", authCfg.Settings["sms_provider"]);
-        Assert.NotEmpty(authCfg.Settings["sms_api_key"]);
+        // 1. Verify project keypair generation and Ed25519 token signing
+        var (pub, priv) = pm.GetOrCreateProjectKeyPair(proj.Id);
+        Assert.NotNull(pub);
+        Assert.NotNull(priv);
+        Assert.Equal(32, pub.Length);
+        Assert.Equal(32, priv.Length);
 
-        // Request OTP with developer credentials
-        var otpRes = otp.RequestOtp(new OtpRequest(
-            Phone: "+989351112233",
-            Provider: authCfg.Settings["sms_provider"],
-            ProviderApiKey: authCfg.Settings["sms_api_key"],
-            SenderNumber: authCfg.Settings["sms_sender_number"]
-        ));
-        Assert.True(otpRes.Success);
-        Assert.NotNull(otpRes.CodeForTesting);
+        var tokens = LocalMe.DataPlane.Auth.JwtTokenService.GenerateSessionToken(
+            userId: "usr_tenant_1",
+            role: "authenticated",
+            privateKeySeed: priv,
+            projectSlug: proj.Slug
+        );
+        Assert.NotNull(tokens.AccessToken);
 
-        // Verify OTP
-        var verifyRes = otp.VerifyOtp(new OtpVerifyRequest("+989351112233", otpRes.CodeForTesting!));
-        Assert.True(verifyRes.Success);
-        Assert.NotNull(verifyRes.Tokens);
+        var (valid, userId, role) = LocalMe.DataPlane.Auth.JwtTokenService.ValidateToken(tokens.AccessToken, publicKey: pub);
+        Assert.True(valid);
+        Assert.Equal("usr_tenant_1", userId);
+        Assert.Equal("authenticated", role);
 
         // 2. Register OAuth User without OTP
         var oauthUser = pm.AddProjectUser(proj.Id, email: "developer@gmail.com", fullName: "Google Dev", provider: "oauth_google");
@@ -279,12 +266,13 @@ public class MultiTenantBaasTests
         Assert.Equal("oauth_google", oauthUser.Provider);
         Assert.Equal("developer@gmail.com", oauthUser.Email);
 
-        // 3. Register Email/Password User without OTP
+        // 3. Register Email/Password User with pure Argon2id
         var pwdUser = pm.AddProjectUser(proj.Id, email: "user@localme.ir", fullName: "احمد رضوی", provider: "password", username: "ahmad_dev", password: "StrongPassword!987");
         Assert.NotNull(pwdUser);
         Assert.Equal("password", pwdUser.Provider);
         Assert.Equal("ahmad_dev", pwdUser.Username);
         Assert.NotNull(pwdUser.PasswordHash);
+        Assert.StartsWith("$argon2id$", pwdUser.PasswordHash);
         Assert.True(ProjectManagerService.VerifyPassword("StrongPassword!987", pwdUser.PasswordHash));
         Assert.False(ProjectManagerService.VerifyPassword("WrongPassword123", pwdUser.PasswordHash));
 
@@ -298,27 +286,35 @@ public class MultiTenantBaasTests
     }
 
     [Fact]
-    public void CaptchaService_GeneratesSvgAndVerifiesCodeWithSingleUseProtection()
+    public void RefreshTokenService_RotatesAndDetectsFamilyReplayAttack()
     {
-        var captcha = new LocalMe.DataPlane.Auth.CaptchaService();
-        var challenge = captcha.Generate(length: 5, ttlSeconds: 120);
+        var refreshService = new LocalMe.DataPlane.Auth.RefreshTokenService();
+        var projectId = "prj_security_test";
+        var userId = "usr_100";
 
-        Assert.NotEmpty(challenge.CaptchaId);
-        Assert.NotEmpty(challenge.Svg);
-        Assert.Contains("<svg", challenge.Svg);
-        Assert.Equal(5, challenge.CodeForTesting.Length);
+        // 1. Issue initial refresh token
+        var (token1, rec1) = refreshService.CreateToken(projectId, userId);
+        Assert.NotNull(token1);
+        Assert.NotNull(rec1.FamilyId);
 
-        // Verification with wrong code fails
-        Assert.False(captcha.Verify(challenge.CaptchaId, "WRONG"));
+        // 2. Rotate token legitimately -> returns token2
+        var (ok1, err1, rotatedUserId, token2, rec2) = refreshService.RotateToken(projectId, token1);
+        Assert.True(ok1);
+        Assert.Null(err1);
+        Assert.Equal(userId, rotatedUserId);
+        Assert.NotNull(token2);
+        Assert.NotEqual(token1, token2);
+        Assert.Equal(rec1.FamilyId, rec2!.FamilyId);
 
-        // Single-use token: once failed/used, it cannot be reused
-        Assert.False(captcha.Verify(challenge.CaptchaId, challenge.CodeForTesting));
+        // 3. Replay attack: Attacker re-submits old token1!
+        var (replayOk, replayErr, _, _, _) = refreshService.RotateToken(projectId, token1);
+        Assert.False(replayOk);
+        Assert.Contains("Replay", replayErr);
 
-        // Fresh token verification
-        var challenge2 = captcha.Generate(length: 5, ttlSeconds: 120);
-        Assert.True(captcha.Verify(challenge2.CaptchaId, challenge2.CodeForTesting.ToLowerInvariant()));
-        // Token consumed
-        Assert.False(captcha.Verify(challenge2.CaptchaId, challenge2.CodeForTesting));
+        // 4. Family revoked: subsequent rotation with token2 must also fail!
+        var (token2Ok, token2Err, _, _, _) = refreshService.RotateToken(projectId, token2!);
+        Assert.False(token2Ok);
+        Assert.Contains("ابطال", token2Err);
     }
 
     [Fact]
@@ -362,80 +358,7 @@ public class MultiTenantBaasTests
         Assert.True(execResult.ExecutionTimeMs >= 0);
     }
 
-    [Fact]
-    public void ShetabIpg_InitiatesPayment_RetrievesStoredPayment_AndVerifiesWithLedger()
-    {
-        var pm = new ProjectManagerService();
-        var ipg = new PaymentIpgService(pm);
 
-        // 1. Initiate IPG payment
-        var initRes = ipg.InitiatePayment(new IpgInitiateRequest(
-            Gateway: "SEP",
-            AmountIrr: 25_000_000, // 2.5M Toman
-            CallbackUrl: "https://myclient.ir/pay/callback",
-            CustomerPhone: "+989121112233",
-            Description: "شارژ آنلاین از طریق سامان‌کیش"
-        ));
-
-        Assert.True(initRes.Success);
-        Assert.NotEmpty(initRes.AuthorityToken);
-        Assert.Contains("/_baas/v1/pay/mock-gateway", initRes.RedirectUrl);
-
-        // 2. Query stored payment
-        var stored = ipg.GetPayment(initRes.AuthorityToken);
-        Assert.NotNull(stored);
-        Assert.Equal("SEP", stored!.Gateway);
-        Assert.Equal(25_000_000, stored.Amount.AmountIrr);
-        Assert.False(stored.IsVerified);
-
-        // 3. Verify payment (simulating user completed gateway payment)
-        var verifyRes = ipg.VerifyPayment(new IpgVerifyRequest(
-            AuthorityToken: initRes.AuthorityToken,
-            Gateway: "SEP",
-            Status: "OK",
-            TrackingCode: "TRK_981240"
-        ));
-
-        Assert.True(verifyRes.Success);
-        Assert.NotNull(verifyRes.ReferenceId);
-
-        // 4. Stored payment updated
-        var updated = ipg.GetPayment(initRes.AuthorityToken);
-        Assert.NotNull(updated);
-        Assert.True(updated!.IsVerified);
-
-        // 5. User wallet balance credited
-        var bal = ipg.GetWalletBalance("+989121112233");
-        Assert.True(bal.BalanceIrr >= 25_000_000);
-    }
-
-    [Fact]
-    public void HostingAndDomains_CreatesDeployment_AndVerifiesCustomDomain()
-    {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("فروشگاه سازنده", "maker-shop"));
-
-        // 1. Initial deployments are empty
-        var deps = pm.GetDeployments(proj.Id);
-        Assert.Empty(deps);
-
-        // 2. Deploy new version
-        var newDep = pm.CreateDeployment(proj.Id, "release/v1.2", "abc9876", "shop.maker.ir");
-        Assert.NotNull(newDep);
-        Assert.Equal("Live", newDep.Status);
-        Assert.Equal("shop.maker.ir", newDep.Domain);
-
-        // 3. Register custom domain
-        var dom = pm.AddDomain(proj.Id, "shop.maker.ir");
-        Assert.NotNull(dom);
-        Assert.Equal("Pending_Dns", dom.SslStatus);
-
-        // 4. Verify domain DNS
-        var verifiedDom = pm.VerifyDomain(proj.Id, "shop.maker.ir");
-        Assert.NotNull(verifiedDom);
-        Assert.True(verifiedDom!.IsVerified);
-        Assert.Equal("Active", verifiedDom.SslStatus);
-    }
 
     [Fact]
     public void InteractiveSql_ExecutesQuery_AndInspectsTableSchema()
@@ -608,14 +531,14 @@ public class MultiTenantBaasTests
         Assert.False(wrongPassSuccess);
 
         // 6. Generate project-scoped JWT token and verify scope extraction
-        var tokens = LocalMe.DataPlane.Auth.OtpAuthService.GenerateSessionToken(
+        var tokens = LocalMe.DataPlane.Auth.JwtTokenService.GenerateSessionToken(
             userId: $"proj_user_{proj.Id}",
             role: "project_developer",
             scopedProjectId: proj.Id
         );
         Assert.NotNull(tokens.AccessToken);
 
-        var (tokenValid, tokenUserId, tokenRole, scopedId) = LocalMe.DataPlane.Auth.OtpAuthService.ValidateTokenWithScope(tokens.AccessToken);
+        var (tokenValid, tokenUserId, tokenRole, scopedId) = LocalMe.DataPlane.Auth.JwtTokenService.ValidateTokenWithScope(tokens.AccessToken);
         Assert.True(tokenValid);
         Assert.Equal($"proj_user_{proj.Id}", tokenUserId);
         Assert.Equal("project_developer", tokenRole);
@@ -639,97 +562,16 @@ public class MultiTenantBaasTests
 
         // Verify zero fake/demo entities
         Assert.Empty(pm.GetProjectTableNames(proj.Id));
-        Assert.Empty(pm.GetProjectBuckets(proj.Id));
         Assert.Empty(pm.GetProjectFunctions(proj.Id));
         Assert.Empty(pm.GetProjectUsers(proj.Id));
-        Assert.Empty(pm.GetDeployments(proj.Id));
-        Assert.Empty(pm.GetDomains(proj.Id));
 
         // Team must only have the owner
         var team = pm.GetCollaborators(proj.Id);
         Assert.Single(team);
         Assert.Equal("Owner", team[0].Role);
 
-        // IPG and Compliance start unconfigured
-        var ipg = pm.GetIpgConfig(proj.Id);
-        Assert.Empty(ipg.TerminalId);
-        Assert.Empty(ipg.MerchantKey);
-
         var comp = pm.GetCompliance(proj.Id);
         Assert.Empty(comp.EnamadSymbolCode);
-    }
-
-    [Fact]
-    public void ShetabIpg_SupportsBankSpecificFieldsForMellatSepZarinpalSadad()
-    {
-        var pm = new ProjectManagerService();
-        var proj = pm.CreateProject(new CreateProjectRequest("درگاه بانکی", "bank-ipg-app"));
-
-        // 1. Mellat Behpardakht 1-to-1 official parameters
-        var mellatConfig = new IpgMerchantConfig(
-            TerminalId: "7891234",
-            MerchantKey: "sec_mellat",
-            DefaultPsp: "BEHPARDAKHT",
-            EnforceShetabCardMask: true,
-            IsSandbox: false,
-            MellatTerminalId: "7891234",
-            MellatUserName: "mellat_ws_user",
-            MellatUserPassword: "MellatSecretPassword!1",
-            MellatPayerId: "12345"
-        );
-        var savedMellat = pm.UpdateIpgConfig(proj.Id, mellatConfig);
-        Assert.Equal("7891234", savedMellat.MellatTerminalId);
-        Assert.Equal("mellat_ws_user", savedMellat.MellatUserName);
-        Assert.Equal("MellatSecretPassword!1", savedMellat.MellatUserPassword);
-
-        // 2. Saman Kish (SEP) 1-to-1 official parameters
-        var sepConfig = new IpgMerchantConfig(
-            TerminalId: "10987654",
-            MerchantKey: "sep_pass_88",
-            DefaultPsp: "SEP",
-            EnforceShetabCardMask: true,
-            IsSandbox: false,
-            SepTerminalId: "10987654",
-            SepMerchantId: "sep_merchant_pass_123",
-            SepCellNumber: "09121112233"
-        );
-        var savedSep = pm.UpdateIpgConfig(proj.Id, sepConfig);
-        Assert.Equal("10987654", savedSep.SepTerminalId);
-        Assert.Equal("sep_merchant_pass_123", savedSep.SepMerchantId);
-        Assert.Equal("09121112233", savedSep.SepCellNumber);
-
-        // 3. Zarinpal 1-to-1 official parameters (36-char UUID)
-        const string zpUuid = "c7a8b9d0-1234-5678-90ab-cdef12345678";
-        var zarinpalConfig = new IpgMerchantConfig(
-            TerminalId: zpUuid,
-            MerchantKey: zpUuid,
-            DefaultPsp: "ZARINPAL",
-            EnforceShetabCardMask: true,
-            IsSandbox: true,
-            ZarinpalMerchantId: zpUuid,
-            ZarinpalIsZarinGate: true,
-            ZarinpalSandbox: true
-        );
-        var savedZp = pm.UpdateIpgConfig(proj.Id, zarinpalConfig);
-        Assert.Equal(zpUuid, savedZp.ZarinpalMerchantId);
-        Assert.True(savedZp.ZarinpalIsZarinGate);
-        Assert.True(savedZp.ZarinpalSandbox);
-
-        // 4. Sadad Bank Melli 1-to-1 official parameters
-        var sadadConfig = new IpgMerchantConfig(
-            TerminalId: "24009988",
-            MerchantKey: "sadad_sym_key",
-            DefaultPsp: "SADAD",
-            EnforceShetabCardMask: true,
-            IsSandbox: false,
-            SadadMerchantId: "000000140299881",
-            SadadTerminalId: "24009988",
-            SadadTerminalKey: "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU="
-        );
-        var savedSadad = pm.UpdateIpgConfig(proj.Id, sadadConfig);
-        Assert.Equal("000000140299881", savedSadad.SadadMerchantId);
-        Assert.Equal("24009988", savedSadad.SadadTerminalId);
-        Assert.Equal("QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU=", savedSadad.SadadTerminalKey);
     }
 
     [Fact]

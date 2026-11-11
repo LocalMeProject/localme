@@ -2,45 +2,19 @@ export type CapabilityCode =
   | 'BASE'
   | 'BAAS_DB'
   | 'IDAAS'
-  | 'RTAAS'
-  | 'RTDAAS'
-  | 'COMPUTE_EDGE'
-  | 'FIN_IPG'
-  | 'FIN_IAP'
-  | 'STORAGE_BLOB'
-  | 'EDA_STREAM'
-  | 'WORKFLOW_DUR'
-  | 'COMPUTE_HEAVY'
-  | 'CACHE_LOCK'
-  | 'OLAP_ENGINE'
-  | 'PUSH_ENGINE'
-  | 'MOBILE_OPS'
-  | 'HOSTING_WEB';
+  | 'COMPUTE_EDGE';
 
 export type PrimitiveCode =
   | 'DNS_SUBDOMAIN'
   | 'YARP_ROUTE'
-  | 'COMPLIANCE_RESPONDER'
   | 'TELEMETRY_METER'
   | 'PG_TENANT_SCHEMA'
   | 'NPGSQL_POOL'
   | 'DYNAMIC_SQL_ROUTE'
-  | 'REDIS_KV'
   | 'JINT_ISOLATE'
   | 'SECRET_VAULT'
   | 'STATIC_EGRESS_NAT'
-  | 'PG_LISTEN_NOTIFY'
-  | 'REDIS_STREAMS'
-  | 'SIGNALR_GATEWAY'
-  | 'BLOB_STORAGE_ADAPTER'
-  | 'TUSDOTNET_PROXY'
-  | 'IMAGESHARP_PROXY'
-  | 'HEAVY_WORKER_POOL'
-  | 'PG_ANALYTICS_PART'
-  | 'MQTTNET_BROKER'
-  | 'FCM_APNS_ADAPTER'
-  | 'EDGE_CACHE'
-  | 'LETTUCEENCRYPT_SSL';
+  | 'PG_LISTEN_NOTIFY';
 
 export interface CapabilityInfo {
   code: CapabilityCode;
@@ -59,12 +33,10 @@ export interface Project {
   region: string;
   status: 'ACTIVE' | 'PROVISIONING' | 'MAINTENANCE';
   createdAt: string;
-  walletBalanceIrr: number;
   hasPassword: boolean;
   services: {
     database?: { isEnabled: boolean };
     auth?: { isEnabled: boolean };
-    storage?: { isEnabled: boolean };
     functions?: { isEnabled: boolean };
   };
 }

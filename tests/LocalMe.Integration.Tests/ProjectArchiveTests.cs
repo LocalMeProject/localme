@@ -40,10 +40,6 @@ public class ProjectArchiveTests : IClassFixture<PostgreSqlTestFixture>
         // Add Edge Function
         pm.DeployFunction(project.Id, "محاسبه مالیات", "return req.amount * 0.10;", "calc-tax");
 
-        // Add Storage Bucket and File
-        pm.CreateBucket(project.Id, "invoices", isPublic: false);
-        pm.UploadBucketFile(project.Id, "invoices", "factor_101.pdf", "application/pdf", 102400);
-
         return (pm, project);
     }
 
@@ -121,11 +117,6 @@ public class ProjectArchiveTests : IClassFixture<PostgreSqlTestFixture>
         var clonedFuncs = pm.GetProjectFunctions(clonedProject.Id);
         Assert.Single(clonedFuncs);
         Assert.Equal("calc-tax", clonedFuncs[0].Slug);
-
-        // Verify cloned buckets
-        var clonedBuckets = pm.GetProjectBuckets(clonedProject.Id);
-        Assert.Single(clonedBuckets);
-        Assert.Equal("invoices", clonedBuckets[0].Name);
 
         // Verify table exists in cloned project schema
         var tables = await pm.GetTablesOverviewAsync(clonedProject.Id);

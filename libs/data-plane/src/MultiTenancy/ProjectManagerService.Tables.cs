@@ -10,8 +10,6 @@ using LocalMe.Core.Database;
 
 public sealed partial class ProjectManagerService
 {
-    // Realtime notification hook for table mutations
-    public Action<string, string, string, object?>? OnTableEvent { get; set; }
 
     private string ResolveProjectSlug(string projectId) =>
         _projects.TryGetValue(projectId, out var p) ? p.Slug : projectId;
@@ -67,17 +65,32 @@ public sealed partial class ProjectManagerService
         return arr;
     }
 
-    public async Task<TenantDbQueryResult> QueryTableAsync(string projectId, string table, SqlAstQuery query)
+    public async Task<TenantDbQueryResult> QueryTableAsync(string projectId, string table, SqlAstQuery query, string? userId = null, string? userRole = null)
     {
         var slug = ResolveProjectSlug(projectId);
         if (TenantDbStore != null)
         {
-            return await TenantDbStore.ExecuteQueryAsync(slug, table, query);
+            return await TenantDbStore.ExecuteQueryAsync(slug, table, query, userId, userRole);
         }
 
         var rows = QueryTable(projectId, table, query.Limit);
         var cols = rows.Count > 0 && rows[0] is JsonObject obj ? obj.Select(kv => kv.Key).ToList() : new List<string> { "id" };
         return new TenantDbQueryResult(cols, rows, rows.Count, 1);
+    }
+
+    public async Task<long> StreamTableQueryAsync(string projectId, string table, SqlAstQuery query, System.IO.Pipelines.PipeWriter pipeWriter, string? userId = null, string? userRole = null, CancellationToken ct = default)
+    {
+        var slug = ResolveProjectSlug(projectId);
+        if (TenantDbStore != null)
+        {
+            return await TenantDbStore.StreamQueryToPipeAsync(slug, table, query, pipeWriter, userId, userRole, ct: ct);
+        }
+
+        var res = await QueryTableAsync(projectId, table, query, userId, userRole);
+        var writer = new System.Text.Json.Utf8JsonWriter(pipeWriter);
+        res.Rows.WriteTo(writer);
+        await writer.FlushAsync(ct);
+        return res.TotalCount;
     }
 
     public JsonObject InsertRow(string projectId, string table, JsonObject payload)
@@ -86,7 +99,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var inserted = TenantDbStore.InsertRowAsync(slug, table, payload).GetAwaiter().GetResult();
-            OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", inserted);
             return inserted;
         }
 
@@ -99,7 +111,6 @@ public sealed partial class ProjectManagerService
         }
 
         rows.Add(payload);
-        OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", payload);
         if (_store != null)
         {
             var rowId = payload["id"]?.ToString() ?? Guid.NewGuid().ToString("N");
@@ -118,7 +129,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var inserted = await TenantDbStore.InsertRowAsync(slug, table, payload);
-            OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", inserted);
             return inserted;
         }
 
@@ -131,7 +141,6 @@ public sealed partial class ProjectManagerService
         }
 
         rows.Add(payload);
-        OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "INSERT", payload);
         if (_store != null)
         {
             var rowId = payload["id"]?.ToString() ?? Guid.NewGuid().ToString("N");
@@ -147,10 +156,7 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var updated = await TenantDbStore.UpdateRowAsync(slug, table, rowId, patch);
-            if (updated != null)
-            {
-                OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "UPDATE", updated);
-            }
+
             return updated;
         }
 
@@ -170,7 +176,6 @@ public sealed partial class ProjectManagerService
                 if (k.Equals("id", StringComparison.OrdinalIgnoreCase)) continue;
                 target[k] = v?.DeepClone();
             }
-            OnTableEvent?.Invoke(projectId, cleanName, "UPDATE", target);
             return target;
         }
     }
@@ -181,7 +186,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var upserted = await TenantDbStore.UpsertRowAsync(slug, table, onConflictCol, payload);
-            OnTableEvent?.Invoke(projectId, table.ToLowerInvariant().Trim(), "UPSERT", upserted);
             return upserted;
         }
         return InsertRow(projectId, table, payload);
@@ -245,17 +249,11 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var ok = await TenantDbStore.CreateTableAsync(slug, tableName, columns);
-            if (ok)
-            {
-                OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
-            }
+
             return ok;
         }
         var created = CreateTable(projectId, tableName);
-        if (created)
-        {
-            OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "CREATE_TABLE", new { table = tableName });
-        }
+
         return created;
     }
 
@@ -265,7 +263,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var res = TenantDbStore.DropTableAsync(slug, tableName).GetAwaiter().GetResult();
-            if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DROP_TABLE", new { table = tableName });
             return res;
         }
 
@@ -274,7 +271,6 @@ public sealed partial class ProjectManagerService
         var removed = tables.TryRemove(cleanName, out _);
         if (removed)
         {
-            OnTableEvent?.Invoke(projectId, cleanName, "DROP_TABLE", new { table = cleanName });
             if (_store != null)
             {
                 _ = Task.Run(async () =>
@@ -293,7 +289,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var res = await TenantDbStore.DropTableAsync(slug, tableName);
-            if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DROP_TABLE", new { table = tableName });
             return res;
         }
 
@@ -302,7 +297,6 @@ public sealed partial class ProjectManagerService
         var removed = tables.TryRemove(cleanName, out _);
         if (removed)
         {
-            OnTableEvent?.Invoke(projectId, cleanName, "DROP_TABLE", new { table = cleanName });
             if (_store != null)
             {
                 try { await _store.DeleteTableAsync(projectId, cleanName); }
@@ -318,7 +312,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var res = TenantDbStore.DeleteRowAsync(slug, tableName, rowId).GetAwaiter().GetResult();
-            if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DELETE", new { id = rowId });
             return res;
         }
 
@@ -334,7 +327,6 @@ public sealed partial class ProjectManagerService
             if (target != null)
             {
                 rows.Remove(target);
-                OnTableEvent?.Invoke(projectId, cleanName, "DELETE", new { id = rowId });
                 if (_store != null)
                 {
                     _ = Task.Run(async () =>
@@ -355,7 +347,6 @@ public sealed partial class ProjectManagerService
         {
             var slug = ResolveProjectSlug(projectId);
             var res = await TenantDbStore.DeleteRowAsync(slug, tableName, rowId);
-            if (res) OnTableEvent?.Invoke(projectId, tableName.ToLowerInvariant().Trim(), "DELETE", new { id = rowId });
             return res;
         }
 
@@ -371,7 +362,6 @@ public sealed partial class ProjectManagerService
             if (target != null)
             {
                 rows.Remove(target);
-                OnTableEvent?.Invoke(projectId, cleanName, "DELETE", new { id = rowId });
             }
             else
             {

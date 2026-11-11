@@ -10,7 +10,6 @@ import {
   ArrowUpDown,
   Trash2,
   ExternalLink,
-  HardDrive,
   Zap,
   ShieldCheck,
   Calendar,
@@ -339,12 +338,6 @@ export function TenantOversightView() {
                             className={`p-1 rounded-md text-[10px] ${p.services?.database?.isEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}
                           >
                             <Database className="w-3.5 h-3.5" />
-                          </span>
-                          <span 
-                            title={p.services?.storage?.isEnabled ? 'استوریج فعال' : 'استوریج غیرفعال'}
-                            className={`p-1 rounded-md text-[10px] ${p.services?.storage?.isEnabled ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}
-                          >
-                            <HardDrive className="w-3.5 h-3.5" />
                           </span>
                           <span 
                             title={p.services?.auth?.isEnabled ? 'احراز هویت فعال' : 'احراز هویت غیرفعال'}

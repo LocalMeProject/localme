@@ -10,143 +10,7 @@ using System.Threading.Tasks;
 
 public sealed partial class ProjectManagerService
 {
-    // 6. Project Buckets & Files
-    public IReadOnlyList<ProjectBucket> GetProjectBuckets(string projectId) =>
-        _projectBuckets.TryGetValue(projectId, out var b) ? b : [];
 
-    public ProjectBucket CreateBucket(string projectId, string name, bool isPublic)
-    {
-        var list = _projectBuckets.GetOrAdd(projectId, _ => []);
-        var cleanName = name.Trim().ToLowerInvariant().Replace(' ', '-');
-        var existing = list.FirstOrDefault(b => b.Name == cleanName);
-        if (existing != null) return existing;
-
-        var bucket = new ProjectBucket(cleanName, isPublic, 0, 0, DateTimeOffset.UtcNow);
-        list.Add(bucket);
-
-        if (_store != null)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _store.SaveBucketAsync(projectId, bucket); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SaveBucket error: {ex.Message}"); }
-            });
-        }
-
-        return bucket;
-    }
-
-    public bool DeleteBucket(string projectId, string bucketName)
-    {
-        if (!_projectBuckets.TryGetValue(projectId, out var list)) return false;
-        var cleanName = bucketName.Trim().ToLowerInvariant().Replace(' ', '-');
-        var idx = list.FindIndex(b => b.Name == cleanName);
-        if (idx >= 0)
-        {
-            list.RemoveAt(idx);
-            if (_projectFiles.TryGetValue(projectId, out var bucketFiles))
-            {
-                bucketFiles.TryRemove(cleanName, out _);
-            }
-            if (_store != null)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try { await _store.DeleteBucketAsync(projectId, cleanName); }
-                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteBucket error: {ex.Message}"); }
-                });
-            }
-            return true;
-        }
-        return false;
-    }
-
-    public IReadOnlyList<ProjectStorageFile> GetBucketFiles(string projectId, string bucket)
-    {
-        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
-        return buckets.TryGetValue(bucket.ToLowerInvariant().Trim(), out var files) ? files : [];
-    }
-
-    public ProjectStorageFile UploadBucketFile(string projectId, string bucket, string fileName, string contentType, long sizeBytes)
-    {
-        var buckets = _projectFiles.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, List<ProjectStorageFile>>());
-        var files = buckets.GetOrAdd(bucket.ToLowerInvariant().Trim(), _ => []);
-
-        var cleanName = Path.GetFileName(fileName);
-        var file = new ProjectStorageFile(
-            Bucket: bucket,
-            FileName: cleanName,
-            ContentType: contentType,
-            SizeBytes: sizeBytes,
-            UploadedAtUtc: DateTimeOffset.UtcNow,
-            DownloadUrl: $"/_baas/v1/{projectId}/storage/{bucket}/{cleanName}"
-        );
-        files.Insert(0, file);
-
-        // Update bucket counts
-        if (_projectBuckets.TryGetValue(projectId, out var bucketList))
-        {
-            var idx = bucketList.FindIndex(b => b.Name == bucket);
-            if (idx >= 0)
-            {
-                var cur = bucketList[idx];
-                bucketList[idx] = cur with
-                {
-                    ObjectCount = cur.ObjectCount + 1,
-                    TotalSizeBytes = cur.TotalSizeBytes + sizeBytes
-                };
-            }
-        }
-
-        if (_store != null)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _store.SaveStorageFileAsync(projectId, file); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SaveStorageFile error: {ex.Message}"); }
-            });
-        }
-
-        return file;
-    }
-
-    public bool DeleteBucketFile(string projectId, string bucket, string fileName)
-    {
-        var cleanBucket = bucket.Trim().ToLowerInvariant();
-        var cleanFile = Path.GetFileName(fileName);
-        if (_projectFiles.TryGetValue(projectId, out var bucketFiles) && bucketFiles.TryGetValue(cleanBucket, out var files))
-        {
-            var idx = files.FindIndex(f => f.FileName.Equals(cleanFile, StringComparison.OrdinalIgnoreCase));
-            if (idx >= 0)
-            {
-                var removed = files[idx];
-                files.RemoveAt(idx);
-                if (_projectBuckets.TryGetValue(projectId, out var bucketList))
-                {
-                    var bIdx = bucketList.FindIndex(b => b.Name == cleanBucket);
-                    if (bIdx >= 0)
-                    {
-                        var cur = bucketList[bIdx];
-                        bucketList[bIdx] = cur with
-                        {
-                            ObjectCount = Math.Max(0, cur.ObjectCount - 1),
-                            TotalSizeBytes = Math.Max(0, cur.TotalSizeBytes - removed.SizeBytes)
-                        };
-                    }
-                }
-                if (_store != null)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        try { await _store.DeleteStorageFileAsync(projectId, cleanBucket, cleanFile); }
-                        catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteStorageFile error: {ex.Message}"); }
-                    });
-                }
-                return true;
-            }
-        }
-        return false;
-    }
 
     // 7. Project Functions
     public IReadOnlyList<ProjectEdgeFunction> GetProjectFunctions(string projectId) =>
@@ -237,114 +101,7 @@ public sealed partial class ProjectManagerService
         return false;
     }
 
-    // 8. Hosting & Deployments
-    public IReadOnlyList<ProjectDeployment> GetDeployments(string projectId) =>
-        _projectDeployments.TryGetValue(projectId, out var list) ? list : [];
 
-    public ProjectDeployment CreateDeployment(string projectId, string branch, string commitSha, string? domain = null)
-    {
-        var list = _projectDeployments.GetOrAdd(projectId, _ => []);
-        var proj = GetProject(projectId);
-        var targetDomain = string.IsNullOrWhiteSpace(domain)
-            ? (proj != null ? $"{proj.Slug}.localme.ir" : "app.localme.ir")
-            : domain.Trim();
-
-        var dep = new ProjectDeployment(
-            Id: $"dep_{Guid.NewGuid():N}"[..8],
-            Branch: string.IsNullOrWhiteSpace(branch) ? "main" : branch.Trim(),
-            CommitSha: string.IsNullOrWhiteSpace(commitSha) ? "head_latest" : commitSha.Trim(),
-            Domain: targetDomain,
-            Status: "Live",
-            SizeBytes: 1024 * 1024 * 3 + RandomNumberGenerator.GetInt32(10000, 500000),
-            DeployedAtUtc: DateTimeOffset.UtcNow,
-            PreviewUrl: $"https://{targetDomain}"
-        );
-        list.Insert(0, dep);
-
-        if (_store != null)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _store.SaveDeploymentAsync(projectId, dep); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SaveDeployment error: {ex.Message}"); }
-            });
-        }
-
-        return dep;
-    }
-
-    public IReadOnlyList<CustomDomain> GetDomains(string projectId) =>
-        _projectDomains.TryGetValue(projectId, out var list) ? list : [];
-
-    public CustomDomain AddDomain(string projectId, string domain)
-    {
-        var list = _projectDomains.GetOrAdd(projectId, _ => []);
-        var clean = domain.Trim().ToLowerInvariant();
-        var existing = list.FirstOrDefault(d => d.Domain.Equals(clean, StringComparison.OrdinalIgnoreCase));
-        if (existing != null) return existing;
-
-        var dom = new CustomDomain(
-            Domain: clean,
-            IsVerified: clean.EndsWith(".localme.ir", StringComparison.OrdinalIgnoreCase),
-            SslStatus: clean.EndsWith(".localme.ir", StringComparison.OrdinalIgnoreCase) ? "Active" : "Pending_Dns",
-            CreatedAtUtc: DateTimeOffset.UtcNow
-        );
-        list.Add(dom);
-
-        if (_store != null)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _store.SaveDomainAsync(projectId, dom); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] SaveDomain error: {ex.Message}"); }
-            });
-        }
-
-        return dom;
-    }
-
-    public CustomDomain? VerifyDomain(string projectId, string domain)
-    {
-        if (!_projectDomains.TryGetValue(projectId, out var list)) return null;
-        var clean = domain.Trim().ToLowerInvariant();
-        var idx = list.FindIndex(d => d.Domain.Equals(clean, StringComparison.OrdinalIgnoreCase));
-        if (idx < 0) return null;
-
-        var verified = list[idx] with { IsVerified = true, SslStatus = "Active" };
-        list[idx] = verified;
-
-        if (_store != null)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _store.SaveDomainAsync(projectId, verified); }
-                catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] VerifyDomain save error: {ex.Message}"); }
-            });
-        }
-
-        return verified;
-    }
-
-    public bool DeleteDomain(string projectId, string domain)
-    {
-        if (!_projectDomains.TryGetValue(projectId, out var list)) return false;
-        var clean = domain.Trim().ToLowerInvariant();
-        var idx = list.FindIndex(d => d.Domain.Equals(clean, StringComparison.OrdinalIgnoreCase));
-        if (idx >= 0)
-        {
-            list.RemoveAt(idx);
-            if (_store != null)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try { await _store.DeleteDomainAsync(projectId, clean); }
-                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] DeleteDomain error: {ex.Message}"); }
-                });
-            }
-            return true;
-        }
-        return false;
-    }
 
     // 9. Interactive SQL Runner & Schema Inspection
     public async Task<SqlExecutionResult> ExecuteSqlAsync(string projectId, string sql, string? userId = null, string? role = null)
@@ -577,23 +334,7 @@ public sealed partial class ProjectManagerService
         return false;
     }
 
-    // 11. Shetab IPG Merchant Studio
-    public IpgMerchantConfig GetIpgConfig(string projectId)
-    {
-        return _projectIpgConfigs.GetOrAdd(projectId, id => new IpgMerchantConfig(
-            TerminalId: $"SEP_{RandomNumberGenerator.GetInt32(100000, 999999)}",
-            MerchantKey: $"sec_ipg_{Guid.NewGuid():N}"[..16],
-            DefaultPsp: "ZARINPAL",
-            EnforceShetabCardMask: true,
-            IsSandbox: true
-        ));
-    }
 
-    public IpgMerchantConfig UpdateIpgConfig(string projectId, IpgMerchantConfig config)
-    {
-        _projectIpgConfigs[projectId] = config;
-        return config;
-    }
 
     // 12. Iranian Compliance Hub
     public ComplianceConfig GetCompliance(string projectId)
@@ -685,13 +426,6 @@ public sealed partial class ProjectManagerService
             }
         }
 
-        foreach (var (projId, domains) in _projectDomains)
-        {
-            if (domains.Any(d => d.Domain.Equals(cleanHost, StringComparison.OrdinalIgnoreCase)))
-            {
-                return GetProject(projId);
-            }
-        }
 
         return null;
     }

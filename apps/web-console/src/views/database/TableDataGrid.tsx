@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   RefreshCw,
@@ -16,7 +16,6 @@ import {
   X,
   Key,
   Sparkles,
-  Radio,
 } from 'lucide-react';
 import { DatabaseColumn } from '../../types';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
@@ -49,7 +48,7 @@ interface TableDataGridProps {
 }
 
 export const TableDataGrid: React.FC<TableDataGridProps> = ({
-  projectSlug,
+  projectSlug: _projectSlug,
   activeTable,
   tableColumns,
   schemaColumns,
@@ -73,7 +72,6 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
   onSortChange,
 }) => {
   const [isInsertOpen, setIsInsertOpen] = useState(false);
-  const [isLiveSyncActive, setIsLiveSyncActive] = useState(false);
   const [isGeneratingSamples, setIsGeneratingSamples] = useState(false);
 
   // Deletion state
@@ -81,17 +79,6 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
 
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; col: string; value: string } | null>(null);
-
-  useEffect(() => {
-    if (!isLiveSyncActive || !projectSlug || !activeTable) return;
-    const sse = new EventSource(`/_baas/v1/${projectSlug}/db/realtime?table=${encodeURIComponent(activeTable)}`);
-    sse.onmessage = () => {
-      onRefresh();
-    };
-    return () => {
-      sse.close();
-    };
-  }, [isLiveSyncActive, projectSlug, activeTable, onRefresh]);
 
   const effectiveColumns: DatabaseColumn[] = schemaColumns && schemaColumns.length > 0
     ? schemaColumns
@@ -244,21 +231,6 @@ export const TableDataGrid: React.FC<TableDataGridProps> = ({
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin' : ''}`} />
           </button>
-
-          {projectSlug && (
-            <button
-              onClick={() => setIsLiveSyncActive(!isLiveSyncActive)}
-              className={`inline-flex items-center gap-1.5 rounded-lg border font-medium text-xs px-2.5 py-1.5 transition ${
-                isLiveSyncActive
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-              title={isLiveSyncActive ? 'همگام‌سازی زنده فعال است (SSE)' : 'فعال‌سازی همگام‌سازی زنده (CDC)'}
-            >
-              <Radio className={`w-3.5 h-3.5 ${isLiveSyncActive ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`} />
-              <span className="hidden sm:inline">همگام‌سازی زنده</span>
-            </button>
-          )}
 
           <div className="flex items-center gap-1 border-r border-slate-200 pr-2 mr-1">
             <button

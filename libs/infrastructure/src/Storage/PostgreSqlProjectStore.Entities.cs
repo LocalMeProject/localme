@@ -8,241 +8,7 @@ using Npgsql;
 
 public sealed partial class PostgreSqlProjectStore
 {
-    // 6. Deployments
-    public async Task<Dictionary<string, List<ProjectDeployment>>> LoadDeploymentsAsync()
-    {
-        await EnsureInitializedAsync();
-        var dict = new Dictionary<string, List<ProjectDeployment>>();
-        const string sql = "SELECT id, project_id, branch, commit_sha, domain, status, size_bytes, preview_url, deployed_at_utc FROM project_deployments ORDER BY deployed_at_utc DESC;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var prjId = reader.GetString(1);
-            if (!dict.TryGetValue(prjId, out var list))
-            {
-                list = [];
-                dict[prjId] = list;
-            }
-            list.Add(new ProjectDeployment(
-                Id: reader.GetString(0),
-                Branch: reader.GetString(2),
-                CommitSha: reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                Domain: reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                Status: reader.GetString(5),
-                SizeBytes: reader.GetInt64(6),
-                PreviewUrl: reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
-                DeployedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
-            ));
-        }
-        return dict;
-    }
 
-    public async Task SaveDeploymentAsync(string projectId, ProjectDeployment deployment)
-    {
-        await EnsureInitializedAsync();
-        const string sql = @"
-            INSERT INTO project_deployments (id, project_id, branch, commit_sha, domain, status, size_bytes, preview_url, deployed_at_utc)
-            VALUES (@id, @pid, @br, @sha, @dom, @st, @sz, @url, @dep)
-            ON CONFLICT (id) DO UPDATE SET
-                status = EXCLUDED.status,
-                preview_url = EXCLUDED.preview_url;";
-
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("id", deployment.Id);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("br", deployment.Branch);
-        cmd.Parameters.AddWithValue("sha", (object?)deployment.CommitSha ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("dom", (object?)deployment.Domain ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("st", deployment.Status);
-        cmd.Parameters.AddWithValue("sz", deployment.SizeBytes);
-        cmd.Parameters.AddWithValue("url", (object?)deployment.PreviewUrl ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("dep", deployment.DeployedAtUtc);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    // 7. Custom Domains
-    public async Task<Dictionary<string, List<CustomDomain>>> LoadDomainsAsync()
-    {
-        await EnsureInitializedAsync();
-        var dict = new Dictionary<string, List<CustomDomain>>();
-        const string sql = "SELECT id, project_id, domain, is_verified, ssl_status, created_at_utc FROM project_domains ORDER BY created_at_utc ASC;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var prjId = reader.GetString(1);
-            if (!dict.TryGetValue(prjId, out var list))
-            {
-                list = [];
-                dict[prjId] = list;
-            }
-            list.Add(new CustomDomain(
-                Domain: reader.GetString(2),
-                IsVerified: reader.GetBoolean(3),
-                SslStatus: reader.GetString(4),
-                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)
-            ));
-        }
-        return dict;
-    }
-
-    public async Task SaveDomainAsync(string projectId, CustomDomain domain)
-    {
-        await EnsureInitializedAsync();
-        const string sql = @"
-            INSERT INTO project_domains (id, project_id, domain, is_verified, ssl_status, created_at_utc)
-            VALUES (@id, @pid, @dom, @ver, @ssl, @ca)
-            ON CONFLICT (id) DO UPDATE SET
-                is_verified = EXCLUDED.is_verified,
-                ssl_status = EXCLUDED.ssl_status;";
-
-        var id = $"dom_{domain.Domain.Replace(".", "_", StringComparison.Ordinal)}_{projectId}";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("id", id);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("dom", domain.Domain);
-        cmd.Parameters.AddWithValue("ver", domain.IsVerified);
-        cmd.Parameters.AddWithValue("ssl", domain.SslStatus);
-        cmd.Parameters.AddWithValue("ca", domain.CreatedAtUtc);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task DeleteDomainAsync(string projectId, string domain)
-    {
-        await EnsureInitializedAsync();
-        const string sql = "DELETE FROM project_domains WHERE project_id = @pid AND domain = @dom;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("dom", domain);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    // 8. Buckets & Files
-    public async Task<Dictionary<string, List<ProjectBucket>>> LoadBucketsAsync()
-    {
-        await EnsureInitializedAsync();
-        var dict = new Dictionary<string, List<ProjectBucket>>();
-        const string sql = @"
-            SELECT b.id, b.project_id, b.name, b.is_public, b.created_at_utc,
-                   COUNT(f.id) as object_count,
-                   COALESCE(SUM(f.size_bytes), 0) as total_size
-            FROM project_buckets b
-            LEFT JOIN project_storage_files f ON b.project_id = f.project_id AND b.name = f.bucket
-            GROUP BY b.id, b.project_id, b.name, b.is_public, b.created_at_utc
-            ORDER BY b.created_at_utc ASC;";
-
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var prjId = reader.GetString(1);
-            if (!dict.TryGetValue(prjId, out var list))
-            {
-                list = [];
-                dict[prjId] = list;
-            }
-            list.Add(new ProjectBucket(
-                Name: reader.GetString(2),
-                IsPublic: reader.GetBoolean(3),
-                ObjectCount: reader.GetInt64(5),
-                TotalSizeBytes: reader.GetInt64(6),
-                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc)
-            ));
-        }
-        return dict;
-    }
-
-    public async Task SaveBucketAsync(string projectId, ProjectBucket bucket)
-    {
-        await EnsureInitializedAsync();
-        const string sql = @"
-            INSERT INTO project_buckets (id, project_id, name, is_public, created_at_utc)
-            VALUES (@id, @pid, @name, @pub, @ca)
-            ON CONFLICT (project_id, name) DO UPDATE SET
-                is_public = EXCLUDED.is_public;";
-
-        var id = $"bkt_{projectId}_{bucket.Name}";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("id", id);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("name", bucket.Name);
-        cmd.Parameters.AddWithValue("pub", bucket.IsPublic);
-        cmd.Parameters.AddWithValue("ca", bucket.CreatedAtUtc);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task DeleteBucketAsync(string projectId, string bucketName)
-    {
-        await EnsureInitializedAsync();
-        const string sql = "DELETE FROM project_buckets WHERE project_id = @pid AND name = @name;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("name", bucketName);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task<Dictionary<string, List<ProjectStorageFile>>> LoadStorageFilesAsync()
-    {
-        await EnsureInitializedAsync();
-        var dict = new Dictionary<string, List<ProjectStorageFile>>();
-        const string sql = "SELECT id, project_id, bucket, file_name, content_type, size_bytes, download_url, uploaded_at_utc FROM project_storage_files ORDER BY uploaded_at_utc DESC;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var prjId = reader.GetString(1);
-            if (!dict.TryGetValue(prjId, out var list))
-            {
-                list = [];
-                dict[prjId] = list;
-            }
-            list.Add(new ProjectStorageFile(
-                Bucket: reader.GetString(2),
-                FileName: reader.GetString(3),
-                ContentType: reader.GetString(4),
-                SizeBytes: reader.GetInt64(5),
-                DownloadUrl: reader.IsDBNull(6) ? $"/_baas/v1/{prjId}/storage/{reader.GetString(2)}/{reader.GetString(3)}" : reader.GetString(6),
-                UploadedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)
-            ));
-        }
-        return dict;
-    }
-
-    public async Task SaveStorageFileAsync(string projectId, ProjectStorageFile file)
-    {
-        await EnsureInitializedAsync();
-        const string sql = @"
-            INSERT INTO project_storage_files (id, project_id, bucket, file_name, content_type, size_bytes, download_url, uploaded_at_utc)
-            VALUES (@id, @pid, @bkt, @fn, @ct, @sz, @url, @ua)
-            ON CONFLICT (id) DO UPDATE SET
-                content_type = EXCLUDED.content_type,
-                size_bytes = EXCLUDED.size_bytes,
-                download_url = EXCLUDED.download_url;";
-
-        var id = $"file_{projectId}_{file.Bucket}_{file.FileName.Replace("/", "_", StringComparison.Ordinal)}";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("id", id);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("bkt", file.Bucket);
-        cmd.Parameters.AddWithValue("fn", file.FileName);
-        cmd.Parameters.AddWithValue("ct", file.ContentType);
-        cmd.Parameters.AddWithValue("sz", file.SizeBytes);
-        cmd.Parameters.AddWithValue("url", (object?)file.DownloadUrl ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("ua", file.UploadedAtUtc);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task DeleteStorageFileAsync(string projectId, string bucket, string fileName)
-    {
-        await EnsureInitializedAsync();
-        const string sql = "DELETE FROM project_storage_files WHERE project_id = @pid AND bucket = @bkt AND file_name = @fn;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("bkt", bucket);
-        cmd.Parameters.AddWithValue("fn", fileName);
-        await cmd.ExecuteNonQueryAsync();
-    }
 
     // 9. Edge Functions
     public async Task<Dictionary<string, List<ProjectEdgeFunction>>> LoadFunctionsAsync()
@@ -309,7 +75,7 @@ public sealed partial class PostgreSqlProjectStore
     {
         await EnsureInitializedAsync();
         var dict = new Dictionary<string, List<ProjectAuthUser>>();
-        const string sql = "SELECT id, project_id, phone, email, full_name, provider, is_confirmed, created_at_utc, last_sign_in_utc FROM project_auth_users ORDER BY created_at_utc DESC;";
+        const string sql = "SELECT id, project_id, phone, email, full_name, provider, is_confirmed, created_at_utc, last_sign_in_utc, username, password_hash FROM project_auth_users ORDER BY created_at_utc DESC;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -328,7 +94,9 @@ public sealed partial class PostgreSqlProjectStore
                 Provider: reader.GetString(5),
                 IsConfirmed: reader.GetBoolean(6),
                 CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc),
-                LastSignInUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc)
+                LastSignInUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc),
+                Username: reader.IsDBNull(9) ? null : reader.GetString(9),
+                PasswordHash: reader.IsDBNull(10) ? null : reader.GetString(10)
             ));
         }
         return dict;
@@ -338,14 +106,16 @@ public sealed partial class PostgreSqlProjectStore
     {
         await EnsureInitializedAsync();
         const string sql = @"
-            INSERT INTO project_auth_users (id, project_id, phone, email, full_name, provider, is_confirmed, created_at_utc, last_sign_in_utc)
-            VALUES (@id, @pid, @ph, @em, @fn, @prov, @conf, @ca, @ls)
+            INSERT INTO project_auth_users (id, project_id, phone, email, full_name, provider, is_confirmed, created_at_utc, last_sign_in_utc, username, password_hash)
+            VALUES (@id, @pid, @ph, @em, @fn, @prov, @conf, @ca, @ls, @un, @pwd)
             ON CONFLICT (id) DO UPDATE SET
                 phone = EXCLUDED.phone,
                 email = EXCLUDED.email,
                 full_name = EXCLUDED.full_name,
                 is_confirmed = EXCLUDED.is_confirmed,
-                last_sign_in_utc = EXCLUDED.last_sign_in_utc;";
+                last_sign_in_utc = EXCLUDED.last_sign_in_utc,
+                username = EXCLUDED.username,
+                password_hash = EXCLUDED.password_hash;";
 
         await using var cmd = _dataSource!.CreateCommand(sql);
         cmd.Parameters.AddWithValue("id", user.Id);
@@ -357,6 +127,8 @@ public sealed partial class PostgreSqlProjectStore
         cmd.Parameters.AddWithValue("conf", user.IsConfirmed);
         cmd.Parameters.AddWithValue("ca", user.CreatedAtUtc);
         cmd.Parameters.AddWithValue("ls", user.LastSignInUtc);
+        cmd.Parameters.AddWithValue("un", (object?)user.Username ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("pwd", (object?)user.PasswordHash ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -510,4 +282,25 @@ public sealed partial class PostgreSqlProjectStore
         await cmd.ExecuteNonQueryAsync();
     }
 
+    public async Task RecordUsageRawAsync(string projectId, string metricType, long quantity, long costIrr)
+    {
+        await EnsureInitializedAsync();
+        const string sql = @"
+            INSERT INTO project_logs (id, project_id, service, level, message, latency_ms, timestamp_utc)
+            VALUES (@id, @pid, 'billing', 'INFO', @msg, @cost, NOW());";
+
+        try
+        {
+            await using var cmd = _dataSource!.CreateCommand(sql);
+            cmd.Parameters.AddWithValue("id", $"usage_{Guid.NewGuid():N}"[..16]);
+            cmd.Parameters.AddWithValue("pid", projectId);
+            cmd.Parameters.AddWithValue("msg", $"{metricType}:{quantity}");
+            cmd.Parameters.AddWithValue("cost", costIrr);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch
+        {
+            // Best effort telemetry recording
+        }
+    }
 }

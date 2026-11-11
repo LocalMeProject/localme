@@ -4,26 +4,18 @@ import {
   Database,
   Users,
   Terminal,
-  HardDrive,
-  CreditCard,
-  Globe,
-  Award,
   Activity,
   Settings,
   Table as TableIcon,
   Code2,
   Columns,
   FolderGit2,
-  Shield,
   Layers,
   Key,
   Network,
   UserCheck,
   ChevronRight,
   Archive,
-  History,
-  FileSpreadsheet,
-  Link2,
   LayoutDashboard,
 } from 'lucide-react';
 import { Project } from '../types';
@@ -33,10 +25,6 @@ export type TabId =
   | 'database'
   | 'auth'
   | 'functions'
-  | 'storage'
-  | 'ipg'
-  | 'hosting'
-  | 'compliance'
   | 'telemetry'
   | 'settings';
 
@@ -108,16 +96,12 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'overview', label: 'داشبورد', icon: <LayoutGrid className="w-5 h-5" /> },
     { id: 'database', label: 'پایگاه داده', icon: <Database className="w-5 h-5" /> },
     { id: 'auth', label: 'کاربران', icon: <Users className="w-5 h-5" /> },
-    { id: 'storage', label: 'ذخیره سازی', icon: <HardDrive className="w-5 h-5" /> },
     {
       id: 'functions',
       label: 'توابع ابری',
       icon: <Terminal className="w-5 h-5" />,
       badge: edgeFunctionsEnabled ? 'فعال' : undefined,
     },
-    { id: 'ipg', label: 'درگاه پرداخت', icon: <CreditCard className="w-5 h-5" /> },
-    { id: 'hosting', label: 'میزبانی وب', icon: <Globe className="w-5 h-5" /> },
-    { id: 'compliance', label: 'اینماد و نمادها', icon: <Award className="w-5 h-5" /> },
     { id: 'telemetry', label: 'لاگ ها', icon: <Activity className="w-5 h-5" /> },
     { id: 'settings', label: 'تنظیمات', icon: <Settings className="w-5 h-5" /> },
   ];
@@ -145,16 +129,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       title: 'احراز هویت و کاربران',
       items: [
         { id: 'users', label: 'مدیریت کاربران', icon: <Users className="w-4 h-4" /> },
-        { id: 'sms', label: 'سرویس پیامک و ورود', icon: <Shield className="w-4 h-4" /> },
         { id: 'policies', label: 'سیاست های امنیتی', icon: <UserCheck className="w-4 h-4" /> },
-      ],
-    },
-    storage: {
-      title: 'ذخیره سازی ابری فایل',
-      items: [
-        { id: 'buckets', label: 'باکت های فایل', icon: <HardDrive className="w-4 h-4" /> },
-        { id: 'explorer', label: 'مرورگر اسناد', icon: <FileSpreadsheet className="w-4 h-4" /> },
-        { id: 'policies', label: 'سهمیه ها و محدودیت', icon: <Shield className="w-4 h-4" /> },
       ],
     },
     functions: {
@@ -163,29 +138,6 @@ export const Navigation: React.FC<NavigationProps> = ({
         { id: 'list', label: 'فهرست توابع لبه', icon: <Terminal className="w-4 h-4" /> },
         { id: 'deploy', label: 'ثبت و استقرار جدید', icon: <Layers className="w-4 h-4" /> },
         { id: 'env', label: 'متغیرهای محیطی', icon: <Key className="w-4 h-4" /> },
-      ],
-    },
-    ipg: {
-      title: 'درگاه های پرداخت',
-      items: [
-        { id: 'transactions', label: 'گزارش تراکنش ها', icon: <History className="w-4 h-4" /> },
-        { id: 'gateways', label: 'پیکربندی درگاه ها', icon: <CreditCard className="w-4 h-4" /> },
-        { id: 'ledger', label: 'دفتر کل و تسویه', icon: <FileSpreadsheet className="w-4 h-4" /> },
-      ],
-    },
-    hosting: {
-      title: 'میزبانی وب و دامنه ها',
-      items: [
-        { id: 'deployments', label: 'استقرارهای وب', icon: <Globe className="w-4 h-4" /> },
-        { id: 'domains', label: 'دامنه های اختصاصی', icon: <Link2 className="w-4 h-4" /> },
-        { id: 'routing', label: 'مسیریابی شبکه لبه', icon: <Network className="w-4 h-4" /> },
-      ],
-    },
-    compliance: {
-      title: 'اینماد و نمادهای سامانه ای',
-      items: [
-        { id: 'tokens', label: 'تاییدیه های اینماد', icon: <Award className="w-4 h-4" /> },
-        { id: 'deeplinks', label: 'احراز دامنه و اپلیکیشن', icon: <Link2 className="w-4 h-4" /> },
       ],
     },
     telemetry: {

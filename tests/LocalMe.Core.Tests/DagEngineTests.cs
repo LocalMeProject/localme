@@ -28,7 +28,6 @@ public sealed class DagEngineTests
         Assert.Contains(PrimitiveCode.DYNAMIC_SQL_ROUTE, primitives);
 
         // Direct from IDAAS
-        Assert.Contains(PrimitiveCode.REDIS_KV, primitives);
         Assert.Contains(PrimitiveCode.JINT_ISOLATE, primitives);
         Assert.Contains(PrimitiveCode.SECRET_VAULT, primitives);
         Assert.Contains(PrimitiveCode.STATIC_EGRESS_NAT, primitives);
@@ -51,7 +50,7 @@ public sealed class DagEngineTests
     [Fact]
     public void ProjectPrimitive_RefCount_Decrements_To_Zero_Signals_Deprovisioning()
     {
-        var prim = new ProjectPrimitive(Guid.NewGuid(), PrimitiveCode.REDIS_KV, refCount: 2);
+        var prim = new ProjectPrimitive(Guid.NewGuid(), PrimitiveCode.PG_TENANT_SCHEMA, refCount: 2);
 
         Assert.False(prim.DecrementRef());
         Assert.Equal(1, prim.RefCount);

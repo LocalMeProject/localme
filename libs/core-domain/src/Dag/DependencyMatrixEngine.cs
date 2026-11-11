@@ -34,23 +34,10 @@ public sealed class DependencyMatrixEngine
             [CapabilityCode.IDAAS] = (
                 [CapabilityCode.BAAS_DB],
                 [
-                    PrimitiveCode.REDIS_KV,
                     PrimitiveCode.JINT_ISOLATE,
                     PrimitiveCode.SECRET_VAULT,
                     PrimitiveCode.STATIC_EGRESS_NAT
                 ]
-            ),
-            [CapabilityCode.RTAAS] = (
-                [CapabilityCode.BAAS_DB],
-                [
-                    PrimitiveCode.PG_LISTEN_NOTIFY,
-                    PrimitiveCode.REDIS_STREAMS,
-                    PrimitiveCode.SIGNALR_GATEWAY
-                ]
-            ),
-            [CapabilityCode.RTDAAS] = (
-                [CapabilityCode.RTAAS, CapabilityCode.BAAS_DB],
-                []
             ),
             [CapabilityCode.COMPUTE_EDGE] = (
                 [],
@@ -58,86 +45,6 @@ public sealed class DependencyMatrixEngine
                     PrimitiveCode.JINT_ISOLATE,
                     PrimitiveCode.SECRET_VAULT,
                     PrimitiveCode.STATIC_EGRESS_NAT
-                ]
-            ),
-            [CapabilityCode.FIN_IPG] = (
-                [CapabilityCode.BAAS_DB, CapabilityCode.COMPUTE_EDGE],
-                [
-                    PrimitiveCode.STATIC_EGRESS_NAT,
-                    PrimitiveCode.COMPLIANCE_RESPONDER
-                ]
-            ),
-            [CapabilityCode.FIN_IAP] = (
-                [CapabilityCode.BAAS_DB, CapabilityCode.COMPUTE_EDGE],
-                [
-                    PrimitiveCode.REDIS_KV,
-                    PrimitiveCode.STATIC_EGRESS_NAT
-                ]
-            ),
-            [CapabilityCode.STORAGE_BLOB] = (
-                [CapabilityCode.BAAS_DB],
-                [
-                    PrimitiveCode.BLOB_STORAGE_ADAPTER,
-                    PrimitiveCode.TUSDOTNET_PROXY,
-                    PrimitiveCode.IMAGESHARP_PROXY
-                ]
-            ),
-            [CapabilityCode.EDA_STREAM] = (
-                [],
-                [
-                    PrimitiveCode.REDIS_STREAMS
-                ]
-            ),
-            [CapabilityCode.WORKFLOW_DUR] = (
-                [CapabilityCode.BAAS_DB],
-                [
-                    PrimitiveCode.REDIS_STREAMS,
-                    PrimitiveCode.JINT_ISOLATE
-                ]
-            ),
-            [CapabilityCode.COMPUTE_HEAVY] = (
-                [CapabilityCode.STORAGE_BLOB],
-                [
-                    PrimitiveCode.REDIS_STREAMS,
-                    PrimitiveCode.HEAVY_WORKER_POOL
-                ]
-            ),
-            [CapabilityCode.CACHE_LOCK] = (
-                [],
-                [
-                    PrimitiveCode.REDIS_KV
-                ]
-            ),
-            [CapabilityCode.OLAP_ENGINE] = (
-                [],
-                [
-                    PrimitiveCode.PG_ANALYTICS_PART,
-                    PrimitiveCode.PG_LISTEN_NOTIFY,
-                    PrimitiveCode.REDIS_STREAMS
-                ]
-            ),
-            [CapabilityCode.PUSH_ENGINE] = (
-                [CapabilityCode.BAAS_DB],
-                [
-                    PrimitiveCode.REDIS_STREAMS,
-                    PrimitiveCode.MQTTNET_BROKER,
-                    PrimitiveCode.FCM_APNS_ADAPTER
-                ]
-            ),
-            [CapabilityCode.MOBILE_OPS] = (
-                [CapabilityCode.STORAGE_BLOB],
-                [
-                    PrimitiveCode.REDIS_KV,
-                    PrimitiveCode.COMPLIANCE_RESPONDER
-                ]
-            ),
-            [CapabilityCode.HOSTING_WEB] = (
-                [],
-                [
-                    PrimitiveCode.BLOB_STORAGE_ADAPTER,
-                    PrimitiveCode.YARP_ROUTE,
-                    PrimitiveCode.EDGE_CACHE,
-                    PrimitiveCode.LETTUCEENCRYPT_SSL
                 ]
             )
         };

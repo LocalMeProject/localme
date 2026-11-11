@@ -14,6 +14,10 @@ public static class SqlAstQueryCompiler
     public static string SanitizeIdentifier(string identifier)
     {
         var clean = identifier.Trim().ToLowerInvariant();
+        if (clean == "*")
+        {
+            return "*";
+        }
         if (!SafeIdentifierRegex.IsMatch(clean))
         {
             throw new ArgumentException($"Invalid SQL identifier: '{identifier}'. Identifiers must be alphanumeric with underscores only.");
@@ -106,76 +110,80 @@ public static class SqlAstQueryCompiler
             }
 
             // PostgREST operator parsing: col=op.value or col=not.op.value
-            if (val.Contains('.'))
+            foreach (var subFilterVal in SplitFilterValues(val))
             {
-                var dotIdx = val.IndexOf('.');
-                var opPrefix = val[..dotIdx].ToLowerInvariant();
-                var opVal = val[(dotIdx + 1)..];
-
-                var isNegated = false;
-                if (opPrefix == "not" && opVal.Contains('.'))
+                var curVal = subFilterVal.Trim();
+                if (curVal.Contains('.'))
                 {
-                    isNegated = true;
-                    var nextDot = opVal.IndexOf('.');
-                    opPrefix = opVal[..nextDot].ToLowerInvariant();
-                    opVal = opVal[(nextDot + 1)..];
-                }
+                    var dotIdx = curVal.IndexOf('.');
+                    var opPrefix = curVal[..dotIdx].ToLowerInvariant();
+                    var opVal = curVal[(dotIdx + 1)..];
 
-                var cleanCol = SanitizeIdentifier(lKey);
-                switch (opPrefix)
-                {
-                    case "eq":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotEquals : QueryOperator.Equals, opVal));
-                        break;
-                    case "neq":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.Equals : QueryOperator.NotEquals, opVal));
-                        break;
-                    case "gt":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThanOrEqual : QueryOperator.GreaterThan, opVal));
-                        break;
-                    case "gte":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThan : QueryOperator.GreaterThanOrEqual, opVal));
-                        break;
-                    case "lt":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThanOrEqual : QueryOperator.LessThan, opVal));
-                        break;
-                    case "lte":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThan : QueryOperator.LessThanOrEqual, opVal));
-                        break;
-                    case "like":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotLike : QueryOperator.Like, opVal));
-                        break;
-                    case "ilike":
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotILike : QueryOperator.ILike, opVal));
-                        break;
-                    case "in":
-                        var items = opVal.Trim('(', ')').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotIn : QueryOperator.In, items));
-                        break;
-                    case "cs":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Contains, opVal));
-                        break;
-                    case "cd":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.ContainedBy, opVal));
-                        break;
-                    case "fts":
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.TextSearch, opVal));
-                        break;
-                    case "is" when opVal.Equals("null", StringComparison.OrdinalIgnoreCase):
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNotNull : QueryOperator.IsNull, null));
-                        break;
-                    case "is" when opVal.Equals("not_null", StringComparison.OrdinalIgnoreCase):
-                        filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNull : QueryOperator.IsNotNull, null));
-                        break;
-                    default:
-                        filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Equals, val));
-                        break;
+                    var isNegated = false;
+                    if (opPrefix == "not" && opVal.Contains('.'))
+                    {
+                        isNegated = true;
+                        var nextDot = opVal.IndexOf('.');
+                        opPrefix = opVal[..nextDot].ToLowerInvariant();
+                        opVal = opVal[(nextDot + 1)..];
+                    }
+
+                    var cleanCol = SanitizeIdentifier(lKey);
+                    switch (opPrefix)
+                    {
+                        case "eq":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotEquals : QueryOperator.Equals, opVal));
+                            break;
+                        case "neq":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.Equals : QueryOperator.NotEquals, opVal));
+                            break;
+                        case "gt":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThanOrEqual : QueryOperator.GreaterThan, opVal));
+                            break;
+                        case "gte":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.LessThan : QueryOperator.GreaterThanOrEqual, opVal));
+                            break;
+                        case "lt":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThanOrEqual : QueryOperator.LessThan, opVal));
+                            break;
+                        case "lte":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.GreaterThan : QueryOperator.LessThanOrEqual, opVal));
+                            break;
+                        case "like":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotLike : QueryOperator.Like, opVal));
+                            break;
+                        case "ilike":
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotILike : QueryOperator.ILike, opVal));
+                            break;
+                        case "in":
+                            var items = opVal.Trim('(', ')').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.NotIn : QueryOperator.In, items));
+                            break;
+                        case "cs":
+                            filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Contains, opVal));
+                            break;
+                        case "cd":
+                            filters.Add(new QueryFilterNode(cleanCol, QueryOperator.ContainedBy, opVal));
+                            break;
+                        case "fts":
+                            filters.Add(new QueryFilterNode(cleanCol, QueryOperator.TextSearch, opVal));
+                            break;
+                        case "is" when opVal.Equals("null", StringComparison.OrdinalIgnoreCase):
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNotNull : QueryOperator.IsNull, null));
+                            break;
+                        case "is" when opVal.Equals("not_null", StringComparison.OrdinalIgnoreCase):
+                            filters.Add(new QueryFilterNode(cleanCol, isNegated ? QueryOperator.IsNull : QueryOperator.IsNotNull, null));
+                            break;
+                        default:
+                            filters.Add(new QueryFilterNode(cleanCol, QueryOperator.Equals, curVal));
+                            break;
+                    }
                 }
-            }
-            else
-            {
-                // Default equality filter
-                filters.Add(new QueryFilterNode(SanitizeIdentifier(lKey), QueryOperator.Equals, val));
+                else
+                {
+                    // Default equality filter
+                    filters.Add(new QueryFilterNode(SanitizeIdentifier(lKey), QueryOperator.Equals, curVal));
+                }
             }
         }
 
@@ -364,8 +372,11 @@ public static class SqlAstQueryCompiler
                     case QueryOperator.IsNotNull:
                         filterClauses.Add($"{col} IS NOT NULL");
                         break;
-                    case QueryOperator.In when filter.Value is System.Collections.IEnumerable inValues and not string:
+                    case QueryOperator.In when filter.Value is not null:
                         {
+                            var inValues = filter.Value is System.Collections.IEnumerable enumerable and not string
+                                ? enumerable
+                                : new[] { filter.Value };
                             var inClauses = new List<string>();
                             foreach (var inVal in inValues)
                             {
@@ -379,8 +390,11 @@ public static class SqlAstQueryCompiler
                                 filterClauses.Add("1=0");
                             break;
                         }
-                    case QueryOperator.NotIn when filter.Value is System.Collections.IEnumerable inValues and not string:
+                    case QueryOperator.NotIn when filter.Value is not null:
                         {
+                            var inValues = filter.Value is System.Collections.IEnumerable enumerable and not string
+                                ? enumerable
+                                : new[] { filter.Value };
                             var inClauses = new List<string>();
                             foreach (var inVal in inValues)
                             {
@@ -470,6 +484,54 @@ public static class SqlAstQueryCompiler
                                     case QueryOperator.IsNotNull:
                                         subClauses.Add($"{sCol} IS NOT NULL");
                                         break;
+                                    case QueryOperator.In when subNode.Value is not null:
+                                        {
+                                            var inValues = subNode.Value is System.Collections.IEnumerable enumerable and not string
+                                                ? enumerable
+                                                : new[] { subNode.Value };
+                                            var inClauses = new List<string>();
+                                            foreach (var inVal in inValues)
+                                            {
+                                                var inParam = $"@p{paramIdx++}";
+                                                inClauses.Add(inParam);
+                                                parameters[inParam] = inVal?.ToString();
+                                            }
+                                            if (inClauses.Count > 0)
+                                                subClauses.Add($"{sCol} IN ({string.Join(", ", inClauses)})");
+                                            else
+                                                subClauses.Add("1=0");
+                                            break;
+                                        }
+                                    case QueryOperator.NotIn when subNode.Value is not null:
+                                        {
+                                            var inValues = subNode.Value is System.Collections.IEnumerable enumerable and not string
+                                                ? enumerable
+                                                : new[] { subNode.Value };
+                                            var inClauses = new List<string>();
+                                            foreach (var inVal in inValues)
+                                            {
+                                                var inParam = $"@p{paramIdx++}";
+                                                inClauses.Add(inParam);
+                                                parameters[inParam] = inVal?.ToString();
+                                            }
+                                            if (inClauses.Count > 0)
+                                                subClauses.Add($"{sCol} NOT IN ({string.Join(", ", inClauses)})");
+                                            else
+                                                subClauses.Add("1=1");
+                                            break;
+                                        }
+                                    case QueryOperator.Contains:
+                                        subClauses.Add($"{sCol} @> {pName}::jsonb");
+                                        parameters[pName] = subNode.Value?.ToString();
+                                        break;
+                                    case QueryOperator.ContainedBy:
+                                        subClauses.Add($"{sCol} <@ {pName}::jsonb");
+                                        parameters[pName] = subNode.Value?.ToString();
+                                        break;
+                                    case QueryOperator.TextSearch:
+                                        subClauses.Add($"to_tsvector('simple', {sCol}::text) @@ plainto_tsquery('simple', {pName})");
+                                        parameters[pName] = subNode.Value?.ToString();
+                                        break;
                                     default:
                                         subClauses.Add($"{sCol} = {pName}");
                                         parameters[pName] = subNode.Value;
@@ -501,5 +563,39 @@ public static class SqlAstQueryCompiler
         parameters[offsetParam] = query.Offset;
 
         return (sb.ToString(), parameters);
+    }
+
+    private static IEnumerable<string> SplitFilterValues(string val)
+    {
+        if (!val.Contains(','))
+        {
+            yield return val;
+            yield break;
+        }
+
+        var sb = new StringBuilder();
+        var parenDepth = 0;
+        foreach (var ch in val)
+        {
+            if (ch == '(') parenDepth++;
+            else if (ch == ')') parenDepth--;
+
+            if (ch == ',' && parenDepth == 0)
+            {
+                if (sb.Length > 0)
+                {
+                    yield return sb.ToString();
+                    sb.Clear();
+                }
+            }
+            else
+            {
+                sb.Append(ch);
+            }
+        }
+        if (sb.Length > 0)
+        {
+            yield return sb.ToString();
+        }
     }
 }

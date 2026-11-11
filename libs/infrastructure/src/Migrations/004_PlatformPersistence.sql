@@ -52,13 +52,17 @@ CREATE TABLE IF NOT EXISTS project_auth_users (
     phone VARCHAR(32),
     email VARCHAR(256),
     full_name VARCHAR(256),
-    provider VARCHAR(64) NOT NULL DEFAULT 'sms_otp',
+    username VARCHAR(128),
+    password_hash VARCHAR(512),
+    provider VARCHAR(64) NOT NULL DEFAULT 'password',
     is_confirmed BOOLEAN NOT NULL DEFAULT TRUE,
     created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_sign_in_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_project_auth_users_prj ON project_auth_users(project_id);
+ALTER TABLE project_auth_users ADD COLUMN IF NOT EXISTS username VARCHAR(128);
+ALTER TABLE project_auth_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(512);
 
 -- 4. Project IPG Configurations
 CREATE TABLE IF NOT EXISTS project_ipg_configs (

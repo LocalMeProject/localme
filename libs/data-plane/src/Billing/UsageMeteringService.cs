@@ -1,8 +1,6 @@
 namespace LocalMe.DataPlane.Billing;
 
 using System.Collections.Concurrent;
-using LocalMe.Core.Finance;
-using LocalMe.DataPlane.Finance;
 
 public sealed record UsageEvent(
     string ProjectId,
@@ -36,7 +34,6 @@ public sealed record ProjectUsageSummary(
 public sealed class UsageMeteringService
 {
     private readonly PricingCatalog _pricing;
-    private readonly PaymentIpgService _ipg;
 
     private readonly ConcurrentDictionary<string, ConcurrentBag<UsageEvent>> _projectEvents = new();
     private readonly ConcurrentDictionary<string, long> _projectDbQueries = new();
@@ -46,10 +43,9 @@ public sealed class UsageMeteringService
     private readonly ConcurrentDictionary<string, long> _projectEgressBytes = new();
     private readonly ConcurrentDictionary<string, long> _projectTotalCostIrr = new();
 
-    public UsageMeteringService(PricingCatalog pricing, PaymentIpgService ipg)
+    public UsageMeteringService(PricingCatalog pricing)
     {
         _pricing = pricing;
-        _ipg = ipg;
     }
 
     public long RecordUsage(string projectId, string ownerPhone, string metricType, long quantity)
@@ -94,10 +90,6 @@ public sealed class UsageMeteringService
         if (costIrr > 0)
         {
             _projectTotalCostIrr.AddOrUpdate(projectId, costIrr, (_, current) => current + costIrr);
-            if (!string.IsNullOrWhiteSpace(ownerPhone))
-            {
-                _ipg.DeductWalletBalance(ownerPhone, costIrr, $"هزینه مصرف سرویس ({metricType}) برای پروژه {projectId}");
-            }
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -131,8 +123,7 @@ public sealed class UsageMeteringService
             ? bag.Take(50).OrderByDescending(e => e.TimestampUtc).ToList()
             : [];
 
-        var rial = new RialAmount(totalCost);
-        var formattedToman = rial.ToTomanString();
+        var formattedToman = $"{totalCost / 10:N0} تومان";
         return new ProjectUsageSummary(
             ProjectId: projectId,
             TotalDbQueries: dbQ,

@@ -264,6 +264,7 @@ public sealed class ShardManagerService
         {
             // Dynamically invoke test query using reflection to keep data-plane free of hard ADO.NET dependencies
             object ds;
+            var isCreatedFromFactory = false;
             if (string.IsNullOrWhiteSpace(connectionString) ||
                 connectionString.Equals("PRIMARY_CONNECTION", StringComparison.OrdinalIgnoreCase) ||
                 (!string.IsNullOrWhiteSpace(_primaryConnectionString) && connectionString.Equals(_primaryConnectionString, StringComparison.OrdinalIgnoreCase)))
@@ -273,80 +274,98 @@ public sealed class ShardManagerService
             else
             {
                 ds = _dataSourceFactory(connectionString);
+                isCreatedFromFactory = true;
             }
 
-            var openMethod = ds.GetType().GetMethod("OpenConnectionAsync", new[] { typeof(CancellationToken) });
-            if (openMethod == null)
+            try
             {
-                return new ShardTestResult(false, 0, null, "OpenConnectionAsync method not found on DataSource");
-            }
-
-            var resultObj = openMethod.Invoke(ds, new object[] { ct })!;
-            object? conn = null;
-            if (resultObj is Task t)
-            {
-                await t.ConfigureAwait(false);
-                conn = t.GetType().GetProperty("Result")?.GetValue(t);
-            }
-            else
-            {
-                var asTaskMethod = resultObj.GetType().GetMethod("AsTask");
-                if (asTaskMethod != null)
+                var openMethod = ds.GetType().GetMethod("OpenConnectionAsync", new[] { typeof(CancellationToken) });
+                if (openMethod == null)
                 {
-                    var task = (Task)asTaskMethod.Invoke(resultObj, null)!;
-                    await task.ConfigureAwait(false);
-                    conn = task.GetType().GetProperty("Result")?.GetValue(task);
+                    return new ShardTestResult(false, 0, null, "OpenConnectionAsync method not found on DataSource");
                 }
-            }
 
-            if (conn is IDisposable dispConn)
-            {
-                try
+                var resultObj = openMethod.Invoke(ds, new object[] { ct })!;
+                object? conn = null;
+                if (resultObj is Task t)
                 {
-                    var createCmdMethod = conn.GetType().GetMethod("CreateCommand", Type.EmptyTypes);
-                    var cmd = createCmdMethod?.Invoke(conn, null);
-                    if (cmd != null)
+                    await t.ConfigureAwait(false);
+                    conn = t.GetType().GetProperty("Result")?.GetValue(t);
+                }
+                else
+                {
+                    var asTaskMethod = resultObj.GetType().GetMethod("AsTask");
+                    if (asTaskMethod != null)
                     {
-                        var textProp = cmd.GetType().GetProperty("CommandText");
-                        textProp?.SetValue(cmd, "SELECT version();");
+                        var task = (Task)asTaskMethod.Invoke(resultObj, null)!;
+                        await task.ConfigureAwait(false);
+                        conn = task.GetType().GetProperty("Result")?.GetValue(task);
+                    }
+                }
 
-                        var execScalarMethod = cmd.GetType().GetMethod("ExecuteScalarAsync", new[] { typeof(CancellationToken) });
-                        if (execScalarMethod != null)
+                if (conn is IDisposable dispConn)
+                {
+                    try
+                    {
+                        var createCmdMethod = conn.GetType().GetMethod("CreateCommand", Type.EmptyTypes);
+                        var cmd = createCmdMethod?.Invoke(conn, null);
+                        if (cmd != null)
                         {
-                            var scalarObj = execScalarMethod.Invoke(cmd, new object[] { ct })!;
-                            object? scalarResult = null;
-                            if (scalarObj is Task st)
+                            var textProp = cmd.GetType().GetProperty("CommandText");
+                            textProp?.SetValue(cmd, "SELECT version();");
+
+                            var execScalarMethod = cmd.GetType().GetMethod("ExecuteScalarAsync", new[] { typeof(CancellationToken) });
+                            if (execScalarMethod != null)
                             {
-                                await st.ConfigureAwait(false);
-                                scalarResult = st.GetType().GetProperty("Result")?.GetValue(st);
-                            }
-                            else
-                            {
-                                var asTaskMethod = scalarObj.GetType().GetMethod("AsTask");
-                                if (asTaskMethod != null)
+                                var scalarObj = execScalarMethod.Invoke(cmd, new object[] { ct })!;
+                                object? scalarResult = null;
+                                if (scalarObj is Task st)
                                 {
-                                    var scalarTask = (Task)asTaskMethod.Invoke(scalarObj, null)!;
-                                    await scalarTask.ConfigureAwait(false);
-                                    scalarResult = scalarTask.GetType().GetProperty("Result")?.GetValue(scalarTask);
+                                    await st.ConfigureAwait(false);
+                                    scalarResult = st.GetType().GetProperty("Result")?.GetValue(st);
                                 }
                                 else
                                 {
-                                    scalarResult = scalarObj;
+                                    var asTaskMethod = scalarObj.GetType().GetMethod("AsTask");
+                                    if (asTaskMethod != null)
+                                    {
+                                        var scalarTask = (Task)asTaskMethod.Invoke(scalarObj, null)!;
+                                        await scalarTask.ConfigureAwait(false);
+                                        scalarResult = scalarTask.GetType().GetProperty("Result")?.GetValue(scalarTask);
+                                    }
+                                    else
+                                    {
+                                        scalarResult = scalarObj;
+                                    }
                                 }
+                                sw.Stop();
+                                return new ShardTestResult(true, sw.ElapsedMilliseconds, scalarResult?.ToString() ?? "PostgreSQL Connected", null);
                             }
-                            sw.Stop();
-                            return new ShardTestResult(true, sw.ElapsedMilliseconds, scalarResult?.ToString() ?? "PostgreSQL Connected", null);
                         }
                     }
+                    finally
+                    {
+                        dispConn.Dispose();
+                    }
                 }
-                finally
+
+                sw.Stop();
+                return new ShardTestResult(true, sw.ElapsedMilliseconds, "Connected successfully", null);
+            }
+            finally
+            {
+                if (isCreatedFromFactory)
                 {
-                    dispConn.Dispose();
+                    if (ds is IAsyncDisposable asyncDispDs)
+                    {
+                        await asyncDispDs.DisposeAsync().ConfigureAwait(false);
+                    }
+                    else if (ds is IDisposable dispDs)
+                    {
+                        dispDs.Dispose();
+                    }
                 }
             }
-
-            sw.Stop();
-            return new ShardTestResult(true, sw.ElapsedMilliseconds, "Connected successfully", null);
         }
         catch (Exception ex)
         {

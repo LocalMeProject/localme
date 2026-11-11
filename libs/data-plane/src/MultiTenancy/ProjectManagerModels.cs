@@ -17,7 +17,6 @@ public sealed record PlatformUser(
     string Phone,
     string Email,
     UserRole Role,
-    long WalletBalanceIrr,
     DateTimeOffset CreatedAtUtc,
     bool IsActive,
     string? Username = null,
@@ -90,46 +89,11 @@ public sealed record ProjectAuthUser(
     [property: System.Text.Json.Serialization.JsonIgnore] string? PasswordHash = null
 );
 
-public sealed record ProjectBucket(
-    string Name,
-    bool IsPublic,
-    long ObjectCount,
-    long TotalSizeBytes,
-    DateTimeOffset CreatedAtUtc
-);
-
-public sealed record ProjectStorageFile(
-    string Bucket,
-    string FileName,
-    string ContentType,
-    long SizeBytes,
-    DateTimeOffset UploadedAtUtc,
-    string DownloadUrl
-);
-
 public sealed record ProjectEdgeFunction(
     string Name,
     string Slug,
     string TriggerPath,
     string Script,
-    DateTimeOffset CreatedAtUtc
-);
-
-public sealed record ProjectDeployment(
-    string Id,
-    string Branch,
-    string CommitSha,
-    string Domain,
-    string Status, // "Live", "Building", "Failed"
-    long SizeBytes,
-    DateTimeOffset DeployedAtUtc,
-    string PreviewUrl
-);
-
-public sealed record CustomDomain(
-    string Domain,
-    bool IsVerified,
-    string SslStatus, // "Active", "Pending_Dns", "Domestic_CA"
     DateTimeOffset CreatedAtUtc
 );
 
@@ -169,30 +133,6 @@ public sealed record ProjectCollaborator(
     string Status // "Active", "Invited"
 );
 
-public sealed record IpgMerchantConfig(
-    string TerminalId,
-    string MerchantKey,
-    string DefaultPsp, // "SEP", "BEHPARDAKHT", "ZARINPAL", "SADAD", "IDPAY", "PAYPING"
-    bool EnforceShetabCardMask,
-    bool IsSandbox,
-    string? MellatTerminalId = null,
-    string? MellatUserName = null,
-    string? MellatUserPassword = null,
-    string? MellatPayerId = null,
-    string? SepTerminalId = null,
-    string? SepMerchantId = null,
-    string? SepCellNumber = null,
-    string? ZarinpalMerchantId = null,
-    bool? ZarinpalIsZarinGate = null,
-    bool? ZarinpalSandbox = null,
-    string? SadadMerchantId = null,
-    string? SadadTerminalId = null,
-    string? SadadTerminalKey = null,
-    string? IdpayApiKey = null,
-    bool? IdpaySandbox = null,
-    string? PaypingToken = null,
-    bool? PaypingSandbox = null
-);
 
 public sealed record ComplianceConfig(
     string EnamadToken,
