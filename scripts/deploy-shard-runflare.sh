@@ -15,18 +15,20 @@ SHARD_REGION="${SHARD_REGION:-ir-tehran-runflare}"
 MAX_CAPACITY="${MAX_CAPACITY:-100}"
 
 # Runflare Target Metadata
+RUNFLARE_ACCOUNT="${RUNFLARE_ACCOUNT:-sina1vali@gmail.com}"
 RUNFLARE_PROJECT_ID="${RUNFLARE_PROJECT_ID:-36960}"
-RUNFLARE_ITEM_ID="${RUNFLARE_ITEM_ID:-}"
+RUNFLARE_ITEM_ID="${RUNFLARE_ITEM_ID:-88984}"
+DEPLOY_SHARD_CONTAINER="${DEPLOY_SHARD_CONTAINER:-false}"
 
 # Database Connection Credentials
-PGHOST="${PGHOST:-${LOCALME_SHARD_HOST:-127.0.0.1}}"
+PGHOST="${PGHOST:-${LOCALME_SHARD_HOST:-shard-a.localme.ir}}"
 PGPORT="${PGPORT:-${LOCALME_SHARD_PORT:-5432}}"
-PGDATABASE="${PGDATABASE:-${LOCALME_SHARD_DB:-localme_shard}}"
+PGDATABASE="${PGDATABASE:-${LOCALME_SHARD_DB:-postgres}}"
 PGUSER="${PGUSER:-${LOCALME_SHARD_USER:-postgres}}"
 PGPASSWORD="${PGPASSWORD:-${LOCALME_SHARD_PASSWORD:-}}"
 
 # LocalMe Master API endpoint for dynamic shard auto-registration
-LOCALME_API_URL="${LOCALME_API_URL:-http://127.0.0.1:3000}"
+LOCALME_API_URL="${LOCALME_API_URL:-https://localme.ir}"
 LOCALME_ADMIN_TOKEN="${LOCALME_ADMIN_TOKEN:-}"
 
 GREEN='\033[0;32m'
@@ -48,18 +50,20 @@ echo -e "Project ID       : ${YELLOW}${RUNFLARE_PROJECT_ID}${NC}"
 echo ""
 
 # ------------------------------------------------------------------------------
-# 1. Optional Runflare Item Deployment (if ITEM_ID is provided and CLI is available)
+# 1. Optional Runflare Item Deployment (if explicitly requested)
 # ------------------------------------------------------------------------------
-if [ -n "${RUNFLARE_ITEM_ID}" ]; then
+if [ "${DEPLOY_SHARD_CONTAINER}" = "true" ] && [ -n "${RUNFLARE_ITEM_ID}" ]; then
   RUNFLARE_BIN="$(command -v runflare || echo "${HOME}/.local/bin/runflare")"
   if [ -x "${RUNFLARE_BIN}" ]; then
-    echo -e "${CYAN}▶ Deploying shard container to Runflare (Project: ${RUNFLARE_PROJECT_ID}, Item: ${RUNFLARE_ITEM_ID})...${NC}"
-    "${RUNFLARE_BIN}" deploy --project-id "${RUNFLARE_PROJECT_ID}" --item-id "${RUNFLARE_ITEM_ID}" -y --force || {
+    echo -e "${CYAN}▶ Deploying shard container to Runflare (Account: ${RUNFLARE_ACCOUNT}, Project: ${RUNFLARE_PROJECT_ID}, Item: ${RUNFLARE_ITEM_ID})...${NC}"
+    "${RUNFLARE_BIN}" --account "${RUNFLARE_ACCOUNT}" deploy --project-id "${RUNFLARE_PROJECT_ID}" --item-id "${RUNFLARE_ITEM_ID}" -y --force || {
       echo -e "${YELLOW}⚠️ Runflare item deploy notice: CLI exited with non-zero code. Proceeding to database setup.${NC}"
     }
   else
     echo -e "${YELLOW}ℹ️ Runflare CLI not found at ${RUNFLARE_BIN}. Skipping remote container trigger.${NC}"
   fi
+else
+  echo -e "${GREEN}✓ Shard container is assumed active on Runflare (Item: ${RUNFLARE_ITEM_ID}). Proceeding to connectivity and registration.${NC}"
 fi
 
 # ------------------------------------------------------------------------------

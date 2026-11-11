@@ -134,9 +134,14 @@ affected_projects:
 
 ### Modified Files
 - `.dockerignore`: Docker build ignore rules.
+- `.gitignore`: Ignore local Runflare account metadata.
 - `CHANGE_SURFACE.md`: Declared blast radius.
 - `Dockerfile`: Multi-stage build for web-console, dotnet publish, and lean runtime.
 - `package.json`: Add generic deploy script target.
+- `scripts/deploy-runflare.sh`: Unified container deployment script for Runflare.
+- `apps/server/src/wwwroot/panel.html`: Production console HTML asset references.
+- `apps/server/src/wwwroot/assets/index-D_1EpJUH.js`: Production web-console JavaScript bundle.
+- `apps/server/src/wwwroot/assets/index-DabGHArw.css`: Production web-console stylesheet.
 - `apps/server/src/Diagnostics/PlatformLogBuffer.cs`: Added entity-type, entity-id, client-ip, trace-id indexing and multi-criteria log query filtering.
 - `apps/server/src/Program.cs`: Wire dynamic services, admin endpoints, SPA deep linking, and per-entity logging tags.
 - `apps/server/src/Routes/AuthHelper.cs`: Hardened authentication helpers, added Superadmin/Operator checks, and implemented EnsureProjectAccess guard.

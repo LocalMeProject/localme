@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+RUNFLARE_ACCOUNT="${RUNFLARE_ACCOUNT:-sina1vali@gmail.com}"
+RUNFLARE_PROJECT_ID="${RUNFLARE_PROJECT_ID:-36960}"
+RUNFLARE_ITEM_ID="${RUNFLARE_ITEM_ID:-86246}"
+
 echo "=========================================================="
 echo "   LocalMe Unified Production Container Deployment        "
 echo "   Target: Runflare Docker Engine                         "
-echo "   Project: projectsgroup-free (36960) | Item: localme (86246)"
+echo "   Account: ${RUNFLARE_ACCOUNT}                           "
+echo "   Project: projectsgroup-free (${RUNFLARE_PROJECT_ID}) | Item: localme (${RUNFLARE_ITEM_ID})"
 echo "   Port: 3000 (Pure .NET 10 Unified BaaS/PaaS)            "
 echo "=========================================================="
 
@@ -25,6 +30,23 @@ cp -r apps/web-console/dist/assets/* apps/server/src/wwwroot/assets/
 echo "🔨 3. Compiling and publishing .NET 10 host locally..."
 dotnet publish apps/server/src/LocalMe.Server.csproj -c Release -o dist/server
 rm -f dist/server/*.pdb 2>/dev/null || true
+
+# Prune unreferenced stale historical web bundles to keep container upload lightweight
+python3 -c "
+import os, glob, re
+panel = 'dist/server/wwwroot/panel.html'
+if os.path.exists(panel):
+    with open(panel) as f:
+        html = f.read()
+    referenced = set(re.findall(r'/assets/([^\"\' >]+)', html))
+    for f in glob.glob('dist/server/wwwroot/assets/index-*'):
+        base = os.path.basename(f).replace('.gz', '').replace('.br', '')
+        if base not in referenced:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+"
 
 if [ ! -f "dist/server/LocalMe.Server.dll" ]; then
   echo "❌ Error: dist/server/LocalMe.Server.dll not found after publish!"
@@ -61,9 +83,10 @@ env['TERM'] = 'xterm-256color'
 
 cmd = [
     '${RUNFLARE_BIN}',
+    '--account', '${RUNFLARE_ACCOUNT}',
     'deploy',
-    '--project-id', '36960',
-    '--item-id', '86246',
+    '--project-id', '${RUNFLARE_PROJECT_ID}',
+    '--item-id', '${RUNFLARE_ITEM_ID}',
     '-y',
     '--force'
 ]
