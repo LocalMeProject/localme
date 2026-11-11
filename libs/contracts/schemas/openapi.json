@@ -3,7 +3,7 @@
   "info": {
     "title": "LocalMe Sovereign BaaS & Edge PaaS API",
     "version": "1.0.0-PROD",
-    "description": "Formal OpenAPI 3.1 wire specification for LocalMe pure .NET 10 + PostgreSQL 18.1 + Redis 7/8 multi-tenant stack."
+    "description": "Formal OpenAPI 3.1 wire specification for LocalMe pure .NET 10 + PostgreSQL 18.1 multi-tenant BaaS stack."
   },
   "servers": [
     {

@@ -76,6 +76,8 @@ affected_projects:
 - `docker-compose.prod.yml`: Provider-agnostic production compose setup.
 - `Dockerfile.multistage`: Standalone multi-stage build definition for CI/CD runners.
 - `scripts/deploy.sh`: Generic OCI registry and VPS deployment script.
+- `scripts/deploy-shard.sh`: Generic database shard deployment driver defaulting to Runflare.
+- `scripts/deploy-shard-runflare.sh`: Dedicated Runflare PostgreSQL shard deployment and auto-registration engine.
 - `scripts/org-build.sh`: Build platform and SDKs across the organization.
 - `scripts/org-dev.sh`: Dev server launcher for platform services.
 - `scripts/org-pull.sh`: Pull and synchronize all organization repositories.
@@ -83,6 +85,52 @@ affected_projects:
 - `scripts/org-status.sh`: Status table for all organization repositories.
 - `scripts/org-sync.sh`: Multi-tier branch synchronizer across organization repositories.
 - `scripts/org-test.sh`: Run automated test suites across all organization projects.
+
+### Core Service Pruning & Redis Elimination Files
+- `apps/cli/src/Program.cs`: Pruned dropped DAG capabilities.
+- `apps/server/src/Routes/BaasAuthRoutes.cs`: Pure Argon2id and JWT authentication endpoints.
+- `apps/server/src/Routes/MockGatewayRenderer.cs`: Dropped mock gateway.
+- `apps/web-console/src/components/Navigation.tsx`: Pruned navigation for 4 core services.
+- `apps/web-console/src/components/modals/AddDomainModal.tsx`: Pruned dropped domain modal.
+- `apps/web-console/src/components/modals/CreateBucketModal.tsx`: Pruned dropped bucket modal.
+- `apps/web-console/src/components/modals/TopupModal.tsx`: Pruned dropped topup modal.
+- `apps/web-console/src/dagEngine.ts`: Pruned DAG definitions to 4 core capabilities.
+- `apps/web-console/src/types.ts`: Pruned capabilities and primitives.
+- `apps/web-console/src/views/ComplianceView.tsx`: Pruned dropped compliance view.
+- `apps/web-console/src/views/IpgView.tsx`: Pruned dropped IPG view.
+- `apps/web-console/src/views/OverviewView.tsx`: Pruned overview cards to 4 core services.
+- `apps/web-console/src/views/StorageView.tsx`: Pruned dropped storage view.
+- `libs/client-sdk/src/index.ts`: Pruned client SDK to auth, from, functions, and database.
+- `libs/client-sdk/src/types.ts`: Pruned client SDK types.
+- `libs/core-domain/src/Dag/CapabilityCode.cs`: Pruned capabilities to 4 core services.
+- `libs/core-domain/src/Dag/DependencyMatrixEngine.cs`: Pruned DAG resolution.
+- `libs/core-domain/src/Dag/PrimitiveCode.cs`: Pruned primitives.
+- `libs/core-domain/src/Finance/RialAmount.cs`: Dropped Rial finance domain.
+- `libs/core-domain/src/Project/Project.cs`: Pruned project domain entity.
+- `libs/data-plane/src/Admin/SuperadminService.cs`: Pruned dropped finance metrics.
+- `libs/data-plane/src/Billing/UsageMeteringService.cs`: Pruned dropped finance dependencies.
+- `libs/data-plane/src/Finance/IpgGatewayAdapters.cs`: Dropped IPG adapters.
+- `libs/data-plane/src/Finance/PaymentIpgService.cs`: Dropped payment service.
+- `libs/data-plane/src/Finance/PaymentReportEngine.cs`: Dropped payment reports.
+- `libs/data-plane/src/Mobile/MobileIapService.cs`: Dropped mobile IAP.
+- `libs/data-plane/src/Mobile/PushNotificationService.cs`: Dropped push engine.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.Modules.cs`: Pruned modules.
+- `libs/data-plane/src/MultiTenancy/ProjectManagerService.Tables.cs`: Pruned table management.
+- `libs/data-plane/src/Realtime/RealtimeChannelHub.cs`: Dropped SignalR realtime hub.
+- `libs/infrastructure/src/Scripts/fenced_redlock.lua`: Eliminated Redis Redlock.
+- `libs/infrastructure/src/Scripts/gcra_limiter.lua`: Eliminated Redis GCRA limiter.
+- `libs/infrastructure/src/Storage/PostgreSqlProjectStore.FinanceAndMobile.cs`: Dropped finance and mobile store.
+- `tests/LocalMe.Core.Tests/DagEngineTests.cs`: Updated DAG assertions for 4 core services.
+- `tests/LocalMe.Core.Tests/DagStressTests.cs`: Pruned dropped service stress tests.
+- `tests/LocalMe.Core.Tests/RialAmountTests.cs`: Dropped Rial amount tests.
+- `tests/LocalMe.Integration.Tests/ClusterBusTests.cs`: Pure PostgreSQL LISTEN / NOTIFY cluster bus test.
+- `tests/LocalMe.Integration.Tests/DatabaseParserAndBridgeTests.cs`: Realigned database parser tests.
+- `tests/LocalMe.Integration.Tests/DbaasConsoleStudioTests.cs`: Realigned DB studio tests.
+- `tests/LocalMe.Integration.Tests/DbaasSdkRealtimeTests.cs`: Dropped realtime SDK tests.
+- `tests/LocalMe.Integration.Tests/DomainAndStorageTests.cs`: Dropped domain and storage tests.
+- `tests/LocalMe.Integration.Tests/MobileBaasTests.cs`: Dropped mobile BaaS tests.
+- `tests/LocalMe.Integration.Tests/MultiTenantBaasTests.cs`: Realigned multi-tenant BaaS tests.
+- `tests/LocalMe.Integration.Tests/StorageAdapterTests.cs`: Dropped storage adapter tests.
 
 ### Modified Files
 - `.dockerignore`: Docker build ignore rules.
@@ -112,6 +160,20 @@ affected_projects:
 - `apps/web-console/src/main.tsx`: Root React wrapper with AuthGuard.
 - `apps/web-console/src/views/HostingView.tsx`: Cleaned region options.
 - `apps/web-console/src/views/SettingsView.tsx`: Cleaned region options.
+- `apps/web-console/src/views/database/TableDataGrid.tsx`: Pruned live SSE realtime sync to match sovereign BaaS core invariants.
+- `libs/client-sdk/src/query-builder.ts`: Multi-filter array tuple parameterization and query builder hardening.
+- `libs/contracts/schemas/openapi.json`: Core 4 service API contract specifications.
+- `libs/core-domain/src/Database/SqlGuardrailValidator.cs`: SQL guardrail validator hardened with DDL/DCL blocking, set_config filtering, and literal regex sanitization.
+- `libs/data-plane/src/Auth/Argon2id.cs`: Sovereign Argon2id password hashing primitive.
+- `libs/data-plane/src/Auth/CaptchaService.cs`: Purged and hardened captcha validation.
+- `libs/data-plane/src/Auth/Ed25519.cs`: Ed25519 asymmetric cryptographic signing primitive.
+- `libs/data-plane/src/Auth/JwtTokenService.cs`: Asymmetric JWT token service using Ed25519 keypairs.
+- `libs/data-plane/src/Auth/RefreshTokenService.cs`: Persistent refresh token rotation with SHA-256 digests and token family replay revocation.
+- `libs/data-plane/src/MultiTenancy/ITenantDatabaseStore.cs`: Threaded caller identity and zero-allocation pipe streaming interface.
+- `libs/data-plane/src/MultiTenancy/InternalServiceBridge.cs`: Direct in-process internal BaaS service bridge.
+- `libs/data-plane/src/Network/OutboundEgressDispatcher.cs`: Outbound egress network dispatcher with RFC 1918 SSRF blocking.
+- `tests/LocalMe.Core.Tests/SqlGuardrailValidatorTests.cs`: Comprehensive unit tests for SQL guardrail token blocking and regex literal stripping.
+- `tests/LocalMe.Integration.Tests/SecurityRegressionTests.cs`: Integration regression tests for Argon2id, Ed25519 JWT, and refresh token rotation.
 - `apps/web-console/src/views/WorkspaceHubView.tsx`: Cleaned region options.
 - `docs/adr/0006-postgres-centralization-contract.md`: Architecture decision record.
 - `libs/core-domain/src/Database/SqlAstQueryCompiler.cs`: AST query compilation.

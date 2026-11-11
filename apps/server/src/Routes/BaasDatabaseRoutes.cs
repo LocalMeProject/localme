@@ -37,11 +37,12 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-                var result = await pm.QueryTableAsync(project.Id, table, ast);
+                var userId = caller?.Id ?? "anon";
+                var userRole = caller != null ? (caller.Role == UserRole.Admin ? "admin" : "authenticated") : "anon";
 
-                context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                return Results.Json(result.Rows);
+                context.Response.ContentType = "application/json; charset=utf-8";
+                await pm.StreamTableQueryAsync(project.Id, table, ast, context.Response.BodyWriter, userId, userRole, context.RequestAborted);
+                return Results.Empty;
             }
             catch (Exception ex)
             {
@@ -62,7 +63,9 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseJsonQuery(jsonNode);
-                var result = await pm.QueryTableAsync(project!.Id, table, ast);
+                var userId = caller?.Id ?? "anon";
+                var userRole = caller != null ? (caller.Role == UserRole.Admin ? "admin" : "authenticated") : "anon";
+                var result = await pm.QueryTableAsync(project!.Id, table, ast, userId, userRole);
                 metering.RecordUsage(project.Id, project.OwnerPhone, "db_query", 1);
                 return Results.Json(result);
             }
@@ -89,7 +92,9 @@ public static class BaasDatabaseRoutes
             try
             {
                 var ast = SqlAstQueryCompiler.ParseUrlQuery(queryDict);
-                var result = await pm.QueryTableAsync(project.Id, table, ast);
+                var userId = caller?.Id ?? "anon";
+                var userRole = caller != null ? (caller.Role == UserRole.Admin ? "admin" : "authenticated") : "anon";
+                var result = await pm.QueryTableAsync(project.Id, table, ast, userId, userRole);
 
                 context.Response.Headers["X-Total-Count"] = result.TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 context.Response.Headers["X-Latency-Ms"] = result.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -170,70 +175,7 @@ public static class BaasDatabaseRoutes
             }
         });
 
-        // 6. Real-Time CDC Table Events over Server-Sent Events (SSE)
-        app.MapGet("/_baas/v1/{projectId}/db/realtime", async (string projectId, HttpContext context, ProjectManagerService pm) =>
-        {
-            var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(context, pm, projectId, serviceRequired: "database");
-            if (!allowed) return err!;
 
-            context.Response.Headers.Append("Content-Type", "text/event-stream");
-            context.Response.Headers.Append("Cache-Control", "no-cache");
-            context.Response.Headers.Append("Connection", "keep-alive");
-
-            var tableFilter = context.Request.Query["table"].ToString();
-
-            void Handler(string pId, string tbl, string action, object? payload)
-            {
-                if (pId != project!.Id) return;
-                if (!string.IsNullOrEmpty(tableFilter) && !tbl.Equals(tableFilter, StringComparison.OrdinalIgnoreCase)) return;
-
-                var payloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    projectId = pId,
-                    table = tbl,
-                    action,
-                    payload,
-                    timestamp = DateTimeOffset.UtcNow
-                });
-
-                var sseMessage = $"event: {action.ToLowerInvariant()}\ndata: {payloadJson}\n\n";
-                try
-                {
-                    context.Response.WriteAsync(sseMessage).GetAwaiter().GetResult();
-                    context.Response.Body.FlushAsync().GetAwaiter().GetResult();
-                }
-                catch
-                {
-                    // Client disconnected
-                }
-            }
-
-            pm.OnTableEvent += Handler;
-
-            try
-            {
-                var initMsg = $"event: connected\ndata: {{\"status\":\"subscribed\",\"projectId\":\"{projectId}\"}}\n\n";
-                await context.Response.WriteAsync(initMsg);
-                await context.Response.Body.FlushAsync();
-
-                while (!context.RequestAborted.IsCancellationRequested)
-                {
-                    await Task.Delay(15000, context.RequestAborted);
-                    await context.Response.WriteAsync(": heartbeat\n\n");
-                    await context.Response.Body.FlushAsync();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Disconnected normally
-            }
-            finally
-            {
-                pm.OnTableEvent -= Handler;
-            }
-
-            return Results.Empty;
-        });
 
         // 7. REST Row Update (PATCH)
         app.MapPatch("/_baas/v1/{projectId}/rest/{table}/{rowId}", async (string projectId, string table, string rowId, HttpRequest request, ProjectManagerService pm, UsageMeteringService metering) =>

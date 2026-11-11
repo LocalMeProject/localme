@@ -1,6 +1,5 @@
 namespace LocalMe.DataPlane.Admin;
 
-using LocalMe.Core.Finance;
 using LocalMe.DataPlane.Billing;
 using LocalMe.DataPlane.MultiTenancy;
 
@@ -80,7 +79,6 @@ public sealed class SuperadminService
             totalRevenue += summary.TotalCostIrr;
         }
 
-        var rial = new RialAmount(totalRevenue);
         var egressNat = _configService?.GetConfig().SovereignEgressNat ?? "2.180.12.94 (Static Domestic NAT Active)";
         return new SuperadminSystemStats(
             TotalUsers: users.Count,
@@ -89,7 +87,7 @@ public sealed class SuperadminService
             TotalQueriesProcessed: totalQueries,
             TotalSmsDispatched: totalSms,
             TotalPlatformRevenueIrr: totalRevenue,
-            FormattedRevenueToman: rial.ToTomanString(),
+            FormattedRevenueToman: $"{totalRevenue / 10:N0} تومان",
             Pricing: _pricing.GetSnapshot(),
             SystemUptimeUtc: _bootTimeUtc,
             SovereignEgressNat: egressNat,

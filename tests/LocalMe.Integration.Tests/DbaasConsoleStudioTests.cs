@@ -69,17 +69,6 @@ public class DbaasConsoleStudioTests : IClassFixture<PostgreSqlTestFixture>
     {
         var (pm, proj) = CreateTestContext("تست ایجاد جدول با ستون");
 
-        string? capturedEvent = null;
-        string? capturedTable = null;
-        pm.OnTableEvent = (pId, table, evType, payload) =>
-        {
-            if (pId == proj.Id)
-            {
-                capturedEvent = evType;
-                capturedTable = table;
-            }
-        };
-
         var columns = new List<TableColumnDefinition>
         {
             new("id", "uuid", true, false),
@@ -89,8 +78,6 @@ public class DbaasConsoleStudioTests : IClassFixture<PostgreSqlTestFixture>
 
         var created = await pm.CreateTableAsync(proj.Id, "catalog", columns);
         Assert.True(created);
-        Assert.Equal("CREATE_TABLE", capturedEvent);
-        Assert.Equal("catalog", capturedTable);
     }
 
     [Fact]

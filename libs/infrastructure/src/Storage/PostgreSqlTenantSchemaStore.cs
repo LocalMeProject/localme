@@ -377,10 +377,12 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
             setCmd.Transaction = tx;
             setCmd.CommandText = $@"
                 SET LOCAL search_path = ""{schema}"", auth, public;
-                SET LOCAL request.jwt.claim.sub = '{userId ?? ""}';
-                SET LOCAL request.jwt.claim.role = '{userRole ?? "anon"}';
+                SELECT set_config('request.jwt.claim.sub', @sub, true),
+                       set_config('request.jwt.claim.role', @role, true);
                 SET LOCAL statement_timeout = '{Math.Clamp(timeoutMs, 500, 30000)}ms';
                 SET LOCAL work_mem = '8MB';";
+            setCmd.Parameters.AddWithValue("sub", userId ?? string.Empty);
+            setCmd.Parameters.AddWithValue("role", userRole ?? "anon");
             await setCmd.ExecuteNonQueryAsync(ct);
         }
 
@@ -416,6 +418,180 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
         await tx.CommitAsync(ct);
         sw.Stop();
         return new TenantDbQueryResult(columns, rows, rows.Count, sw.ElapsedMilliseconds);
+    }
+
+    public async Task<long> StreamQueryToPipeAsync(string projectSlug, string tableName, SqlAstQuery query, System.IO.Pipelines.PipeWriter pipeWriter, string? userId = null, string? userRole = null, int timeoutMs = 3000, CancellationToken ct = default)
+    {
+        await EnsureTenantSchemaAsync(projectSlug, ct);
+        var schema = GetSchemaName(projectSlug);
+
+        var (sql, parameters) = SqlAstQueryCompiler.CompileToParameterizedSql(tableName, query);
+
+        await using var conn = await GetDataSource(projectSlug).OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        // Inject sandbox limits and RLS claim context
+        await using (var setCmd = conn.CreateCommand())
+        {
+            setCmd.Transaction = tx;
+            setCmd.CommandText = $@"
+                SET LOCAL search_path = ""{schema}"", auth, public;
+                SELECT set_config('request.jwt.claim.sub', @sub, true),
+                       set_config('request.jwt.claim.role', @role, true);
+                SET LOCAL statement_timeout = '{Math.Clamp(timeoutMs, 500, 30000)}ms';
+                SET LOCAL work_mem = '8MB';";
+            setCmd.Parameters.AddWithValue("sub", userId ?? string.Empty);
+            setCmd.Parameters.AddWithValue("role", userRole ?? "anon");
+            await setCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        long rowCount = 0;
+        await using (var queryCmd = conn.CreateCommand())
+        {
+            queryCmd.Transaction = tx;
+            queryCmd.CommandText = sql;
+            foreach (var (k, v) in parameters)
+            {
+                queryCmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
+            }
+
+            await using var reader = await queryCmd.ExecuteReaderAsync(System.Data.CommandBehavior.SequentialAccess, ct);
+            var colCount = reader.FieldCount;
+            var colNames = new string[colCount];
+            for (var i = 0; i < colCount; i++)
+            {
+                colNames[i] = reader.GetName(i);
+            }
+
+            var jsonWriter = new System.Text.Json.Utf8JsonWriter(pipeWriter);
+            jsonWriter.WriteStartArray();
+
+            while (await reader.ReadAsync(ct))
+            {
+                rowCount++;
+                jsonWriter.WriteStartObject();
+                for (var i = 0; i < colCount; i++)
+                {
+                    jsonWriter.WritePropertyName(colNames[i]);
+                    if (await reader.IsDBNullAsync(i, ct))
+                    {
+                        jsonWriter.WriteNullValue();
+                    }
+                    else
+                    {
+                        var val = reader.GetValue(i);
+                        WriteJsonValue(jsonWriter, val);
+                    }
+                }
+                jsonWriter.WriteEndObject();
+                if (rowCount % 100 == 0)
+                {
+                    await jsonWriter.FlushAsync(ct);
+                }
+            }
+
+            jsonWriter.WriteEndArray();
+            await jsonWriter.FlushAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
+        return rowCount;
+    }
+
+    private static void WriteJsonValue(System.Text.Json.Utf8JsonWriter writer, object val)
+    {
+        switch (val)
+        {
+            case bool b:
+                writer.WriteBooleanValue(b);
+                break;
+            case byte by:
+                writer.WriteNumberValue(by);
+                break;
+            case sbyte sb:
+                writer.WriteNumberValue(sb);
+                break;
+            case short s:
+                writer.WriteNumberValue(s);
+                break;
+            case ushort us:
+                writer.WriteNumberValue(us);
+                break;
+            case int i:
+                writer.WriteNumberValue(i);
+                break;
+            case uint ui:
+                writer.WriteNumberValue(ui);
+                break;
+            case long l:
+                writer.WriteNumberValue(l);
+                break;
+            case ulong ul:
+                writer.WriteNumberValue(ul);
+                break;
+            case float f:
+                writer.WriteNumberValue(f);
+                break;
+            case double d:
+                writer.WriteNumberValue(d);
+                break;
+            case decimal dec:
+                writer.WriteNumberValue(dec);
+                break;
+            case DateTime dt:
+                writer.WriteStringValue(dt.ToString("O"));
+                break;
+            case DateTimeOffset dto:
+                writer.WriteStringValue(dto.ToString("O"));
+                break;
+            case Guid g:
+                writer.WriteStringValue(g.ToString());
+                break;
+            case byte[] bytes:
+                writer.WriteBase64StringValue(bytes);
+                break;
+            case System.Text.Json.JsonElement elem:
+                elem.WriteTo(writer);
+                break;
+            case System.Text.Json.Nodes.JsonNode node:
+                node.WriteTo(writer);
+                break;
+            case System.Array arr:
+                writer.WriteStartArray();
+                foreach (var item in arr)
+                {
+                    if (item == null)
+                    {
+                        writer.WriteNullValue();
+                    }
+                    else
+                    {
+                        WriteJsonValue(writer, item);
+                    }
+                }
+                writer.WriteEndArray();
+                break;
+            case string str:
+                var trimmed = str.Trim();
+                if ((trimmed.StartsWith('{') && trimmed.EndsWith('}')) || (trimmed.StartsWith('[') && trimmed.EndsWith(']')))
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(str);
+                        doc.WriteTo(writer);
+                        break;
+                    }
+                    catch
+                    {
+                        // fall through to string
+                    }
+                }
+                writer.WriteStringValue(str);
+                break;
+            default:
+                writer.WriteStringValue(val.ToString() ?? string.Empty);
+                break;
+        }
     }
 
     public async Task<JsonObject> InsertRowAsync(string projectSlug, string tableName, JsonObject data, CancellationToken ct = default)
@@ -679,10 +855,12 @@ public sealed partial class PostgreSqlTenantSchemaStore : ITenantDatabaseStore
                 setCmd.Transaction = tx;
                 setCmd.CommandText = $@"
                     SET LOCAL search_path = ""{schema}"", auth, public;
-                    SET LOCAL request.jwt.claim.sub = '{userId ?? ""}';
-                    SET LOCAL request.jwt.claim.role = '{userRole ?? "anon"}';
+                    SELECT set_config('request.jwt.claim.sub', @sub, true),
+                           set_config('request.jwt.claim.role', @role, true);
                     SET LOCAL statement_timeout = '{Math.Clamp(timeoutMs, 500, 30000)}ms';
                     SET LOCAL work_mem = '8MB';";
+                setCmd.Parameters.AddWithValue("sub", userId ?? string.Empty);
+                setCmd.Parameters.AddWithValue("role", userRole ?? "anon");
                 await setCmd.ExecuteNonQueryAsync(ct);
             }
 

@@ -183,93 +183,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             Console.WriteLine($"[LocalMe.Store] Migration 005 initialization notice: {ex.Message}");
         }
 
-        // Ensure finance, mobile push & IAP, and billing tables exist
+        // Ensure billing usage records table exists
         const string auxiliaryTablesSql = @"
-            CREATE TABLE IF NOT EXISTS payment_transactions (
-                id VARCHAR(64) PRIMARY KEY,
-                authority_token VARCHAR(128) UNIQUE NOT NULL,
-                gateway VARCHAR(64) NOT NULL,
-                amount_irr BIGINT NOT NULL,
-                customer_phone VARCHAR(32) NOT NULL,
-                callback_url TEXT NOT NULL,
-                description TEXT,
-                idempotency_key VARCHAR(128) NOT NULL,
-                is_verified BOOLEAN NOT NULL DEFAULT FALSE,
-                reference_id VARCHAR(128),
-                project_id VARCHAR(64),
-                created_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            CREATE INDEX IF NOT EXISTS idx_pmt_tx_auth ON payment_transactions(authority_token);
-            CREATE INDEX IF NOT EXISTS idx_pmt_tx_phone ON payment_transactions(customer_phone);
-
-            CREATE TABLE IF NOT EXISTS customer_ledgers (
-                id VARCHAR(64) PRIMARY KEY,
-                customer_phone VARCHAR(32) NOT NULL,
-                transaction_id VARCHAR(64) NOT NULL,
-                idempotency_key VARCHAR(128) NOT NULL,
-                entries_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-                timestamp_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            CREATE INDEX IF NOT EXISTS idx_cust_ledgers_ph ON customer_ledgers(customer_phone, timestamp_utc DESC);
-
-            CREATE TABLE IF NOT EXISTS customer_wallets (
-                customer_phone VARCHAR(32) PRIMARY KEY,
-                balance_irr BIGINT NOT NULL DEFAULT 0,
-                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS project_push_devices (
-                device_id VARCHAR(128) NOT NULL,
-                project_id VARCHAR(64) NOT NULL,
-                push_token TEXT NOT NULL,
-                platform VARCHAR(32) NOT NULL,
-                provider VARCHAR(32) NOT NULL,
-                user_id VARCHAR(128),
-                tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-                app_version VARCHAR(64),
-                device_model VARCHAR(128),
-                registered_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (project_id, device_id)
-            );
-
-            CREATE TABLE IF NOT EXISTS project_push_configs (
-                project_id VARCHAR(64) PRIMARY KEY,
-                fcm_server_key TEXT,
-                apns_key_id VARCHAR(64),
-                apns_team_id VARCHAR(64),
-                apns_bundle_id VARCHAR(128),
-                apns_auth_token TEXT,
-                najva_api_token TEXT,
-                pushy_api_key TEXT,
-                enable_domestic_fallback BOOLEAN NOT NULL DEFAULT TRUE,
-                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS project_iap_configs (
-                project_id VARCHAR(64) PRIMARY KEY,
-                bazaar_client_id VARCHAR(128),
-                bazaar_client_secret VARCHAR(256),
-                bazaar_refresh_token TEXT,
-                myket_api_key VARCHAR(256),
-                auto_credit_wallet BOOLEAN NOT NULL DEFAULT TRUE,
-                updated_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS project_iap_records (
-                transaction_id VARCHAR(64) PRIMARY KEY,
-                project_id VARCHAR(64) NOT NULL,
-                store VARCHAR(32) NOT NULL,
-                package_name VARCHAR(256) NOT NULL,
-                product_id VARCHAR(128) NOT NULL,
-                purchase_token TEXT NOT NULL,
-                user_id VARCHAR(128),
-                amount_irr BIGINT NOT NULL,
-                consumption_state VARCHAR(32) NOT NULL,
-                purchase_state VARCHAR(32) NOT NULL,
-                verified_at_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                UNIQUE (project_id, purchase_token)
-            );
-
             CREATE TABLE IF NOT EXISTS billing_usage_records (
                 id VARCHAR(64) PRIMARY KEY,
                 project_id VARCHAR(64) NOT NULL,
@@ -319,7 +234,7 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         var list = new List<PlatformUser>();
-        const string sql = "SELECT id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc FROM platform_users ORDER BY created_at_utc DESC;";
+        const string sql = "SELECT id, full_name, phone, email, username, password_hash, role, is_active, created_at_utc FROM platform_users ORDER BY created_at_utc DESC;";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -330,12 +245,11 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 FullName: reader.GetString(1),
                 Phone: reader.GetString(2),
                 Email: reader.GetString(3),
-                Username: reader.IsDBNull(4) ? null : reader.GetString(4),
-                PasswordHash: reader.IsDBNull(5) ? null : reader.GetString(5),
                 Role: role,
-                WalletBalanceIrr: reader.GetInt64(7),
-                IsActive: reader.GetBoolean(8),
-                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)
+                CreatedAtUtc: DateTime.SpecifyKind(reader.GetDateTime(8), DateTimeKind.Utc),
+                IsActive: reader.GetBoolean(7),
+                Username: reader.IsDBNull(4) ? null : reader.GetString(4),
+                PasswordHash: reader.IsDBNull(5) ? null : reader.GetString(5)
             ));
         }
         return list;
@@ -345,8 +259,8 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
     {
         await EnsureInitializedAsync();
         const string sql = @"
-            INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, wallet_balance_irr, is_active, created_at_utc)
-            VALUES (@id, @fn, @ph, @em, @un, @pwd, @role, @bal, @act, @ca)
+            INSERT INTO platform_users (id, full_name, phone, email, username, password_hash, role, is_active, created_at_utc)
+            VALUES (@id, @fn, @ph, @em, @un, @pwd, @role, @act, @ca)
             ON CONFLICT (id) DO UPDATE SET
                 full_name = EXCLUDED.full_name,
                 phone = EXCLUDED.phone,
@@ -354,7 +268,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
                 username = EXCLUDED.username,
                 password_hash = COALESCE(EXCLUDED.password_hash, platform_users.password_hash),
                 role = EXCLUDED.role,
-                wallet_balance_irr = EXCLUDED.wallet_balance_irr,
                 is_active = EXCLUDED.is_active;";
 
         await using var cmd = _dataSource!.CreateCommand(sql);
@@ -365,7 +278,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         cmd.Parameters.AddWithValue("un", (object?)user.Username ?? DBNull.Value);
         cmd.Parameters.AddWithValue("pwd", (object?)user.PasswordHash ?? DBNull.Value);
         cmd.Parameters.AddWithValue("role", user.Role.ToString());
-        cmd.Parameters.AddWithValue("bal", user.WalletBalanceIrr);
         cmd.Parameters.AddWithValue("act", user.IsActive);
         cmd.Parameters.AddWithValue("ca", user.CreatedAtUtc);
         await cmd.ExecuteNonQueryAsync();
@@ -490,119 +402,6 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         await cmd.ExecuteNonQueryAsync();
     }
 
-    // 3. Shetab IPG Configs
-    public async Task<Dictionary<string, IpgMerchantConfig>> LoadIpgConfigsAsync()
-    {
-        await EnsureInitializedAsync();
-        var dict = new Dictionary<string, IpgMerchantConfig>();
-        const string sql = "SELECT project_id, terminal_id, merchant_key, default_psp, enforce_card_mask, is_sandbox, config_data FROM project_ipg_configs;";
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var prjId = reader.GetString(0);
-            var termId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-            var mKey = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
-            var psp = reader.IsDBNull(3) ? "ZARINPAL" : reader.GetString(3);
-            var mask = !reader.IsDBNull(4) && reader.GetBoolean(4);
-            var sandbox = !reader.IsDBNull(5) && reader.GetBoolean(5);
-            var configJson = reader.IsDBNull(6) ? "{}" : reader.GetString(6);
-
-            JsonDocument? doc = null;
-            try { doc = JsonDocument.Parse(configJson); }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[LocalMe.Store] Failed to parse IPG config JSON: {ex.Message}");
-            }
-
-            using (doc)
-            {
-                string? mellatTerm = doc?.RootElement.TryGetProperty("mellatTerminalId", out var p1) == true && p1.ValueKind == JsonValueKind.String ? p1.GetString() : null;
-                string? mellatUser = doc?.RootElement.TryGetProperty("mellatUserName", out var p2) == true && p2.ValueKind == JsonValueKind.String ? p2.GetString() : null;
-                string? mellatPass = doc?.RootElement.TryGetProperty("mellatUserPassword", out var p3) == true && p3.ValueKind == JsonValueKind.String ? p3.GetString() : null;
-                string? mellatPayer = doc?.RootElement.TryGetProperty("mellatPayerId", out var p4) == true && p4.ValueKind == JsonValueKind.String ? p4.GetString() : null;
-
-                string? sepTerm = doc?.RootElement.TryGetProperty("sepTerminalId", out var p5) == true && p5.ValueKind == JsonValueKind.String ? p5.GetString() : null;
-                string? sepMerch = doc?.RootElement.TryGetProperty("sepMerchantId", out var p6) == true && p6.ValueKind == JsonValueKind.String ? p6.GetString() : null;
-                string? sepCell = doc?.RootElement.TryGetProperty("sepCellNumber", out var p7) == true && p7.ValueKind == JsonValueKind.String ? p7.GetString() : null;
-
-                string? zarinMerch = doc?.RootElement.TryGetProperty("zarinpalMerchantId", out var p8) == true && p8.ValueKind == JsonValueKind.String ? p8.GetString() : null;
-                bool? zarinGate = doc?.RootElement.TryGetProperty("zarinpalIsZarinGate", out var p9) == true && (p9.ValueKind == JsonValueKind.True || p9.ValueKind == JsonValueKind.False) ? p9.GetBoolean() : null;
-                bool? zarinSand = doc?.RootElement.TryGetProperty("zarinpalSandbox", out var p10) == true && (p10.ValueKind == JsonValueKind.True || p10.ValueKind == JsonValueKind.False) ? p10.GetBoolean() : null;
-
-                string? sadadMerch = doc?.RootElement.TryGetProperty("sadadMerchantId", out var p11) == true && p11.ValueKind == JsonValueKind.String ? p11.GetString() : null;
-                string? sadadTerm = doc?.RootElement.TryGetProperty("sadadTerminalId", out var p12) == true && p12.ValueKind == JsonValueKind.String ? p12.GetString() : null;
-                string? sadadKey = doc?.RootElement.TryGetProperty("sadadTerminalKey", out var p13) == true && p13.ValueKind == JsonValueKind.String ? p13.GetString() : null;
-
-                dict[prjId] = new IpgMerchantConfig(
-                    TerminalId: termId,
-                    MerchantKey: mKey,
-                    DefaultPsp: psp,
-                    EnforceShetabCardMask: mask,
-                    IsSandbox: sandbox,
-                    MellatTerminalId: mellatTerm,
-                    MellatUserName: mellatUser,
-                    MellatUserPassword: mellatPass,
-                    MellatPayerId: mellatPayer,
-                    SepTerminalId: sepTerm,
-                    SepMerchantId: sepMerch,
-                    SepCellNumber: sepCell,
-                    ZarinpalMerchantId: zarinMerch,
-                    ZarinpalIsZarinGate: zarinGate,
-                    ZarinpalSandbox: zarinSand,
-                    SadadMerchantId: sadadMerch,
-                    SadadTerminalId: sadadTerm,
-                    SadadTerminalKey: sadadKey
-                );
-            }
-        }
-        return dict;
-    }
-
-    public async Task SaveIpgConfigAsync(string projectId, IpgMerchantConfig config)
-    {
-        await EnsureInitializedAsync();
-        const string sql = @"
-            INSERT INTO project_ipg_configs (project_id, terminal_id, merchant_key, default_psp, enforce_card_mask, is_sandbox, config_data, updated_at_utc)
-            VALUES (@pid, @tid, @mk, @psp, @mask, @sb, @cfg::jsonb, NOW())
-            ON CONFLICT (project_id) DO UPDATE SET
-                terminal_id = EXCLUDED.terminal_id,
-                merchant_key = EXCLUDED.merchant_key,
-                default_psp = EXCLUDED.default_psp,
-                enforce_card_mask = EXCLUDED.enforce_card_mask,
-                is_sandbox = EXCLUDED.is_sandbox,
-                config_data = EXCLUDED.config_data,
-                updated_at_utc = NOW();";
-
-        var extraData = new
-        {
-            mellatTerminalId = config.MellatTerminalId,
-            mellatUserName = config.MellatUserName,
-            mellatUserPassword = config.MellatUserPassword,
-            mellatPayerId = config.MellatPayerId,
-            sepTerminalId = config.SepTerminalId,
-            sepMerchantId = config.SepMerchantId,
-            sepCellNumber = config.SepCellNumber,
-            zarinpalMerchantId = config.ZarinpalMerchantId,
-            zarinpalIsZarinGate = config.ZarinpalIsZarinGate,
-            zarinpalSandbox = config.ZarinpalSandbox,
-            sadadMerchantId = config.SadadMerchantId,
-            sadadTerminalId = config.SadadTerminalId,
-            sadadTerminalKey = config.SadadTerminalKey
-        };
-        var extraJson = JsonSerializer.Serialize(extraData);
-
-        await using var cmd = _dataSource!.CreateCommand(sql);
-        cmd.Parameters.AddWithValue("pid", projectId);
-        cmd.Parameters.AddWithValue("tid", (object?)config.TerminalId ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("mk", (object?)config.MerchantKey ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("psp", config.DefaultPsp);
-        cmd.Parameters.AddWithValue("mask", config.EnforceShetabCardMask);
-        cmd.Parameters.AddWithValue("sb", config.IsSandbox);
-        cmd.Parameters.AddWithValue("cfg", extraJson);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
     // 4. Collaborators
     public async Task<Dictionary<string, List<ProjectCollaborator>>> LoadCollaboratorsAsync()
     {
@@ -722,29 +521,15 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         const string sql = @"
             DELETE FROM projects;
             TRUNCATE TABLE 
-                payment_transactions,
-                payments,
-                customer_ledgers,
-                customer_wallets,
                 billing_usage_records,
-                project_push_devices,
-                project_push_configs,
-                project_iap_configs,
-                project_iap_records,
                 project_table_records,
                 project_auth_users,
                 project_collaborators,
-                project_ipg_configs,
                 project_compliance_configs,
-                project_deployments,
-                project_domains,
-                project_buckets,
-                project_storage_files,
                 project_functions,
                 project_logs
             CASCADE;
-            DELETE FROM platform_users WHERE id NOT IN ('usr_admin_01', 'usr_operator_02', 'usr_developer_03');
-            UPDATE platform_users SET wallet_balance_irr = 0;";
+            DELETE FROM platform_users WHERE id NOT IN ('usr_admin_01', 'usr_operator_02', 'usr_developer_03');";
         await using var cmd = _dataSource!.CreateCommand(sql);
         await cmd.ExecuteNonQueryAsync();
     }

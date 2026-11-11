@@ -186,7 +186,6 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProjects.map((p) => {
-            const toman = Math.floor((p.walletBalanceIrr || 0) / 10);
             return (
               <div
                 key={p.id}
@@ -223,9 +222,8 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
                     <span className="truncate max-w-[130px]">{p.region}</span>
                   </div>
 
-                  <div className="font-semibold text-slate-700 flex items-center gap-1">
-                    <span dir="ltr">{toman.toLocaleString('fa-IR')}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">تومان</span>
+                  <div className="font-medium text-emerald-700 flex items-center gap-1">
+                    <span>آماده عملیات</span>
                   </div>
                 </div>
               </div>

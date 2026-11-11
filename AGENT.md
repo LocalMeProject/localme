@@ -34,7 +34,7 @@ This document defines the root governance invariants, prime directives, architec
 ---
 
 ## 4. LocalMe Sovereign Iran-Native & Global Runtime Invariants
-1. **Consolidated Pure .NET 10 Stack**: Every server engine runs on .NET 10 + PostgreSQL 18.1 + Redis 7/8 with zero external runtime binaries.
+1. **Consolidated Pure .NET 10 Stack**: Every server engine runs on .NET 10 + PostgreSQL 18.1 with zero external runtime binaries.
 2. **Currency Standard**: All monetary values are stored and calculated as exact **Iranian Rials (`IRR`)** using 64-bit integer (`BIGINT`) representations in `RialAmount`. Toman is used exclusively for presentation formatting.
 3. **Regulatory Layer**: Automated e-Namad dynamic text and meta injection, fallback Persian storefront, and Static Egress NAT Gateway IP pooling for domestic banking and SMS providers.
 4. **Domestic Resiliency**: Dual-mode push notifications (FCM/APNs + domestic MQTT-over-WebSocket) with client-side deduplication ring buffer.

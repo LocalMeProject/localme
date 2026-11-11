@@ -7,7 +7,7 @@
 - **Architectural Profile**: Profile A (Backend Hexagonal & ASP.NET Core 10 Host)
 - **Runtime Environment**: Containerized / Kestrel / Podman Quadlet / Runflare
 - **Upstream Dependencies**: Ingress Proxy / Shetab IPG gateways / Client SDKs
-- **Downstream Dependencies**: PostgreSQL, Redis / In-memory storage, SMS providers
+- **Downstream Dependencies**: PostgreSQL / Npgsql Connection Pool
 
 ---
 

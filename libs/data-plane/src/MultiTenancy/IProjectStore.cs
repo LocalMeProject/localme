@@ -1,11 +1,9 @@
 namespace LocalMe.DataPlane.MultiTenancy;
 
 using System.Text.Json.Nodes;
-using LocalMe.DataPlane.Finance;
-using LocalMe.DataPlane.Mobile;
 
 /// <summary>
-/// Contract for durable PostgreSQL and Redis persistence of the LocalMe multi-tenant BaaS control plane.
+/// Contract for durable PostgreSQL persistence of the LocalMe multi-tenant BaaS control plane.
 /// </summary>
 public interface IProjectStore
 {
@@ -21,10 +19,6 @@ public interface IProjectStore
     Task UpsertProjectAsync(BaasProject project);
     Task DeleteProjectAsync(string projectId);
 
-    // Shetab IPG Configs
-    Task<Dictionary<string, IpgMerchantConfig>> LoadIpgConfigsAsync();
-    Task SaveIpgConfigAsync(string projectId, IpgMerchantConfig config);
-
     // Collaborators
     Task<Dictionary<string, List<ProjectCollaborator>>> LoadCollaboratorsAsync();
     Task SaveCollaboratorAsync(string projectId, ProjectCollaborator collaborator);
@@ -33,24 +27,6 @@ public interface IProjectStore
     // Compliance Configs
     Task<Dictionary<string, ComplianceConfig>> LoadComplianceConfigsAsync();
     Task SaveComplianceConfigAsync(string projectId, ComplianceConfig config);
-
-    // Deployments
-    Task<Dictionary<string, List<ProjectDeployment>>> LoadDeploymentsAsync();
-    Task SaveDeploymentAsync(string projectId, ProjectDeployment deployment);
-
-    // Custom Domains
-    Task<Dictionary<string, List<CustomDomain>>> LoadDomainsAsync();
-    Task SaveDomainAsync(string projectId, CustomDomain domain);
-    Task DeleteDomainAsync(string projectId, string domain);
-
-    // Storage Buckets & Files
-    Task<Dictionary<string, List<ProjectBucket>>> LoadBucketsAsync();
-    Task SaveBucketAsync(string projectId, ProjectBucket bucket);
-    Task DeleteBucketAsync(string projectId, string bucketName);
-
-    Task<Dictionary<string, List<ProjectStorageFile>>> LoadStorageFilesAsync();
-    Task SaveStorageFileAsync(string projectId, ProjectStorageFile file);
-    Task DeleteStorageFileAsync(string projectId, string bucket, string fileName);
 
     // Edge Functions
     Task<Dictionary<string, List<ProjectEdgeFunction>>> LoadFunctionsAsync();
@@ -71,28 +47,6 @@ public interface IProjectStore
     // Telemetry & Logs
     Task<Dictionary<string, List<ProjectLogEntry>>> LoadRecentLogsAsync(int limitPerProject = 100);
     Task AppendLogAsync(string projectId, ProjectLogEntry log);
-
-    // Payments & Ledger
-    Task<List<StoredPayment>> LoadPaymentsAsync();
-    Task SavePaymentAsync(StoredPayment payment);
-    Task<Dictionary<string, List<LedgerTransaction>>> LoadLedgersAsync();
-    Task SaveLedgerTransactionAsync(string customerPhone, LedgerTransaction transaction);
-    Task<Dictionary<string, long>> LoadCustomerWalletsAsync();
-    Task SaveCustomerWalletAsync(string customerPhone, long balanceIrr);
-
-    // Mobile Push & IAP
-    Task<Dictionary<string, List<PushDeviceRegistration>>> LoadPushDevicesAsync();
-    Task SavePushDeviceAsync(string projectId, PushDeviceRegistration registration);
-    Task DeletePushDeviceAsync(string projectId, string deviceId);
-
-    Task<Dictionary<string, PushProviderConfig>> LoadPushConfigsAsync();
-    Task SavePushConfigAsync(string projectId, PushProviderConfig config);
-
-    Task<Dictionary<string, MobileIapConfig>> LoadIapConfigsAsync();
-    Task SaveIapConfigAsync(string projectId, MobileIapConfig config);
-
-    Task<Dictionary<string, List<IapVerifiedRecord>>> LoadIapRecordsAsync();
-    Task SaveIapRecordAsync(string projectId, IapVerifiedRecord record);
 
     // Usage Metering
     Task RecordUsageRawAsync(string projectId, string metricType, long quantity, long costIrr);

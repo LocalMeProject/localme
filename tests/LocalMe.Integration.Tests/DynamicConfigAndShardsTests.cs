@@ -9,8 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using LocalMe.DataPlane.Admin;
 using LocalMe.DataPlane.MultiTenancy;
-using LocalMe.DataPlane.Storage;
-using LocalMe.DataPlane.Storage.Adapters;
 using LocalMe.Infrastructure.Storage;
 using Npgsql;
 using Xunit;
@@ -146,61 +144,5 @@ public class DynamicConfigAndShardsTests : IClassFixture<PostgreSqlTestFixture>
 
         var afterDelete = await shardManager.GetShardAsync(shardId);
         Assert.Null(afterDelete);
-    }
-
-    [Fact]
-    public async Task Storage_DynamicAdapter_SwitchesBetweenLocalAndS3OnTheFly()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"localme_storage_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-        var configPath = Path.Combine(tempDir, "isolated_config.json");
-        var configService = new PlatformConfigurationService(storagePath: configPath);
-
-        try
-        {
-            var localDisk = new LocalDiskAdapter(tempDir);
-            var dynamicAdapter = new DynamicBlobStorageAdapter(configService, localDisk);
-
-            // Default config is LOCAL_DISK
-            Assert.Equal("LOCAL_DISK", dynamicAdapter.AdapterKey);
-
-            // Put object in LocalDisk
-            var testData = Encoding.UTF8.GetBytes("تست داده های باینری ذخیره سازی ابری");
-            using (var ms = new MemoryStream(testData))
-            {
-                await dynamicAdapter.PutObjectAsync("test-bucket", "sample.txt", ms, "text/plain");
-            }
-
-            var fetched = await dynamicAdapter.GetObjectAsync("test-bucket", "sample.txt");
-            Assert.NotNull(fetched);
-            using (var reader = new StreamReader(fetched))
-            {
-                var content = await reader.ReadToEndAsync();
-                Assert.Equal("تست داده های باینری ذخیره سازی ابری", content);
-            }
-
-            // Switch live config to ARVAN_S3
-            var cfg = configService.GetConfig();
-            cfg.StorageAdapterType = "ARVAN_S3";
-            cfg.ArvanS3Endpoint = "https://s3.ir-thr-at1.arvancdn.ir";
-            cfg.ArvanS3AccessKey = "test_access_key_123";
-            cfg.ArvanS3SecretKey = "test_secret_key_456";
-            cfg.ArvanS3CdnUrl = "https://cdn.localme.ir";
-            configService.UpdateConfig(cfg);
-
-            // Active adapter must switch to ARVAN_S3 immediately
-            Assert.Equal("ARVAN_S3", dynamicAdapter.AdapterKey);
-
-            // Verify presigned URL uses CDN public URL
-            var presignedGet = await dynamicAdapter.CreatePresignedGetUrlAsync("test-bucket", "sample.txt", TimeSpan.FromMinutes(15));
-            Assert.StartsWith("https://cdn.localme.ir/test-bucket/sample.txt", presignedGet);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, true);
-            }
-        }
     }
 }

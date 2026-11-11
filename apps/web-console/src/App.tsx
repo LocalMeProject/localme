@@ -13,10 +13,6 @@ import { OverviewView } from './views/OverviewView';
 import { DatabaseView } from './views/DatabaseView';
 import { AuthView } from './views/AuthView';
 import { EdgeFunctionsView } from './views/EdgeFunctionsView';
-import { StorageView } from './views/StorageView';
-import { IpgView } from './views/IpgView';
-import { HostingView } from './views/HostingView';
-import { ComplianceView } from './views/ComplianceView';
 import { TelemetryView } from './views/TelemetryView';
 import { SettingsView } from './views/SettingsView';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -26,24 +22,18 @@ import { LoginView } from './views/auth/LoginView';
 import { AdminLayout, AdminTab } from './views/admin/AdminLayout';
 import { ClusterShardsView } from './views/admin/ClusterShardsView';
 import { DatabaseActivityView } from './views/admin/DatabaseActivityView';
-import { StorageBucketsView } from './views/admin/StorageBucketsView';
-import { GatewaysSmsView } from './views/admin/GatewaysSmsView';
 import { TenantOversightView } from './views/admin/TenantOversightView';
 import { TelemetryHealthView } from './views/admin/TelemetryHealthView';
 import { UsersPermissionsView } from './views/admin/UsersPermissionsView';
 import { AdminLogsView } from './views/admin/AdminLogsView';
 import { PricingQuotasView } from './views/admin/PricingQuotasView';
 import { AdminSqlStudioView } from './views/admin/AdminSqlStudioView';
-import { AdminDeploymentsView } from './views/admin/AdminDeploymentsView';
 
 // Modals
 import { CreateProjectModal } from './components/modals/CreateProjectModal';
 import { DeployFunctionModal } from './components/modals/DeployFunctionModal';
 import { CreateTableModal } from './components/modals/CreateTableModal';
-import { CreateBucketModal } from './components/modals/CreateBucketModal';
 import { AddUserModal } from './components/modals/AddUserModal';
-import { AddDomainModal } from './components/modals/AddDomainModal';
-import { TopupModal } from './components/modals/TopupModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
 
 const DEFAULT_PROJECTS: Project[] = [];
@@ -52,11 +42,7 @@ const DEFAULT_SUB_VIEWS: Record<TabId, string> = {
   overview: 'overview',
   database: 'dashboard',
   auth: 'users',
-  storage: 'buckets',
   functions: 'list',
-  ipg: 'transactions',
-  hosting: 'deployments',
-  compliance: 'tokens',
   telemetry: 'live',
   settings: 'general',
 };
@@ -85,11 +71,7 @@ export default function App() {
     const lower = tab.toLowerCase();
     if (lower === 'db' || lower === 'sqleditor' || lower === 'tables' || lower === 'schema' || lower === 'database') return 'database';
     if (lower === 'auth' || lower === 'users') return 'auth';
-    if (lower === 'storage' || lower === 'buckets' || lower === 'files') return 'storage';
     if (lower === 'functions' || lower === 'edge') return 'functions';
-    if (lower === 'ipg' || lower === 'pay' || lower === 'payments') return 'ipg';
-    if (lower === 'hosting' || lower === 'domains') return 'hosting';
-    if (lower === 'compliance' || lower === 'enamad') return 'compliance';
     if (lower === 'telemetry' || lower === 'logs') return 'telemetry';
     if (lower === 'settings') return 'settings';
     if (lower === 'overview') return 'overview';
@@ -119,7 +101,7 @@ export default function App() {
 
   // Capability set for current project
   const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
-    new Set(['BASE', 'BAAS_DB', 'IDAAS', 'COMPUTE_EDGE', 'HOSTING_WEB', 'STORAGE_BLOB'])
+    new Set<CapabilityCode>(['BASE', 'BAAS_DB', 'IDAAS', 'COMPUTE_EDGE'])
   );
 
   // Modal open states
@@ -128,10 +110,7 @@ export default function App() {
   const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
   const [lastCreatedTable, setLastCreatedTable] = useState<string | null>(null);
   const [tableRefreshTrigger, setTableRefreshTrigger] = useState(0);
-  const [isCreateBucketOpen, setIsCreateBucketOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [isAddDomainOpen, setIsAddDomainOpen] = useState(false);
-  const [isTopupOpen, setIsTopupOpen] = useState(false);
   const [isConfirmDeleteProjectOpen, setIsConfirmDeleteProjectOpen] = useState(false);
 
   // Toast feedback
@@ -176,12 +155,10 @@ export default function App() {
             region: String(p.region || p.Region || 'ir-teh-1 (دیتاسنتر مرکزی)'),
             status: (p.status === 'PROVISIONING' || p.status === 'MAINTENANCE' ? p.status : 'ACTIVE') as Project['status'],
             createdAt: String(p.createdAt || p.CreatedAt || new Date().toISOString()),
-            walletBalanceIrr: Number(p.walletBalanceIrr ?? p.WalletBalanceIrr ?? 0),
             hasPassword: Boolean(p.hasPassword),
             services: (p.services as Project['services']) || {
               database: { isEnabled: true },
               auth: { isEnabled: true },
-              storage: { isEnabled: true },
               functions: { isEnabled: true },
             },
           }));
@@ -307,12 +284,10 @@ export default function App() {
         region: String(created.region || data.region),
         status: 'ACTIVE',
         createdAt: String(created.createdAt || new Date().toISOString()),
-        walletBalanceIrr: 0,
         hasPassword: Boolean(data.password),
         services: {
           database: { isEnabled: true },
           auth: { isEnabled: true },
-          storage: { isEnabled: true },
           functions: { isEnabled: true },
         },
       };
@@ -352,25 +327,6 @@ export default function App() {
     }
   };
 
-  // Real API: Create Bucket
-  const handleCreateBucket = async (bkt: { name: string; isPublic: boolean }) => {
-    if (!currentProject) return;
-    try {
-      const res = await fetch(`/_baas/v1/${currentProject.slug}/storage/buckets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: bkt.name, isPublic: bkt.isPublic }),
-      });
-      if (res.ok) {
-        showToast(`باکت «${bkt.name}» با موفقیت ایجاد گردید.`);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(`خطا در ایجاد باکت: ${err.error || res.statusText}`);
-      }
-    } catch {
-      showToast('خطا در ارتباط با سرویس ذخیره‌سازی.');
-    }
-  };
 
   // Real API: Deploy Function
   const handleDeployFunction = async (fn: EdgeFunction) => {
@@ -423,25 +379,6 @@ export default function App() {
     }
   };
 
-  // Real API: Add Domain
-  const handleAddDomain = async (dom: { domain: string }) => {
-    if (!currentProject) return;
-    try {
-      const res = await fetch(`/_baas/v1/${currentProject.slug}/hosting/domains`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: dom.domain }),
-      });
-      if (res.ok) {
-        showToast(`دامنه «${dom.domain}» با موفقیت ثبت شد.`);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(`خطا در ثبت دامنه: ${err.error || res.statusText}`);
-      }
-    } catch {
-      showToast('خطا در ثبت دامنه.');
-    }
-  };
 
   // Real API: Update Project
   const handleUpdateProject = async (updated: Partial<Project>) => {
@@ -493,30 +430,6 @@ export default function App() {
     }
   };
 
-  // Real API: Topup Wallet
-  const handleTopup = async (amountIrr: number, gateway: string) => {
-    try {
-      const res = await fetch('/_baas/v1/user/credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deltaIrr: amountIrr }),
-      });
-      if (res.ok) {
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id === currentProjectId
-              ? { ...p, walletBalanceIrr: p.walletBalanceIrr + amountIrr }
-              : p
-          )
-        );
-        showToast(
-          `پرداخت موفق از طریق ${gateway}. مبلغ ${(amountIrr / 10).toLocaleString('fa-IR')} تومان به کیف پول افزوده شد.`
-        );
-      }
-    } catch {
-      showToast('خطا در افزایش اعتبار کیف پول.');
-    }
-  };
 
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
@@ -533,7 +446,7 @@ export default function App() {
   if (isAdminRoute) {
     const adminTabMatch = normalizedPath.match(/^\/admin\/([a-z0-9_-]+)/);
     const rawAdminTab = (adminTabMatch ? adminTabMatch[1] : 'shards') as AdminTab;
-    const validAdminTabs: AdminTab[] = ['shards', 'activity', 'query', 'storage', 'deployments', 'gateways', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
+    const validAdminTabs: AdminTab[] = ['shards', 'activity', 'query', 'tenants', 'telemetry', 'users', 'logs', 'pricing'];
     const activeAdminTab: AdminTab = validAdminTabs.includes(rawAdminTab) ? rawAdminTab : 'shards';
 
     return (
@@ -542,9 +455,6 @@ export default function App() {
           {activeAdminTab === 'shards' && <ClusterShardsView />}
           {activeAdminTab === 'activity' && <DatabaseActivityView />}
           {activeAdminTab === 'query' && <AdminSqlStudioView />}
-          {activeAdminTab === 'storage' && <StorageBucketsView />}
-          {activeAdminTab === 'deployments' && <AdminDeploymentsView />}
-          {activeAdminTab === 'gateways' && <GatewaysSmsView />}
           {activeAdminTab === 'tenants' && <TenantOversightView />}
           {activeAdminTab === 'telemetry' && <TelemetryHealthView />}
           {activeAdminTab === 'users' && <UsersPermissionsView />}
@@ -572,7 +482,6 @@ export default function App() {
         allProjects={projects}
         onSelectProject={handleSelectProject}
         onOpenCreateModal={() => setIsCreateProjectOpen(true)}
-        onOpenTopupModal={() => setIsTopupOpen(true)}
       />
 
       {/* STAGE 1: USER WORKSPACE HUB */}
@@ -665,41 +574,6 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'storage' && (
-                  <StorageView
-                    project={currentProject}
-                    onOpenCreateBucketModal={() => setIsCreateBucketOpen(true)}
-                    activeSubView={activeSubView}
-                    onSubViewChange={handleSubViewChange}
-                  />
-                )}
-
-                {activeTab === 'ipg' && (
-                  <IpgView
-                    project={currentProject}
-                    activeSubView={activeSubView}
-                    onSubViewChange={handleSubViewChange}
-                  />
-                )}
-
-                {activeTab === 'hosting' && (
-                  <HostingView
-                    project={currentProject}
-                    onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
-                    onOpenAddDomainModal={() => setIsAddDomainOpen(true)}
-                    activeSubView={activeSubView}
-                    onSubViewChange={handleSubViewChange}
-                  />
-                )}
-
-                {activeTab === 'compliance' && (
-                  <ComplianceView
-                    project={currentProject}
-                    activeSubView={activeSubView}
-                    onSubViewChange={handleSubViewChange}
-                  />
-                )}
-
                 {activeTab === 'telemetry' && (
                   <TelemetryView
                     project={currentProject}
@@ -742,28 +616,10 @@ export default function App() {
         onCreate={handleCreateTable}
       />
 
-      <CreateBucketModal
-        isOpen={isCreateBucketOpen}
-        onClose={() => setIsCreateBucketOpen(false)}
-        onCreate={handleCreateBucket}
-      />
-
       <AddUserModal
         isOpen={isAddUserOpen}
         onClose={() => setIsAddUserOpen(false)}
         onAdd={handleAddUser}
-      />
-
-      <AddDomainModal
-        isOpen={isAddDomainOpen}
-        onClose={() => setIsAddDomainOpen(false)}
-        onAdd={handleAddDomain}
-      />
-
-      <TopupModal
-        isOpen={isTopupOpen}
-        onClose={() => setIsTopupOpen(false)}
-        onTopup={handleTopup}
       />
 
       {/* Accessible Confirm Modal for Project Deletion */}

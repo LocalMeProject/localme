@@ -17,7 +17,6 @@ public sealed partial class ProjectManagerService
             Phone: "+989120000001",
             Email: "admin@localme.ir",
             Role: UserRole.Admin,
-            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-6),
             IsActive: true,
             Username: "admin",
@@ -30,7 +29,6 @@ public sealed partial class ProjectManagerService
             Phone: "+989120000002",
             Email: "support@localme.ir",
             Role: UserRole.Operator,
-            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-3),
             IsActive: true,
             Username: "operator",
@@ -43,7 +41,6 @@ public sealed partial class ProjectManagerService
             Phone: "+989121112233",
             Email: "sina@example.com",
             Role: UserRole.Developer,
-            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow.AddMonths(-1),
             IsActive: true,
             Username: "sina",
@@ -54,14 +51,7 @@ public sealed partial class ProjectManagerService
     // 1. User Management & Credentials
     public static string HashPassword(string password)
     {
-        byte[] salt = RandomNumberGenerator.GetBytes(16);
-        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
-            System.Text.Encoding.UTF8.GetBytes(password),
-            salt,
-            iterations: 100_000,
-            HashAlgorithmName.SHA256,
-            outputLength: 32);
-        return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+        return LocalMe.DataPlane.Auth.Argon2id.HashPassword(password, memoryCostKiB: 4096, timeCost: 2, parallelism: 2);
     }
 
     public static bool VerifyPassword(string password, string? storedHash)
@@ -71,7 +61,13 @@ public sealed partial class ProjectManagerService
             return false;
         }
 
-        // 1. Standard PBKDF2 with salt (salt:hash)
+        // 1. Pure Argon2id hash (RFC 9106)
+        if (storedHash.StartsWith("$argon2id$", StringComparison.Ordinal))
+        {
+            return LocalMe.DataPlane.Auth.Argon2id.VerifyHash(password, storedHash);
+        }
+
+        // 2. Backward-compatible fallback: PBKDF2 with salt (salt:hash)
         if (storedHash.Contains(':', StringComparison.Ordinal))
         {
             var parts = storedHash.Split(':');
@@ -100,7 +96,7 @@ public sealed partial class ProjectManagerService
             }
         }
 
-        // 2. Backward-compatible fallback for legacy SHA-256 or seeded demo hashes
+        // 3. Backward-compatible fallback for legacy SHA-256 or seeded demo hashes
         if (storedHash.Length == 64)
         {
             try
@@ -167,8 +163,8 @@ public sealed partial class ProjectManagerService
             return (false, "کلمه عبور وارد شده نادرست است.", null);
         }
 
-        // Auto-upgrade legacy hash to PBKDF2 in memory and persistent store
-        if (!user.PasswordHash.Contains(':', StringComparison.Ordinal))
+        // Auto-upgrade legacy hash to Argon2id in memory and persistent store
+        if (!user.PasswordHash.StartsWith("$argon2id$", StringComparison.Ordinal))
         {
             var upgraded = user with { PasswordHash = HashPassword(password) };
             _users[user.Id] = upgraded;
@@ -264,26 +260,6 @@ public sealed partial class ProjectManagerService
         return false;
     }
 
-    public bool AdjustUserWallet(string userId, long deltaIrr)
-    {
-        if (_users.TryGetValue(userId, out var u))
-        {
-            var newBal = Math.Max(0, u.WalletBalanceIrr + deltaIrr);
-            var updated = u with { WalletBalanceIrr = newBal };
-            _users[userId] = updated;
-            if (_store != null)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try { await _store.UpsertUserAsync(updated); }
-                    catch (Exception ex) { Console.WriteLine($"[LocalMe.PM] AdjustUserWallet persist error: {ex.Message}"); }
-                });
-            }
-            return true;
-        }
-        return false;
-    }
-
     public bool DeleteUser(string userId)
     {
         if (_users.TryRemove(userId, out _))
@@ -309,7 +285,6 @@ public sealed partial class ProjectManagerService
             Phone: phone.Trim(),
             Email: string.IsNullOrWhiteSpace(email) ? $"{phone.Trim().Replace("+", "", StringComparison.Ordinal)}@localme.ir" : email.Trim(),
             Role: role,
-            WalletBalanceIrr: 0,
             CreatedAtUtc: DateTimeOffset.UtcNow,
             IsActive: true,
             Username: string.IsNullOrWhiteSpace(username) ? phone.Trim().Replace("+", "", StringComparison.Ordinal) : username.Trim(),
@@ -338,7 +313,6 @@ public sealed partial class ProjectManagerService
             Phone: phone.Trim(),
             Email: email ?? $"{phone.Trim().Replace("+", "", StringComparison.Ordinal)}@localme.ir",
             Role: UserRole.Developer,
-            WalletBalanceIrr: 5_000_000, // 500k Toman initial credit
             CreatedAtUtc: DateTimeOffset.UtcNow,
             IsActive: true,
             Username: phone.Trim().Replace("+", "", StringComparison.Ordinal)

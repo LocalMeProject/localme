@@ -49,13 +49,9 @@ public sealed record ArchiveManifest(
 public sealed record UniversalProjectArchive(
     ArchiveManifest Manifest,
     ComplianceConfig Compliance,
-    IpgMerchantConfig IpgConfig,
     JsonObject Database,
     IReadOnlyList<ProjectAuthUser> AuthUsers,
-    IReadOnlyList<ProjectEdgeFunction> Functions,
-    IReadOnlyList<ProjectBucket> Buckets,
-    IReadOnlyList<ProjectStorageFile> StorageFiles,
-    IReadOnlyList<CustomDomain> Domains
+    IReadOnlyList<ProjectEdgeFunction> Functions
 );
 
 public sealed class ProjectArchiveService
@@ -82,17 +78,8 @@ public sealed class ProjectArchiveService
 
         // 1. Gather all tenant assets
         var compliance = _pm.GetCompliance(projectId);
-        var ipg = _pm.GetIpgConfig(projectId);
         var users = _pm.GetProjectUsers(projectId);
         var funcs = _pm.GetProjectFunctions(projectId);
-        var buckets = _pm.GetProjectBuckets(projectId);
-        var domains = _pm.GetDomains(projectId);
-
-        var storageFiles = new List<ProjectStorageFile>();
-        foreach (var b in buckets)
-        {
-            storageFiles.AddRange(_pm.GetBucketFiles(projectId, b.Name));
-        }
 
         // 2. Export database schemas and rows
         JsonObject dbSnapshot;
@@ -125,13 +112,9 @@ public sealed class ProjectArchiveService
         var archive = new UniversalProjectArchive(
             Manifest: manifest,
             Compliance: compliance,
-            IpgConfig: ipg,
             Database: dbSnapshot,
             AuthUsers: users,
-            Functions: funcs,
-            Buckets: buckets,
-            StorageFiles: storageFiles,
-            Domains: domains
+            Functions: funcs
         );
 
         var json = JsonSerializer.Serialize(archive, JsonOpts);
@@ -229,28 +212,7 @@ public sealed class ProjectArchiveService
         {
             _pm.UpdateCompliance(project.Id, archive.Compliance);
         }
-        if (archive.IpgConfig != null)
-        {
-            _pm.UpdateIpgConfig(project.Id, archive.IpgConfig);
-        }
 
-        // Restore buckets
-        if (archive.Buckets != null)
-        {
-            foreach (var b in archive.Buckets)
-            {
-                _pm.CreateBucket(project.Id, b.Name, b.IsPublic);
-            }
-        }
-
-        // Restore storage files metadata
-        if (archive.StorageFiles != null)
-        {
-            foreach (var f in archive.StorageFiles)
-            {
-                _pm.UploadBucketFile(project.Id, f.Bucket, f.FileName, f.ContentType, f.SizeBytes);
-            }
-        }
 
         // Restore edge functions
         if (archive.Functions != null)
@@ -286,9 +248,8 @@ public sealed class ProjectArchiveService
         var project = _pm.GetProject(targetId)
             ?? throw new InvalidOperationException($"Target project '{targetId}' not found for overwrite restore.");
 
-        // Overwrite compliance & IPG
+        // Overwrite compliance
         if (archive.Compliance != null) _pm.UpdateCompliance(project.Id, archive.Compliance);
-        if (archive.IpgConfig != null) _pm.UpdateIpgConfig(project.Id, archive.IpgConfig);
 
         // Overwrite functions
         if (archive.Functions != null)
@@ -296,15 +257,6 @@ public sealed class ProjectArchiveService
             foreach (var f in archive.Functions)
             {
                 _pm.DeployFunction(project.Id, f.Name, f.Script, f.Slug);
-            }
-        }
-
-        // Overwrite buckets
-        if (archive.Buckets != null)
-        {
-            foreach (var b in archive.Buckets)
-            {
-                _pm.CreateBucket(project.Id, b.Name, b.IsPublic);
             }
         }
 
@@ -340,19 +292,6 @@ public sealed class ProjectArchiveService
                 else
                 {
                     _pm.DeployFunction(project.Id, f.Name, f.Script, f.Slug);
-                }
-            }
-        }
-
-        // Merge Buckets
-        if (archive.Buckets != null)
-        {
-            var existingBuckets = new HashSet<string>(_pm.GetProjectBuckets(project.Id).Select(b => b.Name), StringComparer.OrdinalIgnoreCase);
-            foreach (var b in archive.Buckets)
-            {
-                if (!existingBuckets.Contains(b.Name))
-                {
-                    _pm.CreateBucket(project.Id, b.Name, b.IsPublic);
                 }
             }
         }

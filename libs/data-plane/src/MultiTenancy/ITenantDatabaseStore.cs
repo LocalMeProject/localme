@@ -15,6 +15,7 @@ public interface ITenantDatabaseStore
     Task<bool> CreateTableAsync(string projectSlug, string tableName, IReadOnlyList<TableColumnDefinition>? columns = null, CancellationToken ct = default);
     Task<bool> DropTableAsync(string projectSlug, string tableName, CancellationToken ct = default);
     Task<TenantDbQueryResult> ExecuteQueryAsync(string projectSlug, string tableName, SqlAstQuery query, string? userId = null, string? userRole = null, int timeoutMs = 3000, CancellationToken ct = default);
+    Task<long> StreamQueryToPipeAsync(string projectSlug, string tableName, SqlAstQuery query, System.IO.Pipelines.PipeWriter pipeWriter, string? userId = null, string? userRole = null, int timeoutMs = 3000, CancellationToken ct = default);
     Task<JsonObject> InsertRowAsync(string projectSlug, string tableName, JsonObject data, CancellationToken ct = default);
     Task<JsonObject?> UpdateRowAsync(string projectSlug, string tableName, string rowId, JsonObject patch, CancellationToken ct = default);
     Task<JsonObject> UpsertRowAsync(string projectSlug, string tableName, string onConflictCol, JsonObject data, CancellationToken ct = default);

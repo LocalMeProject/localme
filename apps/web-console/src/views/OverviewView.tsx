@@ -3,13 +3,12 @@ import { Project, CapabilityCode } from '../types';
 import { TabId } from '../components/Navigation';
 import {
   ExternalLink,
-  Zap,
   Terminal,
   CheckCircle2,
   Database,
   Users,
-  HardDrive,
-  CreditCard,
+  Activity,
+  Code2,
 } from 'lucide-react';
 
 interface OverviewViewProps {
@@ -25,7 +24,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   activeCapabilities,
   onToggleCapability,
   onNavigateTab,
-  onDeployBuild,
 }) => {
   const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
@@ -72,21 +70,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           >
             <Terminal className="w-4 h-4" />
             <span>
-              {isEdgeFunctionsEnabled ? 'غیرفعال‌سازی توابع ابری' : 'فعال‌سازی توابع ابری'}
+              {isEdgeFunctionsEnabled ? 'غیرفعال‌سازی توابع لبه' : 'فعال‌سازی توابع لبه'}
             </span>
-          </button>
-
-          <button
-            onClick={onDeployBuild}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs"
-          >
-            <Zap className="w-4 h-4" />
-            <span>استقرار نسخه جدید</span>
           </button>
         </div>
       </div>
 
-      {/* Services Grid Navigation */}
+      {/* Services Grid Navigation (4 Core Services) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           onClick={() => onNavigateTab('database')}
@@ -101,7 +91,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
           <div className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>آماده پذیرش کوئری</span>
+            <span>PostgreSQL & Data API</span>
           </div>
         </div>
 
@@ -110,47 +100,49 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           className="cursor-pointer p-4 rounded-xl bg-white hover:border-emerald-500 border border-slate-200 transition shadow-xs group"
         >
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-2">
-            <span>کاربران و ورود</span>
+            <span>احراز هویت و کاربران</span>
             <Users className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition" />
           </div>
           <div className="text-lg font-bold text-slate-900">
-            ورود پیامکی
-          </div>
-          <div className="text-[11px] text-slate-500 mt-2">
-            خطوط خدماتی پیامک
-          </div>
-        </div>
-
-        <div
-          onClick={() => onNavigateTab('storage')}
-          className="cursor-pointer p-4 rounded-xl bg-white hover:border-emerald-500 border border-slate-200 transition shadow-xs group"
-        >
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-2">
-            <span>ذخیره‌سازی فایل</span>
-            <HardDrive className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition" />
-          </div>
-          <div className="text-lg font-bold text-slate-900">
-            باکت‌های ابری
+            کاربران پروژه
           </div>
           <div className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>آپلود و دانلود امن</span>
+            <span>رمز عبور و JWT</span>
           </div>
         </div>
 
         <div
-          onClick={() => onNavigateTab('ipg')}
+          onClick={() => onNavigateTab('functions')}
           className="cursor-pointer p-4 rounded-xl bg-white hover:border-emerald-500 border border-slate-200 transition shadow-xs group"
         >
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-2">
-            <span>درگاه‌های پرداخت</span>
-            <CreditCard className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition" />
+            <span>توابع لبه (Edge Functions)</span>
+            <Code2 className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition" />
           </div>
           <div className="text-lg font-bold text-slate-900">
-            تراکنش‌های ریالی
+            محاسبات ابری
           </div>
-          <div className="text-[11px] text-slate-500 mt-2">
-            درگاه‌های بانکی و شاپرک
+          <div className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{isEdgeFunctionsEnabled ? 'موتور Jint فعال' : 'آماده فعال‌سازی'}</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab('telemetry')}
+          className="cursor-pointer p-4 rounded-xl bg-white hover:border-emerald-500 border border-slate-200 transition shadow-xs group"
+        >
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-2">
+            <span>تله‌متری و پایش</span>
+            <Activity className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition" />
+          </div>
+          <div className="text-lg font-bold text-slate-900">
+            لاگ‌های زنده
+          </div>
+          <div className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>درخواست‌ها و تله‌متری</span>
           </div>
         </div>
       </div>
