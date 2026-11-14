@@ -59,7 +59,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
             پروژه‌ها و سرویس‌های ابری
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            مدیریت پایگاه‌های داده رابطه‌ای، کاربران و احراز هویت، توابع ابری و درگاه‌های پرداخت در یک محیط امن و یکپارچه.
+            مدیریت پایگاه‌های داده رابطه‌ای، کاربران و احراز هویت، توابع ابری و پایش تله‌متری در یک محیط امن و یکپارچه.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export const WorkspaceHubView: React.FC<WorkspaceHubViewProps> = ({
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>ورود پیامکی و کاربران اختصاصی</span>
+            <span>مدیریت کاربران و احراز هویت JWT</span>
           </div>
         </div>
 

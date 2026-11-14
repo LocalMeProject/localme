@@ -85,7 +85,8 @@ affected_projects:
 - `scripts/org-status.sh`: Status table for all organization repositories.
 - `scripts/org-sync.sh`: Multi-tier branch synchronizer across organization repositories.
 - `scripts/org-test.sh`: Run automated test suites across all organization projects.
-- `apps/server/src/wwwroot/assets/index-DFolMZS2.js`: Production web-console JavaScript bundle.
+- `apps/server/src/wwwroot/assets/index-B4H2Af7u.js`: Production web-console JavaScript bundle.
+- `apps/server/src/wwwroot/assets/index-DFolMZS2.js`: Pruned stale build bundle.
 - `apps/server/src/wwwroot/assets/index-_PB2RjlU.css`: Production web-console stylesheet.
 - `apps/web-console/src/components/modals/ResetPasswordModal.tsx`: Project user password reset modal.
 - `apps/web-console/src/views/auth/RegisterView.tsx`: Developer self-service registration view.

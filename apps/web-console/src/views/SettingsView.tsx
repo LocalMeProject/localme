@@ -217,9 +217,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const apiKeys: Record<string, string> = {
-    database: `lm_db_${project.id.slice(0, 8)}_live_99a8b7`,
+    database: `lm_database_${project.id.slice(0, 8)}_live_99a8b7`,
     auth: `lm_auth_${project.id.slice(0, 8)}_live_44c3d2`,
-    functions: `lm_fn_${project.id.slice(0, 8)}_live_11g2h3`,
+    functions: `lm_functions_${project.id.slice(0, 8)}_live_11g2h3`,
+    telemetry: `lm_telemetry_${project.id.slice(0, 8)}_live_77e8f9`,
   };
 
   return (

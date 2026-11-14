@@ -308,7 +308,7 @@ public sealed class DynamicDiscoveryService
         sb.AppendLine();
         sb.AppendLine("## ۱. ساختار دسترسی و کلیدهای API");
         sb.AppendLine("درخواست های ارسالی از کلاینت ها با هدرهای زیر تایید می شوند:");
-        sb.AppendLine("- `x-api-key`: کلید تفکیک شده اختصاصی هر سرویس با الگوی `lm_[service]_[project]_[id]`");
+        sb.AppendLine("- `x-api-key` / `X-Service-Key`: کلید تفکیک شده اختصاصی هر سرویس با الگوی `lm_[service]_[project]_[id]`");
         sb.AppendLine("- `Authorization: Bearer <token>`: توکن اعتبارسنجی احراز هویت JWT کاربر");
         sb.AppendLine("- `Accept: application/json`: ساختار تبادل داده پیش فرض");
         sb.AppendLine();
