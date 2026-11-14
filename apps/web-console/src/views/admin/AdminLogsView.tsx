@@ -138,7 +138,6 @@ export function AdminLogsView() {
       case 'user': return { label: 'کاربر', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
       case 'database': return { label: 'پایگاه‌داده', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
       case 'auth': return { label: 'احراز هویت', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' };
-      case 'storage': return { label: 'استوریج', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
       case 'function': return { label: 'تابع لبه', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };
       default: return { label: type, color: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
     }
@@ -255,7 +254,6 @@ export function AdminLogsView() {
             <option value="user">کاربران (user)</option>
             <option value="database">پایگاه‌داده (database)</option>
             <option value="auth">احراز هویت (auth)</option>
-            <option value="storage">فضای ابری (storage)</option>
             <option value="function">توابع لبه (function)</option>
             <option value="system">هسته سیستم (system)</option>
           </select>

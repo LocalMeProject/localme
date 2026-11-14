@@ -1,9 +1,8 @@
 import React from 'react';
-import { Project, CapabilityCode } from '../types';
+import { Project } from '../types';
 import { TabId } from '../components/Navigation';
 import {
   ExternalLink,
-  Terminal,
   CheckCircle2,
   Database,
   Users,
@@ -13,19 +12,14 @@ import {
 
 interface OverviewViewProps {
   project: Project;
-  activeCapabilities: Set<CapabilityCode>;
-  onToggleCapability: (code: CapabilityCode) => void;
   onNavigateTab: (tab: TabId) => void;
   onDeployBuild: () => void;
 }
 
 export const OverviewView: React.FC<OverviewViewProps> = ({
   project,
-  activeCapabilities,
-  onToggleCapability,
   onNavigateTab,
 }) => {
-  const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   return (
     <div className="space-y-6">
@@ -58,22 +52,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => onToggleCapability('COMPUTE_EDGE')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition ${
-              isEdgeFunctionsEnabled
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            <span>
-              {isEdgeFunctionsEnabled ? 'غیرفعال‌سازی توابع لبه' : 'فعال‌سازی توابع لبه'}
-            </span>
-          </button>
-        </div>
+
       </div>
 
       {/* Services Grid Navigation (4 Core Services) */}
@@ -125,7 +104,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
           <div className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{isEdgeFunctionsEnabled ? 'موتور Jint فعال' : 'آماده فعال‌سازی'}</span>
+            <span>موتور Jint فعال</span>
           </div>
         </div>
 

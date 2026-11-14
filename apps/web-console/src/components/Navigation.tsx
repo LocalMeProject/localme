@@ -39,7 +39,6 @@ interface NavigationProps {
   onTabChange: (tab: TabId, subView?: string) => void;
   activeSubView?: string;
   onSubViewChange?: (subView: string) => void;
-  edgeFunctionsEnabled: boolean;
   project?: Project;
   onNavigateHome: () => void;
 }
@@ -49,7 +48,6 @@ export const Navigation: React.FC<NavigationProps> = ({
   onTabChange,
   activeSubView,
   onSubViewChange,
-  edgeFunctionsEnabled,
   project,
   onNavigateHome,
 }) => {
@@ -100,7 +98,6 @@ export const Navigation: React.FC<NavigationProps> = ({
       id: 'functions',
       label: 'توابع ابری',
       icon: <Terminal className="w-5 h-5" />,
-      badge: edgeFunctionsEnabled ? 'فعال' : undefined,
     },
     { id: 'telemetry', label: 'لاگ ها', icon: <Activity className="w-5 h-5" /> },
     { id: 'settings', label: 'تنظیمات', icon: <Settings className="w-5 h-5" /> },

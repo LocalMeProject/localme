@@ -87,7 +87,7 @@ function handleRequest(context) {
               <input
                 type="text"
                 required
-                placeholder="ارسال پیامک خوش‌آمدگویی"
+                placeholder="پردازش و اعتبارسنجی سفارش"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
@@ -102,7 +102,7 @@ function handleRequest(context) {
               <input
                 type="text"
                 required
-                placeholder="send-welcome-sms"
+                placeholder="process-order"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 dir="ltr"

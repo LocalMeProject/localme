@@ -80,6 +80,7 @@ export interface ProjectUser {
   phone?: string;
   email?: string;
   username?: string;
+  password?: string;
   fullName: string;
   provider: string;
   role?: string;
@@ -108,82 +109,7 @@ export interface FunctionEnvVar {
   isSecret: boolean;
 }
 
-export interface StorageBucket {
-  name: string;
-  isPublic: boolean;
-  filesCount: number;
-  totalSizeBytes: number;
-  createdAt: string;
-}
 
-export interface StorageFile {
-  name: string;
-  bucket: string;
-  contentType: string;
-  sizeBytes: number;
-  uploadedAt: string;
-  url: string;
-}
-
-export interface IpgConfig {
-  defaultPsp: 'ZARINPAL' | 'BEHPARDAKHT' | 'SEP' | 'SADAD';
-  isSandbox: boolean;
-  enforceShetabCardMask: boolean;
-  zarinpalMerchantId?: string;
-  zarinpalIsZarinGate?: boolean;
-  mellatTerminalId?: string;
-  mellatUserName?: string;
-  mellatUserPassword?: string;
-  sepTerminalId?: string;
-  sepMerchantId?: string;
-  sadadMerchantId?: string;
-  sadadTerminalId?: string;
-  sadadTerminalKey?: string;
-}
-
-export interface LedgerTransaction {
-  id: string;
-  trackingCode: string;
-  gateway: string;
-  amountIrr: number;
-  customerPhone: string;
-  status: 'VERIFIED' | 'PENDING' | 'FAILED';
-  createdAt: string;
-  settledAt?: string;
-}
-
-export interface DeploymentRelease {
-  id: string;
-  branch: string;
-  commitSha: string;
-  commitMessage?: string;
-  domain: string;
-  status: 'READY' | 'BUILDING' | 'FAILED';
-  sizeBytes: number;
-  deployedAt: string;
-  url?: string;
-  previewUrl: string;
-}
-
-export interface CustomDomain {
-  id?: string;
-  domain: string;
-  isVerified: boolean;
-  sslActive: boolean;
-  hasSsl?: boolean;
-  cnameTarget: string;
-  createdAt: string;
-}
-
-export interface ComplianceSettings {
-  enamadToken: string;
-  enamadSymbolCode: string;
-  samandehiCode: string;
-  androidPackageName: string;
-  androidSha256Fingerprint: string;
-  appleTeamId: string;
-  appleAppBundleId: string;
-}
 
 export interface TelemetryLog {
   id: string;

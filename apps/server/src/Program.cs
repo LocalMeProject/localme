@@ -330,7 +330,7 @@ public class Program
         });
 
         // 1. Health & Config Probe
-        app.MapGet("/healthz", () => Results.Ok(new
+        app.MapMethods("/healthz", ["GET", "HEAD"], () => Results.Ok(new
         {
             status = "HEALTHY",
             platform = "LocalMe Cloud Platform",
@@ -338,7 +338,7 @@ public class Program
             timestamp = DateTimeOffset.UtcNow
         }));
 
-        app.MapGet("/readyz", async (IProjectStore store) =>
+        app.MapMethods("/readyz", ["GET", "HEAD"], async (IProjectStore store) =>
         {
             try
             {
