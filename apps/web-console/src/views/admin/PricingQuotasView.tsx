@@ -9,7 +9,6 @@ import {
   Radio,
   ShieldAlert,
   Network,
-  HardDrive,
   Database,
   Cpu,
   Gift,
@@ -292,39 +291,7 @@ export function PricingQuotasView() {
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                    <HardDrive className="w-3.5 h-3.5 text-slate-400" />
-                    <span>استوریج ابری (به ازای هر گیگابایت در ماه)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={storageGbMonthIrr}
-                    onChange={(e) => setStorageGbMonthIrr(Number(e.target.value))}
-                    min={0}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    معادل {formatToman(storageGbMonthIrr)}
-                  </span>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                    <Radio className="w-3.5 h-3.5 text-slate-400" />
-                    <span>پیامک اعتبارسنجی (به ازای هر پیامک OTP)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={smsPerMessageIrr}
-                    onChange={(e) => setSmsPerMessageIrr(Number(e.target.value))}
-                    min={0}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    معادل {formatToman(smsPerMessageIrr)}
-                  </span>
-                </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
@@ -457,33 +424,7 @@ export function PricingQuotasView() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    سهمیه پیش‌فرض استوریج هر پروژه (MB)
-                  </label>
-                  <input
-                    type="number"
-                    value={defaultStorageQuotaMb}
-                    onChange={(e) => setDefaultStorageQuotaMb(Number(e.target.value))}
-                    min={50}
-                    max={500000}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    حداکثر حجم مجاز تک‌فایل در آپلود (MB)
-                  </label>
-                  <input
-                    type="number"
-                    value={defaultMaxFileSizeMb}
-                    onChange={(e) => setDefaultMaxFileSizeMb(Number(e.target.value))}
-                    min={1}
-                    max={5000}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">

@@ -85,6 +85,15 @@ affected_projects:
 - `scripts/org-status.sh`: Status table for all organization repositories.
 - `scripts/org-sync.sh`: Multi-tier branch synchronizer across organization repositories.
 - `scripts/org-test.sh`: Run automated test suites across all organization projects.
+- `apps/server/src/wwwroot/assets/index-B4H2Af7u.js`: Production web-console JavaScript bundle.
+- `apps/server/src/wwwroot/assets/index-DFolMZS2.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-_PB2RjlU.css`: Production web-console stylesheet.
+- `apps/web-console/src/components/modals/ResetPasswordModal.tsx`: Project user password reset modal.
+- `apps/web-console/src/views/auth/RegisterView.tsx`: Developer self-service registration view.
+- `apps/web-console/src/views/auth/ResetPasswordView.tsx`: Developer password recovery and reset view.
+- `scripts/postgres-shard-1/Dockerfile`: PostgreSQL shard container Dockerfile.
+- `scripts/postgres-shard-1/docker-entrypoint-wrapper.sh`: Wrapper script with socat port forwarder for Runflare shard.
+- `scripts/postgres-shard-1/init-scripts/01-init-database.sql`: Shard database initialization SQL script.
 
 ### Core Service Pruning & Redis Elimination Files
 - `apps/cli/src/Program.cs`: Pruned dropped DAG capabilities.
@@ -100,6 +109,46 @@ affected_projects:
 - `apps/web-console/src/views/IpgView.tsx`: Pruned dropped IPG view.
 - `apps/web-console/src/views/OverviewView.tsx`: Pruned overview cards to 4 core services.
 - `apps/web-console/src/views/StorageView.tsx`: Pruned dropped storage view.
+- `apps/server/src/wwwroot/admin-logs.js`: Pruned legacy admin logs script.
+- `apps/server/src/wwwroot/admin.html`: Client-side redirect to modern React admin console.
+- `apps/server/src/wwwroot/admin.js`: Pruned legacy admin script.
+- `apps/server/src/wwwroot/auth.html`: Client-side redirect to modern React auth login view.
+- `apps/server/src/wwwroot/docs.html`: Overhauled API documentation to strictly reflect 4 sovereign services and email/password auth.
+- `apps/server/src/wwwroot/features/storage.html`: Pruned obsolete storage feature page.
+- `apps/server/src/wwwroot/index.html`: Pruned storage features and cleaned typography to 0 half-spaces.
+- `apps/server/src/wwwroot/llms-full.txt`: Pruned storage and SMS OTP from full LLM documentation.
+- `apps/server/src/wwwroot/llms.txt`: Pruned storage from LLM documentation.
+- `apps/server/src/wwwroot/sitemap.xml`: Pruned storage feature URL from sitemap.
+- `apps/server/src/wwwroot/assets/index-AJt2HxaP.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-BDyBtl7n.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-BIrLsUaE.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-BLnyn0hZ.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-Br7n94n9.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-C1vClONq.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-CRcu-Zbr.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-CmxQgU1D.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-D4P2Fuxq.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-DIO1YLSc.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-D_1EpJUH.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-DabGHArw.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-H9B8CWPh.css`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-_7YH-lI7.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-v9oasbVe.js`: Pruned stale build bundle.
+- `apps/server/src/wwwroot/assets/index-vYoq5u28.js`: Pruned stale build bundle.
+- `apps/web-console/src/App.tsx`: Wired register and reset-password routes, removed capability toggles.
+- `apps/web-console/src/components/modals/AddUserModal.tsx`: Converted phone/OTP to email/password credentials.
+- `apps/web-console/src/components/modals/DeployFunctionModal.tsx`: Updated placeholders and templates.
+- `apps/web-console/src/views/AuthView.tsx`: Anti-AI-Slop overhaul, reset password modal, removed SMS/OTP tab.
+- `apps/web-console/src/views/EdgeFunctionsView.tsx`: Removed service activation toggle button.
+- `apps/web-console/src/views/SettingsView.tsx`: Pruned obsolete storage key and warning.
+- `apps/web-console/src/views/TelemetryView.tsx`: Anti-AI-Slop redesign with slow query (>200ms) filter, status code filters, metrics cards.
+- `apps/web-console/src/views/admin/AdminLogsView.tsx`: Pruned storage entity filter.
+- `apps/web-console/src/views/admin/PricingQuotasView.tsx`: Pruned storage and SMS pricing cards.
+- `apps/web-console/src/views/admin/TelemetryHealthView.tsx`: Pruned storage breakdown columns.
+- `apps/web-console/src/views/auth/LoginView.tsx`: Anti-AI-Slop redesign, high contrast enterprise auth view with self-service registration and recovery links.
+- `libs/data-plane/src/Admin/DynamicDiscoveryService.cs`: Pruned storage from discovery sitemap entries.
+- `libs/infrastructure/src/Storage/PostgreSqlProjectStore.cs`: Dynamic cluster IP and internal shard connection handling.
+- `tests/LocalMe.Integration.Tests/DiscoverabilityAndSeoTests.cs`: Updated invariants and assertions for 4 core services.
 - `libs/client-sdk/src/index.ts`: Pruned client SDK to auth, from, functions, and database.
 - `libs/client-sdk/src/types.ts`: Pruned client SDK types.
 - `libs/core-domain/src/Dag/CapabilityCode.cs`: Pruned capabilities to 4 core services.
@@ -134,9 +183,14 @@ affected_projects:
 
 ### Modified Files
 - `.dockerignore`: Docker build ignore rules.
+- `.gitignore`: Ignore local Runflare account metadata.
 - `CHANGE_SURFACE.md`: Declared blast radius.
 - `Dockerfile`: Multi-stage build for web-console, dotnet publish, and lean runtime.
 - `package.json`: Add generic deploy script target.
+- `scripts/deploy-runflare.sh`: Unified container deployment script for Runflare.
+- `apps/server/src/wwwroot/panel.html`: Production console HTML asset references.
+- `apps/server/src/wwwroot/assets/index-D_1EpJUH.js`: Production web-console JavaScript bundle.
+- `apps/server/src/wwwroot/assets/index-DabGHArw.css`: Production web-console stylesheet.
 - `apps/server/src/Diagnostics/PlatformLogBuffer.cs`: Added entity-type, entity-id, client-ip, trace-id indexing and multi-criteria log query filtering.
 - `apps/server/src/Program.cs`: Wire dynamic services, admin endpoints, SPA deep linking, and per-entity logging tags.
 - `apps/server/src/Routes/AuthHelper.cs`: Hardened authentication helpers, added Superadmin/Operator checks, and implemented EnsureProjectAccess guard.

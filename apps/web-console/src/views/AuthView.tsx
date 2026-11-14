@@ -2,16 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Project, ProjectUser } from '../types';
 import {
   Users,
-  Smartphone,
   Trash2,
   KeyRound,
   Plus,
-  CheckCircle2,
   RefreshCw,
   Search,
   Save,
 } from 'lucide-react';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { ResetPasswordModal } from '../components/modals/ResetPasswordModal';
 
 interface AuthViewProps {
   project: Project;
@@ -19,8 +18,6 @@ interface AuthViewProps {
   activeSubView?: string;
   onSubViewChange?: (subView: string) => void;
 }
-
-export type OtpProvider = 'kavenegar' | 'melipayamak';
 
 export const AuthView: React.FC<AuthViewProps> = ({
   project,
@@ -31,17 +28,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-
-  // SMS OTP Test State
-  const [testPhone, setTestPhone] = useState('09121112233');
-  const [otpProvider, setOtpProvider] = useState<OtpProvider>('kavenegar');
-  const [otpSentFeedback, setOtpSentFeedback] = useState<string | null>(null);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [userToResetPassword, setUserToResetPassword] = useState<ProjectUser | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Security Policies State
-  const [otpExpiry, setOtpExpiry] = useState('120');
-  const [otpLength, setOtpLength] = useState('6');
-  const [enableCaptcha, setEnableCaptcha] = useState(false);
+  const [jwtExpiryHours, setJwtExpiryHours] = useState('72');
+  const [minPasswordLength, setMinPasswordLength] = useState('8');
   const [allowPasswordAuth, setAllowPasswordAuth] = useState(true);
   const [policyFeedback, setPolicyFeedback] = useState<string | null>(null);
   const [isSavingPolicies, setIsSavingPolicies] = useState(false);
@@ -61,7 +53,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
               email: String(u.email || u.Email || ''),
               username: String(u.username || u.Username || ''),
               fullName: String(u.fullName || u.name || u.FullName || ''),
-              provider: String(u.provider || u.Provider || 'sms'),
+              provider: String(u.provider || u.Provider || 'email'),
               role: String(u.role || u.Role || 'user'),
               isConfirmed: Boolean(u.isConfirmed ?? u.IsConfirmed ?? true),
               createdAt: String(u.createdAt || u.CreatedAt || new Date().toISOString()),
@@ -83,9 +75,8 @@ export const AuthView: React.FC<AuthViewProps> = ({
       if (res.ok) {
         const data = await res.json();
         if (data) {
-          if (data.otpExpirySeconds) setOtpExpiry(String(data.otpExpirySeconds));
-          if (data.otpLength) setOtpLength(String(data.otpLength));
-          if (typeof data.enableCaptcha === 'boolean') setEnableCaptcha(data.enableCaptcha);
+          if (data.jwtExpiryHours) setJwtExpiryHours(String(data.jwtExpiryHours));
+          if (data.minPasswordLength) setMinPasswordLength(String(data.minPasswordLength));
           if (typeof data.allowPasswordAuth === 'boolean') setAllowPasswordAuth(data.allowPasswordAuth);
         }
       }
@@ -98,33 +89,6 @@ export const AuthView: React.FC<AuthViewProps> = ({
     fetchUsers();
     fetchPolicies();
   }, [fetchUsers, fetchPolicies]);
-
-  // Real API: Send OTP
-  const handleSendTestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSendingOtp(true);
-    setOtpSentFeedback(null);
-
-    try {
-      const res = await fetch(`/_baas/v1/${project.slug}/auth/otp/request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: testPhone, provider: otpProvider }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setOtpSentFeedback(
-          data.message || `کد تایید با موفقیت از طریق ${otpProvider === 'kavenegar' ? 'کاوه‌نگار' : 'ملی‌پیامک'} برای شماره ${testPhone} ارسال شد.`
-        );
-      } else {
-        setOtpSentFeedback(`خطا در ارسال پیامک: ${data.error || res.statusText}`);
-      }
-    } catch {
-      setOtpSentFeedback('خطا در برقراری ارتباط با درگاه پیامک.');
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
 
   // Real API: Toggle User Status
   const handleToggleUserStatus = async (user: ProjectUser) => {
@@ -173,10 +137,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          otpExpirySeconds: parseInt(otpExpiry, 10),
-          otpLength: parseInt(otpLength, 10),
-          enableCaptcha,
-          allowPasswordAuth,
+          jwt_expiry_hours: jwtExpiryHours,
+          min_password_length: minPasswordLength,
+          allow_password_auth: allowPasswordAuth ? 'true' : 'false',
         }),
       });
       if (res.ok) {
@@ -196,9 +159,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
     const q = userSearch.toLowerCase();
     return (
       (u.fullName || '').toLowerCase().includes(q) ||
-      (u.phone || '').includes(q) ||
       (u.email || '').toLowerCase().includes(q) ||
-      (u.username || '').toLowerCase().includes(q)
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.phone || '').includes(q)
     );
   });
 
@@ -217,17 +180,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
           </div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-emerald-600" />
-            {activeSubView === 'sms'
-              ? 'سرویس پیامک و ورود یکبار مصرف'
-              : activeSubView === 'policies'
+            {activeSubView === 'policies'
               ? 'سیاست‌های امنیتی و دسترسی'
               : 'مدیریت کاربران و دسترسی‌ها'}
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            {activeSubView === 'sms'
-              ? 'تست خطوط خدماتی کاوه‌نگار و ملی‌پیامک و بررسی دریافت پیامک‌های حاوی کد اعتبارسنجی.'
-              : activeSubView === 'policies'
-              ? 'پیکربندی طول کدهای احراز هویت، زمان انقضا و الزامات امنیتی ورود به سامانه.'
+            {activeSubView === 'policies'
+              ? 'پیکربندی حداقل طول کلمه عبور، زمان انقضای توکن‌ها و الزامات امنیتی ورود به سامانه.'
               : 'مشاهده فهرست کاربران فعال، نقش‌های سازمانی و صدور دسترسی به صورت لحظه‌ای.'}
           </p>
         </div>
@@ -253,136 +212,55 @@ export const AuthView: React.FC<AuthViewProps> = ({
         )}
       </div>
 
-      {/* Sub-View: SMS OTP Simulator */}
-      {activeSubView === 'sms' && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs max-w-2xl space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Smartphone className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-sm font-bold text-slate-900">ارسال پیامک آزمایشی به شماره همراه</h3>
-          </div>
-
-          <form onSubmit={handleSendTestOtp} className="space-y-4">
-            <div>
-              <label className="text-xs text-slate-700 font-medium block mb-1.5">
-                ارائه‌دهنده سرویس پیامک
-              </label>
-              <select
-                value={otpProvider}
-                onChange={(e) => setOtpProvider(e.target.value as OtpProvider)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
-              >
-                <option value="kavenegar">کاوه‌نگار (خط خدماتی اختصاصی)</option>
-                <option value="melipayamak">ملی‌پیامک (وب‌سرویس خدماتی)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-700 font-medium block mb-1.5">
-                شماره همراه گیرنده
-              </label>
-              <input
-                type="text"
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
-                placeholder="09121112233"
-                dir="ltr"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSendingOtp}
-              className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-xs disabled:opacity-50 inline-flex items-center gap-2"
-            >
-              {isSendingOtp ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>در حال ارسال پیامک...</span>
-                </>
-              ) : (
-                <>
-                  <Smartphone className="w-4 h-4" />
-                  <span>ارسال کد پیامکی آزمایشی</span>
-                </>
-              )}
-            </button>
-
-            {otpSentFeedback && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 leading-relaxed flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                <span>{otpSentFeedback}</span>
-              </div>
-            )}
-          </form>
-        </div>
-      )}
-
       {/* Sub-View: Security Policies */}
       {activeSubView === 'policies' && (
         <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs max-w-2xl space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <KeyRound className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-sm font-bold text-slate-900">سیاست‌های امنیتی و اعتبار کدهای ورود</h3>
+            <h3 className="text-sm font-bold text-slate-900">سیاست‌های امنیتی و اعتبار توکن‌های ورود</h3>
           </div>
 
           <div className="space-y-4 text-xs">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <div className="font-semibold text-slate-800">طول کد تایید پیامکی</div>
-                <div className="text-[11px] text-slate-400">تعداد ارقام رمز یکبار مصرف ارسالی برای کاربر</div>
+                <div className="font-semibold text-slate-800">حداقل طول کلمه عبور (Argon2id)</div>
+                <div className="text-[11px] text-slate-400">حداقل کاراکتر مجاز برای رمزهای عبور کاربران</div>
               </div>
               <select
-                value={otpLength}
-                onChange={(e) => setOtpLength(e.target.value)}
+                value={minPasswordLength}
+                onChange={(e) => setMinPasswordLength(e.target.value)}
                 className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-mono text-xs focus:outline-none focus:border-emerald-500 shadow-xs"
                 dir="ltr"
               >
-                <option value="4">4 digits</option>
-                <option value="5">5 digits</option>
-                <option value="6">6 digits</option>
+                <option value="8">8 کاراکتر (حداقل مجاز)</option>
+                <option value="10">10 کاراکتر</option>
+                <option value="12">12 کاراکتر (توصیه شده)</option>
+                <option value="16">16 کاراکتر (امنیت سازمانی)</option>
               </select>
             </div>
 
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <div className="font-semibold text-slate-800">مدت زمان اعتبار کد (ثانیه)</div>
-                <div className="text-[11px] text-slate-400">مدت زمانی که کاربر فرصت دارد کد را وارد نماید</div>
+                <div className="font-semibold text-slate-800">زمان انقضای توکن دسترسی JWT (ساعت)</div>
+                <div className="text-[11px] text-slate-400">مدت اعتبار کلید دسترسی قبل از نیاز به توکن تازه‌سازی (Refresh Token)</div>
               </div>
               <select
-                value={otpExpiry}
-                onChange={(e) => setOtpExpiry(e.target.value)}
+                value={jwtExpiryHours}
+                onChange={(e) => setJwtExpiryHours(e.target.value)}
                 className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-mono text-xs focus:outline-none focus:border-emerald-500 shadow-xs"
                 dir="ltr"
               >
-                <option value="60">60 ثانیه</option>
-                <option value="120">120 ثانیه (استاندارد)</option>
-                <option value="300">300 ثانیه</option>
+                <option value="1">1 ساعت</option>
+                <option value="24">24 ساعت (1 روز)</option>
+                <option value="72">72 ساعت (استاندارد)</option>
+                <option value="168">168 ساعت (1 هفته)</option>
               </select>
-            </div>
-
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <div className="font-semibold text-slate-800">کپچای امنیتی هوشمند</div>
-                <div className="text-[11px] text-slate-400">جلوگیری از ارسال انبوه درخواست‌های پیامکی توسط ربات‌ها</div>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enableCaptcha}
-                  onChange={(e) => setEnableCaptcha(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                />
-                <span className="text-xs text-slate-600">
-                  {enableCaptcha ? 'فعال' : 'غیرفعال'}
-                </span>
-              </label>
             </div>
 
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <div className="font-semibold text-slate-800">احراز هویت با کلمه عبور</div>
-                <div className="text-[11px] text-slate-400">امکان ورود با پسورد ثابت علاوه بر کد پیامکی</div>
+                <div className="text-[11px] text-slate-400">ورود امن کاربران از طریق هشینگ Argon2id و کلیدهای Ed25519</div>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -418,7 +296,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
       )}
 
       {/* Sub-View: Users Table (Default) */}
-      {(activeSubView === 'users' || (!activeSubView && activeSubView !== 'sms' && activeSubView !== 'policies')) && (
+      {(activeSubView === 'users' || (!activeSubView && activeSubView !== 'policies')) && (
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -433,7 +311,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 type="text"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="جستجوی کاربر یا شماره..."
+                placeholder="جستجوی کاربر یا ایمیل..."
                 className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 shadow-xs"
               />
             </div>
@@ -444,7 +322,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
                   <th className="py-2.5 px-3">شناسه و نام</th>
-                  <th className="py-2.5 px-3 text-center">شماره همراه / ایمیل</th>
+                  <th className="py-2.5 px-3 text-center">ایمیل / نام کاربری</th>
                   <th className="py-2.5 px-3 text-center">نقش</th>
                   <th className="py-2.5 px-3 text-center">وضعیت حساب</th>
                   <th className="py-2.5 px-3 text-center">عملیات</th>
@@ -476,7 +354,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-slate-700" dir="ltr">
-                        {u.phone || u.email || '-'}
+                        {u.email || u.username || u.phone || '-'}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-medium">
@@ -503,6 +381,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
                             {u.isConfirmed ? 'تعلیق' : 'فعال‌سازی'}
                           </button>
                           <button
+                            onClick={() => setUserToResetPassword(u)}
+                            className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                            title="تغییر رمز عبور کاربر"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteUser(u.id)}
                             className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
                             title="حذف کاربر"
@@ -517,6 +402,25 @@ export const AuthView: React.FC<AuthViewProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      <ResetPasswordModal
+        isOpen={Boolean(userToResetPassword)}
+        user={userToResetPassword}
+        projectSlug={project.slug}
+        onClose={() => setUserToResetPassword(null)}
+        onSuccess={(msg) => {
+          setToastMessage(msg);
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 shadow-xl text-white text-xs font-medium flex items-center gap-2 animate-in slide-in-from-bottom-2">
+          <span>{toastMessage}</span>
         </div>
       )}
 

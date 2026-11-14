@@ -330,7 +330,7 @@ public class Program
         });
 
         // 1. Health & Config Probe
-        app.MapGet("/healthz", () => Results.Ok(new
+        app.MapMethods("/healthz", ["GET", "HEAD"], () => Results.Ok(new
         {
             status = "HEALTHY",
             platform = "LocalMe Cloud Platform",
@@ -338,7 +338,7 @@ public class Program
             timestamp = DateTimeOffset.UtcNow
         }));
 
-        app.MapGet("/readyz", async (IProjectStore store) =>
+        app.MapMethods("/readyz", ["GET", "HEAD"], async (IProjectStore store) =>
         {
             try
             {
@@ -406,6 +406,12 @@ public class Program
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
         app.MapGetAndHead("/register", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user != null) return Results.Redirect("/panel");
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
+        app.MapGetAndHead("/reset-password", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);
             if (user != null) return Results.Redirect("/panel");

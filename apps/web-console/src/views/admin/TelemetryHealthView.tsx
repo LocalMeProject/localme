@@ -58,8 +58,6 @@ interface ProjectBreakdownItem {
   dbSize: string;
   tableCount: number;
   liveRows: number;
-  fileCount: number;
-  storageSize: string;
   functionCount: number;
   domainCount: number;
 }
@@ -122,8 +120,6 @@ export function TelemetryHealthView() {
           dbSize: p.dbSizePretty || p.dbSize || '0 B',
           tableCount: p.tableCount ?? 0,
           liveRows: p.liveRows ?? p.totalRows ?? 0,
-          fileCount: p.fileCount ?? 0,
-          storageSize: p.storagePretty || p.storageSize || '0 B',
           functionCount: p.functionCount ?? 0,
           domainCount: p.domainCount ?? 0,
         })));
@@ -138,8 +134,6 @@ export function TelemetryHealthView() {
           projectCount: u.projectCount ?? 0,
           totalDbSizeBytes: u.totalDbSizeBytes ?? 0,
           totalDbSizePretty: u.totalDbSizePretty || '0 B',
-          totalStorageBytes: u.totalStorageBytes ?? 0,
-          totalStoragePretty: u.totalStoragePretty || '0 B',
         })));
 
         const rawShards = res.shards || res.shardBreakdown || [];
@@ -493,7 +487,7 @@ export function TelemetryHealthView() {
       {activeSubTab === 'projects' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-800">تفکیک مصرف منابع، دیتابیس و استوریج به ازای هر پروژه</span>
+            <span className="font-bold text-slate-800">تفکیک مصرف منابع، پایگاه داده و توابع لبه به ازای هر پروژه</span>
             <span className="text-slate-500 font-mono text-[11px]">{toPersianDigits(projectBreakdown.length)} پروژه</span>
           </div>
 
@@ -506,7 +500,6 @@ export function TelemetryHealthView() {
                   <th className="px-5 py-3">حجم دیتابیس</th>
                   <th className="px-5 py-3">تعداد جداول</th>
                   <th className="px-5 py-3">سطرهای زنده</th>
-                  <th className="px-5 py-3">فایل‌ها و حجم استوریج</th>
                   <th className="px-5 py-3">توابع لبه</th>
                   <th className="px-5 py-3">دامنه‌ها</th>
                 </tr>
@@ -514,7 +507,7 @@ export function TelemetryHealthView() {
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {projectBreakdown.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
                       {loadingBreakdown ? 'در حال محاسبه و گردآوری منابع...' : 'پروژه‌ای برای نمایش یافت نشد.'}
                     </td>
                   </tr>
@@ -536,11 +529,6 @@ export function TelemetryHealthView() {
                       </td>
                       <td className="px-5 py-3 font-mono text-[11px] text-emerald-700 font-semibold">
                         {toPersianDigits(p.liveRows.toLocaleString())}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[11px]">
-                        <span>{toPersianDigits(p.fileCount)} فایل</span>
-                        <span className="text-slate-400 mx-1">/</span>
-                        <span dir="ltr">{p.storageSize}</span>
                       </td>
                       <td className="px-5 py-3 font-mono text-[11px]">
                         {toPersianDigits(p.functionCount)}
@@ -574,14 +562,13 @@ export function TelemetryHealthView() {
                   <th className="px-5 py-3">نقش</th>
                   <th className="px-5 py-3">تعداد پروژه‌ها</th>
                   <th className="px-5 py-3">کل دیتابیس اختصاصی</th>
-                  <th className="px-5 py-3">کل فضای ذخیره‌سازی S3</th>
                   <th className="px-5 py-3">موجودی کیف پول</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {userBreakdown.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
                       {loadingBreakdown ? 'در حال بارگذاری آمار کاربران...' : 'هیچ کاربری یافت نشد.'}
                     </td>
                   </tr>
@@ -604,9 +591,6 @@ export function TelemetryHealthView() {
                       </td>
                       <td className="px-5 py-3 font-mono text-[11px]" dir="ltr">
                         {u.totalDbSizePretty || '0 B'}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[11px]" dir="ltr">
-                        {u.totalStoragePretty || '0 B'}
                       </td>
                       <td className="px-5 py-3 font-bold text-slate-900">
                         {formatToman(u.walletBalanceIrr)}

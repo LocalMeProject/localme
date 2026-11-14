@@ -26,7 +26,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://localme.ir/" />
   <meta property="og:title" content="لوکال می | پلتفرم ابری و بک اند یکپارچه برای توسعه دهندگان" />
-  <meta property="og:description" content="توسعه سریع اپلیکیشن های موبایل و وب با پایگاه داده ابری، احراز هویت، فضای ابری S3، توابع لبه و پایش تله متری با تاخیر زیر ۳۰۰ میلی ثانیه و آپتایم ۱۰۰٪ در لوکال می." />
+  <meta property="og:description" content="توسعه سریع اپلیکیشن های موبایل و وب با پایگاه داده ابری، احراز هویت توکن محور، توابع لبه و پایش تله متری با تاخیر زیر ۳۰۰ میلی ثانیه و آپتایم ۱۰۰٪ در لوکال می." />
   <meta property="og:image" content="https://localme.ir/assets/og/home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -38,7 +38,7 @@
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://localme.ir/" />
   <meta property="twitter:title" content="لوکال می | پلتفرم ابری و بک اند توسعه دهندگان" />
-  <meta property="twitter:description" content="پایگاه داده ابری، مدیریت کاربران، فضای ذخیره سازی S3، توابع سرورلس لبه و تله متری با تاخیر زیر ۳۰۰ میلی ثانیه." />
+  <meta property="twitter:description" content="پایگاه داده ابری، احراز هویت کاربران، توابع سرورلس لبه و تله متری با تاخیر زیر ۳۰۰ میلی ثانیه." />
   <meta property="twitter:image" content="https://localme.ir/assets/og/home.png" />
 
   <link rel="stylesheet" href="/styles.css" />
@@ -73,7 +73,7 @@
         "applicationCategory": "DeveloperApplication",
         "applicationSubCategory": "Backend-as-a-Service, Cloud Platform",
         "softwareVersion": "1.0.0",
-        "description": "پلتفرم ابری Backend-as-a-Service بومی ایران برای تسریع توسعه اپلیکیشن های موبایل و فرانت اند با خدمات پایگاه داده، احراز هویت، فضای ابری S3، توابع لبه و تله متری.",
+        "description": "پلتفرم ابری Backend-as-a-Service بومی ایران برای تسریع توسعه اپلیکیشن های موبایل و فرانت اند با خدمات پایگاه داده، احراز هویت، توابع لبه و تله متری.",
         "image": "https://localme.ir/assets/og/home.png",
         "offers": {
           "@type": "Offer",
@@ -82,8 +82,7 @@
         },
         "featureList": [
           "پایگاه داده ابری رابطه ای با تفکیک داده ها و امنیت RLS",
-          "احراز هویت توکن محور JWT و پیامکی بومی",
-          "فضای ابری ذخیره سازی شی گرا سازگار با S3",
+          "احراز هویت توکن محور JWT با هشینگ امن Argon2id",
           "اجرای توابع محاسباتی سرورلس در لبه شبکه",
           "تله متری، متریک ها و پایش آنلاین سلامت پروژه"
         ]
@@ -125,7 +124,7 @@
             "name": "لوکال می چه کمکی به توسعه دهندگان اپلیکیشن و وب می کند؟",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "لوکال می تمام زیرساخت های سمت سرور شامل پایگاه داده ابری، مدیریت احراز هویت کاربران، فضای ابری S3، اجرای توابع بدون سرور لبه و مانیتورینگ تله متری را به صورت آماده در اختیارتان می گذارد تا بدون درگیر شدن با مدیریت سرور، روی تجربه کاربری برنامه تمرکز کنید."
+              "text": "لوکال می تمام زیرساخت های سمت سرور شامل پایگاه داده ابری با امنیت RLS، مدیریت احراز هویت کاربران، اجرای توابع بدون سرور لبه و مانیتورینگ تله متری را به صورت آماده در اختیارتان می گذارد تا بدون درگیر شدن با مدیریت سرور، روی تجربه کاربری برنامه تمرکز کنید."
             }
           },
           {
@@ -371,9 +370,9 @@
         <div class="metric-desc">تفکیک اختصاصی برای هر پروژه با امکان اعمال سیاست های امنیتی سطر داده ها (RLS).</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">سازگار با S3</div>
-        <div class="metric-title">ذخیره سازی ابری فایل ها</div>
-        <div class="metric-desc">مدیریت فایل های چندرسانه ای و اسناد با صدور دسترسی های موقت امن و تحویل سریع ابری.</div>
+        <div class="metric-value">زیر ۳۰۰ میلی ثانیه</div>
+        <div class="metric-title">پاسخگویی سریع لبه</div>
+        <div class="metric-desc">اجرای توابع محاسباتی در نودهای پردازشی نزدیک به کاربران با کمترین زمان تاخیر.</div>
       </div>
     </div>
   </section>
@@ -404,13 +403,7 @@
         <a href="/features/auth">مطالعه جزئیات سرویس احراز هویت ←</a>
       </div>
 
-      <div class="feature-box">
-        <h3>ذخیره سازی ابری فایل (S3)</h3>
-        <p>
-          بارگذاری و بارگیری امن اسناد و چندرسانه ای با باکت های ابری استاندارد سازگار با S3، تولید پیوندهای دانلود موقت امن و CDN ابری داخلی.
-        </p>
-        <a href="/features/storage">مطالعه جزئیات سرویس ذخیره سازی ←</a>
-      </div>
+
 
       <div class="feature-box">
         <h3>توابع ابری بدون سرور (Edge Functions)</h3>
@@ -506,13 +499,17 @@ const localMe = createClient({
   apiKey: 'lm_live_key_982348',
 });
 
-// 2. آپلود فایل در باکت ابری S3
-const fileInput = document.getElementById('avatar-input');
-const uploadResult = await localMe.storage
-  .bucket('user-uploads')
-  .upload('profile.jpg', fileInput.files[0]);
+// 2. ورود امن با ایمیل و رمز عبور
+const { session } = await localMe.auth.signInWithPassword({
+  email: 'developer@example.com',
+  password: 'secure-password',
+});
 
-console.log('آدرس فایل بارگذاری شده:', uploadResult.publicUrl);</div>
+// 3. اجرای کوئری با امنیت سطح سطر (RLS)
+const { data: users } = await localMe
+  .table('profiles')
+  .select('*')
+  .limit(5);</div>
 
         <div id="tab-kotlin" class="code-content-block">// 1. مقداردهی کلاینت در اندروید (Kotlin)
 val localMe = LocalMeClient.Builder()
@@ -600,7 +597,6 @@ Task {
         <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
           <a href="/features/database" style="color: var(--text-muted); text-decoration: none;">پایگاه داده ابری</a>
           <a href="/features/auth" style="color: var(--text-muted); text-decoration: none;">احراز هویت و کاربران</a>
-          <a href="/features/storage" style="color: var(--text-muted); text-decoration: none;">ذخیره سازی ابری S3</a>
           <a href="/features/edge-functions" style="color: var(--text-muted); text-decoration: none;">توابع لبه (Edge Functions)</a>
           <a href="/features/telemetry" style="color: var(--text-muted); text-decoration: none;">تله متری و مانیتورینگ</a>
         </div>

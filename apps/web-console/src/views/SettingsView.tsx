@@ -217,10 +217,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const apiKeys: Record<string, string> = {
-    database: `lm_db_${project.id.slice(0, 8)}_live_99a8b7`,
+    database: `lm_database_${project.id.slice(0, 8)}_live_99a8b7`,
     auth: `lm_auth_${project.id.slice(0, 8)}_live_44c3d2`,
-    storage: `lm_str_${project.id.slice(0, 8)}_live_77e6f5`,
-    functions: `lm_fn_${project.id.slice(0, 8)}_live_11g2h3`,
+    functions: `lm_functions_${project.id.slice(0, 8)}_live_11g2h3`,
+    telemetry: `lm_telemetry_${project.id.slice(0, 8)}_live_77e8f9`,
   };
 
   return (
@@ -508,7 +508,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               حذف دائمی پروژه
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
-              با حذف این پروژه، تمامی پایگاه‌های داده، اسکیماها، فایل‌های ذخیره‌سازی، توابع و اطلاعات کاربران برای همیشه پاکسازی خواهند شد.
+              با حذف این پروژه، تمامی پایگاه‌های داده، اسکیماها، لاگ‌ها، توابع و اطلاعات کاربران برای همیشه پاکسازی خواهند شد.
             </p>
             <button
               type="button"

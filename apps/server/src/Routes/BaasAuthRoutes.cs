@@ -54,6 +54,113 @@ public static class BaasAuthRoutes
             });
         });
 
+        // Self-service User Registration for Platform Developers
+        app.MapPost("/_baas/v1/auth/register", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var email = body["email"]?.ToString()?.Trim() ?? "";
+            var password = body["password"]?.ToString() ?? "";
+            var fullName = body["fullName"]?.ToString()?.Trim() ?? body["name"]?.ToString()?.Trim() ?? "";
+            var username = body["username"]?.ToString()?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            {
+                return Results.BadRequest(new { success = false, error = "لطفا یک آدرس ایمیل معتبر وارد نمایید." });
+            }
+
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+            {
+                return Results.BadRequest(new { success = false, error = "کلمه عبور باید حداقل ۶ کاراکتر باشد." });
+            }
+
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                fullName = email.Split('@')[0];
+            }
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                username = email.Split('@')[0];
+            }
+
+            var existing = pm.FindUserByCredential(email);
+            if (existing != null)
+            {
+                return Results.BadRequest(new { success = false, error = "این نشانی ایمیل قبلاً در سامانه ثبت شده است." });
+            }
+
+            var user = pm.CreatePlatformUser(fullName, "", email, username, password, UserRole.Developer);
+            var tokens = JwtTokenService.GenerateSessionToken(user.Id, "developer");
+
+            var isHttps = ctx.Request.IsHttps || string.Equals(ctx.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+            ctx.Response.Cookies.Append("localme_session", tokens.AccessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = isHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = "ثبت‌نام با موفقیت انجام شد.",
+                tokens,
+                user
+            });
+        });
+
+        // Password Reset Request
+        app.MapPost("/_baas/v1/auth/password-reset/request", (JsonObject body, ProjectManagerService pm) =>
+        {
+            var identifier = body["email"]?.ToString()?.Trim() ?? body["identifier"]?.ToString()?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                return Results.BadRequest(new { success = false, error = "لطفا ایمیل یا نام کاربری خود را وارد نمایید." });
+            }
+
+            var user = pm.FindUserByCredential(identifier);
+            if (user == null)
+            {
+                return Results.Ok(new { success = true, message = "در صورت وجود حساب کاربری، دستورالعمل بازیابی به نشانی ثبت‌شده ارسال شد." });
+            }
+
+            var resetToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+            return Results.Ok(new 
+            { 
+                success = true, 
+                message = "دستورالعمل بازیابی کلمه عبور با موفقیت ایجاد شد.",
+                resetToken = resetToken,
+                email = user.Email
+            });
+        });
+
+        // Password Reset Confirm
+        app.MapPost("/_baas/v1/auth/password-reset/confirm", (JsonObject body, ProjectManagerService pm) =>
+        {
+            var identifier = body["email"]?.ToString()?.Trim() ?? body["identifier"]?.ToString()?.Trim() ?? "";
+            var newPassword = body["newPassword"]?.ToString() ?? body["password"]?.ToString() ?? "";
+
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                return Results.BadRequest(new { success = false, error = "شناسه کاربر الزامی است." });
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            {
+                return Results.BadRequest(new { success = false, error = "کلمه عبور جدید باید حداقل ۶ کاراکتر باشد." });
+            }
+
+            var user = pm.FindUserByCredential(identifier);
+            if (user == null)
+            {
+                return Results.BadRequest(new { success = false, error = "کاربری با این مشخصات یافت نشد." });
+            }
+
+            pm.SetUserPassword(user.Id, newPassword);
+            return Results.Ok(new { success = true, message = "کلمه عبور جدید با موفقیت ذخیره شد. اکنون می‌توانید وارد شوید." });
+        });
+
         // Project-Scoped Login (Project Slug + Project Specific Password)
         app.MapPost("/_baas/v1/auth/project-login", (JsonObject body, HttpContext ctx, ProjectManagerService pm) =>
         {
@@ -230,7 +337,7 @@ public static class BaasAuthRoutes
         {
             var (allowed, project, caller, err) = AuthHelper.EnsureProjectAccess(ctx, pm, projectId, serviceRequired: "auth");
             if (!allowed) return err!;
-            var newPassword = body["password"]?.ToString();
+            var newPassword = body["password"]?.ToString() ?? body["newPassword"]?.ToString();
             if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 4)
             {
                 return Results.BadRequest(new { error = "رمز عبور جدید باید حداقل ۴ کاراکتر باشد." });

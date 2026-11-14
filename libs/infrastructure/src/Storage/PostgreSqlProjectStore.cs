@@ -76,34 +76,13 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
             _dataSource = dataSourceBuilder.Build();
         }
 
-        // Verify and apply migrations if needed
-        await using var cmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects';");
-        var count = Convert.ToInt64(await cmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
-        if (count == 0)
-        {
-            string? sql = null;
-            var migrationCandidates = new[]
-            {
-                Path.Combine(AppContext.BaseDirectory, "Migrations", "004_PlatformPersistence.sql"),
-                Path.Combine(Directory.GetCurrentDirectory(), "libs", "infrastructure", "src", "Migrations", "004_PlatformPersistence.sql"),
-                Path.Combine(AppContext.BaseDirectory, "../../../libs/infrastructure/src/Migrations/004_PlatformPersistence.sql")
-            };
+        // Apply migrations 001 - 003 if missing
+        await EnsureMigrationAppliedAsync("001_ControlPlane.sql", "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'control_plane';");
+        await EnsureMigrationAppliedAsync("002_TenantSchema.sql", "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'auth';");
+        await EnsureMigrationAppliedAsync("003_AnalyticsAndBilling.sql", "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'analytics';");
 
-            foreach (var candidate in migrationCandidates)
-            {
-                if (File.Exists(candidate))
-                {
-                    sql = await File.ReadAllTextAsync(candidate);
-                    break;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(sql))
-            {
-                await using var migCmd = _dataSource.CreateCommand(sql);
-                await migCmd.ExecuteNonQueryAsync();
-            }
-        }
+        // Verify and apply migration 004
+        await EnsureMigrationAppliedAsync("004_PlatformPersistence.sql", "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects';");
 
         // Ensure schema evolution for existing projects table (db_cluster_id column)
         try
@@ -170,13 +149,13 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
 
                 await using var mCmd = _dataSource.CreateCommand(mig005Sql);
                 await mCmd.ExecuteNonQueryAsync();
-
-                // Ensure shard-a has the real connection string instead of placeholder PRIMARY_CONNECTION
-                await using var syncShardCmd = _dataSource.CreateCommand(
-                    "UPDATE platform_shards SET connection_string = $1 WHERE id = 'shard-a' AND (connection_string = 'PRIMARY_CONNECTION' OR connection_string = '' OR connection_string IS NULL);");
-                syncShardCmd.Parameters.AddWithValue(_pgConnectionString);
-                await syncShardCmd.ExecuteNonQueryAsync();
             }
+
+            // Ensure shard-a has the real connection string instead of placeholder PRIMARY_CONNECTION
+            await using var syncShardCmd = _dataSource.CreateCommand(
+                "UPDATE platform_shards SET connection_string = $1 WHERE id = 'shard-a' AND (connection_string = 'PRIMARY_CONNECTION' OR connection_string = '' OR connection_string IS NULL);");
+            syncShardCmd.Parameters.AddWithValue(_pgConnectionString);
+            await syncShardCmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex)
         {
@@ -539,6 +518,43 @@ public sealed partial class PostgreSqlProjectStore : IProjectStore, IAsyncDispos
         if (_dataSource == null)
         {
             await InitializeAsync();
+        }
+    }
+
+    private async Task EnsureMigrationAppliedAsync(string fileName, string checkSql)
+    {
+        try
+        {
+            await using var checkCmd = _dataSource!.CreateCommand(checkSql);
+            var exists = Convert.ToInt64(await checkCmd.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+            if (exists) return;
+
+            var candidates = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "Migrations", fileName),
+                Path.Combine(Directory.GetCurrentDirectory(), "libs", "infrastructure", "src", "Migrations", fileName),
+                Path.Combine(AppContext.BaseDirectory, "../../../libs/infrastructure/src/Migrations", fileName)
+            };
+
+            string? sql = null;
+            foreach (var candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                {
+                    sql = await File.ReadAllTextAsync(candidate);
+                    break;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(sql))
+            {
+                await using var migCmd = _dataSource.CreateCommand(sql);
+                await migCmd.ExecuteNonQueryAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LocalMe.Store] Migration {fileName} notice: {ex.Message}");
         }
     }
 

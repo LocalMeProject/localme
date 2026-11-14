@@ -14,32 +14,31 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   onAdd,
 }) => {
   const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [provider, setProvider] = useState<'sms' | 'credentials'>('sms');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) return;
+    if (!fullName.trim() || !email.trim() || !password) return;
 
     onAdd({
       id: `usr-${Date.now()}`,
       fullName: fullName.trim(),
+      email: email.trim(),
       username: username.trim() || undefined,
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      provider,
+      password,
+      provider: 'credentials',
       isConfirmed: true,
       createdAt: 'هم‌اکنون',
     });
 
     setFullName('');
-    setUsername('');
-    setPhone('');
     setEmail('');
+    setUsername('');
+    setPassword('');
     onClose();
   };
 
@@ -62,7 +61,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
                 افزودن کاربر جدید
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                ثبت دستی کاربر در پایگاه داده احراز هویت
+                ثبت کاربر با احراز هویت امن Argon2id
               </p>
             </div>
           </div>
@@ -90,21 +89,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 font-medium mb-1.5">شماره تلفن همراه</label>
-            <input
-              type="tel"
-              placeholder="09121112233"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              dir="ltr"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-700 font-medium mb-1.5">ایمیل (اختیاری)</label>
+            <label className="block text-slate-700 font-medium mb-1.5">نشانی ایمیل</label>
             <input
               type="email"
+              required
               placeholder="ali@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -114,15 +102,29 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 font-medium mb-1.5">روش احراز هویت</label>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as 'sms' | 'credentials')}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-800"
-            >
-              <option value="sms">ورود با کد تایید پیامک (OTP)</option>
-              <option value="credentials">نام کاربری و گذرواژه</option>
-            </select>
+            <label className="block text-slate-700 font-medium mb-1.5">نام کاربری (اختیاری)</label>
+            <input
+              type="text"
+              placeholder="ali_ahmadi"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-700 font-medium mb-1.5">کلمه عبور</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder="حداقل ۸ کاراکتر"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              dir="ltr"
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-900 font-mono"
+            />
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">

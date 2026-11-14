@@ -82,9 +82,9 @@ public class DiscoverabilityAndSeoTests
         Assert.Contains("<loc>https://localme.ir/benchmarks</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/features/database</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/features/auth</loc>", sitemapXml);
-        Assert.Contains("<loc>https://localme.ir/features/storage</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/features/edge-functions</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/features/telemetry</loc>", sitemapXml);
+        Assert.DoesNotContain("<loc>https://localme.ir/features/storage</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/compare/localme-vs-firebase-iran</loc>", sitemapXml);
         Assert.Contains("<loc>https://localme.ir/compare/localme-vs-supabase-iran</loc>", sitemapXml);
 

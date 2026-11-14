@@ -159,6 +159,10 @@ public static class BaasServiceRoutes
                 ));
 
                 metering.RecordUsage(project.Id, project.OwnerPhone, "compute_ms", Math.Max(10, result.ExecutionTimeMs));
+                pm.AddProjectLog(project.Id, "functions", result.Success ? "INFO" : "ERROR",
+                    $"اجرای تابع {funcSlug}: {(result.Success ? "موفق" : result.Error)}",
+                    statusCode: result.Success ? 200 : 500,
+                    latencyMs: result.ExecutionTimeMs);
                 return Results.Json(result);
             };
 

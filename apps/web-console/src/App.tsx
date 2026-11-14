@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, CheckCircle2 } from 'lucide-react';
-import { Project, CapabilityCode, DatabaseColumn, EdgeFunction, ProjectUser } from './types';
+import { Project, DatabaseColumn, EdgeFunction, ProjectUser } from './types';
 import { Header } from './components/Header';
 import { Navigation, TabId } from './components/Navigation';
 
@@ -19,6 +19,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Auth & Admin Views
 import { LoginView } from './views/auth/LoginView';
+import { RegisterView } from './views/auth/RegisterView';
+import { ResetPasswordView } from './views/auth/ResetPasswordView';
 import { AdminLayout, AdminTab } from './views/admin/AdminLayout';
 import { ClusterShardsView } from './views/admin/ClusterShardsView';
 import { DatabaseActivityView } from './views/admin/DatabaseActivityView';
@@ -99,10 +101,7 @@ export default function App() {
     }
   }, [rawTab, rawSub, activeTab]);
 
-  // Capability set for current project
-  const [activeCapabilities, setActiveCapabilities] = useState<Set<CapabilityCode>>(
-    new Set<CapabilityCode>(['BASE', 'BAAS_DB', 'IDAAS', 'COMPUTE_EDGE'])
-  );
+
 
   // Modal open states
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
@@ -126,7 +125,7 @@ export default function App() {
   // Fetch live projects from backend API
   const fetchLiveProjects = useCallback(async () => {
     const currentPath = location.pathname.toLowerCase();
-    if (currentPath === '/login' || currentPath === '/register' || currentPath.startsWith('/auth')) {
+    if (currentPath === '/login' || currentPath === '/register' || currentPath === '/reset-password' || currentPath.startsWith('/auth')) {
       return;
     }
 
@@ -175,7 +174,7 @@ export default function App() {
 
   useEffect(() => {
     const currentPath = location.pathname.toLowerCase();
-    if (currentPath === '/login' || currentPath === '/register' || currentPath.startsWith('/auth')) {
+    if (currentPath === '/login' || currentPath === '/register' || currentPath === '/reset-password' || currentPath.startsWith('/auth')) {
       return;
     }
     fetchLiveProjects();
@@ -216,37 +215,7 @@ export default function App() {
     }
   };
 
-  const handleToggleCapability = (code: CapabilityCode) => {
-    setActiveCapabilities((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) {
-        next.delete(code);
-        showToast(`سرویس با موفقیت غیرفعال شد.`);
-      } else {
-        next.add(code);
-        showToast(`سرویس با موفقیت فعال گردید.`);
-      }
-      return next;
-    });
 
-    if (code === 'COMPUTE_EDGE') {
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === currentProjectId
-            ? {
-                ...p,
-                services: {
-                  ...p.services,
-                  functions: {
-                    isEnabled: !p.services.functions?.isEnabled,
-                  },
-                },
-              }
-            : p
-        )
-      );
-    }
-  };
 
   // Real API: Create Project
   const handleCreateProject = async (data: {
@@ -362,14 +331,15 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: usr.fullName,
-          phone: usr.phone,
           email: usr.email,
-          password: 'TempPassword123!',
+          username: usr.username,
+          phone: usr.phone,
+          password: usr.password || 'TempPassword123!',
           role: usr.role || 'user',
         }),
       });
       if (res.ok) {
-        showToast(`کاربر «${usr.fullName || usr.phone}» با موفقیت ثبت شد.`);
+        showToast(`کاربر «${usr.fullName || usr.email}» با موفقیت ثبت شد.`);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(`خطا در ثبت کاربر: ${err.error || res.statusText}`);
@@ -431,14 +401,18 @@ export default function App() {
   };
 
 
-  const isEdgeFunctionsEnabled = activeCapabilities.has('COMPUTE_EDGE');
 
   const normalizedPath = location.pathname.toLowerCase();
-  const isAuthRoute = normalizedPath === '/login' || normalizedPath === '/register' || normalizedPath.startsWith('/auth');
   const isAdminRoute = normalizedPath === '/admin' || normalizedPath.startsWith('/admin/');
 
-  // Auth Routing
-  if (isAuthRoute) {
+  // Auth Routing (Self-Service Registration, Password Recovery, and Login)
+  if (normalizedPath === '/register' || normalizedPath === '/auth/register') {
+    return <RegisterView />;
+  }
+  if (normalizedPath === '/reset-password' || normalizedPath === '/auth/reset-password') {
+    return <ResetPasswordView />;
+  }
+  if (normalizedPath === '/login' || normalizedPath.startsWith('/auth')) {
     return <LoginView />;
   }
 
@@ -502,7 +476,6 @@ export default function App() {
             onTabChange={handleTabChange}
             activeSubView={activeSubView}
             onSubViewChange={handleSubViewChange}
-            edgeFunctionsEnabled={isEdgeFunctionsEnabled}
             project={currentProject}
             onNavigateHome={() => navigate('/panel')}
           />
@@ -547,8 +520,6 @@ export default function App() {
                 {activeTab === 'overview' && (
                   <OverviewView
                     project={currentProject}
-                    activeCapabilities={activeCapabilities}
-                    onToggleCapability={handleToggleCapability}
                     onNavigateTab={handleTabChange}
                     onDeployBuild={() => setIsDeployFunctionOpen(true)}
                   />
@@ -566,8 +537,6 @@ export default function App() {
                 {activeTab === 'functions' && (
                   <EdgeFunctionsView
                     project={currentProject}
-                    enabled={isEdgeFunctionsEnabled}
-                    onToggleEnable={() => handleToggleCapability('COMPUTE_EDGE')}
                     onOpenDeployModal={() => setIsDeployFunctionOpen(true)}
                     activeSubView={activeSubView}
                     onSubViewChange={handleSubViewChange}
