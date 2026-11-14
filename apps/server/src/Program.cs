@@ -411,6 +411,12 @@ public class Program
             if (user != null) return Results.Redirect("/panel");
             return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
         });
+        app.MapGetAndHead("/reset-password", (HttpContext ctx, ProjectManagerService pm) =>
+        {
+            var user = AuthHelper.GetCurrentUser(ctx, pm);
+            if (user != null) return Results.Redirect("/panel");
+            return Results.File(Path.Combine(app.Environment.WebRootPath, "panel.html"), "text/html");
+        });
         app.MapGetAndHead("/auth", (HttpContext ctx, ProjectManagerService pm) =>
         {
             var user = AuthHelper.GetCurrentUser(ctx, pm);

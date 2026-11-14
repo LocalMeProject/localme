@@ -117,7 +117,7 @@ flags = fcntl.fcntl(master, fcntl.F_GETFL)
 fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 start_time = time.time()
-max_duration = 420  # 7 minutes max timeout
+max_duration = 600  # 10 minutes max timeout
 stop_flag = [False]
 abort_reason = [None]
 
